@@ -1,0 +1,6 @@
+# `dependency_validator` config. The example (added in a later pass) is a separate
+# Flutter app with its own pubspec and deps; scope the validator to the published
+# surface (lib/) and skip the example so its dependencies aren't judged against the
+# root package's.
+exclude:
+  - "example/**"

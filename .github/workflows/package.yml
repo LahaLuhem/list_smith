@@ -1,0 +1,68 @@
+name: Package checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  # Pull-request runs cancel each other per PR; main-branch runs cancel only
+  # against later main commits. The `|| github.ref` fallback keeps the group
+  # well-formed on push events where `pull_request.number` is empty.
+  group: pkg-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+      # Explicit paths: lib + test are the root package. The example is a
+      # separate package with its own pubspec and is analysed by example.yml,
+      # so it's deliberately left out here.
+      - run: flutter --no-version-check analyze lib test
+
+  deps:
+    name: Dependency validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+      - run: dart pub global activate dependency_validator
+      - run: dart pub global run dependency_validator
+
+  test:
+    name: Unit tests + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+      # `flutter test --coverage` writes coverage/lcov.info directly, so no
+      # separate format_coverage step is needed.
+      - run: flutter --no-version-check test --coverage
+      # Upload BEFORE the gate so the coverage badge updates and PR comments
+      # land even when the gate would fail. Coveralls auto-routes based on
+      # event context (PR vs. push to main).
+      #
+      # `continue-on-error: true` keeps a Coveralls outage from failing the
+      # whole job, Coveralls is observability, not a correctness gate; the
+      # actual threshold check is the next step. The step still shows RED in
+      # the CI UI on failure so broken uploads don't go unnoticed for long.
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: coverage/lcov.info
+          format: lcov
+      - name: Enforce min coverage (95%)
+        uses: VeryGoodOpenSource/very_good_coverage@v3
+        with:
+          path: coverage/lcov.info
+          min_coverage: 95

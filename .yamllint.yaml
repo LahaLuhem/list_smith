@@ -1,0 +1,28 @@
+# ryl (YAML lint) config for list_smith. yamllint-compatible; ryl reads it via
+# `-c` in .github/lint-checks.json (CI matrix) and the release.sh preflight.
+#
+# Starts from yamllint's "default" rule set, then tuned to the repo's deliberate
+# YAML style rather than the other way round: the wide section dividers in
+# pubspec.yaml / analysis_options.yaml and the terse inline comments are
+# intentional, and GitHub workflows use the `on:` key with no leading `---`.
+extends: default
+
+rules:
+  # 100 columns, matching .editorconfig. Long single-token URLs in comments stay
+  # exempt via yamllint's allow-non-breakable-words default.
+  line-length:
+    max: 100
+  # Allow the intentional multi-blank section dividers (up to 5 seen in-repo).
+  empty-lines:
+    max: 5
+  # The repo puts one space before inline comments and disables config blocks by
+  # prefixing `#` with no trailing space (analysis_options' plugin block), so
+  # don't require two-space gaps or a leading space.
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: false
+  # Workflows use `on:`, which reads as a truthy key; keep value checks, not keys.
+  truthy:
+    check-keys: false
+  # Single-document files here don't lead with `---`.
+  document-start: disable

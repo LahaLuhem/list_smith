@@ -1,0 +1,43 @@
+# Dependabot version updates.
+# Reference (options):
+# https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# Bot PRs branch as `dependabot/...` and carry no `sem-*` label. The
+# PR-convention and changelog workflows exempt `dependabot[bot]` from the
+# branch-name, sem-label and changelog jobs (see
+# .github/workflows/{pr-conventions,changelog}.yml), so these PRs land WITHOUT
+# an automatic CHANGELOG entry, add one by hand if a bump is user-visible.
+# The commit-length / no-merge-commit gate still applies to them.
+#
+# Minor + patch bumps are grouped into one PR per ecosystem to cut noise; major
+# bumps still arrive as individual PRs so they can be reviewed in isolation.
+#
+# The example app is added in a later pass. Its Dependabot entries (a `pub`
+# entry for /example and a `gradle` entry for /example/android) will be added
+# then; there's nothing to resolve under /example until it exists.
+version: 2
+
+updates:
+  # --- Dart / Flutter: published library ---
+  # Bumps the version constraints in the root pubspec.yaml. pub.dev packages
+  # only, git / path deps are not eligible.
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      pub:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- GitHub Actions ---
+  # `directory: "/"` scans everything under .github/, the workflows and the
+  # local composite action at .github/actions/setup-flutter.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

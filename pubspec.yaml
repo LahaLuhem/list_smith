@@ -1,0 +1,32 @@
+name: list_smith
+description: >-
+  A developer-first Flutter package that wraps ListView.builder for real-world
+  lists: async pagination, pull-to-refresh, and sync-or-async search.
+version: 0.0.0
+homepage: https://github.com/LahaLuhem/list_smith?tab=readme-ov-file
+repository: https://github.com/LahaLuhem/list_smith
+issue_tracker: https://github.com/LahaLuhem/list_smith/issues
+
+topics:
+  - listview
+  - pagination
+  - infinite-scroll
+  - pull-to-refresh
+  - search
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+cider:
+  link_template:
+    tag: https://github.com/LahaLuhem/list_smith/releases/tag/%tag%
+    diff: https://github.com/LahaLuhem/list_smith/compare/%from%...%to%

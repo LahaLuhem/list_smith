@@ -1,0 +1,71 @@
+name: Repo-wide checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-repo
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: Dart format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      # Format scans files in place; no pub-get needed. The setup-flutter composite
+      # is reserved for jobs that need resolved dependencies, skipping it here
+      # saves ~10-30s per run.
+      - run: dart format --output=none --set-exit-if-changed .
+
+  # Container-based lint checks (tool + args) and the linterpol image tag live in
+  # one manifest, .github/lint-checks.json, shared with scripts/release.sh's
+  # preflight so CI and the release gate can't drift. This job reads the manifest
+  # so the `lint` matrix below can fan out over it; adding a linter is a one-line
+  # manifest edit, no new job here. https://github.com/LahaLuhem/linterpol
+  lint-manifest:
+    name: Load lint manifest
+    runs-on: ubuntu-latest
+    outputs:
+      checks: ${{ steps.read.outputs.checks }}
+      image: ${{ steps.read.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: read
+        # Fail loudly on a missing/malformed/empty manifest instead of emitting an
+        # empty matrix, which would run zero linters and pass the job green.
+        run: |
+          jq -e '.image and (.checks | length > 0)' .github/lint-checks.json > /dev/null
+          {
+            echo "checks=$(jq -c '.checks' .github/lint-checks.json)"
+            echo "image=$(jq -r '.image' .github/lint-checks.json)"
+          } >> "$GITHUB_OUTPUT"
+
+  lint:
+    name: ${{ matrix.check.name }}
+    needs: lint-manifest
+    runs-on: ubuntu-latest
+    strategy:
+      # Each linter reports independently; one failure doesn't cancel the rest.
+      fail-fast: false
+      matrix:
+        check: ${{ fromJSON(needs.lint-manifest.outputs.checks) }}
+    env:
+      LINTERPOL_IMAGE: ${{ needs.lint-manifest.outputs.image }}
+      LINT_CMD: ${{ matrix.check.cmd }}
+    steps:
+      - uses: actions/checkout@v7
+      # The checkout mounts read-only at the image's /work workdir. $LINT_CMD is
+      # intentionally unquoted so the runner shell word-splits it into the tool +
+      # args and glob-expands (e.g. scripts/*.sh) against the checkout before the
+      # container runs. Same contract as the release.sh preflight.
+      - run: |
+          # shellcheck disable=SC2086
+          docker run --rm -v "$PWD:/work:ro" "$LINTERPOL_IMAGE" $LINT_CMD

@@ -1,0 +1,48 @@
+{
+  "url": "https://context7.com/lahaluhem/list_smith",
+  "public_key": "pk_zRQqaALefsVNkJ7uS6fVf",
+  "projectTitle": "list_smith",
+  "description": "A developer-first Flutter package that wraps ListView.builder for real-world lists: async pagination, pull-to-refresh, and sync-or-async search.",
+  "branch": "main",
+  "folders": [],
+  "excludeFolders": [
+    ".git",
+    ".github",
+    ".dart_tool",
+    ".fvm",
+    ".idea",
+    ".vscode",
+    ".ai",
+    ".claude",
+    "build",
+    "test",
+    "scripts",
+    "example/.ai",
+    "example/.dart_tool",
+    "example/.idea",
+    "example/android",
+    "example/ios",
+    "example/macos",
+    "example/windows",
+    "example/linux",
+    "example/web",
+    "example/build"
+  ],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CODESTYLE.md",
+    "APPENDIX.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "analysis_options.yaml",
+    "dart_dependency_validator.yaml",
+    "pubspec.lock",
+    ".metadata",
+    ".pubignore"
+  ],
+  "rules": [
+    "list_smith wraps ListView.builder to add async pagination, pull-to-refresh, and sync-or-async search. Concrete usage rules (the widget API, the data-source and search/cache policy) will be added here once the public API is finalised."
+  ],
+  "previousVersions": []
+}

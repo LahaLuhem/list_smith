@@ -1,0 +1,37 @@
+name: Setup Flutter
+description: >-
+  Install the Flutter SDK (which includes Dart), restore the pub cache, and run
+  `flutter pub get`. The caller is responsible for `actions/checkout` beforehand
+  because local composite actions are only discoverable after checkout.
+
+inputs:
+  channel:
+    description: Flutter channel. Defaults to `stable`.
+    required: false
+    default: stable
+  working-directory:
+    description: Directory containing the `pubspec.yaml` to resolve. Defaults to the repo root.
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - uses: subosito/flutter-action@v2
+      with:
+        channel: ${{ inputs.channel }}
+        cache: true
+
+    - name: Cache .pub-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.pub-cache
+        # Cache key is a single ${{ }}-composed value with no safe wrap point.
+        key: pub-flutter-${{ runner.os }}-${{ hashFiles(format('{0}/pubspec.lock', inputs.working-directory)) }}  # yamllint disable-line rule:line-length
+        restore-keys: |
+          pub-flutter-${{ runner.os }}-
+
+    - name: flutter pub get
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: flutter --no-version-check pub get

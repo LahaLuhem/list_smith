@@ -1,0 +1,8 @@
+# The example is analysed on the same strict lint set as the package, so the two
+# never drift. It only relaxes public_member_api_docs, since a demo app is not a
+# published API surface and its widgets don't need `///` docs.
+include: ../analysis_options.yaml
+
+analyzer:
+  errors:
+    public_member_api_docs: ignore

@@ -1,0 +1,29 @@
+# rumdl (Markdown lint) config for list_smith. Tuned to the repo's conventions.
+#
+# The docs deliberately use a 100-column width (matching .editorconfig), inline
+# HTML (<details>/<summary> and <a id> anchors), and a README that leads with a
+# badge block, so the markdownlint defaults that fight those are relaxed here.
+# See AGENTS.md for how the lint set is wired into CI + the release preflight.
+
+[global]
+# CHANGELOG.md is bot-owned (cider + the release automation); the issue templates
+# are GitHub-specific Markdown; the example's ios/ and android/ dirs are
+# flutter-generated platform scaffolding (e.g. the Xcode asset-catalog READMEs) that
+# we don't hand-maintain. None of these belong under the doc lint.
+exclude = ["CHANGELOG.md", ".github/ISSUE_TEMPLATE/**", "example/ios/**", "example/android/**"]
+# MD033 inline HTML: intentional (<details>, <summary>, <a id> anchors).
+# MD022 blanks-around-headings: clashes with the <a id></a>-before-heading anchors.
+# MD041 first-line-heading: the README opens with a badge block, not an H1.
+# MD057 relative-link-exists: false positives from the .ai/ symlink indirection
+#   (the real files link to root-level docs that resolve via the root symlink).
+# MD004/MD007 list marker + indent: the README's table of contents is generated
+#   by bitdowntoc (https://bitdowntoc.derlin.ch/); its `*` markers and 4-space
+#   nesting are the generator's output, not ours to reformat by hand.
+disable = ["MD033", "MD022", "MD041", "MD057", "MD004", "MD007"]
+
+[MD013]
+# 100 to match .editorconfig. Code blocks and tables are exempt: fixed-width
+# ASCII trees, sample output, and table rows can't reflow.
+line-length = 100
+code_blocks = false
+tables = false

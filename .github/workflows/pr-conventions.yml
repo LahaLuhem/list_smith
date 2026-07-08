@@ -1,0 +1,113 @@
+name: PR conventions
+
+on:
+  pull_request:
+    # `labeled` / `unlabeled` are in the trigger set so the sem-label job
+    # re-runs whenever a label is added or removed. The other two jobs
+    # (branch-name, commit-conventions) re-running on label events is a
+    # harmless few seconds of bash.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-conventions
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  branch-name:
+    name: Branch name
+    runs-on: ubuntu-latest
+    # Dependabot branches are always `dependabot/...` and can't be made to match
+    # the required pattern; exempt bot-authored PRs. Keyed off the PR author
+    # (not github.actor) so it still holds when a human triggers a `labeled`
+    # event on a bot PR.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    steps:
+      - name: Validate branch name pattern
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          pattern='^(feature|bugfix|chore|refactor|acceptance-test-issues|hotfix)/#[0-9]+-.+$'
+          if ! echo "$BRANCH" | grep -Eq "$pattern"; then
+            echo "::error::Branch '$BRANCH' does not match required pattern."
+            echo "Expected: <type>/#<issue-number>-<name>"
+            types="feature, bugfix, chore, refactor, acceptance-test-issues, hotfix"
+            echo "Where <type> is one of: $types"
+            echo "Example: chore/#4-tidy-readme"
+            exit 1
+          fi
+          echo "Branch name OK"
+
+  commit-conventions:
+    name: Commit conventions
+    runs-on: ubuntu-latest
+    env:
+      MAX_COMMIT_MESSAGE_LENGTH: 82
+      PR_BODY: ${{ github.event.pull_request.body }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: PR body must not be empty
+        run: |
+          if [ -z "${PR_BODY// /}" ]; then
+            echo "::error::Pull request description is empty."
+            exit 1
+          fi
+
+      - name: No merge commits in PR range
+        run: |
+          merges=$(git log --merges "${BASE_SHA}..${HEAD_SHA}" --pretty=format:'%H')
+          if [ -n "$merges" ]; then
+            echo "::error::Merge commits found in the pull request range. Rebase instead."
+            echo "$merges"
+            exit 1
+          fi
+
+      - name: Commit subjects within length limit
+        run: |
+          fail=0
+          while IFS= read -r subject; do
+            if [ "${#subject}" -gt "$MAX_COMMIT_MESSAGE_LENGTH" ]; then
+              msg="Commit subject exceeds ${MAX_COMMIT_MESSAGE_LENGTH} characters -> ${subject}"
+              echo "::error::$msg"
+              fail=1
+            fi
+          done < <(git log "${BASE_SHA}..${HEAD_SHA}" --pretty=format:'%s')
+          exit "$fail"
+
+  sem-label:
+    name: Sem-* label
+    runs-on: ubuntu-latest
+    # Bot PRs carry no sem-* label and are exempt from the changelog flow too
+    # (see changelog.yml), so don't require one here.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    env:
+      LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+    steps:
+      - name: Require exactly one sem-* label
+        run: |
+          allowed='sem-add, sem-change, sem-deprecate, sem-remove,'
+          allowed="$allowed sem-bugfix, sem-security, sem-skip"
+          count=$(echo "$LABELS" | jq '[.[] | select(startswith("sem-"))] | length')
+          if [ "$count" -ne 1 ]; then
+            echo "::error::PR must have exactly one sem-* label (found $count). Allowed: $allowed"
+            exit 1
+          fi
+          sem=$(echo "$LABELS" | jq -r '.[] | select(startswith("sem-"))')
+          case "$sem" in
+            sem-add|sem-change|sem-deprecate|sem-remove|sem-bugfix|sem-security|sem-skip)
+              echo "Sem label OK: $sem"
+              ;;
+            *)
+              echo "::error::Unknown sem-* label: '$sem'. Allowed: $allowed"
+              exit 1
+              ;;
+          esac

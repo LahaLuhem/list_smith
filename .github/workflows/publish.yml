@@ -1,0 +1,35 @@
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+' # tag-pattern on pub.dev: '{{version}}'
+
+# Inlined instead of using dart-lang/setup-dart/.github/workflows/publish.yml@v1.
+# That reusable workflow runs plain `dart pub get` (no `--no-example` flag) at
+# the package root, which transitively resolves `example/` against CI's Flutter
+# SDK, different from the `.fvmrc`-pinned local Flutter, so the resolution
+# rewrites `example/pubspec.lock`. The next step (`pub publish --dry-run`) then
+# trips its "checked-in files are modified" guard. `--no-example` keeps the
+# committed lockfile byte-identical. This is a Flutter package, so
+# `flutter pub get` (not `dart pub get`) is used to satisfy the
+# `flutter: sdk: flutter` constraint; `dart-lang/setup-dart` is kept first so
+# the OIDC env it exports is in place before publish runs.
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC auth to pub.dev (configured by dart-lang/setup-dart).
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dart-lang/setup-dart@v1
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies (root only, skip example/)
+        run: flutter --no-version-check pub get --no-example
+      - name: Publish dry-run
+        run: flutter --no-version-check pub publish --dry-run
+      - name: Publish to pub.dev
+        run: flutter --no-version-check pub publish --force

@@ -1,0 +1,40 @@
+# .pubignore — exclude maintainer-only / generated / non-consumer files from the
+# published tarball. Syntax is .gitignore-compatible. Patterns are unanchored unless
+# prefixed with `/`, so e.g. `test/` matches both `test/` at the package root AND
+# `example/test/`.
+
+# Test sources.
+test/
+
+# Local-dev config — consumer machines have their own.
+.fvmrc
+analysis_options.yaml
+
+# Build / IDE artefacts.
+build/
+*.iml
+
+# Maintainer-only tooling.
+scripts/
+tool/
+
+# Context7 doc-indexer config — repo metadata for context7.com, not a consumer file.
+context7.json
+
+# Internal contributor / AI-agent docs — not useful to pub.dev consumers.
+# `AGENTS.md` and `CLAUDE.md` at the package root are symlinks into `.ai/`. `.ai/`
+# itself is auto-excluded by pub's hidden-path rule, but pub follows symlinks before
+# that check, so the symlink targets need explicit entries.
+AGENTS.md
+CLAUDE.md
+APPENDIX.md
+CODESTYLE.md
+example/AGENTS.md
+example/CODESTYLE.md
+
+# Example platform scaffolding — pub.dev's "Example" tab only renders example/lib/,
+# example/pubspec.yaml, and example/README.md. Platform dirs add bloat with no
+# pub.dev-side benefit.
+example/android/
+example/ios/
+example/devtools_options.yaml
