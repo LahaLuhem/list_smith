@@ -14,6 +14,7 @@ during the repository setup itself.
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#ai-files-symlinked)
 - [Consumer-facing surfaces impose no design system](#design-system-agnostic)
+- [`lib/src/` directory layout](#src-directory-layout)
 
 <!-- TOC end -->
 
@@ -57,6 +58,24 @@ during the repository setup itself.
   `CircularProgressIndicator`. And when wrapping a dependency that ships Material defaults, leaving
   any of its default-builder slots null is a defect: the Material default leaks onto our surface, so
   fill every slot.
+
+---
+
+<a id="src-directory-layout"></a>
+## `lib/src/` directory layout
+
+- **Decision:** organise `lib/src/` by kind at the top level (`data/`, `widgets/`, `utils/`), then
+  by feature within each (`data/refresh/`, `widgets/defaults/`, ...), one primary public class per
+  file.
+- **Why:** it matches the maintainer's existing Flutter packages (`platform_adaptive_widgets` and
+  `smart_search_list` both use `models/` + `widgets/` + a helpers folder), so a contributor moving
+  between the packages meets the same shape. By-kind at the top keeps data separate from behaviour;
+  by-feature within keeps a concern's pieces together.
+- **Rejected:** top-level `enums/` / `typedefs/` folders. They scatter one cohesive vocabulary (a
+  typedef, the model it builds, and the enum it carries) across three folders.
+- **`data/` over `models/`:** the folder also holds enums and typedefs, which are not models. Public
+  types stay unexported from `lib/list_smith.dart` until the widget shell lands, so the whole public
+  surface appears in one place at one time.
 
 ---
 

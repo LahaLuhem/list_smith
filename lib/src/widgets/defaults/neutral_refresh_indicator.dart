@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../refresh/list_smith_refresh_state.dart';
+import '../../data/refresh/list_smith_refresh_state.dart';
 import 'neutral_progress_indicator.dart';
 
 /// The neutral default pull-to-refresh indicator.

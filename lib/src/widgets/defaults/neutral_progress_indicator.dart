@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
-import 'neutral_theme.dart';
+import '../../utils/neutral_theme.dart';
 
 /// A neutral, widgets-layer progress spinner for list_smith's loading surfaces.
 ///

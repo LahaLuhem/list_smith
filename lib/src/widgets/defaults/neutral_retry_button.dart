@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'neutral_theme.dart';
+import '../../utils/neutral_theme.dart';
 
 /// A neutral, widgets-layer "retry" control for list_smith's error surfaces.
 ///

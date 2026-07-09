@@ -1,9 +1,9 @@
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/widgets.dart';
 
-import '../defaults/neutral_refresh_indicator.dart';
-import 'list_smith_refresh_phase.dart';
-import 'list_smith_refresh_state.dart';
+import '../data/refresh/list_smith_refresh_phase.dart';
+import '../data/refresh/list_smith_refresh_state.dart';
+import 'defaults/neutral_refresh_indicator.dart';
 
 /// Wires list_smith's pull-to-refresh onto the custom_refresh_indicator package, keeping that dependency fully encapsulated.
 ///

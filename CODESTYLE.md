@@ -12,6 +12,7 @@ so renames don't break callers.
 
 - [Type safety & nullability](#type-safety)
 - [Naming](#naming)
+- [Directory layout](#directory-layout)
 - [Formatting](#formatting)
 - [Constants & magic numbers](#constants)
 - [Class structure](#class-structure)
@@ -117,8 +118,29 @@ live under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   callback's dartdoc, not the parameter name.
 - **Files mirror the primary public class name.** `PagedListView` lives in
   `paged_list_view.dart`; `PagedListController` in `paged_list_controller.dart`. `file_names` is
-  enforced by the linter; the directory placement is by convention (**TODO (design pass):** the
-  `lib/src/` layout is defined with the architecture).
+  enforced by the linter; one primary public class per file (private `_helper` classes may share
+  it). Directory placement follows [Directory layout](#directory-layout).
+
+---
+
+<a id="directory-layout"></a>
+## Directory layout
+
+`lib/src/` is organised **by kind at the top level, then by feature within**, the same shape as the
+maintainer's `platform_adaptive_widgets` and `smart_search_list`:
+
+- **`data/`** holds pure vocabulary: enums, typedefs, sealed classes, immutable models. Sub-group by
+  feature (`data/refresh/`, `data/pagination/`, `data/source/`), not by finer kind. A typedef lives
+  in the file of the type it serves (`RefreshBuilder` sits with `ListSmithRefreshState`), so a
+  feature's vocabulary stays in one place.
+- **`widgets/`** holds everything that is a `Widget`; the neutral default surfaces live under
+  `widgets/defaults/`. `data/` and `widgets/` mirror each other by feature name.
+- **`utils/`** holds helpers that are neither a widget nor a data type (a function or a constant),
+  such as `utils/neutral_theme.dart`.
+
+Do **not** create top-level `enums/` or `typedefs/` folders: splitting a typedef from its type, or
+an enum from the model it describes, scatters one cohesive unit. Rationale in
+[`APPENDIX.md`](APPENDIX.md#src-directory-layout).
 
 ---
 
