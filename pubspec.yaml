@@ -21,6 +21,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  infinite_scroll_pagination: ^5.1.1
+  custom_refresh_indicator: ^4.0.1
 
 dev_dependencies:
   flutter_test:
