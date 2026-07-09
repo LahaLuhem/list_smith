@@ -45,11 +45,11 @@ during the repository setup itself.
   their place are neutral, widgets-layer widgets.
 - **Scope is our surfaces, not the dependency closure.** A dependency may import Material internally
   (`infinite_scroll_pagination`'s default indicators do). We neutralise it by overriding *every*
-  default builder slot it exposes, so no Material widget appears in list_smith's own default look and
-  feel. Migrating that dependency's internal Material use once Flutter unbundles Material from the
-  SDK is the dependency's problem, not ours.
-- **Why:** two reasons. Developer experience: list_smith should drop into a Material app, a Cupertino
-  app, or a bespoke design system without importing a look the consumer never chose.
+  default builder slot it exposes, so no Material widget appears in list_smith's own default look
+  and feel. Migrating that dependency's internal Material use once Flutter unbundles Material from
+  the SDK is the dependency's problem, not ours.
+- **Why:** two reasons. Developer experience: list_smith should drop into a Material app, a
+  Cupertino app, or a bespoke design system without importing a look the consumer never chose.
   Forward-compatibility: Flutter is decoupling `material` / `cupertino` from the framework core
   (https://github.com/orgs/flutter/projects/220), so the widgets layer is where a design-neutral
   package belongs.
