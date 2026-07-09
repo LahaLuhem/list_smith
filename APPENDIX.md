@@ -13,6 +13,7 @@ during the repository setup itself.
 <!-- TOC start -->
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#ai-files-symlinked)
+- [Consumer-facing surfaces impose no design system](#design-system-agnostic)
 
 <!-- TOC end -->
 
@@ -30,6 +31,32 @@ during the repository setup itself.
   without symlink support enabled, the file may show up as a small text file containing the link
   target. If that ever bites a contributor, the fallback is to drop the symlinks and keep real
   files at the root, hand-syncing the content.
+
+---
+
+<a id="design-system-agnostic"></a>
+## Consumer-facing surfaces impose no design system
+
+- **Decision:** list_smith's own code, and every default it ships for a visible surface (loading,
+  error, empty, "no more items", the pull-to-refresh indicator, and the search field where the
+  package owns it), are built on `package:flutter/widgets.dart` only, never `material.dart` or
+  `cupertino.dart`. Every visible surface stays overridable by the consumer; the defaults we ship in
+  their place are neutral, widgets-layer widgets.
+- **Scope is our surfaces, not the dependency closure.** A dependency may import Material internally
+  (`infinite_scroll_pagination`'s default indicators do). We neutralise it by overriding *every*
+  default builder slot it exposes, so no Material widget appears in list_smith's own default look and
+  feel. Migrating that dependency's internal Material use once Flutter unbundles Material from the
+  SDK is the dependency's problem, not ours.
+- **Why:** two reasons. Developer experience: list_smith should drop into a Material app, a Cupertino
+  app, or a bespoke design system without importing a look the consumer never chose.
+  Forward-compatibility: Flutter is decoupling `material` / `cupertino` from the framework core
+  (https://github.com/orgs/flutter/projects/220), so the widgets layer is where a design-neutral
+  package belongs.
+- **Consequences:** the widgets layer ships no progress spinner, so our neutral loading and refresh
+  defaults are small widgets-layer implementations (for example a `CustomPainter`), not
+  `CircularProgressIndicator`. And when wrapping a dependency that ships Material defaults, leaving
+  any of its default-builder slots null is a defect: the Material default leaks onto our surface, so
+  fill every slot.
 
 ---
 
