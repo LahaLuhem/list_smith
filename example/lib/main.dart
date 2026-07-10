@@ -3,12 +3,9 @@ import 'package:list_smith/list_smith.dart';
 
 void main() => runApp(const ListSmithExampleApp());
 
-/// Placeholder demo for `list_smith`.
-///
-/// The package's list widgets are still being designed, so this app only
-/// exercises the (temporary) public API to keep the example wired to the
-/// package. It grows into a real pagination / pull-to-refresh / search
-/// showcase once the API lands.
+/// Demo app for `list_smith`: an async paginated list with pull-to-refresh,
+/// dropped into a Material app to show the neutral defaults inherit the app's
+/// look without list_smith importing Material itself.
 class ListSmithExampleApp extends StatelessWidget {
   const ListSmithExampleApp({super.key});
 
@@ -20,36 +17,28 @@ class ListSmithExampleApp extends StatelessWidget {
   );
 }
 
-class _HomePage extends StatefulWidget {
+class _HomePage extends StatelessWidget {
   const _HomePage();
 
-  @override
-  State<_HomePage> createState() => _HomePageState();
-}
+  static const _pageCount = 5;
+  static const _fetchDelay = Duration(milliseconds: 600);
 
-class _HomePageState extends State<_HomePage> {
-  final _calculator = Calculator();
-  var _count = 0;
+  /// A fake async source: five pages of items, then an empty page so
+  /// [StopOnEmptyPages] ends the list.
+  Future<List<String>> _fetchPage(int pageIndex, int pageSize) async {
+    await Future<void>.delayed(_fetchDelay);
+    if (pageIndex >= _pageCount) return const <String>[];
 
-  void _increment() => setState(() => _count = _calculator.addOne(_count));
+    return List.generate(pageSize, (index) => 'Item ${pageIndex * pageSize + index + 1}');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('list_smith example')),
-    body: Center(
-      child: Column(
-        mainAxisAlignment: .center,
-        spacing: 8,
-        children: [
-          const Text('list_smith list widgets are coming soon.'),
-          Text('$_count', style: Theme.of(context).textTheme.headlineMedium),
-        ],
-      ),
-    ),
-    floatingActionButton: FloatingActionButton(
-      onPressed: _increment,
-      tooltip: 'Increment via Calculator.addOne',
-      child: const Icon(Icons.add),
+    body: ListSmith<String>.async(
+      fetchPage: _fetchPage,
+      separatorBuilder: (_, _) => const Divider(height: 1),
+      itemBuilder: (_, item, _) => ListTile(title: Text(item)),
     ),
   );
 }
