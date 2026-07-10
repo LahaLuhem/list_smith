@@ -1,16 +1,12 @@
 import 'package:flutter/widgets.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '../data/pagination/page_fetcher.dart';
 import '../data/pagination/pagination_end_policy.dart';
-import '../data/pagination/pagination_end_policy_resolver.dart';
-import '../data/presentation/error_builder.dart';
+import '../data/presentation/async_list_surfaces.dart';
 import '../data/presentation/item_builder.dart';
 import '../data/presentation/list_scroll_config.dart';
-import '../data/refresh/list_smith_refresh_state.dart';
 import '../data/source/list_source.dart';
-import 'paged_view.dart';
-import 'refresh_binding.dart';
+import 'async_list_view.dart';
 
 /// A developer-first list handling async pagination and pull-to-refresh.
 ///
@@ -19,8 +15,10 @@ import 'refresh_binding.dart';
 /// Every visible surface has a neutral, widgets-layer default, so the list drops into a Material,
 /// Cupertino, or bespoke app without importing a look it never chose.
 ///
-/// Build it with [ListSmith.async].
-class ListSmith<T extends Object> extends StatefulWidget {
+/// Build it with [ListSmith.async]. Internally it is a stateless dispatcher over a sealed
+/// [ListSource]: each named constructor builds one source case, and [build] routes that case to the
+/// engine for it, so no parameter meant for one mode is ever silently inert on another.
+class ListSmith<T extends Object> extends StatelessWidget {
   final ListSource<T> _source;
 
   /// Builds the widget for each item.
@@ -29,30 +27,18 @@ class ListSmith<T extends Object> extends StatefulWidget {
   /// Builds the separator between items; null for no separators.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// Whether pull-to-refresh is enabled. When false, no refresh gesture is wired and [refreshBuilder]
-  /// has no effect.
+  /// Whether pull-to-refresh is enabled. When false, no refresh gesture is wired and the refresh
+  /// builder in [surfaces] has no effect.
   final bool pullToRefresh;
 
-  /// Draws the pull-to-refresh indicator; null uses the neutral default.
-  final RefreshBuilder? refreshBuilder;
-
-  /// Builds the first-page loading surface; null uses the neutral default.
-  final WidgetBuilder? firstPageLoadingBuilder;
-
-  /// Builds the new-page loading footer; null uses the neutral default.
-  final WidgetBuilder? newPageLoadingBuilder;
-
-  /// Builds the first-page error surface; null uses the neutral default.
-  final ErrorBuilder? firstPageErrorBuilder;
-
-  /// Builds the new-page error footer; null uses the neutral default.
-  final ErrorBuilder? newPageErrorBuilder;
-
   /// Builds the surface shown when the source yields no items; null uses the neutral default.
+  ///
+  /// Lives on the constructor rather than in [surfaces] because every list has an empty state, so it
+  /// reads the same whichever constructor built the list.
   final WidgetBuilder? emptyBuilder;
 
-  /// Builds the footer shown once every page has loaded; null uses the neutral default.
-  final WidgetBuilder? noMoreItemsBuilder;
+  /// The async-only override surfaces (page loading and error, end-of-list footer, refresh indicator).
+  final AsyncListSurfaces surfaces;
 
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
@@ -60,86 +46,32 @@ class ListSmith<T extends Object> extends StatefulWidget {
   /// Creates an async, paginated list driven by [fetchPage].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
-  /// pagination ends per `endPolicy` (by default, the first empty page). [itemBuilder] renders each item.
-  /// The remaining parameters override the neutral default surfaces and the scroll configuration.
+  /// pagination ends per `endPolicy` (by default, the first empty page). [itemBuilder] renders each
+  /// item. [surfaces] overrides the async-only neutral defaults; [emptyBuilder] and [scroll] apply to
+  /// every list.
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
-    super.key,
     int pageSize = 20,
-    PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
-    this.separatorBuilder,
     this.pullToRefresh = true,
-    this.refreshBuilder,
-    this.firstPageLoadingBuilder,
-    this.newPageLoadingBuilder,
-    this.firstPageErrorBuilder,
-    this.newPageErrorBuilder,
-    this.emptyBuilder,
-    this.noMoreItemsBuilder,
+    PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+    this.surfaces = const AsyncListSurfaces(),
     this.scroll = const ListScrollConfig(),
+    this.emptyBuilder,
+    this.separatorBuilder,
+    super.key,
   }) : _source = AsyncSource(fetchPage: fetchPage, pageSize: pageSize, endPolicy: endPolicy);
 
   @override
-  State<ListSmith<T>> createState() => _ListSmithState<T>();
-}
-
-class _ListSmithState<T extends Object> extends State<ListSmith<T>> {
-  late final AsyncSource<T> _source = switch (widget._source) {
-    final AsyncSource<T> source => source,
+  Widget build(BuildContext context) => switch (_source) {
+    final AsyncSource<T> source => AsyncListView<T>(
+      source: source,
+      itemBuilder: itemBuilder,
+      separatorBuilder: separatorBuilder,
+      pullToRefresh: pullToRefresh,
+      emptyBuilder: emptyBuilder,
+      surfaces: surfaces,
+      scroll: scroll,
+    ),
   };
-
-  late final _controller = PagingController<int, T>(
-    getNextPageKey: (state) => _nextPageKey(state, _source.endPolicy),
-    fetchPage: (pageKey) async =>
-        (await _source.fetchPage(pageKey, _source.pageSize)).toList(growable: false),
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _onRefresh() => Future.sync(_controller.refresh);
-
-  @override
-  Widget build(BuildContext context) {
-    final list = PagingListener<int, T>(
-      controller: _controller,
-      builder: (_, state, fetchNextPage) => PagedView<T>(
-        state: state,
-        fetchNextPage: fetchNextPage,
-        itemBuilder: widget.itemBuilder,
-        scroll: widget.scroll,
-        separatorBuilder: widget.separatorBuilder,
-        firstPageLoadingBuilder: widget.firstPageLoadingBuilder,
-        newPageLoadingBuilder: widget.newPageLoadingBuilder,
-        firstPageErrorBuilder: widget.firstPageErrorBuilder,
-        newPageErrorBuilder: widget.newPageErrorBuilder,
-        emptyBuilder: widget.emptyBuilder,
-        noMoreItemsBuilder: widget.noMoreItemsBuilder,
-      ),
-    );
-
-    if (!widget.pullToRefresh) return list;
-
-    return RefreshBinding(
-      onRefresh: _onRefresh,
-      refreshBuilder: widget.refreshBuilder,
-      child: list,
-    );
-  }
-}
-
-/// Computes the next 0-based page key for [state], or `null` once [endPolicy] reports the end.
-/// Keys are the page count so far, so they stay 0-based and sequential.
-int? _nextPageKey<T extends Object>(PagingState<int, T> state, PaginationEndPolicy endPolicy) {
-  final pages = state.pages;
-  if (pages == null || pages.isEmpty) return 0;
-
-  final pageItemCounts = [for (final page in pages) page.length];
-  if (endPolicy.hasReachedEnd(pageItemCounts)) return null;
-
-  return pages.length;
 }

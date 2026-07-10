@@ -4,6 +4,7 @@ library;
 
 export 'src/data/pagination/page_fetcher.dart';
 export 'src/data/pagination/pagination_end_policy.dart';
+export 'src/data/presentation/async_list_surfaces.dart';
 export 'src/data/presentation/error_builder.dart';
 export 'src/data/presentation/item_builder.dart';
 export 'src/data/presentation/list_scroll_config.dart';

@@ -42,17 +42,19 @@ class CustomSurfacesView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               fetchPage: viewModel.fetchPage,
-              firstPageLoadingBuilder: (_) => const CustomLoading(),
-              newPageLoadingBuilder: (_) => const CustomLoading(compact: true),
-              firstPageErrorBuilder: (_, error, onRetry) =>
-                  CustomError(error: error, onRetry: onRetry),
-              newPageErrorBuilder: (_, error, onRetry) =>
-                  CustomError(error: error, onRetry: onRetry, compact: true),
-              emptyBuilder: (_) => const CustomEmpty(),
-              noMoreItemsBuilder: (_) => const CustomEnd(),
-              refreshBuilder: (_, child, state) => CustomRefresh(state: state, child: child),
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
+              emptyBuilder: (_) => const CustomEmpty(),
+              surfaces: AsyncListSurfaces(
+                firstPageLoadingBuilder: (_) => const CustomLoading(),
+                newPageLoadingBuilder: (_) => const CustomLoading(compact: true),
+                firstPageErrorBuilder: (_, error, onRetry) =>
+                    CustomError(error: error, onRetry: onRetry),
+                newPageErrorBuilder: (_, error, onRetry) =>
+                    CustomError(error: error, onRetry: onRetry, compact: true),
+                noMoreItemsBuilder: (_) => const CustomEnd(),
+                refreshBuilder: (_, child, state) => CustomRefresh(state: state, child: child),
+              ),
             ),
           ),
         ],

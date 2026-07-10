@@ -16,6 +16,7 @@ during the repository setup itself.
 - [Consumer-facing surfaces impose no design system](#design-system-agnostic)
 - [`lib/src/` directory layout](#src-directory-layout)
 - [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
+- [Async override surfaces grouped; universal ones stay flat](#async-surfaces-holder)
 
 <!-- TOC end -->
 
@@ -93,6 +94,32 @@ during the repository setup itself.
 - **Deferred (WIP):** a "keep the old items visible, hold the pull indicator until fresh data
   arrives, then swap" behaviour is nicer, but needs a soft refresh that doesn't reset up front.
   Revisit post-V1; it likely rides on a dedicated refresh-policy seam.
+
+---
+
+<a id="async-surfaces-holder"></a>
+## Async override surfaces grouped; universal ones stay flat
+
+- **Decision:** the async-only override surfaces (first/new-page loading, first/new-page error, the
+  end-of-list footer, and the pull-to-refresh indicator) are bundled into one `AsyncListSurfaces`
+  holder, passed as a single `surfaces:` argument. Surfaces every list has, `emptyBuilder` now (and
+  `noResultsBuilder` with search), stay flat constructor parameters. The `pullToRefresh` on/off flag
+  stays flat too; only its indicator builder sits in the holder.
+- **The rule (Rule X):** a surface is a flat parameter if *every* list has it, and moves into the
+  async holder if *only async* lists have it. Behaviour flags (`pullToRefresh`, `pageSize`,
+  `endPolicy`) are not surfaces and stay flat regardless.
+- **Why:** the `.async` constructor had grown seven optional builders that buried the behavioural
+  parameters (`fetchPage`, `pageSize`, `endPolicy`). Grouping them mirrors what `ListScrollConfig`
+  does for the scrollable's knobs, shortens the call site, and lets a consumer define one surface set
+  and reuse it across lists. Autocomplete still lists every slot inside `AsyncListSurfaces(...)`, so
+  discoverability holds.
+- **Why not group every surface** (including `emptyBuilder`): the sync search path has an empty state
+  but none of the async surfaces. A single shared holder would put the six async-only builders where
+  a `.sync` list could set them and see nothing happen, the ghost-parameter bug list_smith exists to
+  remove. Keeping universal surfaces flat means they read the same on `.async` and `.sync`, and the
+  holder stays honestly async-only.
+- **Landed in** the Step 2a refactor, alongside extracting the async engine into the unexported
+  `AsyncListView` and making `ListSmith` a stateless dispatcher over the sealed `ListSource`.
 
 ---
 
