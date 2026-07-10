@@ -480,10 +480,25 @@ runnable through the DCM CLI (`dcm analyze <dir>`):
 <a id="test-style"></a>
 ## Test style
 
-**TODO (design pass).** The test framework and conventions (widget-test patterns, how paginated /
-async sources are faked, whether an examples-table style like the maintainer's other packages is
-adopted) are settled alongside the architecture and the testing decision. Until then: use
-`flutter_test`, keep tests deterministic, and cover the failure paths, not just the happy path.
+Tests split by kind under `test/`:
+
+- **`test/unit_tests/`** holds pure-logic units in `bdd_framework` + `checks`. Frame behaviour as a
+  `BddFeature` with `Bdd(...).scenario().given().when().then()`, and keep the parameter matrix in
+  one place as `.example(val(...), ...)` rows read via `ctx.example.val('name')`, not literals
+  scattered through the body. Assert with `checks` (`check(x).equals(...)`, `.isA<T>()`,
+  `.throws<E>()`).
+- **`test/widget_tests/`** holds widget behaviour, framed with a local Gherkin helper
+  (`test/support/bdd.dart`) that mirrors `minted`'s but is adapted for widgets: `feature`,
+  `scenarioWidgets`, and `scenarioOutlineWidgets` (an examples `Map` looped into `testWidgets`).
+  `bdd_framework` **cannot** drive widget tests (it wraps `test()`, with no `WidgetTester`, so no
+  `pumpWidget`), which is why this helper is local; it fits the plugin-style tests of siblings such
+  as `text_sight`, not a widget package. Use `checks` for value assertions, but keep widget presence
+  on `flutter_test` finders (`expect(find.text(...), findsOneWidget)`); `checks` has no finder API.
+
+Keep tests deterministic and exercise the failure paths, not just the happy path. The neutral
+spinner animates forever, so widget tests drive fixed `pump()`s, never `pumpAndSettle`. The example
+app's widget test uses its own copy of the same local helper (a local helper can't cross package
+boundaries), on `flutter_test` (no `bdd_framework` / `checks`).
 
 ---
 

@@ -67,7 +67,7 @@ class ListSmith<T extends Object> extends StatefulWidget {
     required this.itemBuilder,
     super.key,
     int pageSize = 20,
-    PaginationEndPolicy endPolicy = const StopOnEmptyPages(),
+    PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
     this.separatorBuilder,
     this.pullToRefresh = true,
     this.refreshBuilder,

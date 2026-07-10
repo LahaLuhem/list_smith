@@ -15,6 +15,7 @@ during the repository setup itself.
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#ai-files-symlinked)
 - [Consumer-facing surfaces impose no design system](#design-system-agnostic)
 - [`lib/src/` directory layout](#src-directory-layout)
+- [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
 
 <!-- TOC end -->
 
@@ -76,6 +77,22 @@ during the repository setup itself.
 - **`data/` over `models/`:** the folder also holds enums and typedefs, which are not models. Public
   types stay unexported from `lib/list_smith.dart` until the widget shell lands, so the whole public
   surface appears in one place at one time.
+
+---
+
+<a id="pull-to-refresh-resets-v1"></a>
+## Pull-to-refresh resets the list on V1
+
+- **Decision (V1):** on refresh, the wrapped controller's `refresh()` resets the paging state, so
+  the list clears and the first-page loader shows while the fresh page loads. `onRefresh` completes
+  as soon as the refresh is triggered, so the pull indicator retracts right away (the standard
+  infinite_scroll_pagination pattern).
+- **Why not hold the indicator until fresh data:** awaiting the reload would keep the pull
+  indicator on screen *while* the reset also shows the first-page loader, i.e. two spinners at
+  once. Completing immediately keeps one indicator visible at a time.
+- **Deferred (WIP):** a "keep the old items visible, hold the pull indicator until fresh data
+  arrives, then swap" behaviour is nicer, but needs a soft refresh that doesn't reset up front.
+  Revisit post-V1; it likely rides on a dedicated refresh-policy seam.
 
 ---
 

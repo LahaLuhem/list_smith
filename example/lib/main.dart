@@ -24,7 +24,7 @@ class _HomePage extends StatelessWidget {
   static const _fetchDelay = Duration(milliseconds: 600);
 
   /// A fake async source: five pages of items, then an empty page so
-  /// [StopOnEmptyPages] ends the list.
+  /// [StopOnEmptyPagesPolicy] ends the list.
   Future<List<String>> _fetchPage(int pageIndex, int pageSize) async {
     await Future<void>.delayed(_fetchDelay);
     if (pageIndex >= _pageCount) return const <String>[];
