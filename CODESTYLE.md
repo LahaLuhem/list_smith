@@ -369,6 +369,12 @@ children: items.map((item) => ListTile(title: Text(item.label))).toList()
 Keep explicit generic type args when inference would fall back to `dynamic`
 (`MaterialPageRoute<void>(builder: …)` stays).
 
+**Filtering is not construction.** A predicate that keeps a subset of existing items is a *filter*,
+so it belongs to the [pipeline rule](#idioms-pipeline-methods) (`items.where(pred)`), even when you
+materialise the result into a list for a builder. Reserve collection-`if` for weaving optional
+elements into a literal you are building (`[header, if (isX) badge, body]`), not for selecting from a
+source collection.
+
 <a id="idioms-pipeline-methods"></a>
 ### Library pipeline methods over hand-rolled loops (for data manipulation)
 
@@ -402,6 +408,25 @@ supersede the static call for everyday use. Fixed number of differently-typed fu
 record form (`(f1, f2).wait` returns `Future<(T1, T2)>` and destructures directly); a dynamic
 number of same-typed futures uses the iterable form (errors surface as `ParallelWaitError` carrying
 per-slot values and errors).
+
+<a id="idioms-future-syncvalue"></a>
+### `Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value
+
+When you need a completed `Future` around a value that is *already in hand*, or a synchronous
+side-effecting call whose result you don't await, reach for `Future.syncValue(value)`. `Future.sync`
+is for running a computation that *might* turn out async; `syncValue` states "the value is already
+here, just wrap it," which reads truer at the call site.
+
+```dart
+// Prefer, refresh() is synchronous and returns nothing to await:
+Future<void> _onRefresh() => Future.syncValue(_controller.refresh());
+
+// Over, sync(...) implies a computation that could be async:
+Future<void> _onRefresh() => Future.sync(_controller.refresh);
+```
+
+Keep `Future.sync` when you specifically want a *synchronous* throw from the computation captured
+into the returned future instead of propagating out synchronously.
 
 <a id="idioms-unmodifiable-collections"></a>
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`

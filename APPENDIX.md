@@ -17,6 +17,7 @@ during the repository setup itself.
 - [`lib/src/` directory layout](#src-directory-layout)
 - [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
 - [Async override surfaces grouped; universal ones stay flat](#async-surfaces-holder)
+- [Sync search: flat input, a pure resolver](#sync-search-shape)
 
 <!-- TOC end -->
 
@@ -120,6 +121,37 @@ during the repository setup itself.
   holder stays honestly async-only.
 - **Landed in** the Step 2a refactor, alongside extracting the async engine into the unexported
   `AsyncListView` and making `ListSmith` a stateless dispatcher over the sealed `ListSource`.
+
+---
+
+<a id="sync-search-shape"></a>
+## Sync search: flat input, a pure resolver, universal surfaces stay flat
+
+- **Decision:** the `.sync` constructor takes its search input (`query`, `minSearchLength`,
+  `searchDebounce`) as flat parameters, not a `SearchConfig` holder, even though the override
+  surfaces were just grouped into `AsyncListSurfaces`.
+- **Why flat, not a holder:** the cases differ. `AsyncListSurfaces` groups override builders a
+  consumer sets once and rarely touches; `query` is the opposite, changing on essentially every
+  rebuild, so burying the most-changed parameter in a holder reads badly. The debounce default also
+  diverges by path (`Duration.zero` sync, 300ms async), which flat per-constructor defaults express
+  cleanly and one shared holder could not.
+- **Pure resolver:** the trim + min-length gating and predicate filtering live in a widget-free
+  `resolveSyncSearch(...)` returning `(visibleItems, isSearching)`, unit-tested directly. This
+  mirrors `PaginationEndPolicyResolver`: the branchy logic (an empty or too-short query shows
+  everything; an active query with no matches is the no-results surface) is tested without a widget.
+- **Surfaces stay flat:** `emptyBuilder` (source empty) and `noResultsBuilder` (search matched
+  nothing) are flat and shared with the async path, per Rule X (see
+  [#async-surfaces-holder](#async-surfaces-holder)); a sync list carries none of the async surfaces,
+  so `.sync` takes no `AsyncListSurfaces`.
+- **Materialisation:** `SyncSource` keeps the consumer's raw iterable; `SyncListView` materialises it
+  once and re-materialises only when the iterable identity changes, so an unchanged list is not
+  re-copied or re-filtered per build.
+- **`scrollCacheExtent`, not `cacheExtent`:** Flutter 3.44 deprecated `ScrollView.cacheExtent`
+  (`double`) for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a
+  public `double?` in logical pixels; `SyncListView` wraps it via `ScrollCacheExtent.pixels(...)` and
+  imports `ScrollCacheExtent` from `package:flutter/rendering.dart` (rendering is the widgets layer's
+  own foundation, not a design system, so the no-Material/Cupertino rule is unaffected). The async
+  path is untouched: ISP's `PagedListView` has its own, non-deprecated `cacheExtent`.
 
 ---
 

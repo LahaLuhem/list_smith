@@ -111,8 +111,8 @@ int? _nextPageKey<T extends Object>(PagingState<int, T> state, PaginationEndPoli
   final pages = state.pages;
   if (pages == null || pages.isEmpty) return 0;
 
-  final pageItemCounts = [for (final page in pages) page.length];
-  if (endPolicy.hasReachedEnd(pageItemCounts)) return null;
+  final pageItemCounts = pages.map((page) => page.length);
+  if (endPolicy.hasReachedEnd(pageItemCounts.toList(growable: false))) return null;
 
   return pages.length;
 }

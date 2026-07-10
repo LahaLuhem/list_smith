@@ -50,6 +50,50 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
     });
   });
+
+  feature('ListSmith.sync surfaces', () {
+    bool contains(String item, String query) => item.toLowerCase().contains(query.toLowerCase());
+
+    scenarioWidgets('shows all items when there is no query', (tester) async {
+      await _pumpSyncList(tester, items: const ['apple', 'banana'], searchBy: contains);
+      await tester.pump();
+
+      check(find.text('apple').evaluate()).length.equals(1);
+      check(find.text('banana').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('shows the empty surface when there are no items', (tester) async {
+      await _pumpSyncList(tester, items: const <String>[], searchBy: contains);
+      await tester.pump();
+
+      check(find.text('No items').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('filters to the matches when a query is set', (tester) async {
+      await _pumpSyncList(
+        tester,
+        items: const ['apple', 'banana'],
+        searchBy: contains,
+        query: 'app',
+      );
+      await tester.pump();
+
+      check(find.text('apple').evaluate()).length.equals(1);
+      check(find.text('banana').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('shows the no-results surface when a query matches nothing', (tester) async {
+      await _pumpSyncList(
+        tester,
+        items: const ['apple', 'banana'],
+        searchBy: contains,
+        query: 'xyz',
+      );
+      await tester.pump();
+
+      check(find.text('No results').evaluate()).length.equals(1);
+    });
+  });
 }
 
 Future<void> _pumpList(WidgetTester tester, PageFetcher<int> fetchPage) => tester.pumpWidget(
@@ -69,3 +113,23 @@ Future<void> _drainPages(WidgetTester tester) async {
     await tester.pump();
   }
 }
+
+Future<void> _pumpSyncList(
+  WidgetTester tester, {
+  required List<String> items,
+  required SyncSearchPredicate<String> searchBy,
+  String query = '',
+}) => tester.pumpWidget(
+  Directionality(
+    textDirection: .ltr,
+    child: MediaQuery(
+      data: const MediaQueryData(),
+      child: ListSmith.sync(
+        items: items,
+        searchBy: searchBy,
+        query: query,
+        itemBuilder: (_, item, _) => Text(item),
+      ),
+    ),
+  ),
+);
