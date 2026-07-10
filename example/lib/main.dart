@@ -1,44 +1,59 @@
-import 'package:flutter/material.dart';
-import 'package:list_smith/list_smith.dart';
+import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show ThemeMode;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+
+import 'app/theme_scope.dart';
+import 'features/core/data/constants/const_theme.dart';
+import 'features/core/views/home_view.dart';
 
 void main() => runApp(const ListSmithExampleApp());
 
-/// Demo app for `list_smith`: an async paginated list with pull-to-refresh,
-/// dropped into a Material app to show the neutral defaults inherit the app's
-/// look without list_smith importing Material itself.
-class ListSmithExampleApp extends StatelessWidget {
+/// Showcase app for `list_smith`, built on the sibling packages' platform-adaptive
+/// stack so the neutral list surfaces can be seen dropping into a Material shell
+/// (Android) and a Cupertino shell (iOS) unchanged.
+///
+/// Owns the app-wide theme mode and publishes it through [ThemeScope], so any
+/// screen can flip brightness live (see the app-bar control in `DemoScaffold`).
+/// Platform follows the real device.
+class ListSmithExampleApp extends StatefulWidget {
   const ListSmithExampleApp({super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'list_smith example',
-    theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.indigo)),
-    home: const _HomePage(),
-  );
+  State<ListSmithExampleApp> createState() => _ListSmithExampleAppState();
 }
 
-class _HomePage extends StatelessWidget {
-  const _HomePage();
+class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
+  final _themeMode = ValueNotifier(ThemeMode.system);
 
-  static const _pageCount = 5;
-  static const _fetchDelay = Duration(milliseconds: 600);
-
-  /// A fake async source: five pages of items, then an empty page so
-  /// [StopOnEmptyPagesPolicy] ends the list.
-  Future<List<String>> _fetchPage(int pageIndex, int pageSize) async {
-    await Future<void>.delayed(_fetchDelay);
-    if (pageIndex >= _pageCount) return const <String>[];
-
-    return List.generate(pageSize, (index) => 'Item ${pageIndex * pageSize + index + 1}');
+  @override
+  void dispose() {
+    _themeMode.dispose();
+    super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('list_smith example')),
-    body: ListSmith<String>.async(
-      fetchPage: _fetchPage,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (_, item, _) => ListTile(title: Text(item)),
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: _themeMode,
+    builder: (context, themeMode, _) => PlatformApp(
+      title: 'list_smith example',
+      materialAppData: MaterialAppData(
+        theme: ConstTheme.materialLight,
+        darkTheme: ConstTheme.materialDark,
+        themeMode: themeMode,
+      ),
+      cupertinoAppData: CupertinoAppData(
+        theme: ConstTheme.cupertino(_cupertinoBrightness(themeMode)),
+      ),
+      builder: (_, child) => ThemeScope(notifier: _themeMode, child: child!),
+      home: const HomeView(),
     ),
   );
+
+  /// Cupertino has no `themeMode`; map it to an explicit brightness, or `null`
+  /// to follow the device (the `system` case).
+  Brightness? _cupertinoBrightness(ThemeMode mode) => switch (mode) {
+    .system => null,
+    .light => Brightness.light,
+    .dark => Brightness.dark,
+  };
 }

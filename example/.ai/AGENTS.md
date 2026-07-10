@@ -14,9 +14,28 @@ in the parent [`AGENTS.md`](../AGENTS.md); example-specific code style lives in
   [`example.yml`](../.github/workflows/example.yml) workflow runs `flutter analyze` and
   `dependency_validator` here.
 
-> **TODO (example build-out pass).** The package's public API is still being designed, so this is
-> currently a placeholder app that only exercises the temporary API to keep the dependency honest.
-> Once the list widgets land, this becomes a real pagination / pull-to-refresh / search showcase,
-> and the structure plus state-management conventions get documented here and in `CODESTYLE.md`.
-> The sibling `platform_adaptive_widgets` example is one worked reference (MVVM with a per-feature
-> layout), but don't adopt an approach here without a decision.
+## Architecture
+
+Feature-first MVVM on the maintainer's platform-adaptive stack, mirroring the sibling examples
+(`platform_adaptive_widgets`, `better_internet_connectivity_checker`):
+
+- **State**: `pmvvm` (`MVVM.builder` + `ViewModel`). See [`CODESTYLE.md`](CODESTYLE.md) for the
+  reactivity rule (scoped `ValueNotifier` vs `notifyListeners`) and the view / view-model shape.
+- **Surfaces**: `platform_adaptive_widgets` (Material on Android, Cupertino on iOS), with
+  `material_ui` / `cupertino_ui` for the design libraries and `platform_icons` for icons. This
+  doubles as a showcase: list_smith's neutral surfaces drop into both shells unchanged.
+- **Layout**: `lib/main.dart` (app shell) + `lib/app/` (scopes) + `lib/features/` (one folder per
+  demo, plus `features/core/` for shared pieces). Full layout in [`CODESTYLE.md`](CODESTYLE.md).
+
+The app is a hub (`features/core/views/home_view.dart`) linking to each demo: **Basic feed**
+(`ListSmith.async` + pull-to-refresh, neutral defaults), **Custom surfaces** (every surface
+overridden, plus an inject-failure toggle), and **Playground** (live config knobs).
+
+**Adding a demo:** create `lib/features/<name>/<name>_view.dart` + `_view_model.dart`, add a
+`_DemoTile` to the home hub, and a smoke scenario to `test/widget_test.dart`. Reuse `DemoScaffold`
+for the shell and the `core` fake sources.
+
+## Mobile-targeted
+
+The stack is Android/iOS only: `platformValue` (and `context.platformIcon`) throw on desktop/web.
+Run on a mobile device or simulator.
