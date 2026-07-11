@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="All tests" type="FlutterTestConfigType" factoryName="Flutter Test">
-    <option name="testDir" value="$PROJECT_DIR$/test" />
-    <option name="useRegexp" value="false" />
-    <option name="additionalArgs" value="" />
+  <configuration default="false" name="All tests" type="CompoundRunConfigurationType">
+    <toRun name="Unit tests" type="FlutterTestConfigType" />
+    <toRun name="Widget tests (example)" type="FlutterTestConfigType" />
+    <toRun name="Widget tests (lib)" type="FlutterTestConfigType" />
     <method v="2" />
   </configuration>
 </component>

@@ -12,24 +12,24 @@ import '../core/repos/demo_repository.dart';
 /// view (which holds the list). See `CODESTYLE.md`.
 final class CustomSurfacesViewModel extends ViewModel {
   final _repository = DemoRepository();
-  final _injectFailures = ValueNotifier(false);
+  final _shouldInjectFailuresNotifier = ValueNotifier(false);
 
-  ValueListenable<bool> get injectFailures => _injectFailures;
+  ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
   // Simple case
   // ignore: use_setters_to_change_properties
-  void onFailureToggled({required bool value}) => _injectFailures.value = value;
+  void onFailureToggled({required bool value}) => _shouldInjectFailuresNotifier.value = value;
 
   Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
     final page = await _repository.fetchPage(pageIndex, pageSize);
-    if (_injectFailures.value) throw Exception('Simulated network failure');
+    if (_shouldInjectFailuresNotifier.value) throw Exception('Simulated network failure');
 
     return page;
   }
 
   @override
   void dispose() {
-    _injectFailures.dispose();
+    _shouldInjectFailuresNotifier.dispose();
 
     super.dispose();
   }

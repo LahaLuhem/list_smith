@@ -5,9 +5,11 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/async_search/async_search_view.dart';
 import '/features/basic_feed/basic_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
 import '/features/playground/playground_view.dart';
+import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
 import 'home_view_model.dart';
 
@@ -40,6 +42,19 @@ class HomeView extends StatelessWidget {
             title: 'Playground',
             description: 'Tweak page size, end policy, latency, refresh, and separators live.',
             pageBuilder: (_) => const PlaygroundView(),
+          ),
+          _DemoTile(
+            icon: const PlatformIcon(PlatformIcons.collection),
+            title: 'Sync search',
+            description: 'Client-side search over an in-memory list, with the no-results surface.',
+            pageBuilder: (_) => const SyncSearchView(),
+          ),
+          _DemoTile(
+            icon: const PlatformIcon(PlatformIcons.search),
+            title: 'Async search',
+            description:
+                'Two-view search: paginated feed to results and back, with a policy toggle.',
+            pageBuilder: (_) => const AsyncSearchView(),
           ),
         ],
       ),

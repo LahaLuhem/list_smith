@@ -36,7 +36,7 @@ class CustomSurfacesView extends StatelessWidget {
             ),
           ),
           _FailureToggle(
-            injectFailures: viewModel.injectFailures,
+            injectFailures: viewModel.shouldInjectFailuresListenable,
             onChanged: (value) => viewModel.onFailureToggled(value: value),
           ),
           Expanded(

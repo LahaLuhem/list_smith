@@ -29,7 +29,9 @@ Feature-first MVVM on the maintainer's platform-adaptive stack, mirroring the si
 
 The app is a hub (`features/core/views/home_view.dart`) linking to each demo: **Basic feed**
 (`ListSmith.async` + pull-to-refresh, neutral defaults), **Custom surfaces** (every surface
-overridden, plus an inject-failure toggle), and **Playground** (live config knobs).
+overridden, plus an inject-failure toggle), **Playground** (live config knobs), **Sync search**
+(`ListSmith.sync` client-side filtering), and **Async search** (`ListSmith.async` two-view search
+with a `SearchCachePolicy` toggle).
 
 **Adding a demo:** create `lib/features/<name>/<name>_view.dart` + `_view_model.dart`, add a
 `_DemoTile` to the home hub, and a smoke scenario to `test/widget_test.dart`. Reuse `DemoScaffold`
