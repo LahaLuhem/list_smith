@@ -30,4 +30,23 @@ void main() {
 
         check(policy.hasReachedEnd(pageItemCounts)).equals(ctx.example.val(endedKey) as bool);
       });
+
+  const countKey = 'count';
+  Bdd(endDetection)
+      .scenario('FixedPageCount ends once the given number of pages has been fetched')
+      .given('a FixedPageCount policy with pageCount = <$countKey>')
+      .when('it inspects the per-page item counts <$pageItemCountsKey>')
+      .then('it reports hasReachedEnd = <$endedKey>')
+      // Ends on the page count alone; a page's emptiness is ignored.
+      .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 5]), val(endedKey, false))
+      .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 5, 5]), val(endedKey, true))
+      .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 0, 5]), val(endedKey, true))
+      .example(val(countKey, 1), val(pageItemCountsKey, <int>[5]), val(endedKey, true))
+      .example(val(countKey, 2), val(pageItemCountsKey, <int>[5]), val(endedKey, false))
+      .run((ctx) {
+        final policy = FixedPageCountPolicy(pageCount: ctx.example.val(countKey) as int);
+        final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
+
+        check(policy.hasReachedEnd(pageItemCounts)).equals(ctx.example.val(endedKey) as bool);
+      });
 }

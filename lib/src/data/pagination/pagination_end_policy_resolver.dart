@@ -14,6 +14,7 @@ extension PaginationEndPolicyResolver on PaginationEndPolicy {
   bool hasReachedEnd(List<int> pageItemCounts) => switch (this) {
     StopOnEmptyPagesPolicy(:final emptyRunBeforeEnd) =>
       _trailingEmptyPageCount(pageItemCounts) >= emptyRunBeforeEnd,
+    FixedPageCountPolicy(:final pageCount) => pageItemCounts.length >= pageCount,
   };
 }
 
