@@ -1,7 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
-import 'package:list_smith/src/data/pagination/pagination_end_policy_resolver.dart';
+import 'package:list_smith/src/data/pagination/extensions/pagination_end_policy_resolver_extension.dart';
 
 void main() {
   final endDetection = BddFeature('Pagination end detection');

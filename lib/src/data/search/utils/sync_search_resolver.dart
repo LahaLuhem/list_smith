@@ -1,4 +1,4 @@
-import 'sync_search_predicate.dart';
+import '../typedefs/sync_search_predicate.dart';
 
 /// Applies a sync search over [items]: which items are visible for [query], and whether a search is
 /// actually active (so the caller can show the no-results surface instead of the plain list).

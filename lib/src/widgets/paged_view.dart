@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-import '../data/presentation/error_builder.dart';
-import '../data/presentation/item_builder.dart';
-import '../data/presentation/list_scroll_config.dart';
-import '../data/presentation/no_results_builder.dart';
+import '/src/data/presentation/models/list_scroll_config.dart';
+import '/src/data/presentation/typedefs/error_builder.dart';
+import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/presentation/typedefs/no_results_builder.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';

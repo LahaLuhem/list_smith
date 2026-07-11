@@ -1,4 +1,4 @@
-/// @docImport 'pagination_end_policy.dart';
+/// @docImport '../models/pagination_end_policy.dart';
 library;
 
 /// Fetches one page of items for an async list.

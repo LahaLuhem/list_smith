@@ -1,4 +1,4 @@
-import 'pagination_end_policy.dart';
+import '../models/pagination_end_policy.dart';
 
 /// Internal end-detection logic for [PaginationEndPolicy].
 ///
@@ -6,7 +6,7 @@ import 'pagination_end_policy.dart';
 /// the "has the data ended?" decision remains a small, widget-free unit that can be unit-tested
 /// directly. It can't instead be a `@visibleForTesting` member on the policy: the shell calls this
 /// from another library, which that annotation forbids (and it would not un-export it either).
-extension PaginationEndPolicyResolver on PaginationEndPolicy {
+extension PaginationEndPolicyResolverExtension on PaginationEndPolicy {
   /// Whether pagination has reached its end, given the item count of each page fetched so far, in order.
   ///
   /// Neutral by design: only plain page sizes cross this boundary, never a paging-library type,

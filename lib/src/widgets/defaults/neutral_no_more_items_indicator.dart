@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../utils/neutral_theme.dart';
+import '/src/utils/neutral_theme.dart';
 
 /// The neutral default footer shown once every page has loaded.
 ///

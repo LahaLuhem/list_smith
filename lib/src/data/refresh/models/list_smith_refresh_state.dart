@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'list_smith_refresh_phase.dart';
+import '../enums/list_smith_refresh_phase.dart';
 
 /// The state of list_smith's pull-to-refresh at build time, handed to a [RefreshBuilder].
 ///

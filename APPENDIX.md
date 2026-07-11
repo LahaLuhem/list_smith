@@ -69,14 +69,21 @@ during the repository setup itself.
 ## `lib/src/` directory layout
 
 - **Decision:** organise `lib/src/` by kind at the top level (`data/`, `widgets/`, `utils/`), then
-  by feature within each (`data/refresh/`, `widgets/defaults/`, ...), one primary public class per
-  file.
+  by feature within each (`data/pagination/`, `data/search/`, ...), then **by kind again within a
+  feature** (`models/`, `typedefs/`, `enums/`, `extensions/`, `utils/`), one primary public symbol
+  per file. Sealed cases nest one level under the base's kind and stay `part`s of it
+  (`models/policies/`, `source/sources/`). The third level was adopted as each feature's vocabulary
+  grew past a couple of files; a small feature stays flat until it earns the split.
 - **Why:** it matches the maintainer's existing Flutter packages (`platform_adaptive_widgets` and
   `smart_search_list` both use `models/` + `widgets/` + a helpers folder), so a contributor moving
   between the packages meets the same shape. By-kind at the top keeps data separate from behaviour;
-  by-feature within keeps a concern's pieces together.
-- **Rejected:** top-level `enums/` / `typedefs/` folders. They scatter one cohesive vocabulary (a
-  typedef, the model it builds, and the enum it carries) across three folders.
+  by-feature keeps a concern's pieces together; by-kind within a feature keeps a grown feature
+  scannable (all its typedefs in one place, its policy cases in another).
+- **Rejected:** *top-level* `enums/` / `typedefs/` folders (`lib/src/typedefs/`), which would scatter
+  one feature's vocabulary across the whole tree. The by-kind split is deliberately scoped *within* a
+  feature, so a feature stays self-contained; and a typedef with a single home type still lives in
+  that type's file (`RefreshBuilder` with `ListSmithRefreshState`), never pulled out just to fill a
+  `typedefs/` folder.
 - **`data/` over `models/`:** the folder also holds enums and typedefs, which are not models. Public
   types stay unexported from `lib/list_smith.dart` until the widget shell lands, so the whole public
   surface appears in one place at one time.

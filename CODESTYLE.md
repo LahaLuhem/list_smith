@@ -13,6 +13,7 @@ so renames don't break callers.
 - [Type safety & nullability](#type-safety)
 - [Naming](#naming)
 - [Directory layout](#directory-layout)
+- [Imports](#imports)
 - [Formatting](#formatting)
 - [Constants & magic numbers](#constants)
 - [Class structure](#class-structure)
@@ -126,21 +127,57 @@ live under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
 <a id="directory-layout"></a>
 ## Directory layout
 
-`lib/src/` is organised **by kind at the top level, then by feature within**, the same shape as the
-maintainer's `platform_adaptive_widgets` and `smart_search_list`:
+`lib/src/` is organised **by kind at the top level, then by feature, then by kind again within each
+feature**:
 
-- **`data/`** holds pure vocabulary: enums, typedefs, sealed classes, immutable models. Sub-group by
-  feature (`data/refresh/`, `data/pagination/`, `data/source/`), not by finer kind. A typedef lives
-  in the file of the type it serves (`RefreshBuilder` sits with `ListSmithRefreshState`), so a
-  feature's vocabulary stays in one place.
+- **`data/`** holds pure vocabulary, sub-grouped by feature (`data/pagination/`, `data/search/`,
+  `data/refresh/`, `data/presentation/`, `data/source/`). Within a feature, files are grouped by
+  kind: `models/` (classes: sealed types, immutable data, policy objects), `typedefs/` (standalone
+  function-type aliases), `enums/`, `extensions/`, and `utils/` (pure functions). Sealed cases nest
+  one level under the base's kind and stay `part`s of the base: `models/policies/` for the policy
+  cases, `source/sources/` for the source cases.
 - **`widgets/`** holds everything that is a `Widget`; the neutral default surfaces live under
-  `widgets/defaults/`. `data/` and `widgets/` mirror each other by feature name.
-- **`utils/`** holds helpers that are neither a widget nor a data type (a function or a constant),
-  such as `utils/neutral_theme.dart`.
+  `widgets/defaults/`.
+- **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
+  (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
 
-Do **not** create top-level `enums/` or `typedefs/` folders: splitting a typedef from its type, or
-an enum from the model it describes, scatters one cohesive unit. Rationale in
-[`APPENDIX.md`](APPENDIX.md#src-directory-layout).
+Two placement rules earn their keep:
+
+- **A typedef with a single home type stays in that type's file**; only a standalone typedef with no
+  such home gets its own file under the feature's `typedefs/`. So `RefreshBuilder` sits with
+  `ListSmithRefreshState` in `refresh/models/`, while `PageFetcher` and `ItemBuilder` stand alone in
+  their features' `typedefs/`.
+- **A resolver is an unexported `extension` in `<feature>/extensions/`**, named
+  `<thing>_resolver_extension.dart`; a pure top-level *function* resolver instead goes in
+  `<feature>/utils/` (like `resolveSyncSearch`). Either way the public type stays pure data and its
+  decision logic gets a widget-free, unit-testable home. Rationale in
+  [`APPENDIX.md`](APPENDIX.md#src-directory-layout).
+
+---
+
+<a id="imports"></a>
+## Imports
+
+**Relative within a feature, root-relative across features.** When an import's target lives in the
+same feature subtree, use a path relative to the importing file. When it crosses into another feature
+or top-level area, use a **root-relative** path with a leading `/` (Dart resolves it from the
+package's `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`). The leading `/` is a
+deliberate visual cue: a file's own-feature imports read as bare relatives, and its cross-feature
+ones stand out.
+
+```dart
+// in widgets/async_list_view.dart
+import '/src/data/pagination/models/pagination_end_policy.dart'; // other feature: leading /
+import '/src/utils/query_debouncer.dart';                        // other area: leading /
+import 'paged_view.dart';                                        // same folder: relative
+import 'refresh_binding.dart';                                   // same folder: relative
+```
+
+The split holds inside a feature too: `search/extensions/…_extension.dart` reaches its own model as
+`../models/search_cache_policy.dart` (relative), never root-relative. `@docImport` follows the same
+rule; `part` / `part of` are always same-feature, so always relative. The example app applies the
+identical convention with `/features/…` for its cross-feature imports (see
+[`example/CODESTYLE.md`](example/CODESTYLE.md)).
 
 ---
 

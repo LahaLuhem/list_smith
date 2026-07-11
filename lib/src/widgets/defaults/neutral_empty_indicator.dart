@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../utils/neutral_theme.dart';
+import '/src/utils/neutral_theme.dart';
 
 /// The neutral default surface shown when the source yields no items at all.
 ///

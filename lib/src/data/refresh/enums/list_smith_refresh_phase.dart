@@ -1,4 +1,4 @@
-/// @docImport 'list_smith_refresh_state.dart';
+/// @docImport '../models/list_smith_refresh_state.dart';
 library;
 
 /// The phase of a pull-to-refresh gesture, as handed to a [RefreshBuilder].

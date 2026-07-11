@@ -1,19 +1,20 @@
-/// @docImport '../data/search/search_cache_policy.dart';
+/// @docImport '/src/data/search/models/search_cache_policy.dart';
 /// @docImport 'list_smith.dart';
 library;
 
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-import '../data/pagination/pagination_end_policy.dart';
-import '../data/pagination/pagination_end_policy_resolver.dart';
-import '../data/presentation/async_list_surfaces.dart';
-import '../data/presentation/item_builder.dart';
-import '../data/presentation/list_scroll_config.dart';
-import '../data/presentation/no_results_builder.dart';
-import '../data/search/search_cache_policy_resolver.dart';
-import '../data/source/list_source.dart';
-import '../utils/query_debouncer.dart';
+import '/src/data/pagination/extensions/pagination_end_policy_resolver_extension.dart';
+import '/src/data/pagination/models/pagination_end_policy.dart';
+import '/src/data/presentation/models/async_list_surfaces.dart';
+import '/src/data/presentation/models/list_scroll_config.dart';
+import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/search/enums/cache_action.dart';
+import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
+import '/src/data/source/list_source.dart';
+import '/src/utils/query_debouncer.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 

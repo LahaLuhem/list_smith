@@ -4,12 +4,12 @@ library;
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
-import '../data/presentation/item_builder.dart';
-import '../data/presentation/list_scroll_config.dart';
-import '../data/presentation/no_results_builder.dart';
-import '../data/search/sync_search_resolver.dart';
-import '../data/source/list_source.dart';
-import '../utils/query_debouncer.dart';
+import '/src/data/presentation/models/list_scroll_config.dart';
+import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/search/utils/sync_search_resolver.dart';
+import '/src/data/source/list_source.dart';
+import '/src/utils/query_debouncer.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
 

@@ -1,10 +1,10 @@
-/// @docImport '../../widgets/list_smith.dart';
+/// @docImport '/src/widgets/list_smith.dart';
 library;
 
 import 'package:flutter/widgets.dart';
 
-import '../refresh/list_smith_refresh_state.dart';
-import 'error_builder.dart';
+import '/src/data/refresh/models/list_smith_refresh_state.dart';
+import '../typedefs/error_builder.dart';
 
 /// Groups the overridable surfaces that only an async list has, so [ListSmith.async]'s behavioural
 /// parameters aren't buried among a run of optional builders.
