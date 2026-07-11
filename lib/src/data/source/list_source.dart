@@ -1,13 +1,15 @@
 import '../pagination/page_fetcher.dart';
 import '../pagination/pagination_end_policy.dart';
+import '../search/search_cache_policy.dart';
+import '../search/search_page_fetcher.dart';
 import '../search/sync_search_predicate.dart';
 
 /// The internal, sealed representation of where a list_smith list gets its data.
 ///
-/// Two cases: [AsyncSource] (paginated) and [SyncSource] (in-memory search). The widget's named
-/// constructors build one of these, so the dispatcher switches over a sealed type instead of
-/// juggling nullable mode-fields (no parameter is ever silently inert). Never exposed: consumers
-/// configure the list through the constructor parameters, not by constructing a source.
+/// Two cases: [AsyncSource] (paginated, optionally searchable) and [SyncSource] (in-memory search).
+/// The widget's named constructors build one of these, so the dispatcher switches over a sealed type
+/// instead of juggling nullable mode-fields (no parameter is ever silently inert). Never exposed:
+/// consumers configure the list through the constructor parameters, not by constructing a source.
 sealed class ListSource<T extends Object> {
   const ListSource();
 }
@@ -15,22 +17,40 @@ sealed class ListSource<T extends Object> {
 /// An async, paginated source: a [PageFetcher] and the [PaginationEndPolicy] that decides when its data runs out.
 ///
 /// Bundles `pageSize` here (rather than on the widget) so it stays scoped to the async path:
-/// the sync source carries no page size, so there is no inert field to explain away.
+/// the sync source carries no page size, so there is no inert field to explain away. Search is opt-in:
+/// with a [searchFetchPage] the list gains a search mode governed by [searchCachePolicy]; without one
+/// it is a pure pagination list and the search-related fields are inert.
 final class AsyncSource<T extends Object> extends ListSource<T> {
-  /// Fetches each page of items.
+  /// Fetches each page of items in normal (non-search) mode.
   final PageFetcher<T> fetchPage;
 
-  /// The number of items requested per page, passed to [fetchPage].
+  /// Fetches each page of results in search mode; null when the list does not support search.
+  final SearchPageFetcher<T>? searchFetchPage;
+
+  /// The number of items requested per page, passed to [fetchPage] and [searchFetchPage].
   final int pageSize;
 
-  /// Decides when pagination has reached the end.
+  /// Decides when pagination has reached the end (in either mode).
   final PaginationEndPolicy endPolicy;
 
-  /// Bundles the async pagination configuration built from the `.async` constructor.
-  const AsyncSource({required this.fetchPage, required this.pageSize, required this.endPolicy});
+  /// Decides how cached items carry across a normal ↔ search transition.
+  final SearchCachePolicy searchCachePolicy;
+
+  /// Bundles the async configuration built from the `.async` constructor.
+  const AsyncSource({
+    required this.fetchPage,
+    required this.pageSize,
+    required this.endPolicy,
+    required this.searchCachePolicy,
+    this.searchFetchPage,
+  });
+
+  /// Whether this source supports search, i.e. a [searchFetchPage] was provided.
+  bool get supportsSearch => searchFetchPage != null;
 
   @override
-  String toString() => 'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy)';
+  String toString() =>
+      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, searchCachePolicy: $searchCachePolicy)';
 }
 
 /// A sync, in-memory source: the [items] to search over and the [searchBy] predicate that filters them.

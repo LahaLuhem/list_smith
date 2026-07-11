@@ -94,6 +94,135 @@ void main() {
       check(find.text('No results').evaluate()).length.equals(1);
     });
   });
+
+  feature('ListSmith.async search', () {
+    scenarioWidgets('an empty query shows the normal list even with a search fetcher', (
+      tester,
+    ) async {
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        searchFetchPage: (_, _, _) async => const [99],
+        query: '',
+      );
+      await _settle(tester);
+
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.text('item 99').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('a non-empty query shows the search results', (tester) async {
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: (_, _) async => const [1, 2, 3],
+        searchFetchPage: (query, pageIndex, _) async =>
+            pageIndex == 0 ? [query.length * 10] : const <int>[],
+        query: 'ab',
+      );
+      await _settle(tester);
+
+      check(find.text('item 20').evaluate()).length.equals(1);
+      check(find.text('item 1').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('a search that matches nothing shows the no-results surface', (tester) async {
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: (_, _) async => const [1, 2, 3],
+        searchFetchPage: (_, _, _) async => const <int>[],
+        query: 'zzz',
+      );
+      await _settle(tester);
+
+      check(find.text('No results').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('KeepCachePolicy restores the normal list on clearing, without refetching', (
+      tester,
+    ) async {
+      var normalFetches = 0;
+      Future<Iterable<int>> fetchPage(int pageIndex, int _) async {
+        normalFetches++;
+
+        return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+      }
+
+      Future<Iterable<int>> searchFetchPage(String _, int pageIndex, int _) async =>
+          pageIndex == 0 ? const [99] : const <int>[];
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: '',
+        cachePolicy: const KeepCachePolicy(),
+      );
+      await _settle(tester);
+      check(find.text('item 1').evaluate()).length.equals(1);
+      final fetchesAfterNormal = normalFetches;
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: 'x',
+        cachePolicy: const KeepCachePolicy(),
+      );
+      await _settle(tester);
+      check(find.text('item 99').evaluate()).length.equals(1);
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: '',
+        cachePolicy: const KeepCachePolicy(),
+      );
+      await _settle(tester);
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(normalFetches).equals(fetchesAfterNormal);
+    });
+
+    scenarioWidgets('ReplaceCachePolicy refetches the normal list on clearing', (tester) async {
+      var normalFetches = 0;
+      Future<Iterable<int>> fetchPage(int pageIndex, int _) async {
+        normalFetches++;
+
+        return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+      }
+
+      Future<Iterable<int>> searchFetchPage(String _, int pageIndex, int _) async =>
+          pageIndex == 0 ? const [99] : const <int>[];
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: '',
+      );
+      await _settle(tester);
+      final fetchesAfterNormal = normalFetches;
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: 'x',
+      );
+      await _settle(tester);
+      check(find.text('item 99').evaluate()).length.equals(1);
+
+      await _pumpAsyncSearch(
+        tester,
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: '',
+      );
+      await _settle(tester);
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(normalFetches).isGreaterThan(fetchesAfterNormal);
+    });
+  });
 }
 
 Future<void> _pumpList(WidgetTester tester, PageFetcher<int> fetchPage) => tester.pumpWidget(
@@ -133,3 +262,33 @@ Future<void> _pumpSyncList(
     ),
   ),
 );
+
+Future<void> _pumpAsyncSearch(
+  WidgetTester tester, {
+  required PageFetcher<int> fetchPage,
+  required SearchPageFetcher<int> searchFetchPage,
+  required String query,
+  SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
+}) => tester.pumpWidget(
+  Directionality(
+    textDirection: .ltr,
+    child: MediaQuery(
+      data: const MediaQueryData(),
+      child: ListSmith.async(
+        fetchPage: fetchPage,
+        searchFetchPage: searchFetchPage,
+        query: query,
+        searchCachePolicy: cachePolicy,
+        searchDebounce: const Duration(milliseconds: 20),
+        itemBuilder: (_, item, _) => Text('item $item'),
+      ),
+    ),
+  ),
+);
+
+/// Fires the search debounce (20ms), then drains the triggered fetch.
+Future<void> _settle(WidgetTester tester) async {
+  await tester.pump(const Duration(milliseconds: 20));
+
+  await _drainPages(tester);
+}

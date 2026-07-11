@@ -6,6 +6,8 @@ import '../data/presentation/async_list_surfaces.dart';
 import '../data/presentation/item_builder.dart';
 import '../data/presentation/list_scroll_config.dart';
 import '../data/presentation/no_results_builder.dart';
+import '../data/search/search_cache_policy.dart';
+import '../data/search/search_page_fetcher.dart';
 import '../data/search/sync_search_predicate.dart';
 import '../data/source/list_source.dart';
 import 'async_list_view.dart';
@@ -18,11 +20,11 @@ import 'sync_list_view.dart';
 /// has a neutral, widgets-layer default, so the list drops into a Material, Cupertino, or bespoke
 /// app without importing a look it never chose.
 ///
-/// Build it with [ListSmith.async] (a paginated, pull-to-refresh list over a [PageFetcher]) or
-/// [ListSmith.sync] (an in-memory list searched by a [SyncSearchPredicate]). Internally it is a
-/// stateless dispatcher over a sealed [ListSource]: each named constructor builds one source case,
-/// and [build] routes that case to the engine for it, so no parameter meant for one mode is ever
-/// silently inert on another.
+/// Build it with [ListSmith.async] (a paginated, pull-to-refresh list over a [PageFetcher], made
+/// searchable by also passing a [SearchPageFetcher]) or [ListSmith.sync] (an in-memory list searched
+/// by a [SyncSearchPredicate]). Internally it is a stateless dispatcher over a sealed [ListSource]:
+/// each named constructor builds one source case, and [build] routes that case to the engine for it,
+/// so no parameter meant for one mode is ever silently inert on another.
 class ListSmith<T extends Object> extends StatelessWidget {
   final ListSource<T> _source;
 
@@ -46,14 +48,14 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// indicator).
   final AsyncListSurfaces surfaces;
 
-  /// The current search query for a `.sync` list; trimmed and gated by [minSearchLength].
+  /// The current search query, owned and passed in by the consumer; trimmed and gated by
+  /// [minSearchLength]. Drives sync filtering, and async search when a search fetcher is provided.
   final String query;
 
-  /// Minimum trimmed [query] length before a sync search runs; below it the query counts as empty.
+  /// Minimum trimmed [query] length before a search runs; below it the query counts as empty.
   final int minSearchLength;
 
-  /// How long to wait after [query] changes before a sync search filters; [Duration.zero] is
-  /// immediate.
+  /// How long to wait after [query] changes before it takes effect; [Duration.zero] is immediate.
   final Duration searchDebounce;
 
   /// Builds the surface shown when a search matches nothing; null uses the neutral default.
@@ -62,28 +64,42 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
-  /// Creates an async, paginated list driven by [fetchPage].
+  /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [searchFetchPage].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
-  /// pagination ends per `endPolicy` (by default, the first empty page). [itemBuilder] renders each
-  /// item. [surfaces] overrides the async-only neutral defaults; [emptyBuilder] and [scroll] apply to
-  /// every list.
+  /// pagination ends per `endPolicy` (by default, the first empty page). Passing [searchFetchPage]
+  /// opts into search: a non-empty [query] switches to a search view fetched by it, and
+  /// [searchCachePolicy] governs how the normal list carries across that switch. [itemBuilder] renders
+  /// each item; [surfaces] overrides the async-only neutral defaults; [emptyBuilder], [noResultsBuilder],
+  /// and [scroll] apply to every list.
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
     int pageSize = 20,
     this.pullToRefresh = true,
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+    SearchPageFetcher<T>? searchFetchPage,
+    SearchCachePolicy searchCachePolicy = const ReplaceCachePolicy(),
+    this.query = '',
+    this.minSearchLength = 0,
+    this.searchDebounce = const Duration(milliseconds: 300),
     this.surfaces = const AsyncListSurfaces(),
     this.scroll = const ListScrollConfig(),
     this.emptyBuilder,
+    this.noResultsBuilder,
     this.separatorBuilder,
     super.key,
-  }) : query = '',
-       minSearchLength = 0,
-       searchDebounce = .zero,
-       noResultsBuilder = null,
-       _source = AsyncSource(fetchPage: fetchPage, pageSize: pageSize, endPolicy: endPolicy);
+  }) : assert(
+         searchFetchPage != null || query.isEmpty,
+         'A query was set without a searchFetchPage; pass searchFetchPage to enable search.',
+       ),
+       _source = AsyncSource(
+         fetchPage: fetchPage,
+         pageSize: pageSize,
+         endPolicy: endPolicy,
+         searchCachePolicy: searchCachePolicy,
+         searchFetchPage: searchFetchPage,
+       );
 
   /// Creates a sync, in-memory searchable list over [items].
   ///
@@ -115,7 +131,11 @@ class ListSmith<T extends Object> extends StatelessWidget {
       itemBuilder: itemBuilder,
       separatorBuilder: separatorBuilder,
       pullToRefresh: pullToRefresh,
+      query: query,
+      minSearchLength: minSearchLength,
+      searchDebounce: searchDebounce,
       emptyBuilder: emptyBuilder,
+      noResultsBuilder: noResultsBuilder,
       surfaces: surfaces,
       scroll: scroll,
     ),

@@ -18,6 +18,7 @@ during the repository setup itself.
 - [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
 - [Async override surfaces grouped; universal ones stay flat](#async-surfaces-holder)
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
+- [Async search: one controller, two views](#async-two-view-search)
 
 <!-- TOC end -->
 
@@ -152,6 +153,33 @@ during the repository setup itself.
   imports `ScrollCacheExtent` from `package:flutter/rendering.dart` (rendering is the widgets layer's
   own foundation, not a design system, so the no-Material/Cupertino rule is unaffected). The async
   path is untouched: ISP's `PagedListView` has its own, non-deprecated `cacheExtent`.
+
+---
+
+<a id="async-two-view-search"></a>
+## Async search: one controller, two views
+
+- **Decision:** async search rides a single `PagingController`. A mode-aware fetch closure reads the
+  debounced committed query: empty runs the normal `fetchPage`, non-empty runs `searchFetchPage`.
+  Search is opt-in (a null `searchFetchPage` is a plain pagination list), and search mode requires
+  both a non-empty query and a fetcher.
+- **Why one controller, not two:** pagination and pull-to-refresh then compose for free, one end
+  policy and one `refresh()` serve both modes, and there is no second controller to keep in sync.
+  `refresh()` re-reads the query, so pulling to refresh in search mode reloads the current search.
+- **Cache policy is a pure decision plus an impure execution.** On a committed-query change,
+  `SearchCachePolicy.actionFor(wasSearching, isSearching)` returns a `CacheAction`
+  (`refresh` / `snapshotThenRefresh` / `restoreNormal`). That decision is widget- and controller-free,
+  so it is unit-tested directly (the `PaginationEndPolicyResolver` split again); the view executes it
+  against the controller. `Keep` snapshots `controller.value` on entering search and restores it on
+  leaving (an instant return, no refetch); `Replace` always refetches; a search-to-search change
+  refetches under either policy.
+- **Safety of `searchFetchPage!`:** search mode is `query.isNotEmpty && source.supportsSearch`, so the
+  fetch closure only calls `searchFetchPage!` when it is non-null. A query set without a fetcher trips
+  an `assert` in debug and degrades to normal pagination in release, not a null-check crash.
+- **Shared `QueryDebouncer`:** the debounce (timer, trim, skip-unchanged) was extracted from
+  `SyncListView` into an unexported helper both views own (a 2c refactor-first step). The owner seeds
+  the initial query synchronously and schedules each later change; a zero-debounce change commits on
+  the next tick, which removed a `setState`-during-`didUpdateWidget` hazard the async path would hit.
 
 ---
 

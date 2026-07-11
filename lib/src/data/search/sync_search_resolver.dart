@@ -5,8 +5,8 @@ import 'sync_search_predicate.dart';
 ///
 /// [query] is trimmed; when the trimmed query is empty or shorter than [minSearchLength] it counts
 /// as no search, so every item stays visible and `isSearching` is `false`. Kept widget-free and pure
-/// so the gating and filtering are unit-tested directly, without pumping a widget (mirrors
-/// `PaginationEndPolicyResolver`).
+/// so the gating and filtering are unit-tested directly, without pumping a widget
+/// (mirrors `PaginationEndPolicyResolver`).
 ({List<T> visibleItems, bool isSearching}) resolveSyncSearch<T extends Object>(
   List<T> items,
   SyncSearchPredicate<T> searchBy,

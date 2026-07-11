@@ -4,10 +4,12 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '../data/presentation/error_builder.dart';
 import '../data/presentation/item_builder.dart';
 import '../data/presentation/list_scroll_config.dart';
+import '../data/presentation/no_results_builder.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
 import 'defaults/neutral_no_more_items_indicator.dart';
+import 'defaults/neutral_no_results_indicator.dart';
 
 /// Wraps ISP's [PagedListView], filling every delegate slot with list_smith's neutral defaults
 /// (or the consumer's overrides) so no Material surface leaks through, and bridging the bare error
@@ -28,6 +30,12 @@ class PagedView<T extends Object> extends StatelessWidget {
   /// Scroll and layout configuration.
   final ListScrollConfig scroll;
 
+  /// Whether the current results are a search: picks the no-results surface over the empty one.
+  final bool isSearchMode;
+
+  /// The committed query, handed to [noResultsBuilder] when [isSearchMode] and nothing matched.
+  final String query;
+
   /// Builds separators between items; null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
@@ -43,8 +51,11 @@ class PagedView<T extends Object> extends StatelessWidget {
   /// See [firstPageLoadingBuilder].
   final ErrorBuilder? newPageErrorBuilder;
 
-  /// See [firstPageLoadingBuilder].
+  /// See [firstPageLoadingBuilder]. Shown when the source has no items in normal mode.
   final WidgetBuilder? emptyBuilder;
+
+  /// See [firstPageLoadingBuilder]. Shown when a search yields nothing in search mode.
+  final NoResultsBuilder? noResultsBuilder;
 
   /// See [firstPageLoadingBuilder].
   final WidgetBuilder? noMoreItemsBuilder;
@@ -55,12 +66,15 @@ class PagedView<T extends Object> extends StatelessWidget {
     required this.fetchNextPage,
     required this.itemBuilder,
     required this.scroll,
+    required this.isSearchMode,
+    required this.query,
     this.separatorBuilder,
     this.firstPageLoadingBuilder,
     this.newPageLoadingBuilder,
     this.firstPageErrorBuilder,
     this.newPageErrorBuilder,
     this.emptyBuilder,
+    this.noResultsBuilder,
     this.noMoreItemsBuilder,
     super.key,
   });
@@ -86,8 +100,9 @@ class PagedView<T extends Object> extends StatelessWidget {
         builder: newPageErrorBuilder,
         compact: true,
       ),
-      noItemsFoundIndicatorBuilder: (context) =>
-          emptyBuilder?.call(context) ?? const NeutralEmptyIndicator(),
+      noItemsFoundIndicatorBuilder: (context) => isSearchMode
+          ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
+          : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
       noMoreItemsIndicatorBuilder: (context) =>
           noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
     );

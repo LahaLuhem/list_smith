@@ -451,6 +451,37 @@ Legitimate uses: sealed-class cases across files (Dart requires the same library
 subtypes) and code-generation outputs (`*.g.dart`). Avoid it for general organisation; imports are
 explicit, and parts leak `_private` symbols across files.
 
+<a id="idioms-fine-grained-rebuilds"></a>
+### `ValueNotifier` + `ValueListenableBuilder` over `setState`
+
+In a `StatefulWidget`, drive rebuilds by holding the changing value in a `ValueNotifier<T>` and
+wrapping only the dependent subtree in a `ValueListenableBuilder`, rather than calling `setState`.
+`setState` re-runs the whole `State.build`; a `ValueListenableBuilder` rebuilds only its own builder,
+and the subtree it wraps is exactly the part that depends on the value, so the rebuild scope is
+visible at the call site instead of implied.
+
+```dart
+// Prefer: only the wrapped subtree rebuilds on change, and which subtree is explicit.
+late final _result = ValueNotifier(_resolve());
+void _onChanged() => _result.value = _resolve();
+@override
+Widget build(BuildContext context) => ValueListenableBuilder(
+  valueListenable: _result,
+  builder: (context, result, _) => /* only the part that depends on result */,
+);
+
+// Over: setState re-runs all of build, and nothing marks which part actually changed.
+late var _result = _resolve();
+void _onChanged() => setState(() => _result = _resolve());
+```
+
+Dispose the notifier in `State.dispose`. This is the widget side of the same reasoning the example
+applies to its view-models (a scoped `ValueNotifier` for a value that rebuilds a small part; one
+coarse notification only when many sites must change together): see
+[`example/CODESTYLE.md`](example/CODESTYLE.md) *State management*. The coarse fallback in a widget is
+`setState`; reach for it only when genuinely many independent parts of the one widget change at once,
+where a single rebuild beats many builders.
+
 ---
 
 <a id="dartdoc"></a>
