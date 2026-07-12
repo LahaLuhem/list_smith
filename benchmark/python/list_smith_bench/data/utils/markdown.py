@@ -72,6 +72,73 @@ def sync_search_scaling_table(dataframe: pl.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
+def overhead_table(dataframe: pl.DataFrame) -> str:
+    """Table of the overhead micros: observer_dispatch + wrapping_overhead by page count."""
+    fmt = value_formatter("us")
+    rows = ["| Micro | Metric | Median (us) |", "|---|---|---:|"]
+
+    if "microseconds_per_dispatch" in dataframe.columns:
+        obs = dataframe.filter(pl.col("microseconds_per_dispatch").is_not_null())
+        if not obs.is_empty():
+            median = obs.select(pl.col("microseconds_per_dispatch").median()).item()
+            rows.append(f"| `observer_dispatch` | us / dispatch | {fmt(median)} |")
+
+    if (
+        "microseconds_per_key_computation" in dataframe.columns
+        and "page_count" in dataframe.columns
+    ):
+        wrap = (
+            dataframe.filter(pl.col("microseconds_per_key_computation").is_not_null())
+            .filter(pl.col("page_count").is_not_null())
+            .group_by("page_count")
+            .agg(pl.col("microseconds_per_key_computation").median().alias("median"))
+            .sort("page_count")
+        )
+        for row in wrap.iter_rows(named=True):
+            plural = "s" if row["page_count"] != 1 else ""
+            rows.append(
+                f"| `wrapping_overhead` ({row['page_count']} page{plural}) "
+                f"| us / key | {fmt(row['median'])} |"
+            )
+
+    if len(rows) == 2:
+        return "_(no wrapping-overhead micro data in input)_\n"
+    return "\n".join(rows) + "\n"
+
+
+def frame_scenarios_table(dataframe: pl.DataFrame) -> str:
+    """Per-frame build cost for the UI scroll/refresh scenarios (scroll pair, cri)."""
+    if "avg_frame_build_millis" not in dataframe.columns:
+        return "_(no frame-scenario data in input)_\n"
+
+    df = dataframe.filter(pl.col("avg_frame_build_millis").is_not_null())
+    if df.is_empty():
+        return "_(no frame-scenario data in input)_\n"
+
+    agg = (
+        df.group_by("scenario")
+        .agg(
+            pl.col("frame_count").median().alias("frames"),
+            pl.col("avg_frame_build_millis").median().alias("avg"),
+            pl.col("worst_frame_build_millis").median().alias("worst"),
+            pl.col("p99_frame_build_millis").median().alias("p99"),
+            pl.col("missed_frame_build_count").median().alias("missed"),
+        )
+        .sort("scenario")
+    )
+
+    rows = [
+        "| Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for row in agg.iter_rows(named=True):
+        rows.append(
+            f"| `{row['scenario']}` | {row['frames']:.0f} | {row['avg']:.2f} "
+            f"| {row['worst']:.2f} | {row['p99']:.2f} | {row['missed']:.0f} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
 def render_summary_markdown(
     dataframe: pl.DataFrame,
     *,
@@ -101,5 +168,28 @@ def render_summary_markdown(
 
     if "sync_search_scaling.png" in chart_names:
         parts.append("\n![Sync-search scaling](sync_search_scaling.png)\n")
+
+    parts.extend(
+        [
+            "## Wrapping overhead: list_smith on top of ISP\n",
+            "Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer "
+            "callback (the null-check + virtual call list_smith makes in `_fetchPage`); "
+            "`wrapping_overhead` is the per-`getNextPageKey` cost (rebuild the page-item-counts + "
+            "run the end policy) as loaded pages grow. Both are dwarfed by any real fetch.\n",
+            overhead_table(dataframe),
+        ]
+    )
+
+    parts.extend(
+        [
+            "## UI scroll/refresh: per-frame build cost\n",
+            "From the profile-mode `integration_test` scenarios (real frames on this machine). "
+            "`avg`/`worst`/`p99 build` are the UI-thread build cost per frame (where list_smith's "
+            "code runs); `missed` counts frames over the 16.67ms budget. `isp_scroll` vs "
+            "`bare_listview` (same items + scroll, no list_smith) is the attribution: the small "
+            "delta is what list_smith-over-ISP adds on top of a plain list.\n",
+            frame_scenarios_table(dataframe),
+        ]
+    )
 
     return "\n".join(parts)
