@@ -29,6 +29,16 @@ RESULTS_DIR: Final[Path] = BENCHMARK_DIR / "results-local"
 # maintainer baseline.
 REPORTS_DIR: Final[Path] = BENCHMARK_DIR / "reports"
 
+# ---- UI scenarios ---------------------------------------------------------
+
+APP_DIR: Final[Path] = BENCHMARK_DIR / "app"
+SCENARIOS_DIR: Final[Path] = APP_DIR / "integration_test"
+# Driver passed to `flutter drive`, relative to APP_DIR.
+PERF_DRIVER_TARGET: Final[str] = "test_driver/perf_driver.dart"
+# Default device for UI scenarios. macOS desktop is the reference target (real, quiet hardware);
+# the Android emulator (e.g. emulator-5554) is a one-flag directional cross-check.
+DEFAULT_SCENARIO_DEVICE: Final[str] = "macos"
+
 # ---- run defaults ---------------------------------------------------------
 
 DEFAULT_ITERATIONS: Final[int] = 10
@@ -63,3 +73,11 @@ def dart_command() -> list[str]:
     if fvmrc.exists() and shutil.which("fvm"):
         return ["fvm", "dart"]
     return ["dart"]
+
+
+def flutter_command() -> list[str]:
+    """The `flutter` invocation, honouring the `.fvmrc` pin when fvm is available."""
+    fvmrc = PROJECT_ROOT / ".fvmrc"
+    if fvmrc.exists() and shutil.which("fvm"):
+        return ["fvm", "flutter"]
+    return ["flutter"]

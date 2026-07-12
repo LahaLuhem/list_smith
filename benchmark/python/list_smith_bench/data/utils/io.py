@@ -12,7 +12,7 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
-from list_smith_bench.config import MICRO_DIR, REPORTS_DIR
+from list_smith_bench.config import MICRO_DIR, REPORTS_DIR, SCENARIOS_DIR
 from list_smith_bench.data.dtos.result_record import ResultRecord
 
 
@@ -20,6 +20,12 @@ def discover_sources() -> Iterable[Path]:
     """Yield every .dart micro entry-point to AOT-compile."""
     if MICRO_DIR.exists():
         yield from sorted(MICRO_DIR.glob("*.dart"))
+
+
+def discover_scenarios() -> Iterable[Path]:
+    """Yield every UI scenario entry-point (integration_test/*.dart; support/ excluded)."""
+    if SCENARIOS_DIR.exists():
+        yield from sorted(SCENARIOS_DIR.glob("*.dart"))
 
 
 def filter_by_name(exes: list[Path], wanted: list[str] | None) -> list[Path]:

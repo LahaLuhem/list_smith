@@ -26,7 +26,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from list_smith_bench.config import DEFAULT_ITERATIONS, RESULTS_DIR
+from list_smith_bench.config import DEFAULT_ITERATIONS, DEFAULT_SCENARIO_DEVICE, RESULTS_DIR
 from list_smith_bench.subcommands.build import cmd_build
 from list_smith_bench.subcommands.report import cmd_report
 from list_smith_bench.subcommands.runner import cmd_run
@@ -60,12 +60,12 @@ def _add_build_parser(sub: argparse._SubParsersAction) -> None:
 
 
 def _add_run_parser(sub: argparse._SubParsersAction) -> None:
-    parser_run = sub.add_parser("run", help="execute compiled micros N times, write JSON")
+    parser_run = sub.add_parser("run", help="run micros + drive UI scenarios, write JSON")
     parser_run.add_argument(
         "--iterations",
         type=int,
         default=DEFAULT_ITERATIONS,
-        help=f"iterations per micro (default {DEFAULT_ITERATIONS})",
+        help=f"iterations per micro/scenario (default {DEFAULT_ITERATIONS})",
     )
     parser_run.add_argument(
         "--out",
@@ -75,20 +75,15 @@ def _add_run_parser(sub: argparse._SubParsersAction) -> None:
     parser_run.add_argument(
         "--scenarios",
         nargs="*",
-        help="restrict to named micros (default: all)",
+        help="restrict to named micros/scenarios (default: all)",
     )
     parser_run.add_argument(
-        "--duration-seconds",
-        type=int,
-        default=None,
-        help="global wall-clock duration override (micros ignore it)",
+        "--device",
+        default=DEFAULT_SCENARIO_DEVICE,
+        help=f"device for UI scenarios (default {DEFAULT_SCENARIO_DEVICE}; e.g. emulator-5554)",
     )
-    parser_run.add_argument(
-        "--duration",
-        action="append",
-        metavar="SCENARIO=SECONDS",
-        help="per-scenario duration override (repeatable)",
-    )
+    parser_run.add_argument("--skip-micros", action="store_true", help="skip the AOT micros")
+    parser_run.add_argument("--skip-scenarios", action="store_true", help="skip the UI scenarios")
     parser_run.set_defaults(func=cmd_run)
 
 
