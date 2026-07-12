@@ -6,6 +6,10 @@
 # Test sources.
 test/
 
+# Benchmark suite — maintainer-only perf-measurement infra. Imports from lib/ but ships nothing to
+# downstream users; excluded entirely from the published tarball. See benchmark/README.md.
+benchmark/
+
 # Local-dev config — consumer machines have their own.
 .fvmrc
 analysis_options.yaml

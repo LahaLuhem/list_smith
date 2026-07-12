@@ -1,0 +1,49 @@
+# Project metadata + dependencies for the benchmark orchestrator / analyzer.
+#
+# Managed by `uv` (https://docs.astral.sh/uv/). Install + run:
+#
+#     cd benchmark/python
+#     uv sync                          # create .venv, install everything
+#     uv run python run.py build       # AOT-compile micros
+#     uv run python run.py run         # execute + capture JSON
+#     uv run ruff check .              # lint
+#     uv run ruff format .             # format
+#
+# `uv.lock` is committed for reproducible runs — perf claims are only defensible if the analysis
+# stack is pinned.
+
+[project]
+name = "list-smith-bench"
+version = "0.1.0"
+description = "Benchmark orchestration + analysis for list_smith."
+requires-python = ">=3.12"
+
+dependencies = [
+    "numpy>=1.26,<3.0",
+    "scipy>=1.11,<2.0",
+    # polars (Rust-backed) for analysis; converts to pandas only at the seaborn boundary.
+    "polars>=1.0,<2.0",
+    "matplotlib>=3.8,<4.0",
+    # seaborn gives publication-quality stats plots for ~zero boilerplate; pulls pandas transitively.
+    "seaborn>=0.13,<1.0",
+    # pyarrow backs polars.DataFrame.to_pandas() — the bridge to seaborn's pandas-only plotting API.
+    "pyarrow>=15.0,<22.0",
+]
+
+[dependency-groups]
+# Maintainer-only: linter / formatter. ruff replaces black + flake8 + isort.
+dev = [
+    "ruff>=0.6,<1.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade, SIM simplify, N naming, RUF ruff.
+select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

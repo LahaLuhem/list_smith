@@ -1,0 +1,5 @@
+# uv-managed virtualenv + Python caches. `uv.lock` and pyproject.toml stay tracked.
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/

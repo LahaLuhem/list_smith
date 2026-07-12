@@ -1,0 +1,7 @@
+# AOT-compiled micro executables — produced by `python run.py build`. Reproducible from source.
+build/
+
+# All run outputs are per-machine and per-clone. Cross-machine perf comparisons are misleading
+# (different CPU, GPU, GC tuning, OS scheduler, thermal state), so nothing under here is committed —
+# contributors capture their own baseline locally before measuring the delta from a change.
+results-local/
