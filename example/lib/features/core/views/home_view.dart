@@ -8,6 +8,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import '/features/async_search/async_search_view.dart';
 import '/features/basic_feed/basic_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
+import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
 import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
@@ -55,6 +56,12 @@ class HomeView extends StatelessWidget {
             description:
                 'Two-view search: paginated feed to results and back, with a policy toggle.',
             pageBuilder: (_) => const AsyncSearchView(),
+          ),
+          _DemoTile(
+            icon: const PlatformIcon(PlatformIcons.eye),
+            title: 'Observer',
+            description: 'Watch lifecycle events stream into a live log via an injected observer.',
+            pageBuilder: (_) => const ObserverView(),
           ),
         ],
       ),

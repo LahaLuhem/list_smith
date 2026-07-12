@@ -1,7 +1,7 @@
 import 'package:pmvvm/pmvvm.dart';
 
-import '../core/data/models/demo_item.dart';
-import '../core/repos/demo_repository.dart';
+import '/features/core/data/models/demo_item.dart';
+import '/features/core/repos/demo_repository.dart';
 
 /// Backs the Basic feed demo: it just hands the repository's paged fetch to
 /// `ListSmith.async`, which owns all the paging + refresh state itself.

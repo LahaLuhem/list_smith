@@ -1,6 +1,6 @@
 import 'package:pmvvm/pmvvm.dart';
 
-import '../core/data/models/demo_item.dart';
+import '/features/core/data/models/demo_item.dart';
 
 /// Backs the Playground demo. Holds the live-editable list config and serves a
 /// deliberately gappy source (page 2 is empty, more data follows) so the

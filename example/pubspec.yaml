@@ -19,6 +19,7 @@ dependencies:
   material_ui: ^0.0.1
   cupertino_ui: ^0.0.1
   platform_icons: ^0.1.1
+  listenable_collections: ^3.0.0
 
 dev_dependencies:
   flutter_test:

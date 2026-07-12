@@ -36,6 +36,14 @@ state that rebuilds a **small** part of a view. Only call `notifyListeners()` on
   }
   ```
 
+- **List-typed reactive state uses `ListNotifier` (from `listenable_collections`), not a
+  `ValueNotifier<List<T>>`.** A `ValueNotifier` only notifies on identity change, so a growing list
+  forces you to rebuild a fresh `List` on every mutation (`value = [x, ...value]`) just to fire a
+  notification, which is boilerplate and easy to get wrong. `ListNotifier<T>` is itself a
+  `ValueListenable<List<T>>` you mutate in place (`insert`, `removeLast`, `clear`) with a
+  notification per change, so the getter and `ValueListenableBuilder` are the same while the writes
+  read as ordinary list ops. The Observer demo's event log uses it.
+
 ### Directory layout
 
 Feature-first MVVM, mirroring the sibling examples:

@@ -98,5 +98,19 @@ void main() {
       check(find.text('Item 42').evaluate()).length.equals(1);
       check(find.text('Item 1').evaluate()).length.equals(0);
     });
+
+    scenarioWidgets('observer logs a page-loaded event as the feed loads', (tester) async {
+      await tester.pumpWidget(const ListSmithExampleApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Observer'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+
+      check(find.text('Item 1').evaluate()).length.equals(1);
+      check(find.textContaining('onPageLoaded').evaluate().length).isGreaterThan(0);
+    });
   });
 }

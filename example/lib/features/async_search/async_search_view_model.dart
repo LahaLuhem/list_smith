@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:pmvvm/pmvvm.dart';
 
-import '../core/data/models/demo_item.dart';
-import '../core/repos/demo_repository.dart';
+import '/features/core/data/models/demo_item.dart';
+import '/features/core/repos/demo_repository.dart';
 
 /// Backs the Async search demo: a paginated normal feed that switches to a paginated search when the
 /// query is non-empty, with a live toggle between the two `SearchCachePolicy` cases.

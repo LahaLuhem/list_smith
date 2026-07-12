@@ -18,6 +18,8 @@ The app opens on a hub linking to:
   surface.
 - **Async search**: `ListSmith.async` two-view search (a paginated feed switching to paginated search
   results and back), with a live toggle between the keep and replace cache policies.
+- **Observer**: `ListSmith.async` wired to a `ListSmithObserver` that streams each lifecycle event
+  (page load, error, refresh, query commit, mode change) into a live log, plus a failure toggle.
 
 Tap the app-bar control on any screen to flip light and dark.
 
