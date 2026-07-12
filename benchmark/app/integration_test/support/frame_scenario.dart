@@ -7,6 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 const _flingDistancePixels = -500.0;
 const _flingVelocity = 3000.0;
 const _framesPerFling = 40;
+const _refreshPullPixels = 360.0;
+const _refreshPullSteps = 12;
+const _refreshStepPixels = _refreshPullPixels / _refreshPullSteps; // 30 px/step, past touch slop.
+const _refreshSettleFrames = 60;
 const _frameBudgetMicros = 16667; // 60 Hz frame budget.
 const _flushDelay = Duration(seconds: 2);
 
@@ -21,6 +25,30 @@ Future<void> flingThrough(
   for (var pass = 0; pass < passes; pass++) {
     await tester.fling(scrollable, const Offset(0, _flingDistancePixels), _flingVelocity);
     for (var frame = 0; frame < _framesPerFling; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+  }
+}
+
+/// Drives [passes] full pull-to-refresh cycles on [scrollable]: a stepped overscroll drag past CRI's
+/// arm threshold, release, then a fixed settle window while onRefresh runs and the indicator settles
+/// back (never `pumpAndSettle`: list_smith's loading indicator animates forever). The drag is stepped
+/// over several pumps so the drag/arm/settle animation renders real intermediate frames, not one jump.
+/// Each pass starts at the leading edge (the list sits at the top; a downward pull only overscrolls),
+/// which is what CRI's default `onEdge` trigger needs to arm.
+Future<void> refreshThrough(
+  WidgetTester tester, {
+  required Finder scrollable,
+  required int passes,
+}) async {
+  for (var pass = 0; pass < passes; pass++) {
+    final gesture = await tester.startGesture(tester.getCenter(scrollable));
+    for (var step = 0; step < _refreshPullSteps; step++) {
+      await gesture.moveBy(const Offset(0, _refreshStepPixels));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await gesture.up();
+    for (var frame = 0; frame < _refreshSettleFrames; frame++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
   }
