@@ -158,12 +158,11 @@ Two placement rules earn their keep:
 <a id="imports"></a>
 ## Imports
 
-**Relative within a feature, root-relative across features.** When an import's target lives in the
-same feature subtree, use a path relative to the importing file. When it crosses into another feature
-or top-level area, use a **root-relative** path with a leading `/` (Dart resolves it from the
-package's `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`). The leading `/` is a
-deliberate visual cue: a file's own-feature imports read as bare relatives, and its cross-feature
-ones stand out.
+**Relative within a feature, root-relative across features.** An import whose target is in the same
+feature subtree uses a path relative to the importing file. One that crosses into another feature or
+top-level area uses a **root-relative** path with a leading `/` (Dart resolves it from the package's
+`lib/`, so `/src/data/…` is `package:list_smith/src/data/…`). The leading `/` is a deliberate visual
+cue: a file's own-feature imports read as bare relatives, and its cross-feature ones stand out.
 
 ```dart
 // in widgets/async_list_view.dart

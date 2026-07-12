@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/pagination/typedefs/page_fetcher.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
@@ -48,6 +49,10 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// indicator).
   final AsyncListSurfaces surfaces;
 
+  /// Optional lifecycle observer for the async list (page loads, errors, refresh, search), for
+  /// logging or telemetry; null is silent. Async-only, like [surfaces]: `.sync` exposes no observer.
+  final ListSmithObserver? observer;
+
   /// The current search query, owned and passed in by the consumer; trimmed and gated by
   /// [minSearchLength]. Drives sync filtering, and async search when a search fetcher is provided.
   final String query;
@@ -71,7 +76,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// opts into search: a non-empty [query] switches to a search view fetched by it, and
   /// [searchCachePolicy] governs how the normal list carries across that switch. [itemBuilder] renders
   /// each item; [surfaces] overrides the async-only neutral defaults; [emptyBuilder], [noResultsBuilder],
-  /// and [scroll] apply to every list.
+  /// and [scroll] apply to every list. Pass [observer] to receive lifecycle events (page loads,
+  /// errors, refresh, search) for logging or telemetry.
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
@@ -87,6 +93,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.scroll = const ListScrollConfig(),
     this.emptyBuilder,
     this.noResultsBuilder,
+    this.observer,
     this.separatorBuilder,
     super.key,
   }) : assert(
@@ -122,6 +129,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     super.key,
   }) : pullToRefresh = true,
        surfaces = const AsyncListSurfaces(),
+       observer = null,
        _source = SyncSource(items: items, searchBy: searchBy);
 
   @override
@@ -138,6 +146,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
       noResultsBuilder: noResultsBuilder,
       surfaces: surfaces,
       scroll: scroll,
+      observer: observer,
     ),
     final SyncSource<T> source => SyncListView<T>(
       source: source,

@@ -19,6 +19,7 @@ during the repository setup itself.
 - [Async override surfaces grouped; universal ones stay flat](#async-surfaces-holder)
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
 - [Async search: one controller, two views](#async-two-view-search)
+- [Observer seam: async-only, no-op-method sink](#observer-seam)
 
 <!-- TOC end -->
 
@@ -79,8 +80,8 @@ during the repository setup itself.
   between the packages meets the same shape. By-kind at the top keeps data separate from behaviour;
   by-feature keeps a concern's pieces together; by-kind within a feature keeps a grown feature
   scannable (all its typedefs in one place, its policy cases in another).
-- **Rejected:** *top-level* `enums/` / `typedefs/` folders (`lib/src/typedefs/`), which would scatter
-  one feature's vocabulary across the whole tree. The by-kind split is deliberately scoped *within* a
+- **Rejected:** *top-level* `enums/` / `typedefs/` folders (`lib/src/typedefs/`), which scatter one
+  feature's vocabulary across the whole tree. The by-kind split is deliberately scoped *within* a
   feature, so a feature stays self-contained; and a typedef with a single home type still lives in
   that type's file (`RefreshBuilder` with `ListSmithRefreshState`), never pulled out just to fill a
   `typedefs/` folder.
@@ -187,6 +188,41 @@ during the repository setup itself.
   `SyncListView` into an unexported helper both views own (a 2c refactor-first step). The owner seeds
   the initial query synchronously and schedules each later change; a zero-debounce change commits on
   the next tick, which removed a `setState`-during-`didUpdateWidget` hazard the async path would hit.
+
+---
+
+<a id="observer-seam"></a>
+## Observer seam: async-only, no-op-method sink
+
+- **Decision:** an optional `ListSmithObserver` injected via `ListSmith.async(observer: ...)`,
+  modelled on `better_internet_connectivity_checker`'s `ConnectivityObserver`: an `abstract base
+  class` with a no-op default body per event, so a subclass overrides only what it wants and
+  unhandled events cost nothing. Five events, all async: `onPageLoaded`, `onError`, `onRefresh`,
+  `onQueryCommitted`, `onSearchModeChanged`. A default `LoggingListSmithObserver` logs each via
+  `dart:developer`.
+- **Discrete events only.** The seam fires from callbacks that run outside `build` (the page fetch,
+  the refresh gesture, the debounced-query commit), never from render-derived state. So no-results,
+  empty, and end-reached are excluded on purpose: they exist only as a function of the paging/filter
+  state during `build`, and firing an observer there would re-fire on every rebuild and risk a
+  `setState`-during-build. end-reached is the one worth revisiting, but it needs a latched,
+  post-frame dispatch, which is more machinery than the discrete events carry.
+- **Async-only, not shared with `.sync`.** The observer earns its place by surfacing what the hidden
+  controller keeps out of reach (fetch results, errors, refresh, the debounced commit and mode
+  flip). A sync list has no controller, fetch, or refresh, and the consumer owns the query it
+  filters on, so there is nothing worth observing. Putting an observer on `.sync` would be the
+  ghost-parameter mistake Rule X (see [#async-surfaces-holder](#async-surfaces-holder)) exists to
+  avoid; a `SyncListSmithObserver` stays an additive option if a real use case appears.
+- **Fully hidden, non-generic.** Every callback takes plain values (`int` indices and counts, the
+  `String` query, `Object` / `StackTrace`), never `PagingController`, `PagingState`, or the ISP
+  generics, so wiring diagnostics can't reach an internal handle (holds decision 3). Non-generic (no
+  items in the payload): logging and analytics want counts and mode, a non-generic observer is far
+  easier to subclass, and the package being unpublished keeps a generic variant open if items are
+  ever wanted.
+- **`abstract base`, extend-only.** Guarantees a new lifecycle event can ship as a no-op method in a
+  later minor release without breaking existing subclasses. It's a **dispatch** seam, not a decision
+  seam (the only decision, the mode flip, is the transition `SearchCachePolicyResolver` already
+  owns), so it carries no new pure resolver; it is covered by widget tests driving a
+  `RecordingListSmithObserver`.
 
 ---
 

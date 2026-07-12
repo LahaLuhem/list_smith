@@ -5,6 +5,7 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/extensions/pagination_end_policy_resolver_extension.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
@@ -61,6 +62,9 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
+  /// Optional lifecycle observer for logging or telemetry; null is silent.
+  final ListSmithObserver? observer;
+
   /// Creates the async paged list around an [AsyncSource].
   const AsyncListView({
     required this.source,
@@ -74,6 +78,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
     this.separatorBuilder,
     this.emptyBuilder,
     this.noResultsBuilder,
+    this.observer,
     super.key,
   });
 
@@ -123,22 +128,38 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   Future<List<T>> _fetchPage(int pageKey) async {
     final source = widget.source;
     final committedQuery = _debouncer.committedQuery;
-    final page = _isSearchQuery(committedQuery)
-        ? await source.searchFetchPage!(committedQuery, pageKey, source.pageSize)
-        : await source.fetchPage(pageKey, source.pageSize);
+    final isSearchMode = _isSearchQuery(committedQuery);
 
-    return page.toList(growable: false);
+    try {
+      final page = isSearchMode
+          ? await source.searchFetchPage!(committedQuery, pageKey, source.pageSize)
+          : await source.fetchPage(pageKey, source.pageSize);
+      final pageItems = page.toList(growable: false);
+
+      widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
+
+      return pageItems;
+    } on Object catch (error, stackTrace) {
+      widget.observer?.onError(error, stackTrace);
+
+      rethrow;
+    }
   }
 
   void _onQueryCommitted(String committedQuery) {
+    final wasSearching = _searchModeNotifier.value;
     final isSearchMode = _isSearchQuery(committedQuery);
     final action = widget.source.searchCachePolicy.actionFor(
-      wasSearching: _searchModeNotifier.value,
+      wasSearching: wasSearching,
       isSearching: isSearchMode,
     );
 
     _searchModeNotifier.value = isSearchMode;
     _applyCacheAction(action);
+
+    final observer = widget.observer;
+    observer?.onQueryCommitted(committedQuery);
+    if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
   }
 
   void _applyCacheAction(CacheAction action) {
@@ -190,7 +211,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     );
   }
 
-  Future<void> _onRefresh() => Future.sync(_controller.refresh);
+  Future<void> _onRefresh() {
+    widget.observer?.onRefresh();
+
+    return Future.sync(_controller.refresh);
+  }
 }
 
 /// Computes the next 0-based page key for [state], or `null` once [endPolicy] reports the end.
