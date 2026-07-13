@@ -47,9 +47,12 @@ WARMUP_ITERATIONS: Final[int] = 2
 # Micros ignore duration (benchmark_harness self-times); the orchestrator still passes something.
 FALLBACK_DURATION: Final[int] = 10
 
-# Entrypoints that emit MORE THAN ONE record per iteration (sync_search_scaling: one per list size).
-# Used when picking a representative "iterations per scenario" figure for report headers.
-MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset({"sync_search_scaling"})
+# Micros that emit MORE THAN ONE record per iteration (one per pivot value): sync_search_scaling
+# sweeps list sizes, wrapping_overhead sweeps loaded-page counts. Used when picking the "iterations
+# per scenario" figure for report headers, so their per-pivot fan-out doesn't inflate it.
+MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
+    {"sync_search_scaling", "wrapping_overhead"}
+)
 
 # ---- chart style ----------------------------------------------------------
 
@@ -58,8 +61,12 @@ CHART_DPI: Final[int] = 150
 CHART_PALETTE: Final[str] = "Set2"
 # 60 Hz frame budget in microseconds; the reference line on UI-cost charts.
 FRAME_BUDGET_MICROS_60HZ: Final[int] = 16667
-# Significance threshold for the (deferred) Mann-Whitney compare step.
+# Significance threshold for the Mann-Whitney compare step.
 SIGNIFICANCE_THRESHOLD: Final[float] = 0.05
+# Forest-plot bar colours (compare): direction + significance encoding.
+FOREST_COLOUR_REGRESSION: Final[str] = "#c0392b"  # red: current significantly slower/higher
+FOREST_COLOUR_IMPROVEMENT: Final[str] = "#27ae60"  # green: current significantly faster/lower
+FOREST_COLOUR_NOT_SIG: Final[str] = "#bdc3c7"  # gray: no significant difference
 
 
 def dart_command() -> list[str]:

@@ -31,14 +31,26 @@ dependencies = [
 ]
 
 [dependency-groups]
-# Maintainer-only: linter / formatter. ruff replaces black + flake8 + isort.
+# Maintainer-only: linter / formatter + test runner. ruff replaces black + flake8 + isort; pytest
+# runs the pure-math unit tests under tests/.
 dev = [
     "ruff>=0.6,<1.0",
+    "pytest>=9.1,<10.0",
 ]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.pytest.ini_options]
+# Tests live under tests/; pytest auto-discovers test_*.py there.
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+# The project is not pip-installed (run via `uv run python run.py`), so put its root on sys.path for
+# imports like `list_smith_bench.data.utils.stats`. "." is relative to this pyproject's dir.
+pythonpath = ["."]
+# -ra: short summary for everything except passes. --strict-markers: catch @pytest.mark typos.
+addopts = "-ra --strict-markers"
 
 [tool.ruff.lint]
 # E pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade, SIM simplify, N naming, RUF ruff.

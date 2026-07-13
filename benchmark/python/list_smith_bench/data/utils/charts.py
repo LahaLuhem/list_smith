@@ -17,7 +17,15 @@ import pandas as pd
 import polars as pl
 import seaborn as sns
 
-from list_smith_bench.config import CHART_DPI, CHART_PALETTE, FRAME_BUDGET_MICROS_60HZ
+from list_smith_bench.config import (
+    CHART_DPI,
+    CHART_PALETTE,
+    FOREST_COLOUR_IMPROVEMENT,
+    FOREST_COLOUR_NOT_SIG,
+    FOREST_COLOUR_REGRESSION,
+    FRAME_BUDGET_MICROS_60HZ,
+)
+from list_smith_bench.data.dtos.compare_row import CompareRow
 
 
 def set_default_theme() -> None:
@@ -83,6 +91,49 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
     fig.savefig(out_path, dpi=CHART_DPI)
     plt.close(fig)
     return out_path
+
+
+# ---- compare charts (two datasets) ----------------------------------------
+
+
+def plot_compare_forest(rows: list[CompareRow], out_path: Path) -> Path:
+    """Horizontal bar chart of % delta per (scenario, metric), sorted by |delta|.
+
+    Lower is better for every metric here (microseconds/op, per-frame build cost), so the colour
+    encoding reads directly: red = significant regression (current higher), green = significant
+    improvement (current lower), gray = no significant difference. The zero line is "no change".
+    """
+    plot_rows = [row for row in rows if row.delta_finite]
+    if not plot_rows:
+        write_empty_chart(out_path, "No comparable (scenario, metric) pairs.")
+        return out_path
+
+    # Ascending by |delta| so the biggest bar lands at the top (barh renders row 0 at bottom).
+    plot_rows = sorted(plot_rows, key=lambda row: abs(row.delta_pct))
+
+    labels = [f"{row.scenario} / {row.metric}" for row in plot_rows]
+    deltas = [row.delta_pct for row in plot_rows]
+    colours = [_forest_colour(row) for row in plot_rows]
+
+    # Height scales with row count so bars stay readable from a handful to dozens of rows.
+    height = max(4.0, len(plot_rows) * 0.3)
+    fig, ax = plt.subplots(figsize=(10, height))
+    ax.barh(labels, deltas, color=colours, edgecolor="#555", linewidth=0.5)
+    ax.axvline(0, color="#333", linewidth=0.8)
+    ax.set_xlabel("Delta from baseline (%)")
+    ax.set_title("Per-(scenario, metric) delta (red=regression, green=improvement, gray=not sig)")
+    ax.grid(True, axis="x", alpha=0.3)
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def _forest_colour(row: CompareRow) -> str:
+    """The forest-bar colour for one row: gray if not significant, else red/green by direction."""
+    if not row.significant:
+        return FOREST_COLOUR_NOT_SIG
+    return FOREST_COLOUR_REGRESSION if row.delta_pct > 0 else FOREST_COLOUR_IMPROVEMENT
 
 
 # `pd` is imported at module level so pandas is available when polars hands frames to seaborn via

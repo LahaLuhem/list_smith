@@ -12,6 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
+from list_smith_bench.data.dtos.compare_row import CompareRow
 from list_smith_bench.data.dtos.result_record import ResultRecord
 from list_smith_bench.data.utils.meta import summary_metadata
 
@@ -139,6 +140,40 @@ def frame_scenarios_table(dataframe: pl.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
+def render_latency_table(dataframe: pl.DataFrame) -> str:
+    """Median render latency per observer delay for the `slow_observer` scenario (the headline)."""
+    metric = "median_render_latency_micros"
+    if metric not in dataframe.columns or "observer_delay_millis" not in dataframe.columns:
+        return "_(no slow_observer data in input)_\n"
+
+    df = dataframe.filter(pl.col(metric).is_not_null()).filter(
+        pl.col("observer_delay_millis").is_not_null()
+    )
+    if df.is_empty():
+        return "_(no slow_observer data in input)_\n"
+
+    agg = (
+        df.group_by("observer_delay_millis")
+        .agg(
+            pl.col(metric).median().alias("median"),
+            pl.col("iterations").first().alias("n"),
+        )
+        .sort("observer_delay_millis")
+    )
+
+    rows = [
+        "| Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |",
+        "|---:|---:|---:|---:|",
+    ]
+    for row in agg.iter_rows(named=True):
+        delay = row["observer_delay_millis"]
+        latency_ms = row["median"] / 1000.0
+        # Render latency minus the observer's own block: the list_smith render the observer sits on.
+        baseline_ms = latency_ms - delay
+        rows.append(f"| {delay:.0f} | {latency_ms:,.1f} | {baseline_ms:,.1f} | {row['n']} |")
+    return "\n".join(rows) + "\n"
+
+
 def render_summary_markdown(
     dataframe: pl.DataFrame,
     *,
@@ -157,6 +192,14 @@ def render_summary_markdown(
         "> Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS "
         "scheduler, thermal state). Your numbers WILL differ; capture your own local "
         "baseline before measuring a code delta.\n",
+        "## Observer on the critical path: a slow observer blocks rendering\n",
+        "The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for "
+        "`observer_delay_millis` on each callback and measures render latency over a page load. "
+        "list_smith invokes the observer *synchronously* on the page-load path, so the block lands "
+        "almost fully on the critical path: a 50 ms observer pushes render latency to ~68 ms "
+        "(an ~18 ms baseline render plus the observer's whole 50 ms). Takeaway for consumers: keep "
+        "observer callbacks cheap (logging, metrics); push heavy work off the synchronous path.\n",
+        render_latency_table(dataframe),
         "## Sync-search filter cost vs list size\n",
         "From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` "
         "re-runs `resolveSyncSearch` (an `items.where(predicate).toList()`) synchronously "
@@ -189,6 +232,75 @@ def render_summary_markdown(
             "`bare_listview` (same items + scroll, no list_smith) is the attribution: the small "
             "delta is what list_smith-over-ISP adds on top of a plain list.\n",
             frame_scenarios_table(dataframe),
+        ]
+    )
+
+    return "\n".join(parts)
+
+
+def compare_table(rows: list[CompareRow]) -> str:
+    """Markdown Mann-Whitney table, rows sorted by scenario then metric."""
+    if not rows:
+        return "_(no comparable (scenario, metric) pairs in the two inputs)_\n"
+
+    fmt = value_formatter("us")
+    out = [
+        "| Scenario | Metric | Baseline median | Current median | Delta | p-value | Sig? |",
+        "|---|---|---:|---:|---:|---:|:---:|",
+    ]
+    for row in sorted(rows, key=lambda r: (r.scenario, r.metric)):
+        delta = f"{row.delta_pct:+.1f}%" if row.delta_finite else "n/a"
+        sig = "**Yes**" if row.significant else ""
+        out.append(
+            f"| `{row.scenario}` | `{row.metric}` | {fmt(row.baseline_median)} "
+            f"| {fmt(row.current_median)} | {delta} | {row.p_value:.4f} | {sig} |"
+        )
+    return "\n".join(out) + "\n"
+
+
+def render_compare_markdown(
+    rows: list[CompareRow],
+    *,
+    chart_paths: list[Path],
+    baseline_records: list[ResultRecord],
+    current_records: list[ResultRecord],
+) -> str:
+    """Render COMPARE.md — a forest chart plus the Mann-Whitney significance table.
+
+    Same drop-into-README shape as SUMMARY.md, with both captures' metadata in the header so the
+    reader can confirm the comparison is apples to apples (same machine, same SDK).
+    """
+    base_meta = summary_metadata(baseline_records)
+    curr_meta = summary_metadata(current_records)
+    chart_names = {p.name for p in chart_paths}
+
+    parts: list[str] = [
+        "# Benchmark comparison\n",
+        f"- **Baseline**: `{base_meta['package_version']}` at `{base_meta['git_sha']}` "
+        f"(Dart SDK {base_meta['sdk_version']}) captured {base_meta['date']}, "
+        f"N={base_meta['iterations']} per scenario\n"
+        f"- **Current**: `{curr_meta['package_version']}` at `{curr_meta['git_sha']}` "
+        f"(Dart SDK {curr_meta['sdk_version']}) captured {curr_meta['date']}, "
+        f"N={curr_meta['iterations']} per scenario\n",
+        "> Per-machine measurement. Both sides must come from the same machine in the same "
+        "thermal/power state with no competing workload, or the delta is noise, not signal.\n",
+        "## Forest: every comparable (scenario, metric) delta\n",
+        "Bars sorted by `|delta|` (largest at top). Multi-size scenarios are split per pivot "
+        "(`sync_filter[list_size=100000]`, ...) so a regression at one size is not masked by "
+        "pooling. Colour encodes direction and significance: red = significant regression "
+        "(p < 0.05, current higher), green = significant improvement, gray = no significant "
+        "difference.\n",
+    ]
+
+    if "compare_forest.png" in chart_names:
+        parts.append("\n![Forest plot](compare_forest.png)\n")
+
+    parts.extend(
+        [
+            "## Mann-Whitney U significance table\n",
+            "Each row is one `(scenario, metric)` group present in both runs. `Delta` is "
+            "`(current - baseline) / baseline * 100` on the medians. `Sig?` flags `p < 0.05`.\n",
+            compare_table(rows),
         ]
     )
 

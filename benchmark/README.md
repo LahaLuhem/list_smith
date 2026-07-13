@@ -20,6 +20,13 @@ The split is deliberate: a practical ceiling (e.g. "sync search suits lists up t
 thread in one synchronous chunk. The one exception is the slow-observer scenario, whose headline is
 dominated by the observer's own `sleep()` and so is faithful regardless of mode.
 
+A scenario can only faithfully measure work that lands *inside* a frame's build or raster phase,
+which is what `FrameTiming` (and the `captureFrames` helper) reports. Work that runs off-frame, on a
+`Timer` or microtask, is invisible to frame timing and can't be reliably bracketed by a `Stopwatch`
+around `pump()` in the live binding. The debounced sync-search resolve is exactly that (it fires
+in a zero-duration `Timer` before any build), so it lives as a **micro**, not a scenario. If a
+proposed scenario would measure off-frame work, make it a micro instead.
+
 ## Layout
 
 ```

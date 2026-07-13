@@ -263,7 +263,8 @@ ListSmith.async(
 Override only the events you care about; the rest cost nothing. You get `onPageLoaded`, `onError`,
 `onRefresh`, `onQueryCommitted`, and `onSearchModeChanged`. Just debugging, or in a hurry? Drop in the
 ready-made `LoggingListSmithObserver()` and every event goes through `dart:developer`, so it shows up
-in DevTools and stays `avoid_print`-clean.
+in DevTools and stays `avoid_print`-clean. Whatever you override runs synchronously while a
+page loads, so keep it light: a slow callback delays rendering (see [Performance](#performance)).
 
 > Observers are async-only. A `.sync` list has no fetch, refresh, or controller to observe, and you
 > already hold the query it filters on.
@@ -280,6 +281,32 @@ scroll: const ListScrollConfig(
   physics: BouncingScrollPhysics(),
 ),
 ```
+
+## Performance
+
+list_smith is a thin wrapper over `infinite_scroll_pagination` and `custom_refresh_indicator`, and
+the wrapping is close to free. Measured on one machine (yours will differ), from the committed
+[benchmark report](benchmark/reports/SUMMARY.md):
+
+- **Scrolling costs what a bare list costs.** A `ListSmith.async` scroll runs within ~0.03 ms/frame
+  of a plain `ListView.builder` over the same items, and neither drops a frame. The per-page
+  bookkeeping (end-policy check, observer dispatch) is sub-microsecond to a few microseconds.
+- **Pull-to-refresh is cheap.** A full custom_refresh_indicator cycle builds at ~0.4 ms/frame, with
+  0 frames over the 16.67 ms budget.
+- **Sync search is O(n) per committed query.** `ListSmith.sync` re-filters the whole list on each
+  query. With a naive case-insensitive `contains` that's ~0.4 ms at 1k items, ~4 ms at 10k, and
+  ~42 ms at 100k, where it crosses the frame budget. For big in-memory lists, lean on the built-in
+  debounce or reach for the async path.
+- **Observers are on the critical path.** list_smith calls your `observer` synchronously while
+  a page loads, so a slow callback delays rendering roughly 1:1 (a 50 ms observer pushed render
+  latency to ~68 ms). Keep them cheap: log, count, report; do heavy work elsewhere.
+
+Numbers are per-machine and won't match yours; capture your own baseline before trusting a
+delta. The suite (methodology, micro-benchmarks, profile-mode scenarios) lives in
+[`benchmark/`](benchmark/), and `run.py compare` diffs two runs with a Mann-Whitney test to catch
+regressions.
+
+![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
 
 ## Coming from smart_search_list
 

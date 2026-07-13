@@ -4,8 +4,9 @@
 Thin argparse + dispatch shim. Subcommands live under `list_smith_bench/subcommands/`:
 
 - `build`    AOT-compile all micros (parallel)
-- `run`      execute micros, write per-scenario + aggregated JSON
+- `run`      execute micros + drive UI scenarios, write per-scenario + aggregated JSON
 - `report`   render PNG charts + SUMMARY.md
+- `compare`  Mann-Whitney diff two runs → forest chart + COMPARE.md
 
 Workflow (run from `benchmark/python/`):
 
@@ -13,12 +14,12 @@ Workflow (run from `benchmark/python/`):
     uv run python run.py build                 # AOT-compile all micros
     uv run python run.py run --iterations 10 --out ../results-local/run-1/
     uv run python run.py report ../results-local/run-1/aggregated.json
+    uv run python run.py compare BASE/aggregated.json NEW/aggregated.json
 
 `report` defaults to writing into `benchmark/reports/` (committed, referenced from the README). Pass
 `--out` for ad-hoc local snapshots.
 
 Methodology (see ../README.md): AOT compile not JIT; N >= 10; median + IQR; per-machine baselines.
-The `flutter drive` UI-scenario runner + Mann-Whitney `compare` land in a later slice.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ import sys
 
 from list_smith_bench.config import DEFAULT_ITERATIONS, DEFAULT_SCENARIO_DEVICE, RESULTS_DIR
 from list_smith_bench.subcommands.build import cmd_build
+from list_smith_bench.subcommands.compare import cmd_compare
 from list_smith_bench.subcommands.report import cmd_report
 from list_smith_bench.subcommands.runner import cmd_run
 
@@ -42,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_build_parser(sub)
     _add_run_parser(sub)
     _add_report_parser(sub)
+    _add_compare_parser(sub)
 
     args = parser.parse_args(argv)
     return args.func(args)
@@ -98,6 +101,20 @@ def _add_report_parser(sub: argparse._SubParsersAction) -> None:
         help="output dir for charts + SUMMARY.md (default: benchmark/reports/, committed)",
     )
     parser_report.set_defaults(func=cmd_report)
+
+
+def _add_compare_parser(sub: argparse._SubParsersAction) -> None:
+    parser_compare = sub.add_parser(
+        "compare", help="Mann-Whitney diff two aggregated.json runs → forest chart + COMPARE.md"
+    )
+    parser_compare.add_argument("baseline", help="path to the baseline aggregated.json")
+    parser_compare.add_argument("current", help="path to the current aggregated.json")
+    parser_compare.add_argument(
+        "--out",
+        default=None,
+        help="output dir for compare_forest.png + COMPARE.md (default: benchmark/reports/)",
+    )
+    parser_compare.set_defaults(func=cmd_compare)
 
 
 if __name__ == "__main__":
