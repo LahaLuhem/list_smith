@@ -1,5 +1,5 @@
 name: list_smith_bench_host
-description: "Host app for list_smith UI benchmark scenarios (integration_test, profile mode). Not published."
+description: "Host app for list_smith UI benchmark scenarios (integration_test, profile mode)."
 publish_to: 'none'
 version: 1.0.0+1
 

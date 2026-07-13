@@ -56,7 +56,7 @@ during the repository setup itself.
 - **Why:** two reasons. Developer experience: list_smith should drop into a Material app, a
   Cupertino app, or a bespoke design system without importing a look the consumer never chose.
   Forward-compatibility: Flutter is decoupling `material` / `cupertino` from the framework core
-  (https://github.com/orgs/flutter/projects/220), so the widgets layer is where a design-neutral
+  (<https://github.com/orgs/flutter/projects/220>), so the widgets layer is where a design-neutral
   package belongs.
 - **Consequences:** the widgets layer ships no progress spinner, so our neutral loading and refresh
   defaults are small widgets-layer implementations (for example a `CustomPainter`), not

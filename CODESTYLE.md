@@ -408,8 +408,8 @@ Keep explicit generic type args when inference would fall back to `dynamic`
 **Filtering is not construction.** A predicate that keeps a subset of existing items is a *filter*,
 so it belongs to the [pipeline rule](#idioms-pipeline-methods) (`items.where(pred)`), even when you
 materialise the result into a list for a builder. Reserve collection-`if` for weaving optional
-elements into a literal you are building (`[header, if (isX) badge, body]`), not for selecting from a
-source collection.
+elements into a literal you are building (`[header, if (isX) badge, body]`), not for selecting from
+a source collection.
 
 <a id="idioms-pipeline-methods"></a>
 ### Library pipeline methods over hand-rolled loops (for data manipulation)

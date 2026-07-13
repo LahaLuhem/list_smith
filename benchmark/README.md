@@ -29,7 +29,7 @@ proposed scenario would measure off-frame work, make it a micro instead.
 
 ## Layout
 
-```
+```text
 benchmark/
 ├── harness/        shared pure-Dart utilities for the micros (result_writer, scenario_args)
 ├── micro/          benchmark_harness micro-benches (AOT-compiled)
@@ -80,8 +80,8 @@ Lint the Python side before committing: `uv run ruff format .` then `uv run ruff
   share. True mobile raster/jank needs a physical device and is out of scope.
 - **N >= 10 iterations**; bump to 30 for a high-variance metric before claiming a regression.
 - **Report median + IQR, never mean** (GC outliers skew means on a single-threaded VM).
-- **`forceGc()` before each micro measurement window**; SDK pinned via `.fvmrc` (a bump invalidates a
-  baseline); AC power, no competing apps.
+- **`forceGc()` before each micro measurement window**; SDK pinned via `.fvmrc` (a bump invalidates
+  a baseline); AC power, no competing apps.
 
 ## Baselines are per-machine, never committed
 

@@ -3,7 +3,7 @@
 # - do_not_use_environment: scenario args (iterations, delays, output path) arrive via compile-time
 #   --dart-define, the only way to parameterize an integration_test (it takes no argv).
 # - avoid_redundant_argument_values: a --dart-define value can equal a param default under its own
-#   default (e.g. observer delay 50 ms, page size 20); the argument must stay for the define to apply.
+#   default (e.g. page size 20); the argument must stay for the define to apply.
 include: ../../analysis_options.yaml
 
 linter:
