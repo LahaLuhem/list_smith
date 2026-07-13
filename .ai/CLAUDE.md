@@ -12,7 +12,7 @@ rationale lives in [`APPENDIX.md`](APPENDIX.md). Read AGENTS.md and CODESTYLE.md
 
 You're assisting with **list_smith**: a developer-first Flutter package that wraps
 `ListView.builder` to handle async pagination, pull-to-refresh, and sync-or-async search. It's a
-ground-up replacement for the older `smart_search_list` package. Treat the user as technical and
+ground-up replacement for an older search-list package. Treat the user as technical and
 direct. The package is intended for pub.dev, so once published, changes are visible to every
 downstream user; breakage is expensive and slow to walk back (unpublished versions stay reserved
 for 7 days, and a tag push triggers an automated publish).
@@ -68,8 +68,8 @@ for 7 days, and a tag push triggers an automated publish).
   async path", "raising the Flutter floor on date Y"). Convert relative dates to absolute.
 - **`feedback` memories**: corrections and validated non-obvious choices. Include **Why** and
   **How to apply**.
-- **`reference` memories**: external pointers (the pub.dev page, the context7 project, the old
-  `smart_search_list` package, related Flutter issues). Not internal code paths, which live in
+- **`reference` memories**: external pointers (the pub.dev page, the context7 project, related
+  Flutter issues). Not internal code paths, which live in
   AGENTS.md or are derivable from the repo.
 - **Do NOT save** Dart file paths, lint-rule lists, or the API surface; all derivable from the
   repo or APPENDIX.md. Before acting on a memory, verify the named file / symbol still exists.

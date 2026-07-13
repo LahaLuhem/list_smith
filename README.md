@@ -312,20 +312,6 @@ regressions.
 
 ![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
 
-## Coming from smart_search_list
-
-list_smith is the ground-up successor to
-[`smart_search_list`](https://pub.dev/packages/smart_search_list): the same good ideas, with the sharp
-edges filed off.
-
-- **No ghost parameters.** Every parameter actually does something on the constructor that exposes it.
-  The old package let you set knobs that quietly did nothing on one path; that whole class of bug is
-  designed out.
-- **Pagination that isn't guessing.** The old scroll-offset arithmetic for "are we near the end yet?"
-  gives way to `infinite_scroll_pagination`'s index-based trigger, which sidesteps the flaky
-  end-of-page detection.
-- **Your app, your look.** You never touch a controller, and no design system is forced on you.
-
 ## Roadmap
 
 - [x] Async pagination with swappable end-detection

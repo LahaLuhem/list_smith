@@ -75,9 +75,9 @@ during the repository setup itself.
   per file. Sealed cases nest one level under the base's kind and stay `part`s of it
   (`models/policies/`, `source/sources/`). The third level was adopted as each feature's vocabulary
   grew past a couple of files; a small feature stays flat until it earns the split.
-- **Why:** it matches the maintainer's existing Flutter packages (`platform_adaptive_widgets` and
-  `smart_search_list` both use `models/` + `widgets/` + a helpers folder), so a contributor moving
-  between the packages meets the same shape. By-kind at the top keeps data separate from behaviour;
+- **Why:** it matches the maintainer's existing Flutter packages (`platform_adaptive_widgets` uses
+  `models/` + `widgets/` + a helpers folder), so a contributor moving between the packages meets
+  the same shape. By-kind at the top keeps data separate from behaviour;
   by-feature keeps a concern's pieces together; by-kind within a feature keeps a grown feature
   scannable (all its typedefs in one place, its policy cases in another).
 - **Rejected:** *top-level* `enums/` / `typedefs/` folders (`lib/src/typedefs/`), which scatter one
@@ -229,4 +229,4 @@ during the repository setup itself.
 **TODO (design pass and beyond).** Decisions still to be recorded here as they land, for example:
 the SDK floor rationale, the public API surface and why it's shaped that way, how sync vs async
 data sources are modelled, the search / cache interplay policy, and what `list_smith` deliberately
-does *not* do (learning from the `smart_search_list` pitfalls it replaces).
+does *not* do (learning from the pitfalls of the package it replaces).

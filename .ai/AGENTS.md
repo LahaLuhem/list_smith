@@ -20,7 +20,7 @@ three jobs properly:
 3. **Search**, for both sync and async sources. The async case needs a policy governing how
    already-cached items interact with new results from the async search source.
 
-`list_smith` is a ground-up replacement for the older `smart_search_list` package: it keeps the
+`list_smith` is a ground-up replacement for an older search-list package: it keeps the
 good ideas, removes the "ghost params" (constructor parameters that silently do nothing on one
 path), fixes the known correctness bugs, and puts developer experience first. The name is a
 maker/craft metaphor, a sibling in spirit to the maintainer's `minted` package.
