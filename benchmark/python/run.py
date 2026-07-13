@@ -27,7 +27,12 @@ from __future__ import annotations
 import argparse
 import sys
 
-from list_smith_bench.config import DEFAULT_ITERATIONS, DEFAULT_SCENARIO_DEVICE, RESULTS_DIR
+from list_smith_bench.config import (
+    DEFAULT_ITERATIONS,
+    DEFAULT_SCENARIO_DEVICE,
+    REGRESSION_THRESHOLD_PCT,
+    RESULTS_DIR,
+)
 from list_smith_bench.subcommands.build import cmd_build
 from list_smith_bench.subcommands.compare import cmd_compare
 from list_smith_bench.subcommands.report import cmd_report
@@ -113,6 +118,17 @@ def _add_compare_parser(sub: argparse._SubParsersAction) -> None:
         "--out",
         default=None,
         help="output dir for compare_forest.png + COMPARE.md (default: benchmark/reports/)",
+    )
+    parser_compare.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help="exit non-zero if any metric significantly regressed past --regression-threshold",
+    )
+    parser_compare.add_argument(
+        "--regression-threshold",
+        type=float,
+        default=REGRESSION_THRESHOLD_PCT,
+        help=f"percent slower to fail on (default {REGRESSION_THRESHOLD_PCT:.0f})",
     )
     parser_compare.set_defaults(func=cmd_compare)
 

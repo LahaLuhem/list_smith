@@ -66,9 +66,9 @@ def records_per_scenario(records: list[ResultRecord]) -> int:
 
 
 # Summary keys whose value splits a scenario into independent measurement regimes. The compare
-# groups on them so a regression at one size / page-count is not masked by pooling all of a
-# scenario's samples into one bi/tri-modal distribution (this suite is a regression tripwire).
-_PIVOT_KEYS: Final[tuple[str, ...]] = ("list_size", "page_count")
+# groups on them so a regression at one size / page-count / observer-delay is not masked by pooling
+# a scenario's samples into one multi-modal distribution (this suite is a regression tripwire).
+_PIVOT_KEYS: Final[tuple[str, ...]] = ("list_size", "page_count", "observer_delay_millis")
 
 
 def _pivoted_scenario(record: ResultRecord) -> str:
@@ -146,3 +146,17 @@ def compute_compare_rows(
         )
 
     return rows
+
+
+def regressions(rows: list[CompareRow], threshold_pct: float) -> list[CompareRow]:
+    """Rows that significantly regressed beyond `threshold_pct` (the `--fail-on-regression` gate).
+
+    A row trips the gate only when it is significant (p < the significance threshold) AND slower by
+    more than `threshold_pct`, so a merely noise-significant sub-threshold shift does not fail CI.
+    Every metric here is lower-is-better, so a positive delta is a regression.
+    """
+    return [
+        row
+        for row in rows
+        if row.significant and row.delta_finite and row.delta_pct > threshold_pct
+    ]

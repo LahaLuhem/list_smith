@@ -306,6 +306,10 @@ delta. The suite (methodology, micro-benchmarks, profile-mode scenarios) lives i
 [`benchmark/`](benchmark/), and `run.py compare` diffs two runs with a Mann-Whitney test to catch
 regressions.
 
+![Render latency vs observer delay](benchmark/reports/observer_latency.png)
+
+![Per-frame build cost vs the 60 Hz budget](benchmark/reports/frame_costs.png)
+
 ![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
 
 ## Coming from smart_search_list

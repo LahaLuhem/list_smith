@@ -14,7 +14,7 @@ from pathlib import Path
 
 from list_smith_bench.data.dtos.compare_row import CompareRow
 from list_smith_bench.data.utils.io import load_aggregated, resolve_outdir
-from list_smith_bench.data.utils.stats import compute_compare_rows
+from list_smith_bench.data.utils.stats import compute_compare_rows, regressions
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
@@ -37,8 +37,12 @@ def cmd_compare(args: argparse.Namespace) -> int:
     rows = compute_compare_rows(baseline_records, current_records)
     _print_compare_table(rows)
 
-    # The text table above is the interactive deliverable, so a missing chart stack does not
-    # fail the command — the user still gets the answer.
+    # The regression gate is the CI-facing verdict; compute it up front so every return path (even
+    # the missing-charts one) honours it.
+    exit_code = _regression_exit_code(rows, args)
+
+    # The text table + verdict above are the deliverable, so a missing chart stack does not change
+    # the outcome — the user still gets the answer.
     missing = [
         name
         for name in ("matplotlib", "polars", "seaborn", "pandas")
@@ -47,7 +51,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
     if missing:
         print(f"\nskipping charts — missing deps: {', '.join(missing)}", file=sys.stderr)
         print("  run `uv sync` from benchmark/python/", file=sys.stderr)
-        return 0
+        return exit_code
 
     # Local imports so cmd_compare stays importable without the chart stack.
     from list_smith_bench.data.utils import charts, markdown
@@ -73,7 +77,30 @@ def cmd_compare(args: argparse.Namespace) -> int:
         print(f"  {path.name}")
     print(f"  {compare_path.name}")
 
-    return 0
+    return exit_code
+
+
+def _regression_exit_code(rows: list[CompareRow], args: argparse.Namespace) -> int:
+    """0 normally; 1 when `--fail-on-regression` is set and a metric regressed past threshold."""
+    if not getattr(args, "fail_on_regression", False):
+        return 0
+
+    threshold = args.regression_threshold
+    regressed = regressions(rows, threshold)
+    if not regressed:
+        print(f"\nno regression beyond {threshold:.0f}% (--fail-on-regression)")
+        return 0
+
+    print(
+        f"\nREGRESSION: {len(regressed)} metric(s) slower beyond {threshold:.0f}%:",
+        file=sys.stderr,
+    )
+    for row in regressed:
+        print(
+            f"  {row.scenario} / {row.metric}: +{row.delta_pct:.1f}% (p={row.p_value:.4f})",
+            file=sys.stderr,
+        )
+    return 1
 
 
 def _print_compare_table(rows: list[CompareRow]) -> None:

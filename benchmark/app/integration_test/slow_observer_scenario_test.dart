@@ -9,6 +9,10 @@
 /// Runs under a live `integration_test` binding (real frames, real clock) in profile mode, so the
 /// `sleep()` genuinely blocks the UI isolate and the [Stopwatch] measures real time. Metrics are
 /// directional for absolute UI cost but faithful here, since the observer's own `sleep` dominates.
+///
+/// Sweeps a range of observer delays (one record per delay) so the report can show render latency
+/// tracking the delay ~1:1: each added millisecond of synchronous observer work adds ~1 ms of render
+/// latency, on top of a fixed baseline render. `delay = 0` is that baseline (a near-no-op observer).
 library;
 
 import 'dart:io';
@@ -22,11 +26,13 @@ import 'support/host_frame.dart';
 import 'support/slow_list_smith_observer.dart';
 
 const _iterations = int.fromEnvironment('ITERATIONS', defaultValue: 10);
-const _observerDelayMillis = int.fromEnvironment('OBSERVER_DELAY_MILLIS', defaultValue: 50);
 const _pageSize = int.fromEnvironment('PAGE_SIZE', defaultValue: 20);
 const _outputPath = String.fromEnvironment('OUTPUT');
 const _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
 const _packageVersion = String.fromEnvironment('PKG_VERSION', defaultValue: 'unknown');
+
+// Observer delays swept per run; 0 is the no-observer-work baseline (the y-intercept of the line).
+const _observerDelaysMillis = <int>[0, 25, 50, 100];
 
 // Bound on the pump loop waiting for the first item, so a stalled fetch can't hang the run.
 const _maxPumpsPerIteration = 2000;
@@ -41,61 +47,62 @@ void main() {
   testWidgets('a slow synchronous observer delays list_smith rendering its first page', (
     tester,
   ) async {
-    final renderLatencyMicros = <int>[];
-    var totalPageLoads = 0;
+    final records = <Map<String, dynamic>>[];
 
-    for (var i = 0; i < _iterations; i++) {
-      final stopwatch = Stopwatch()..start();
-      int? dataReadyMicros;
+    for (final delayMillis in _observerDelaysMillis) {
+      final renderLatencyMicros = <int>[];
+      var totalPageLoads = 0;
 
-      Future<List<int>> fetchPage(int pageIndex, int pageSize) async {
-        // Stamp when the page's data is ready, BEFORE list_smith fires the (slow) observer.
-        dataReadyMicros ??= stopwatch.elapsedMicroseconds;
+      for (var i = 0; i < _iterations; i++) {
+        final stopwatch = Stopwatch()..start();
+        int? dataReadyMicros;
 
-        return List<int>.generate(pageSize, (index) => pageIndex * pageSize + index);
-      }
+        Future<List<int>> fetchPage(int pageIndex, int pageSize) async {
+          // Stamp when the page's data is ready, BEFORE list_smith fires the (slow) observer.
+          dataReadyMicros ??= stopwatch.elapsedMicroseconds;
 
-      final observer = SlowListSmithObserver(
-        delay: const Duration(milliseconds: _observerDelayMillis),
-      );
+          return List<int>.generate(pageSize, (index) => pageIndex * pageSize + index);
+        }
 
-      await tester.pumpWidget(
-        HostFrame(
-          key: ValueKey(i),
-          child: ListSmith<int>.async(
-            fetchPage: fetchPage,
-            pageSize: _pageSize,
-            pullToRefresh: false,
-            observer: observer,
-            itemBuilder: (_, item, _) => SizedBox(
-              height: _itemExtentPixels,
-              child: Text('item $item', key: ValueKey('item_$item')),
+        final observer = SlowListSmithObserver(delay: Duration(milliseconds: delayMillis));
+
+        await tester.pumpWidget(
+          HostFrame(
+            key: ValueKey('${delayMillis}_$i'),
+            child: ListSmith<int>.async(
+              fetchPage: fetchPage,
+              pageSize: _pageSize,
+              pullToRefresh: false,
+              observer: observer,
+              itemBuilder: (_, item, _) => SizedBox(
+                height: _itemExtentPixels,
+                child: Text('item $item', key: ValueKey('item_$item')),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      final firstItem = find.byKey(const ValueKey('item_0'));
-      var pumps = 0;
-      while (firstItem.evaluate().isEmpty && pumps < _maxPumpsPerIteration) {
-        await tester.pump(const Duration(milliseconds: 8));
-        pumps++;
+        final firstItem = find.byKey(const ValueKey('item_0'));
+        var pumps = 0;
+        while (firstItem.evaluate().isEmpty && pumps < _maxPumpsPerIteration) {
+          await tester.pump(const Duration(milliseconds: 8));
+          pumps++;
+        }
+
+        final renderedMicros = stopwatch.elapsedMicroseconds;
+        renderLatencyMicros.add(renderedMicros - (dataReadyMicros ?? renderedMicros));
+
+        totalPageLoads += observer.callCounts['onPageLoaded'] ?? 0;
       }
 
-      final renderedMicros = stopwatch.elapsedMicroseconds;
-      renderLatencyMicros.add(renderedMicros - (dataReadyMicros ?? renderedMicros));
-
-      totalPageLoads += observer.callCounts['onPageLoaded'] ?? 0;
+      records.add(_buildRecord(delayMillis, renderLatencyMicros, totalPageLoads));
     }
 
-    binding.reportData = <String, dynamic>{
-      'output_path': _outputPath,
-      'records': <Map<String, dynamic>>[_buildRecord(renderLatencyMicros, totalPageLoads)],
-    };
+    binding.reportData = <String, dynamic>{'output_path': _outputPath, 'records': records};
   });
 }
 
-Map<String, dynamic> _buildRecord(List<int> latencies, int totalPageLoads) {
+Map<String, dynamic> _buildRecord(int delayMillis, List<int> latencies, int totalPageLoads) {
   final sorted = [...latencies]..sort();
   final median = sorted.isEmpty ? 0 : sorted[sorted.length ~/ 2];
 
@@ -109,7 +116,7 @@ Map<String, dynamic> _buildRecord(List<int> latencies, int totalPageLoads) {
     'samples': <String, List<num>>{'render_latency_micros': latencies},
     'summary': <String, num>{
       'median_render_latency_micros': median,
-      'observer_delay_millis': _observerDelayMillis,
+      'observer_delay_millis': delayMillis,
       'iterations': latencies.length,
       'total_page_loads': totalPageLoads,
     },

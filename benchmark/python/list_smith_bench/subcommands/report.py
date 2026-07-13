@@ -47,6 +47,12 @@ def cmd_report(args: argparse.Namespace) -> int:
     scaling_chart = charts.plot_sync_search_scaling(dataframe, out_dir / "sync_search_scaling.png")
     if scaling_chart is not None:
         chart_paths.append(scaling_chart)
+    frame_chart = charts.plot_frame_costs(dataframe, out_dir / "frame_costs.png")
+    if frame_chart is not None:
+        chart_paths.append(frame_chart)
+    observer_chart = charts.plot_observer_latency(dataframe, out_dir / "observer_latency.png")
+    if observer_chart is not None:
+        chart_paths.append(observer_chart)
 
     summary_path = out_dir / "SUMMARY.md"
     summary_path.write_text(

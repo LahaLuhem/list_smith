@@ -1,16 +1,22 @@
 # Benchmark results
 
-Captured **2026-07-12** against `0.0.0` at `b2272b8` on Dart SDK 3.12.2. N=10 iterations.
+Captured **2026-07-13** against `0.0.0` at `b415852` on Dart SDK 3.12.2. N=10 iterations.
 
 > Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS scheduler, thermal state). Your numbers WILL differ; capture your own local baseline before measuring a code delta.
 
 ## Observer on the critical path: a slow observer blocks rendering
 
-The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for `observer_delay_millis` on each callback and measures render latency over a page load. list_smith invokes the observer *synchronously* on the page-load path, so the block lands almost fully on the critical path: a 50 ms observer pushes render latency to ~68 ms (an ~18 ms baseline render plus the observer's whole 50 ms). Takeaway for consumers: keep observer callbacks cheap (logging, metrics); push heavy work off the synchronous path.
+The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for a set delay on each callback and measures render latency over a page load, swept across several delays. list_smith invokes the observer *synchronously* on the page-load path, so the block lands almost fully on the critical path: render latency tracks the delay ~1:1, on top of a fixed baseline render (~18 ms here), so a 50 ms observer pushes it to ~68 ms. Takeaway for consumers: keep observer callbacks cheap (logging, metrics); push heavy work off the synchronous path.
 
 | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---:|---:|---:|---:|
-| 50 | 68.5 | 18.5 | 10 |
+| 0 | 17.2 | 17.2 | 10 |
+| 25 | 42.3 | 17.3 | 10 |
+| 50 | 67.6 | 17.6 | 10 |
+| 100 | 117.8 | 17.8 | 10 |
+
+
+![Render latency vs observer delay](observer_latency.png)
 
 ## Sync-search filter cost vs list size
 
@@ -18,9 +24,9 @@ From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` 
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 383.72 | 1.29 | 0.38 |
-| 10,000 | 10 | 4,028 | 25.24 | 4.03 |
-| 100,000 | 10 | 42,092 | 95.81 | 42.09 |
+| 1,000 | 10 | 379.50 | 2.26 | 0.38 |
+| 10,000 | 10 | 3,982 | 20.10 | 3.98 |
+| 100,000 | 10 | 41,427 | 332.57 | 41.43 |
 
 
 ![Sync-search scaling](sync_search_scaling.png)
@@ -32,9 +38,9 @@ Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer 
 | Micro | Metric | Median (us) |
 |---|---|---:|
 | `observer_dispatch` | us / dispatch | 0.011 |
-| `wrapping_overhead` (1 page) | us / key | 0.522 |
-| `wrapping_overhead` (10 pages) | us / key | 1.27 |
-| `wrapping_overhead` (100 pages) | us / key | 8.21 |
+| `wrapping_overhead` (1 page) | us / key | 0.534 |
+| `wrapping_overhead` (10 pages) | us / key | 1.28 |
+| `wrapping_overhead` (100 pages) | us / key | 7.88 |
 
 ## UI scroll/refresh: per-frame build cost
 
@@ -42,6 +48,9 @@ From the profile-mode `integration_test` scenarios (real frames on this machine)
 
 | Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |
 |---|---:|---:|---:|---:|---:|
-| `bare_listview` | 610 | 0.50 | 1.80 | 1.53 | 0 |
-| `cri_refresh` | 850 | 0.39 | 1.26 | 0.96 | 0 |
-| `isp_scroll` | 610 | 0.53 | 1.98 | 1.52 | 0 |
+| `bare_listview` | 610 | 0.38 | 1.39 | 1.24 | 0 |
+| `cri_refresh` | 850 | 0.26 | 1.16 | 0.71 | 0 |
+| `isp_scroll` | 610 | 0.50 | 2.37 | 1.60 | 0 |
+
+
+![Per-frame build cost](frame_costs.png)

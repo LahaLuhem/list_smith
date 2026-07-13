@@ -13,7 +13,12 @@ import math
 import pytest
 
 from list_smith_bench.data.dtos.result_record import ResultRecord
-from list_smith_bench.data.utils.stats import compute_compare_rows, group_samples, median
+from list_smith_bench.data.utils.stats import (
+    compute_compare_rows,
+    group_samples,
+    median,
+    regressions,
+)
 
 
 def _record(
@@ -156,3 +161,26 @@ class TestPivotAwareGrouping:
         current = [_record("isp_scroll", {"frame_build_micros": [400.0, 410.0, 420.0]})]
         rows = compute_compare_rows(baseline, current)
         assert [row.scenario for row in rows] == ["isp_scroll"]
+
+
+class TestRegressions:
+    def test_unchanged_is_no_regression(self) -> None:
+        baseline = [_record("a", {"m": [9.0, 9.1, 9.2, 9.3, 9.4]})]
+        current = [_record("a", {"m": [9.0, 9.1, 9.2, 9.3, 9.4]})]
+        assert regressions(compute_compare_rows(baseline, current), 10.0) == []
+
+    def test_significant_slowdown_past_threshold_trips(self) -> None:
+        baseline = [_record("a", {"m": [14.0, 14.1, 14.2, 14.3, 14.4]})]
+        current = [_record("a", {"m": [20.0, 20.1, 20.2, 20.3, 20.4]})]  # +42%, fully separated
+        assert len(regressions(compute_compare_rows(baseline, current), 10.0)) == 1
+
+    def test_significant_but_below_threshold_ignored(self) -> None:
+        # ~3% slower and significant, but under the 10% gate, so it must not count as a regression.
+        baseline = [_record("a", {"m": [100.0, 100.1, 100.2, 100.3, 100.4]})]
+        current = [_record("a", {"m": [103.0, 103.1, 103.2, 103.3, 103.4]})]
+        assert regressions(compute_compare_rows(baseline, current), 10.0) == []
+
+    def test_improvement_is_not_a_regression(self) -> None:
+        baseline = [_record("a", {"m": [20.0, 20.1, 20.2, 20.3, 20.4]})]
+        current = [_record("a", {"m": [14.0, 14.1, 14.2, 14.3, 14.4]})]  # faster
+        assert regressions(compute_compare_rows(baseline, current), 10.0) == []

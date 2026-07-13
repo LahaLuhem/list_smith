@@ -93,6 +93,111 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
     return out_path
 
 
+def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
+    """Grouped bars of per-frame build cost (avg / worst / p99) per scroll/refresh scenario.
+
+    The dashed 60 Hz budget line is the point of the chart: every bar sits far below it, so
+    list_smith's per-frame build work is a small fraction of the 16.67 ms a frame gets. The table in
+    SUMMARY.md carries the exact figures; this is the at-a-glance headroom. Returns None on no data.
+    """
+    stat_labels = {
+        "avg_frame_build_millis": "avg",
+        "worst_frame_build_millis": "worst",
+        "p99_frame_build_millis": "p99",
+    }
+    if "avg_frame_build_millis" not in dataframe.columns:
+        return None
+
+    df = dataframe.filter(pl.col("avg_frame_build_millis").is_not_null())
+    if df.is_empty():
+        return None
+
+    long = (
+        df.unpivot(
+            on=list(stat_labels.keys()),
+            index="scenario",
+            variable_name="stat",
+            value_name="ms",
+        )
+        .with_columns(pl.col("stat").replace(stat_labels))
+        .to_pandas()
+    )
+
+    budget_ms = FRAME_BUDGET_MICROS_60HZ / 1000.0
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.barplot(
+        data=long,
+        x="scenario",
+        y="ms",
+        hue="stat",
+        ax=ax,
+        order=sorted(long["scenario"].unique()),
+        hue_order=["avg", "worst", "p99"],
+        errorbar=None,
+    )
+    ax.axhline(
+        budget_ms,
+        color="#c0392b",
+        linestyle="--",
+        linewidth=1.0,
+        label=f"60 Hz frame budget ({budget_ms:.2f} ms)",
+    )
+    ax.set_ylim(0, budget_ms + 1.5)
+    ax.set_xlabel("")
+    ax.set_ylabel("Per-frame build time (ms)")
+    ax.set_title("Per-frame build cost sits far under the 60 Hz budget")
+    ax.legend(loc="best")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
+def plot_observer_latency(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
+    """Median render latency vs observer delay: the headline critical-path relationship.
+
+    list_smith calls the observer synchronously on the page-load path, so each added millisecond of
+    observer delay adds ~1 ms of render latency. The measured line runs parallel to the dashed y=x
+    reference, offset by the fixed baseline render (the `delay = 0` point). Numeric axes make the
+    ~1:1 slope honest. Returns None with no slow_observer data.
+    """
+    metric = "median_render_latency_micros"
+    if metric not in dataframe.columns or "observer_delay_millis" not in dataframe.columns:
+        return None
+
+    df = (
+        dataframe.filter(pl.col(metric).is_not_null())
+        .filter(pl.col("observer_delay_millis").is_not_null())
+        .select(["observer_delay_millis", metric])
+        .unique()
+        .sort("observer_delay_millis")
+    )
+    if df.is_empty():
+        return None
+
+    delays = df["observer_delay_millis"].to_list()
+    latencies = [value / 1000.0 for value in df[metric].to_list()]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(delays, latencies, marker="o", color="#4c72b0", label="measured render latency")
+    ax.plot(
+        [0, max(delays)],
+        [0, max(delays)],
+        color="#c0392b",
+        linestyle="--",
+        linewidth=1.0,
+        label="y = x (observer delay alone)",
+    )
+    ax.set_xlabel("Observer delay (ms)")
+    ax.set_ylabel("Median render latency (ms)")
+    ax.set_title("A slow observer adds its delay ~1:1 to render latency")
+    ax.legend(loc="best")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
 # ---- compare charts (two datasets) ----------------------------------------
 
 

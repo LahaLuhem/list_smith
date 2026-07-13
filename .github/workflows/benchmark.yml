@@ -1,0 +1,70 @@
+name: Benchmark regression
+
+# Micro-benchmark regression tripwire. Runs the AOT micros on both the PR head and origin/main on
+# the SAME runner (GitHub VMs vary run-to-run, so a cross-machine baseline would drown real
+# regressions in noise), then fails the job if any metric regressed significantly. The macOS-only,
+# timing-flaky scenario drives are deliberately NOT run here; they stay local.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - lib/**
+      - benchmark/**
+      - .github/workflows/benchmark.yml
+
+concurrency:
+  group: bench-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  micro-regression:
+    name: Micro-benchmark regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Candidate: build + run the AOT micros on the PR head. build/run use only the stdlib
+      # (subprocess + json), so plain python3 is enough; the analysis venv (scipy, for compare) is
+      # synced later, once.
+      - name: Micros - candidate (PR head)
+        working-directory: benchmark/python
+        run: |
+          python3 run.py build
+          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/candidate"
+
+      # Baseline: the SAME micros on origin/main, in a worktree, on THIS runner. Skips cleanly if
+      # main has no suite yet (the bootstrap PR adding this), so the gate never errors on absence.
+      - name: Micros - baseline (origin/main)
+        id: baseline
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          git worktree add "$RUNNER_TEMP/base" origin/main
+          if [ ! -f "$RUNNER_TEMP/base/benchmark/python/run.py" ]; then
+            echo "origin/main has no benchmark suite yet; skipping the regression gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          cd "$RUNNER_TEMP/base/benchmark/python"
+          python3 run.py build
+          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/baseline"
+
+      # Gate: diff baseline vs candidate, fail on a significant regression. Needs the analysis
+      # stack, so sync it here. Artifacts go to a temp dir, never the committed reports/.
+      - name: Compare and gate
+        if: steps.baseline.outputs.skip != 'true'
+        working-directory: benchmark/python
+        run: |
+          uv sync
+          uv run python run.py compare \
+            "$RUNNER_TEMP/baseline/aggregated.json" \
+            "$RUNNER_TEMP/candidate/aggregated.json" \
+            --out "$RUNNER_TEMP/compare" \
+            --fail-on-regression

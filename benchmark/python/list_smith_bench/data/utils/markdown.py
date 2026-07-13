@@ -193,21 +193,30 @@ def render_summary_markdown(
         "scheduler, thermal state). Your numbers WILL differ; capture your own local "
         "baseline before measuring a code delta.\n",
         "## Observer on the critical path: a slow observer blocks rendering\n",
-        "The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for "
-        "`observer_delay_millis` on each callback and measures render latency over a page load. "
-        "list_smith invokes the observer *synchronously* on the page-load path, so the block lands "
-        "almost fully on the critical path: a 50 ms observer pushes render latency to ~68 ms "
-        "(an ~18 ms baseline render plus the observer's whole 50 ms). Takeaway for consumers: keep "
-        "observer callbacks cheap (logging, metrics); push heavy work off the synchronous path.\n",
+        "The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for a "
+        "set delay on each callback and measures render latency over a page load, swept across "
+        "several delays. list_smith invokes the observer *synchronously* on the page-load path, so "
+        "the block lands almost fully on the critical path: render latency tracks the delay ~1:1, "
+        "on top of a fixed baseline render (~18 ms here), so a 50 ms observer pushes it to ~68 ms. "
+        "Takeaway for consumers: keep observer callbacks cheap (logging, metrics); push heavy work "
+        "off the synchronous path.\n",
         render_latency_table(dataframe),
-        "## Sync-search filter cost vs list size\n",
-        "From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` "
-        "re-runs `resolveSyncSearch` (an `items.where(predicate).toList()`) synchronously "
-        "on every committed query; this measures that cost as the in-memory list grows, "
-        "with a naive case-insensitive `contains` predicate. Where the median crosses the "
-        "frame budget is the practical ceiling for sync search with this predicate.\n",
-        sync_search_scaling_table(dataframe),
     ]
+
+    if "observer_latency.png" in chart_names:
+        parts.append("\n![Render latency vs observer delay](observer_latency.png)\n")
+
+    parts.extend(
+        [
+            "## Sync-search filter cost vs list size\n",
+            "From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` "
+            "re-runs `resolveSyncSearch` (an `items.where(predicate).toList()`) synchronously "
+            "on every committed query; this measures that cost as the in-memory list grows, "
+            "with a naive case-insensitive `contains` predicate. Where the median crosses the "
+            "frame budget is the practical ceiling for sync search with this predicate.\n",
+            sync_search_scaling_table(dataframe),
+        ]
+    )
 
     if "sync_search_scaling.png" in chart_names:
         parts.append("\n![Sync-search scaling](sync_search_scaling.png)\n")
@@ -234,6 +243,9 @@ def render_summary_markdown(
             frame_scenarios_table(dataframe),
         ]
     )
+
+    if "frame_costs.png" in chart_names:
+        parts.append("\n![Per-frame build cost](frame_costs.png)\n")
 
     return "\n".join(parts)
 

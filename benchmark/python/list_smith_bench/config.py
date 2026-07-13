@@ -47,11 +47,12 @@ WARMUP_ITERATIONS: Final[int] = 2
 # Micros ignore duration (benchmark_harness self-times); the orchestrator still passes something.
 FALLBACK_DURATION: Final[int] = 10
 
-# Micros that emit MORE THAN ONE record per iteration (one per pivot value): sync_search_scaling
-# sweeps list sizes, wrapping_overhead sweeps loaded-page counts. Used when picking the "iterations
-# per scenario" figure for report headers, so their per-pivot fan-out doesn't inflate it.
+# Entrypoints that emit MORE THAN ONE record per run (one per pivot value): sync_search_scaling
+# sweeps list sizes, wrapping_overhead sweeps loaded-page counts, slow_observer sweeps observer
+# delays. Used when picking the "iterations per scenario" figure for report headers, so their
+# per-pivot fan-out doesn't inflate it.
 MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
-    {"sync_search_scaling", "wrapping_overhead"}
+    {"sync_search_scaling", "wrapping_overhead", "slow_observer"}
 )
 
 # ---- chart style ----------------------------------------------------------
@@ -63,6 +64,9 @@ CHART_PALETTE: Final[str] = "Set2"
 FRAME_BUDGET_MICROS_60HZ: Final[int] = 16667
 # Significance threshold for the Mann-Whitney compare step.
 SIGNIFICANCE_THRESHOLD: Final[float] = 0.05
+# `compare --fail-on-regression` trips only when a metric is significant AND slower by more than
+# this percent, so a merely noise-significant sub-threshold shift doesn't fail CI.
+REGRESSION_THRESHOLD_PCT: Final[float] = 10.0
 # Forest-plot bar colours (compare): direction + significance encoding.
 FOREST_COLOUR_REGRESSION: Final[str] = "#c0392b"  # red: current significantly slower/higher
 FOREST_COLOUR_IMPROVEMENT: Final[str] = "#27ae60"  # green: current significantly faster/lower
