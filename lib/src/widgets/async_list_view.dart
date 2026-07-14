@@ -138,12 +138,25 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
       widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
 
-      return pageItems;
+      return _deduped(pageItems);
     } on Object catch (error, stackTrace) {
       widget.observer?.onError(error, stackTrace);
 
       rethrow;
     }
+  }
+
+  /// Drops items whose [AsyncSource.itemId] key already appeared in a loaded page (or earlier in this
+  /// page), so overlapping pages don't render an item twice. A null `itemId` disables it (the pager
+  /// itself never de-duplicates). Runs against the pages loaded so far, i.e. before this one is added.
+  List<T> _deduped(List<T> pageItems) {
+    final itemId = widget.source.itemId;
+    if (itemId == null) return pageItems;
+
+    final seen =
+        _controller.value.pages?.expand((page) => page).map(itemId).toSet() ?? <Object>{};
+
+    return pageItems.where((item) => seen.add(itemId(item))).toList(growable: false);
   }
 
   void _onQueryCommitted(String committedQuery) {

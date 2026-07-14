@@ -22,6 +22,9 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Decides how cached items carry across a normal ↔ search transition.
   final SearchCachePolicy searchCachePolicy;
 
+  /// Extracts a stable identity key per item to de-duplicate overlapping pages; null disables it.
+  final ItemId<T>? itemId;
+
   /// Bundles the async configuration built from the `.async` constructor.
   const AsyncSource({
     required this.fetchPage,
@@ -29,6 +32,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.endPolicy,
     required this.searchCachePolicy,
     this.searchFetchPage,
+    this.itemId,
   });
 
   /// Whether this source supports search, i.e. a [searchFetchPage] was provided.

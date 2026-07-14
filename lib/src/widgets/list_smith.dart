@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
+import '/src/data/pagination/typedefs/item_id.dart';
 import '/src/data/pagination/typedefs/page_fetcher.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -72,18 +73,21 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [searchFetchPage].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
-  /// pagination ends per `endPolicy` (by default, the first empty page). Passing [searchFetchPage]
-  /// opts into search: a non-empty [query] switches to a search view fetched by it, and
-  /// [searchCachePolicy] governs how the normal list carries across that switch. [itemBuilder] renders
-  /// each item; [surfaces] overrides the async-only neutral defaults; [emptyBuilder], [noResultsBuilder],
-  /// and [scroll] apply to every list. Pass [observer] to receive lifecycle events (page loads,
-  /// errors, refresh, search) for logging or telemetry.
+  /// pagination ends per `endPolicy` (by default, the first empty page). Pass [itemId] to de-duplicate
+  /// items across overlapping pages (e.g. an offset-based source whose data shifts between fetches);
+  /// without it, overlapping pages render the item once per page, as the underlying pager does no
+  /// de-duplication. Passing [searchFetchPage] opts into search: a non-empty [query] switches to a
+  /// search view fetched by it, and [searchCachePolicy] governs how the normal list carries across that
+  /// switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral defaults;
+  /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
+  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry.
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
     int pageSize = 20,
     this.pullToRefresh = true,
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+    ItemId<T>? itemId,
     SearchPageFetcher<T>? searchFetchPage,
     SearchCachePolicy searchCachePolicy = const ReplaceCachePolicy(),
     this.query = '',
@@ -106,6 +110,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          endPolicy: endPolicy,
          searchCachePolicy: searchCachePolicy,
          searchFetchPage: searchFetchPage,
+         itemId: itemId,
        );
 
   /// Creates a sync, in-memory searchable list over [items].

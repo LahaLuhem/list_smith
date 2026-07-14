@@ -85,6 +85,24 @@ endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),
 endPolicy: const FixedPageCountPolicy(pageCount: 5),
 ```
 
+### De-duplicating overlapping pages
+
+Offset-based sources can hand you the same row on two pages when the data shifts between fetches (a
+new row is inserted, so page N's tail reappears as page N+1's head). By default list_smith renders
+what your source returns, so those repeats show twice. Pass an `itemId` and it drops any item whose
+key already appeared:
+
+```dart
+ListSmith.async(
+  fetchPage: ...,
+  itemId: (item) => item.id,
+  itemBuilder: ...,
+)
+```
+
+The key is compared by value (`==` / `hashCode`), so an `int` or `String` id works; compose one like
+`'${item.a}:${item.b}'` for multi-field identity. Keyset/cursor pagination rarely needs it.
+
 ## Pull to refresh
 
 On by default for `ListSmith.async`. Pull down, the list resets and reloads from the first page.

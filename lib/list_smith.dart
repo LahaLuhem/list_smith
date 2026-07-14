@@ -5,6 +5,7 @@ library;
 export 'src/data/observer/models/list_smith_observer.dart';
 export 'src/data/observer/models/sinks/logging_list_smith_observer.dart';
 export 'src/data/pagination/models/pagination_end_policy.dart';
+export 'src/data/pagination/typedefs/item_id.dart';
 export 'src/data/pagination/typedefs/page_fetcher.dart';
 export 'src/data/presentation/models/async_list_surfaces.dart';
 export 'src/data/presentation/models/list_scroll_config.dart';

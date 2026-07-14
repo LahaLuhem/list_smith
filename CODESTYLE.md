@@ -411,6 +411,12 @@ materialise the result into a list for a builder. Reserve collection-`if` for we
 elements into a literal you are building (`[header, if (isX) badge, body]`), not for selecting from
 a source collection.
 
+**Flattening or mapping a source is not construction either.** A collection literal whose body is a
+`for` (or nested `for`) walking a source to transform it (`{for (final p in pages) for (final x in
+p) key(x)}`) is a pipeline in a literal's clothing; write `pages.expand((p) => p).map(key).toSet()`.
+Collection-`for` in a literal is for laying out *known* elements (a header, a fixed set of
+children), not for deriving one collection from another, no matter how the result is typed.
+
 <a id="idioms-pipeline-methods"></a>
 ### Library pipeline methods over hand-rolled loops (for data manipulation)
 
