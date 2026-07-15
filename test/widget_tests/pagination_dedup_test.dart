@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../support/bdd.dart';
+import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async pagination dedup', () {
@@ -15,17 +15,16 @@ void main() {
     // `_Item(4)` (the shape an offset-based backend produces when its data shifts between fetches).
     // ISP appends pages verbatim and never dedups, so ids 3 and 4 land in the list twice. They are
     // different objects with no `==`, so only an id-based dedup key can collapse them.
-    Future<List<_Item>> overlappingPages(int pageIndex, int _) async => switch (pageIndex) {
-      0 => [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
-      1 => [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
-      _ => <_Item>[],
-    };
+    final overlappingPages = pagedFetcher<_Item>([
+      [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
+      [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
+    ]);
 
     scenarioWidgets('an itemId key collapses an item repeated across a page boundary to one', (
       tester,
     ) async {
       await _pumpPagedList(tester, fetchPage: overlappingPages, itemId: (item) => item.id);
-      await _drainPages(tester);
+      await drain(tester, frames: 8);
 
       // Ids 3 and 4 are returned by BOTH page 0 and page 1; the key collapses each to one.
       check(find.text('item 3').evaluate()).length.equals(1);
@@ -39,7 +38,7 @@ void main() {
       tester,
     ) async {
       await _pumpPagedList(tester, fetchPage: overlappingPages);
-      await _drainPages(tester);
+      await drain(tester, frames: 8);
 
       // Default matches the underlying pager, which never de-duplicates: both copies show.
       check(find.text('item 3').evaluate()).length.equals(2);
@@ -60,26 +59,13 @@ Future<void> _pumpPagedList(
   WidgetTester tester, {
   required PageFetcher<_Item> fetchPage,
   ItemId<_Item>? itemId,
-}) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.async(
-        fetchPage: fetchPage,
-        itemId: itemId,
-        pageSize: 5,
-        pullToRefresh: false,
-        itemBuilder: (_, item, _) => Text('item ${item.id}'),
-      ),
-    ),
+}) => pumpListSmith(
+  tester,
+  ListSmith.async(
+    fetchPage: fetchPage,
+    itemId: itemId,
+    pageSize: 5,
+    pullToRefresh: false,
+    itemBuilder: (_, item, _) => Text('item ${item.id}'),
   ),
 );
-
-/// Pumps fixed frames so page 0 loads, triggers page 1, loads it, and triggers the (empty) end. The
-/// neutral spinner animates forever, so we drive fixed pumps rather than `pumpAndSettle`.
-Future<void> _drainPages(WidgetTester tester) async {
-  for (var frame = 0; frame < 8; frame++) {
-    await tester.pump();
-  }
-}

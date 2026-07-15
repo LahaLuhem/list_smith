@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../support/bdd.dart';
+import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async surface paths', () {
@@ -17,7 +17,7 @@ void main() {
         },
         surfaces: AsyncListSurfaces(newPageErrorBuilder: (_, _, _) => const Text('later failed')),
       );
-      await _drain(tester);
+      await drain(tester);
 
       // Page 0's items stay while the failed page 1 shows its own error footer.
       check(find.text('item 1').evaluate()).length.equals(1);
@@ -30,7 +30,7 @@ void main() {
         fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         separatorBuilder: (_, _) => const Text('sep'),
       );
-      await _drain(tester);
+      await drain(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
       // Separators fall between the items (and before the end-of-list footer).
@@ -42,11 +42,11 @@ void main() {
     scenarioWidgets('replacing the items list after build re-materialises and re-filters', (
       tester,
     ) async {
-      await _pumpSync(tester, items: const ['apple', 'banana'], searchBy: _contains);
+      await _pumpSync(tester, items: const ['apple', 'banana'], searchBy: containsIgnoreCase);
       await tester.pump();
       check(find.text('apple').evaluate()).length.equals(1);
 
-      await _pumpSync(tester, items: const ['cherry', 'date'], searchBy: _contains);
+      await _pumpSync(tester, items: const ['cherry', 'date'], searchBy: containsIgnoreCase);
       await tester.pump();
 
       check(find.text('cherry').evaluate()).length.equals(1);
@@ -56,11 +56,11 @@ void main() {
     scenarioWidgets('changing the query after build commits a new filter', (tester) async {
       // Same const list on both pumps, so only the query changes (isolates the query path).
       const items = ['apple', 'banana'];
-      await _pumpSync(tester, items: items, searchBy: _contains);
+      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase);
       await tester.pump();
       check(find.text('banana').evaluate()).length.equals(1);
 
-      await _pumpSync(tester, items: items, searchBy: _contains, query: 'app');
+      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase, query: 'app');
       // Fire the zero-duration debounce timer so the new query commits.
       await tester.pump(const Duration(milliseconds: 1));
 
@@ -72,7 +72,7 @@ void main() {
       await _pumpSync(
         tester,
         items: const ['apple'],
-        searchBy: _contains,
+        searchBy: containsIgnoreCase,
         scroll: const ListScrollConfig(cacheExtent: 250),
       );
       await tester.pump();
@@ -84,7 +84,7 @@ void main() {
       await _pumpSync(
         tester,
         items: const ['apple', 'banana'],
-        searchBy: _contains,
+        searchBy: containsIgnoreCase,
         separatorBuilder: (_, _) => const Text('sep'),
       );
       await tester.pump();
@@ -96,26 +96,19 @@ void main() {
   });
 }
 
-bool _contains(String item, String query) => item.toLowerCase().contains(query.toLowerCase());
-
 Future<void> _pumpAsync(
   WidgetTester tester, {
   required PageFetcher<int> fetchPage,
   AsyncListSurfaces surfaces = const AsyncListSurfaces(),
   IndexedWidgetBuilder? separatorBuilder,
-}) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.async(
-        fetchPage: fetchPage,
-        surfaces: surfaces,
-        separatorBuilder: separatorBuilder,
-        pullToRefresh: false,
-        itemBuilder: (_, item, _) => Text('item $item'),
-      ),
-    ),
+}) => pumpListSmith(
+  tester,
+  ListSmith.async(
+    fetchPage: fetchPage,
+    surfaces: surfaces,
+    separatorBuilder: separatorBuilder,
+    pullToRefresh: false,
+    itemBuilder: (_, item, _) => Text('item $item'),
   ),
 );
 
@@ -126,27 +119,14 @@ Future<void> _pumpSync(
   String query = '',
   IndexedWidgetBuilder? separatorBuilder,
   ListScrollConfig scroll = const ListScrollConfig(),
-}) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.sync(
-        items: items,
-        searchBy: searchBy,
-        query: query,
-        separatorBuilder: separatorBuilder,
-        scroll: scroll,
-        itemBuilder: (_, item, _) => Text(item),
-      ),
-    ),
+}) => pumpListSmith(
+  tester,
+  ListSmith.sync(
+    items: items,
+    searchBy: searchBy,
+    query: query,
+    separatorBuilder: separatorBuilder,
+    scroll: scroll,
+    itemBuilder: (_, item, _) => Text(item),
   ),
 );
-
-/// Pumps fixed frames so the first fetch, its result, and any triggered next fetch settle. The
-/// neutral spinner animates forever, so we drive fixed pumps rather than `pumpAndSettle`.
-Future<void> _drain(WidgetTester tester) async {
-  for (var frame = 0; frame < 5; frame++) {
-    await tester.pump();
-  }
-}

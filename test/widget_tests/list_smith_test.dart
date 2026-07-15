@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../support/bdd.dart';
+import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async surfaces', () {
@@ -25,7 +25,7 @@ void main() {
       },
       outline: (tester, example) async {
         await _pumpList(tester, example.fetchPage);
-        await _drainPages(tester);
+        await drain(tester);
 
         check(find.text(example.shows).evaluate()).length.equals(1);
       },
@@ -39,23 +39,21 @@ void main() {
 
         return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
       });
-      await _drainPages(tester);
+      await drain(tester);
 
       check(find.text('Something went wrong').evaluate()).length.equals(1);
       check(find.text('Retry').evaluate()).length.equals(1);
 
       await tester.tap(find.text('Retry'));
-      await _drainPages(tester);
+      await drain(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
     });
   });
 
   feature('ListSmith.sync surfaces', () {
-    bool contains(String item, String query) => item.toLowerCase().contains(query.toLowerCase());
-
     scenarioWidgets('shows all items when there is no query', (tester) async {
-      await _pumpSyncList(tester, items: const ['apple', 'banana'], searchBy: contains);
+      await _pumpSyncList(tester, items: const ['apple', 'banana'], searchBy: containsIgnoreCase);
       await tester.pump();
 
       check(find.text('apple').evaluate()).length.equals(1);
@@ -63,7 +61,7 @@ void main() {
     });
 
     scenarioWidgets('shows the empty surface when there are no items', (tester) async {
-      await _pumpSyncList(tester, items: const <String>[], searchBy: contains);
+      await _pumpSyncList(tester, items: const <String>[], searchBy: containsIgnoreCase);
       await tester.pump();
 
       check(find.text('No items').evaluate()).length.equals(1);
@@ -73,7 +71,7 @@ void main() {
       await _pumpSyncList(
         tester,
         items: const ['apple', 'banana'],
-        searchBy: contains,
+        searchBy: containsIgnoreCase,
         query: 'app',
       );
       await tester.pump();
@@ -86,7 +84,7 @@ void main() {
       await _pumpSyncList(
         tester,
         items: const ['apple', 'banana'],
-        searchBy: contains,
+        searchBy: containsIgnoreCase,
         query: 'xyz',
       );
       await tester.pump();
@@ -105,7 +103,7 @@ void main() {
         searchFetchPage: (_, _, _) async => const [99],
         query: '',
       );
-      await _settle(tester);
+      await settle(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 99').evaluate()).length.equals(0);
@@ -119,7 +117,7 @@ void main() {
             pageIndex == 0 ? [query.length * 10] : const <int>[],
         query: 'ab',
       );
-      await _settle(tester);
+      await settle(tester);
 
       check(find.text('item 20').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(0);
@@ -132,7 +130,7 @@ void main() {
         searchFetchPage: (_, _, _) async => const <int>[],
         query: 'zzz',
       );
-      await _settle(tester);
+      await settle(tester);
 
       check(find.text('No results').evaluate()).length.equals(1);
     });
@@ -157,7 +155,7 @@ void main() {
         query: '',
         cachePolicy: const KeepCachePolicy(),
       );
-      await _settle(tester);
+      await settle(tester);
       check(find.text('item 1').evaluate()).length.equals(1);
       final fetchesAfterNormal = normalFetches;
 
@@ -168,7 +166,7 @@ void main() {
         query: 'x',
         cachePolicy: const KeepCachePolicy(),
       );
-      await _settle(tester);
+      await settle(tester);
       check(find.text('item 99').evaluate()).length.equals(1);
 
       await _pumpAsyncSearch(
@@ -178,7 +176,7 @@ void main() {
         query: '',
         cachePolicy: const KeepCachePolicy(),
       );
-      await _settle(tester);
+      await settle(tester);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(normalFetches).equals(fetchesAfterNormal);
     });
@@ -200,7 +198,7 @@ void main() {
         searchFetchPage: searchFetchPage,
         query: '',
       );
-      await _settle(tester);
+      await settle(tester);
       final fetchesAfterNormal = normalFetches;
 
       await _pumpAsyncSearch(
@@ -209,7 +207,7 @@ void main() {
         searchFetchPage: searchFetchPage,
         query: 'x',
       );
-      await _settle(tester);
+      await settle(tester);
       check(find.text('item 99').evaluate()).length.equals(1);
 
       await _pumpAsyncSearch(
@@ -218,48 +216,30 @@ void main() {
         searchFetchPage: searchFetchPage,
         query: '',
       );
-      await _settle(tester);
+      await settle(tester);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(normalFetches).isGreaterThan(fetchesAfterNormal);
     });
   });
 }
 
-Future<void> _pumpList(WidgetTester tester, PageFetcher<int> fetchPage) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.async(fetchPage: fetchPage, itemBuilder: (_, item, _) => Text('item $item')),
-    ),
-  ),
+Future<void> _pumpList(WidgetTester tester, PageFetcher<int> fetchPage) => pumpListSmith(
+  tester,
+  ListSmith.async(fetchPage: fetchPage, itemBuilder: (_, item, _) => Text('item $item')),
 );
-
-/// Pumps a few frames so the post-frame first fetch, its async result, and any triggered next fetch
-/// all settle. The neutral spinner animates forever, so we drive fixed pumps rather than `pumpAndSettle`.
-Future<void> _drainPages(WidgetTester tester) async {
-  for (var frame = 0; frame < 4; frame++) {
-    await tester.pump();
-  }
-}
 
 Future<void> _pumpSyncList(
   WidgetTester tester, {
   required List<String> items,
   required SyncSearchPredicate<String> searchBy,
   String query = '',
-}) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.sync(
-        items: items,
-        searchBy: searchBy,
-        query: query,
-        itemBuilder: (_, item, _) => Text(item),
-      ),
-    ),
+}) => pumpListSmith(
+  tester,
+  ListSmith.sync(
+    items: items,
+    searchBy: searchBy,
+    query: query,
+    itemBuilder: (_, item, _) => Text(item),
   ),
 );
 
@@ -269,26 +249,14 @@ Future<void> _pumpAsyncSearch(
   required SearchPageFetcher<int> searchFetchPage,
   required String query,
   SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
-}) => tester.pumpWidget(
-  Directionality(
-    textDirection: .ltr,
-    child: MediaQuery(
-      data: const MediaQueryData(),
-      child: ListSmith.async(
-        fetchPage: fetchPage,
-        searchFetchPage: searchFetchPage,
-        query: query,
-        searchCachePolicy: cachePolicy,
-        searchDebounce: const Duration(milliseconds: 20),
-        itemBuilder: (_, item, _) => Text('item $item'),
-      ),
-    ),
+}) => pumpListSmith(
+  tester,
+  ListSmith.async(
+    fetchPage: fetchPage,
+    searchFetchPage: searchFetchPage,
+    query: query,
+    searchCachePolicy: cachePolicy,
+    searchDebounce: const Duration(milliseconds: 20),
+    itemBuilder: (_, item, _) => Text('item $item'),
   ),
 );
-
-/// Fires the search debounce (20ms), then drains the triggered fetch.
-Future<void> _settle(WidgetTester tester) async {
-  await tester.pump(const Duration(milliseconds: 20));
-
-  await _drainPages(tester);
-}

@@ -18,9 +18,14 @@ analysis_options.yaml
 build/
 *.iml
 
+# Generated coverage output (from `flutter test --coverage`); regenerated locally, never shipped.
+coverage/
+
 # Maintainer-only tooling.
 scripts/
 tool/
+# dependency_validator config, consumed only by the maintainer's dependency check.
+dart_dependency_validator.yaml
 
 # Context7 doc-indexer config — repo metadata for context7.com, not a consumer file.
 context7.json

@@ -600,6 +600,20 @@ app's widget tests use their own copy of the same local helper (a local helper c
 boundaries), with `flutter_test` finders and `checks` for assertions (no `bdd_framework`; the local
 helper supplies the Gherkin vocabulary).
 
+**Widget tests share one harness, not per-file copies.** The reusable pieces live under
+`test/support/`, re-exported by the `support.dart` barrel (import that one file): `pumpListSmith(
+tester, child)` wraps the list under test in the `Directionality` + `MediaQuery` scaffold every
+widget test needs; `drain(tester, {frames})` pumps a fixed number of frames (never `pumpAndSettle`);
+`settle(tester, {debounce})` advances past a search debounce, then drains. A per-suite `_pump*`
+wrapper is fine when a file repeats a construction, but keep it a thin delegation to `pumpListSmith`
+that carries only that suite's own `ListSmith` config, never a re-declared scaffold or drain loop.
+Shared fakes live in `test/support/fake_sources.dart`: `containsIgnoreCase` for sync search, and
+`pagedFetcher([...])` for multi-page or overlapping data (a single page reads clearer written
+inline). For the observer, extend `ListSmithObserver` with a recording double like
+`RecordingListSmithObserver`; a mock generator can't help here (the observer is `abstract base`, so
+mockito's generated `implements` won't compile against it), and nothing else at the test seams is
+class-shaped to mock.
+
 ---
 
 <a id="documentation-conventions"></a>
