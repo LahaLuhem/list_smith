@@ -9,6 +9,7 @@ void main() {
   const thresholdKey = 'threshold';
   const pageItemCountsKey = 'pageItemCounts';
   const endedKey = 'ended';
+
   Bdd(endDetection)
       .scenario('StopOnEmptyPages ends only after a run of consecutive trailing empty pages')
       .given('a StopOnEmptyPages policy with emptyRunBeforeEnd = <$thresholdKey>')

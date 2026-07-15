@@ -1,0 +1,115 @@
+import 'package:bdd_framework/bdd_framework.dart';
+import 'package:checks/checks.dart';
+import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/data/source/list_source.dart';
+
+void main() {
+  final refreshState = BddFeature('ListSmithRefreshState value semantics');
+
+  Bdd(refreshState)
+      .scenario('equal phase and value compare equal and share a hashCode')
+      .given('two refresh states with the same phase and value')
+      .when('they are compared')
+      .then('they are equal, their hashCodes match, and toString names the phase')
+      .run((_) {
+        const one = ListSmithRefreshState(phase: .armed, value: 1);
+        const same = ListSmithRefreshState(phase: .armed, value: 1);
+
+        check(one).equals(same);
+        check(one.hashCode).equals(same.hashCode);
+        check(one.toString())
+          ..contains('ListSmithRefreshState')
+          ..contains('armed');
+      });
+
+  Bdd(refreshState)
+      .scenario('a difference in phase or in value compares unequal')
+      .given('a base refresh state')
+      .when('it is compared to states differing in phase or in value')
+      .then('neither is equal to the base')
+      .run((_) {
+        const base = ListSmithRefreshState(phase: .idle, value: 0);
+        const otherPhase = ListSmithRefreshState(phase: .dragging, value: 0);
+        const otherValue = ListSmithRefreshState(phase: .idle, value: 0.5);
+
+        check(base == otherPhase).isFalse();
+        check(base == otherValue).isFalse();
+      });
+
+  final scrollConfig = BddFeature('ListScrollConfig string form');
+
+  Bdd(scrollConfig)
+      .scenario('toString names each configured knob')
+      .given('a config with padding, reverse, direction, and cache extent set')
+      .when('it is converted to a string')
+      .then('the string names the configured values')
+      .run((_) {
+        const config = ListScrollConfig(
+          padding: .all(8),
+          reverse: true,
+          scrollDirection: .horizontal,
+          cacheExtent: 250,
+        );
+
+        check(config.toString())
+          ..contains('reverse: true')
+          ..contains('horizontal')
+          ..contains('250');
+      });
+
+  final endPolicies = BddFeature('End policy string form');
+
+  Bdd(endPolicies)
+      .scenario('each end policy names its configuration in toString')
+      .given('a StopOnEmptyPages policy and a FixedPageCount policy')
+      .when('each is converted to a string')
+      .then('the string names the policy and its value')
+      .run((_) {
+        check(const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 2).toString())
+          ..contains('StopOnEmptyPagesPolicy')
+          ..contains('2');
+        check(const FixedPageCountPolicy(pageCount: 5).toString())
+          ..contains('FixedPageCountPolicy')
+          ..contains('5');
+      });
+
+  final sources = BddFeature('List source string form and search support');
+
+  Bdd(sources)
+      .scenario('an async source reports its config and whether it supports search')
+      .given('async sources with and without a search fetcher')
+      .when('each is inspected')
+      .then('supportsSearch reflects the fetcher and toString names the config')
+      .run((_) {
+        final plain = AsyncSource<int>(
+          fetchPage: (_, _) async => const <int>[],
+          pageSize: 20,
+          endPolicy: const StopOnEmptyPagesPolicy(),
+          searchCachePolicy: const ReplaceCachePolicy(),
+        );
+        final searchable = AsyncSource<int>(
+          fetchPage: (_, _) async => const <int>[],
+          searchFetchPage: (_, _, _) async => const <int>[],
+          pageSize: 20,
+          endPolicy: const StopOnEmptyPagesPolicy(),
+          searchCachePolicy: const ReplaceCachePolicy(),
+        );
+
+        check(plain.supportsSearch).isFalse();
+        check(searchable.supportsSearch).isTrue();
+        check(plain.toString())
+          ..contains('AsyncSource')
+          ..contains('pageSize: 20');
+      });
+
+  Bdd(sources)
+      .scenario('a sync source has a compact string form')
+      .given('a sync source over some items')
+      .when('it is converted to a string')
+      .then('the string is the compact SyncSource() form')
+      .run((_) {
+        final source = SyncSource<String>(items: const ['a', 'b'], searchBy: (_, _) => true);
+
+        check(source.toString()).equals('SyncSource()');
+      });
+}

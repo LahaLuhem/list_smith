@@ -153,8 +153,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     final itemId = widget.source.itemId;
     if (itemId == null) return pageItems;
 
-    final seen =
-        _controller.value.pages?.expand((page) => page).map(itemId).toSet() ?? <Object>{};
+    final seen = _controller.value.pages?.expand((page) => page).map(itemId).toSet() ?? <Object>{};
 
     return pageItems.where((item) => seen.add(itemId(item))).toList(growable: false);
   }

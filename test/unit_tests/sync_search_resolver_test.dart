@@ -12,9 +12,10 @@ void main() {
   const minLengthKey = 'minLength';
   const searchingKey = 'searching';
   const visibleKey = 'visible';
+
   Bdd(syncSearch)
       .scenario('gates the query by trim and min-length, then filters by the predicate')
-      .given('items ["apple", "banana", "cherry"] and a case-insensitive contains predicate')
+      .given('items $items and a case-insensitive contains predicate')
       .when('it resolves query <$queryKey> with minSearchLength <$minLengthKey>')
       .then('isSearching is <$searchingKey> and the visible items are <$visibleKey>')
       // Empty or too-short queries count as no search: every item stays visible.

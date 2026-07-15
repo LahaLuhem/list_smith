@@ -11,6 +11,7 @@ void main() {
   const wasKey = 'wasSearching';
   const isKey = 'isSearching';
   const actionKey = 'action';
+
   Bdd(cacheTransition)
       .scenario('maps a mode transition to the cache action for the policy')
       .given('a <$policyKey> and a transition from wasSearching <$wasKey> to isSearching <$isKey>')
