@@ -1,6 +1,9 @@
-# `dependency_validator` config. The example (added in a later pass) is a separate
+# `dependency_validator` config. The example and the benchmark app are each a separate
 # Flutter app with its own pubspec and deps; scope the validator to the published
-# surface (lib/) and skip the example so its dependencies aren't judged against the
-# root package's.
+# surface (lib/) and skip them so their dependencies aren't judged against the root
+# package's. `benchmark/app/` carries `integration_test` (in its own pubspec), while the
+# root-level `benchmark/micro/` stays in scope so its `benchmark_harness` dev-dep is
+# still validated as used.
 exclude:
   - "example/**"
+  - "benchmark/app/**"
