@@ -9,6 +9,30 @@
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/list_smith.svg)](https://github.com/LahaLuhem/list_smith/pulls)
 [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/list_smith.svg)](https://github.com/LahaLuhem/list_smith/pulls?q=is%3Apr+is%3Aclosed)
 
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [Install](#install)
+- [A quick taste](#a-quick-taste)
+- [Two kinds of list](#two-kinds-of-list)
+- [Pagination](#pagination)
+    * [Deciding where the data ends](#deciding-where-the-data-ends)
+    * [De-duplicating overlapping pages](#de-duplicating-overlapping-pages)
+- [Pull to refresh](#pull-to-refresh)
+- [Search](#search)
+    * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
+    * [Paged, with `ListSmith.async` and a search fetcher](#paged-with-listsmithasync-and-a-search-fetcher)
+        + [What happens to the feed while you search?](#what-happens-to-the-feed-while-you-search)
+    * [You keep the search field](#you-keep-the-search-field)
+- [Make it look like your app](#make-it-look-like-your-app)
+- [Watching what it does](#watching-what-it-does)
+- [Scroll and layout](#scroll-and-layout)
+- [Performance](#performance)
+- [Roadmap](#roadmap)
+- [The example app](#the-example-app)
+- [Contributing](#contributing)
+
+<!-- TOC end -->
+
 **list_smith** wraps `ListView.builder` for the lists you actually ship: async pagination,
 pull-to-refresh, and search (sync or async). You hand it a data source, an item builder, and a bit of
 config. It takes care of the scrollable, the controller, and every fiddly loading, error, and empty
