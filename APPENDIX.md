@@ -20,6 +20,7 @@ during the repository setup itself.
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
 - [Async search: one controller, two views](#async-two-view-search)
 - [Observer seam: async-only, no-op-method sink](#observer-seam)
+- [Grouping: erased key, sync buckets, async pre-sorted](#grouping-shape)
 
 <!-- TOC end -->
 
@@ -223,6 +224,49 @@ during the repository setup itself.
   seam (the only decision, the mode flip, is the transition `SearchCachePolicyResolver` already
   owns), so it carries no new pure resolver; it is covered by widget tests driving a
   `RecordingListSmithObserver`.
+
+---
+
+<a id="grouping-shape"></a>
+## Grouping: erased key, sync buckets, async pre-sorted
+
+- **Decision:** an optional `Grouping<T>` on both constructors, defaulting to `const NoGrouping()`;
+  opt in with `Grouping.by(groupBy:, headerBuilder:)`. A sealed, injected, defaulted seam like the
+  end and cache policies. Chosen over a nullable `ListGrouping<T>?` holder (a nullable inert field
+  again) and over flat `groupBy` + `headerBuilder` params (which allow the ghost combo of a header
+  builder with no grouper); the sealed seam makes "off" a real case and rules both out.
+  Breaking-change freedom (unpublished) let us take the cleaner shape.
+- **`NoGrouping extends Grouping<Never>` so the default stays `const`.** A generic `const
+  NoGrouping<T>()` is illegal (type variables can't appear in a constant), which would otherwise
+  force a nullable field. The off-case is `Grouping<Never>`, so the single `const NoGrouping()` is a
+  subtype of `Grouping<T>` for every `T` (`Never <: T`): a valid `const` default without naming `T`.
+- **The key type is erased, so `ListSmith` stays single-generic.** `Grouping.by<T, K>` infers `K`
+  from `groupBy`, keeps it typed in `headerBuilder`, then stores `Object`-keyed closures. A second
+  generic `ListSmith<T, K>` was rejected: Dart can't default a type parameter, so every non-grouping
+  list would carry a meaningless `K` forever. The `key as K` downcast is sound because each key
+  reaching the header builder came from the same instance's `groupBy`. Caveat (on `Grouping.by`): an
+  untyped inline `groupBy` closure widens `T` to `Object` (its parameter is the type variable, and
+  nested inference doesn't recover it), so type the parameter or pass a typed function.
+- **Header rides on the group's first item, not a sticky sliver.** A shared `groupedItemBuilder`
+  stacks the header before each group's first item in a `Flex` along the scroll axis, so ISP keeps
+  its single flat pager and list_smith keeps owning the scrollable (decision 3). A per-cell
+  look-back at the previous item's key marks where a group starts, O(1) per built cell. Sticky
+  headers would need a sliver `CustomScrollView` and, on async, splitting the pager plus
+  scroll-offset tracking (the fragility the package rejects), so they are deferred as a future
+  opt-in.
+- **Sync buckets; async trusts arrival order.** A sync list holds every item, so it reorders the
+  filtered items into contiguous groups (`bucketByGroup` via `collection`'s `groupListsBy`; groups
+  in first-appearance order, item order kept within a group), and the input can arrive in any order.
+  An async list can't reorder across pages, so the fetcher must return items already grouped by key;
+  a debug-only `groupsAreContiguous` assert flags a key that recurs after its section ended. Same
+  sync-owns-the-data / async-is-incremental split as the rest of the package.
+- **A presentation transform, not a source or policy.** `grouping` is a shared param on `ListSmith`
+  (like `itemBuilder` / `scroll`), passed to both engines, not a field on the sealed source. Its
+  logic is widget-free and unit-tested (`bucketByGroup`, `isGroupStart`, `groupsAreContiguous`),
+  mirroring `resolveSyncSearch` and the policy resolvers. `resolveSyncSearch` returns a lazy view so
+  the grouped sync path buckets the filtered iterable with one materialisation; the sync view
+  re-resolves on an items or `grouping` identity change so toggling grouping takes effect (hence
+  "hold the `Grouping` stable" on a large list, to avoid re-bucketing every build).
 
 ---
 

@@ -8,6 +8,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import '/features/async_search/async_search_view.dart';
 import '/features/basic_feed/basic_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
+import '/features/grouping/grouping_view.dart';
 import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
 import '/features/sync_search/sync_search_view.dart';
@@ -56,6 +57,14 @@ class HomeView extends StatelessWidget {
             description:
                 'Two-view search: paginated feed to results and back, with a policy toggle.',
             pageBuilder: (_) => const AsyncSearchView(),
+          ),
+          _DemoTile(
+            icon: Icon(
+              platformValue(material: Icons.segment, cupertino: CupertinoIcons.list_bullet),
+            ),
+            title: 'Grouping',
+            description: 'Bucket a list into labelled sections with Grouping.by.',
+            pageBuilder: (_) => const GroupingView(),
           ),
           _DemoTile(
             icon: const PlatformIcon(PlatformIcons.eye),
