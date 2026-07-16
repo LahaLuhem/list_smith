@@ -73,6 +73,42 @@ def sync_search_scaling_table(dataframe: pl.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
+def bucket_by_group_scaling_table(dataframe: pl.DataFrame) -> str:
+    """Markdown table of bucketing cost per `list_size` for the `bucket_by_group_scaling` micro."""
+    metric = "microseconds_per_bucket"
+    if metric not in dataframe.columns or "list_size" not in dataframe.columns:
+        return "_(no bucket_by_group_scaling data in input)_\n"
+
+    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col("list_size").is_not_null())
+    if df.is_empty():
+        return "_(no bucket_by_group_scaling data in input)_\n"
+
+    agg = (
+        df.group_by("list_size")
+        .agg(
+            pl.col(metric).count().alias("n"),
+            pl.col(metric).median().alias("median"),
+            pl.col(metric).quantile(0.25).alias("q25"),
+            pl.col(metric).quantile(0.75).alias("q75"),
+        )
+        .sort("list_size")
+    )
+
+    fmt = value_formatter("us")
+    rows = [
+        "| List size | N | Median (us) | IQR (us) | Median (ms) |",
+        "|---:|---:|---:|---:|---:|",
+    ]
+    for row in agg.iter_rows(named=True):
+        iqr = row["q75"] - row["q25"]
+        median_ms = row["median"] / 1000.0
+        rows.append(
+            f"| {row['list_size']:,} | {row['n']} | {fmt(row['median'])} "
+            f"| {fmt(iqr)} | {median_ms:,.2f} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
 def overhead_table(dataframe: pl.DataFrame) -> str:
     """Table of the overhead micros: observer_dispatch + wrapping_overhead by page count."""
     fmt = value_formatter("us")
@@ -220,6 +256,21 @@ def render_summary_markdown(
 
     if "sync_search_scaling.png" in chart_names:
         parts.append("\n![Sync-search scaling](sync_search_scaling.png)\n")
+
+    parts.extend(
+        [
+            "## Sync grouping (bucketing) cost vs list size\n",
+            "From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync grouping "
+            "reorders the filtered items into contiguous sections via `bucketByGroup` "
+            "(`groupListsBy` + flatten) on every committed query; this measures that cost as the "
+            "list grows, over fully interleaved input (worst-case reordering). It stacks on the "
+            "search-filter cost above when a sync list both searches and groups.\n",
+            bucket_by_group_scaling_table(dataframe),
+        ]
+    )
+
+    if "bucket_by_group_scaling.png" in chart_names:
+        parts.append("\n![Sync grouping scaling](bucket_by_group_scaling.png)\n")
 
     parts.extend(
         [

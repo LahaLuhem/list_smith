@@ -1,6 +1,6 @@
 # Benchmark results
 
-Captured **2026-07-13** against `0.0.0` at `b415852` on Dart SDK 3.12.2. N=10 iterations.
+Captured **2026-07-16** against `0.0.1` at `6e8008a` on Dart SDK 3.12.2. N=10 iterations.
 
 > Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS scheduler, thermal state). Your numbers WILL differ; capture your own local baseline before measuring a code delta.
 
@@ -10,10 +10,10 @@ The headline finding. `slow_observer` (profile-mode) wires an observer that bloc
 
 | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---:|---:|---:|---:|
-| 0 | 17.2 | 17.2 | 10 |
-| 25 | 42.3 | 17.3 | 10 |
-| 50 | 67.6 | 17.6 | 10 |
-| 100 | 117.8 | 17.8 | 10 |
+| 0 | 17.0 | 17.0 | 10 |
+| 25 | 43.1 | 18.1 | 10 |
+| 50 | 68.4 | 18.4 | 10 |
+| 100 | 118.7 | 18.7 | 10 |
 
 
 ![Render latency vs observer delay](observer_latency.png)
@@ -24,12 +24,25 @@ From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` 
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 379.50 | 2.26 | 0.38 |
-| 10,000 | 10 | 3,982 | 20.10 | 3.98 |
-| 100,000 | 10 | 41,427 | 332.57 | 41.43 |
+| 1,000 | 10 | 371.14 | 4.35 | 0.37 |
+| 10,000 | 10 | 3,931 | 26.12 | 3.93 |
+| 100,000 | 10 | 41,191 | 391.72 | 41.19 |
 
 
 ![Sync-search scaling](sync_search_scaling.png)
+
+## Sync grouping (bucketing) cost vs list size
+
+From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync grouping reorders the filtered items into contiguous sections via `bucketByGroup` (`groupListsBy` + flatten) on every committed query; this measures that cost as the list grows, over fully interleaved input (worst-case reordering). It stacks on the search-filter cost above when a sync list both searches and groups.
+
+| List size | N | Median (us) | IQR (us) | Median (ms) |
+|---:|---:|---:|---:|---:|
+| 1,000 | 10 | 229.34 | 5.03 | 0.23 |
+| 10,000 | 10 | 2,361 | 16.32 | 2.36 |
+| 100,000 | 10 | 26,958 | 417.28 | 26.96 |
+
+
+![Sync grouping scaling](bucket_by_group_scaling.png)
 
 ## Wrapping overhead: list_smith on top of ISP
 
@@ -38,9 +51,9 @@ Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer 
 | Micro | Metric | Median (us) |
 |---|---|---:|
 | `observer_dispatch` | us / dispatch | 0.011 |
-| `wrapping_overhead` (1 page) | us / key | 0.534 |
+| `wrapping_overhead` (1 page) | us / key | 0.519 |
 | `wrapping_overhead` (10 pages) | us / key | 1.28 |
-| `wrapping_overhead` (100 pages) | us / key | 7.88 |
+| `wrapping_overhead` (100 pages) | us / key | 7.85 |
 
 ## UI scroll/refresh: per-frame build cost
 
@@ -48,9 +61,9 @@ From the profile-mode `integration_test` scenarios (real frames on this machine)
 
 | Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |
 |---|---:|---:|---:|---:|---:|
-| `bare_listview` | 610 | 0.38 | 1.39 | 1.24 | 0 |
-| `cri_refresh` | 850 | 0.26 | 1.16 | 0.71 | 0 |
-| `isp_scroll` | 610 | 0.50 | 2.37 | 1.60 | 0 |
+| `bare_listview` | 610 | 0.53 | 1.64 | 1.21 | 0 |
+| `cri_refresh` | 850 | 0.42 | 2.87 | 1.01 | 0 |
+| `isp_scroll` | 610 | 0.58 | 2.48 | 1.57 | 0 |
 
 
 ![Per-frame build cost](frame_costs.png)

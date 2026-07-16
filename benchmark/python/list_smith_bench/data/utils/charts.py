@@ -93,6 +93,57 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
     return out_path
 
 
+def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
+    """Line plot of `microseconds_per_bucket` vs `list_size`, with the 60 Hz frame budget marked.
+
+    From the `bucket_by_group_scaling` micro: the synchronous cost of reordering a filtered
+    in-memory list into contiguous sections on each committed query. Where the line crosses the
+    frame-budget rule is the practical ceiling for sync grouping.
+
+    Returns None (writes nothing) when the input has no `bucket_by_group_scaling` data.
+    """
+    metric = "microseconds_per_bucket"
+    if metric not in dataframe.columns or "list_size" not in dataframe.columns:
+        return None
+
+    plot_df = (
+        dataframe.filter(pl.col("scenario") == "bucket_by_group_scaling")
+        .filter(pl.col(metric).is_not_null())
+        .filter(pl.col("list_size").is_not_null())
+        .select(["list_size", metric])
+        .to_pandas()
+    )
+    if plot_df.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.pointplot(
+        data=plot_df,
+        x="list_size",
+        y=metric,
+        ax=ax,
+        errorbar=("pi", 50),
+        marker="o",
+        linestyle="-",
+        color="#55a868",
+    )
+    ax.axhline(
+        FRAME_BUDGET_MICROS_60HZ,
+        color="#c0392b",
+        linestyle="--",
+        linewidth=1.0,
+        label="60 Hz frame budget (16.67 ms)",
+    )
+    ax.set_xlabel("In-memory list size (items)")
+    ax.set_ylabel("bucketByGroup cost (us)")
+    ax.set_title("Sync grouping cost scales linearly with list size")
+    ax.legend(loc="best")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
 def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     """Grouped bars of per-frame build cost (avg / worst / p99) per scroll/refresh scenario.
 
