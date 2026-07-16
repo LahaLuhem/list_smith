@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/pagination/typedefs/item_id.dart';
@@ -70,6 +71,11 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
+  /// Splits the list into sections; [NoGrouping] (the default) renders a flat list. On the sync path
+  /// the visible items are bucketed into contiguous groups; on the async path each page must already
+  /// arrive ordered by group key. See [Grouping.by].
+  final Grouping<T> grouping;
+
   /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [searchFetchPage].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
@@ -80,7 +86,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// search view fetched by it, and [searchCachePolicy] governs how the normal list carries across that
   /// switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral defaults;
   /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
-  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry.
+  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry. [grouping]
+  /// optionally shows the items in sections (see [Grouping.by]).
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
@@ -95,6 +102,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.searchDebounce = const Duration(milliseconds: 300),
     this.surfaces = const AsyncListSurfaces(),
     this.scroll = const ListScrollConfig(),
+    this.grouping = const NoGrouping(),
     this.emptyBuilder,
     this.noResultsBuilder,
     this.observer,
@@ -119,7 +127,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// list is always about search (there is nothing to paginate or refresh over in-memory data). The
   /// query is trimmed, gated by [minSearchLength], and debounced by [searchDebounce] (immediate by
   /// default). [emptyBuilder] shows when [items] is empty and [noResultsBuilder] when a search
-  /// matches nothing; both fall back to neutral defaults.
+  /// matches nothing; both fall back to neutral defaults. [grouping] optionally shows the items in
+  /// sections (see [Grouping.by]).
   ListSmith.sync({
     required Iterable<T> items,
     required SyncSearchPredicate<T> searchBy,
@@ -128,6 +137,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.minSearchLength = 0,
     this.searchDebounce = .zero,
     this.scroll = const ListScrollConfig(),
+    this.grouping = const NoGrouping(),
     this.emptyBuilder,
     this.noResultsBuilder,
     this.separatorBuilder,
@@ -142,6 +152,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     final AsyncSource<T> source => AsyncListView<T>(
       source: source,
       itemBuilder: itemBuilder,
+      grouping: grouping,
       separatorBuilder: separatorBuilder,
       pullToRefresh: pullToRefresh,
       query: query,
@@ -159,6 +170,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
       minSearchLength: minSearchLength,
       searchDebounce: searchDebounce,
       itemBuilder: itemBuilder,
+      grouping: grouping,
       separatorBuilder: separatorBuilder,
       emptyBuilder: emptyBuilder,
       noResultsBuilder: noResultsBuilder,

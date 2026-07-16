@@ -142,6 +142,8 @@ to keep in working memory:
 - No magic numbers in `lib/` code; pull them to named `static const`s.
 - Public symbols carry `///` dartdoc explaining *why* and *what guarantee*.
 - Prefer Dart 3.10+ static dot shorthands (`.center`, `.all(16)`, `.start`, `.min`).
+- Prefer data-pipeline / `collection`-package methods (`groupListsBy`, `splitBetween`,
+  `whereIndexed`, `.expand`/`.map`/`.fold`) over hand-rolled loops for any transform or scan.
 - British spelling in prose and identifiers, except names fixed by the SDK (`toJson`,
   `compareTo`, `hashCode`).
 
