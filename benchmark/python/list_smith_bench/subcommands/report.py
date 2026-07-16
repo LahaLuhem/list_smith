@@ -47,6 +47,11 @@ def cmd_report(args: argparse.Namespace) -> int:
     scaling_chart = charts.plot_sync_search_scaling(dataframe, out_dir / "sync_search_scaling.png")
     if scaling_chart is not None:
         chart_paths.append(scaling_chart)
+    grouping_chart = charts.plot_bucket_by_group_scaling(
+        dataframe, out_dir / "bucket_by_group_scaling.png"
+    )
+    if grouping_chart is not None:
+        chart_paths.append(grouping_chart)
     frame_chart = charts.plot_frame_costs(dataframe, out_dir / "frame_costs.png")
     if frame_chart is not None:
         chart_paths.append(frame_chart)

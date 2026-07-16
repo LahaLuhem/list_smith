@@ -381,6 +381,9 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
   query. With a naive case-insensitive `contains` that's ~0.4 ms at 1k items, ~4 ms at 10k, and
   ~42 ms at 100k, where it crosses the frame budget. For big in-memory lists, lean on the built-in
   debounce or reach for the async path.
+- **Grouping scales the same way, a bit cheaper.** A `Grouping` on `ListSmith.sync` buckets the
+  filtered items into sections on each committed query: ~0.2 ms at 1k, ~2.4 ms at 10k, and ~27 ms at
+  100k. Same "big list, lean on debounce or async" caveat as sync search.
 - **Observers are on the critical path.** list_smith calls your `observer` synchronously while
   a page loads, so a slow callback delays rendering roughly 1:1 (a 50 ms observer pushed render
   latency to ~68 ms). Keep them cheap: log, count, report; do heavy work elsewhere.
@@ -395,6 +398,8 @@ regressions.
 ![Per-frame build cost vs the 60 Hz budget](benchmark/reports/frame_costs.png)
 
 ![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
+
+![Sync grouping cost vs list size](benchmark/reports/bucket_by_group_scaling.png)
 
 ## Roadmap
 
