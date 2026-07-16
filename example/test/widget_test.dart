@@ -112,5 +112,18 @@ void main() {
       check(find.text('Item 1').evaluate()).length.equals(1);
       check(find.textContaining('onPageLoaded').evaluate().length).isGreaterThan(0);
     });
+
+    scenarioWidgets('grouping shows the in-memory list in labelled sections', (tester) async {
+      await tester.pumpWidget(const ListSmithExampleApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Grouping'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      check(find.text('Item 1').evaluate()).length.equals(1);
+      // The first item (id 0) sits in the 'Alpha' section, whose header renders above it.
+      check(find.text('Alpha').evaluate()).length.equals(1);
+    });
   });
 }

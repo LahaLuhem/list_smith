@@ -88,59 +88,14 @@ class PagedView<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final grouping = this.grouping;
-    final ItemBuilder<T> effectiveItemBuilder;
-    if (grouping is! KeyedGrouping<T>) {
-      effectiveItemBuilder = itemBuilder;
-    } else {
-      final flatItems = state.pages?.expand((page) => page).toList(growable: false) ?? <T>[];
-      assert(
-        groupsAreContiguous(flatItems, grouping.groupOf),
-        'Grouping on an async list needs each page ordered by group key; a group key reappeared '
-        'after its section ended, so its header would fragment.',
-      );
-      effectiveItemBuilder = groupedItemBuilder(
-        grouping,
-        itemBuilder,
-        scroll.scrollDirection,
-        flatItems,
-      );
-    }
-
-    // The error slots read `state.error!`: ISP only builds an error indicator when an error is present,
-    // so it is non-null at that point.
-    final delegate = PagedChildBuilderDelegate<T>(
-      itemBuilder: effectiveItemBuilder,
-      firstPageProgressIndicatorBuilder: (context) =>
-          firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
-      newPageProgressIndicatorBuilder: (context) =>
-          newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(compact: true),
-      firstPageErrorIndicatorBuilder: (_) => _ResolvedError(
-        error: state.error!,
-        onRetry: fetchNextPage,
-        builder: firstPageErrorBuilder,
-      ),
-      newPageErrorIndicatorBuilder: (_) => _ResolvedError(
-        error: state.error!,
-        onRetry: fetchNextPage,
-        builder: newPageErrorBuilder,
-        compact: true,
-      ),
-      noItemsFoundIndicatorBuilder: (context) => isSearchMode
-          ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
-          : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
-      noMoreItemsIndicatorBuilder: (context) =>
-          noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
-    );
-
-    final separatorBuilder = this.separatorBuilder;
+    final builderDelegate = _buildDelegate();
 
     return separatorBuilder != null
-        ? PagedListView<int, T>.separated(
+        ? PagedListView.separated(
             state: state,
             fetchNextPage: fetchNextPage,
-            builderDelegate: delegate,
-            separatorBuilder: separatorBuilder,
+            builderDelegate: builderDelegate,
+            separatorBuilder: separatorBuilder!,
             scrollController: scroll.controller,
             scrollDirection: scroll.scrollDirection,
             reverse: scroll.reverse,
@@ -148,10 +103,10 @@ class PagedView<T extends Object> extends StatelessWidget {
             padding: scroll.padding,
             cacheExtent: scroll.cacheExtent,
           )
-        : PagedListView<int, T>(
+        : PagedListView(
             state: state,
             fetchNextPage: fetchNextPage,
-            builderDelegate: delegate,
+            builderDelegate: builderDelegate,
             scrollController: scroll.controller,
             scrollDirection: scroll.scrollDirection,
             reverse: scroll.reverse,
@@ -160,6 +115,47 @@ class PagedView<T extends Object> extends StatelessWidget {
             cacheExtent: scroll.cacheExtent,
           );
   }
+
+  /// The item builder handed to ISP: [itemBuilder] unchanged when the list is not grouped, otherwise
+  /// one that prefixes each group's first item with its header. The loaded pages are flattened for the
+  /// group look-back (and the debug contiguity check) only when grouping is active.
+  ItemBuilder<T> _effectiveItemBuilder() {
+    final grouping = this.grouping;
+    if (grouping is! KeyedGrouping<T>) return itemBuilder;
+
+    final flatItems = state.pages?.expand((page) => page).toList(growable: false) ?? <T>[];
+    assert(
+      groupsAreContiguous(flatItems, grouping.groupOf),
+      'Grouping on an async list needs each page ordered by group key; a group key reappeared '
+      'after its section ended, so its header would fragment.',
+    );
+
+    return groupedItemBuilder(grouping, itemBuilder, scroll.scrollDirection, flatItems);
+  }
+
+  /// Fills every ISP delegate slot with the neutral defaults or the consumer's overrides. The error
+  /// slots read `state.error!`, non-null because ISP only builds an error indicator when an error is
+  /// present.
+  PagedChildBuilderDelegate<T> _buildDelegate() => PagedChildBuilderDelegate<T>(
+    itemBuilder: _effectiveItemBuilder(),
+    firstPageProgressIndicatorBuilder: (context) =>
+        firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
+    newPageProgressIndicatorBuilder: (context) =>
+        newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(compact: true),
+    firstPageErrorIndicatorBuilder: (_) =>
+        _ResolvedError(error: state.error!, onRetry: fetchNextPage, builder: firstPageErrorBuilder),
+    newPageErrorIndicatorBuilder: (_) => _ResolvedError(
+      error: state.error!,
+      onRetry: fetchNextPage,
+      builder: newPageErrorBuilder,
+      compact: true,
+    ),
+    noItemsFoundIndicatorBuilder: (context) => isSearchMode
+        ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
+        : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
+    noMoreItemsIndicatorBuilder: (context) =>
+        noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
+  );
 }
 
 /// Picks the consumer's [ErrorBuilder] if given, else the neutral default, wiring both to the same

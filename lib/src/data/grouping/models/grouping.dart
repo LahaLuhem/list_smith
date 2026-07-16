@@ -23,7 +23,8 @@ sealed class Grouping<T extends Object> {
   ///
   /// The key type [K] is inferred from [groupBy] and stays type-safe in [headerBuilder]; it is erased
   /// to `Object` internally, so [ListSmith] needs no second type parameter. A header is rendered above
-  /// the first item of each group.
+  /// the first item of each group. Type [groupBy]'s item parameter, or pass a typed function
+  /// reference, so `T` and `K` infer rather than widening to `Object` inside a `ListSmith` call.
   ///
   /// Ordering differs by path. A sync list reorders its (filtered) items so every group is contiguous,
   /// in the order each group first appears, keeping item order within a group, so it need not be

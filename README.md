@@ -23,6 +23,7 @@
     * [Paged, with `ListSmith.async` and a search fetcher](#paged-with-listsmithasync-and-a-search-fetcher)
         + [What happens to the feed while you search?](#what-happens-to-the-feed-while-you-search)
     * [You keep the search field](#you-keep-the-search-field)
+- [Grouping](#grouping)
 - [Make it look like your app](#make-it-look-like-your-app)
 - [Watching what it does](#watching-what-it-does)
 - [Scroll and layout](#scroll-and-layout)
@@ -225,6 +226,47 @@ Two knobs shape how the query is handled:
 - **`minSearchLength`** ignores anything shorter than N characters.
 
 The query is trimmed first, so a field full of spaces counts as empty.
+
+## Grouping
+
+Show the list in labelled sections instead of one flat run. Pass a `Grouping.by`: a `groupBy` that
+returns each item's section key, plus a `headerBuilder` that draws the header. It works on both
+constructors, and the header is stacked above the first item of each section:
+
+```dart
+ListSmith.sync(
+  items: contacts,
+  searchBy: (contact, query) => contact.name.toLowerCase().contains(query.toLowerCase()),
+  query: searchQuery,
+  grouping: Grouping.by(
+    groupBy: (Contact contact) => contact.team,
+    headerBuilder: (context, team) => SectionHeader(team),
+  ),
+  itemBuilder: (context, contact, index) => Text(contact.name),
+)
+```
+
+Grouping runs over whatever is *visible*, so it composes with search: the sections re-form over the
+matches as you type.
+
+The two paths order their sections differently, and the difference matters:
+
+- **`.sync` buckets for you.** It holds the whole list, so it gathers each group into one contiguous
+  run (groups in the order they first appear, items kept in order within a group). Your input can
+  arrive in any order.
+- **`.async` groups in arrival order.** It can't reorder across pages, so your `fetchPage` (and
+  `searchFetchPage`) must return items *already grouped by key*, all of one group before the next.
+  A key that comes back after its section ended repeats the header; a debug-mode assert flags it.
+
+Two things worth knowing:
+
+- **Type the `groupBy` parameter** or pass a typed function reference, so the key type is inferred
+  instead of widening to `Object`.
+- **Hold the `Grouping` stable** on a large `.sync` list. A `Grouping.by(...)` rebuilt every frame
+  re-buckets every frame; keep it in a field (or `const NoGrouping()` when grouping is off) so the
+  result stays cached.
+
+What bucketing costs is in [Performance](#performance).
 
 ## Make it look like your app
 
