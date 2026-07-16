@@ -437,7 +437,10 @@ for (final item in incoming) {
 ```
 
 A tell: if you seed an empty collection and mutate it in a loop, that's usually a pipeline wearing
-a loop's clothes. **Stay lazy; materialise deliberately.** Don't end a chain with a reflexive
+a loop's clothes. When `dart:core` has no matching method, reach for the `collection` package
+(already a dependency) before hand-rolling: `groupListsBy`, `splitBetween`, `whereIndexed`,
+`mapIndexed`, `foldIndexed`, and `slices` cover most grouping, adjacent-run, and indexed scans.
+**Stay lazy; materialise deliberately.** Don't end a chain with a reflexive
 `.toList()`; leave it an `Iterable` and let the terminal consumer drive evaluation. Materialise
 only when the result is iterated more than once or an API genuinely requires a `List`; when you do,
 `.toList(growable: false)` says it won't be mutated.

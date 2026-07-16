@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import '/src/data/grouping/models/grouping.dart';
+import '/src/data/grouping/utils/grouping_resolver.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -10,6 +12,7 @@ import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
 import 'defaults/neutral_no_more_items_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
+import 'grouped_item.dart';
 
 /// Wraps ISP's [PagedListView], filling every delegate slot with list_smith's neutral defaults
 /// (or the consumer's overrides) so no Material surface leaks through, and bridging the bare error
@@ -26,6 +29,9 @@ class PagedView<T extends Object> extends StatelessWidget {
 
   /// Builds each item.
   final ItemBuilder<T> itemBuilder;
+
+  /// Splits the visible items into sections; [NoGrouping] (the default) renders a flat list.
+  final Grouping<T> grouping;
 
   /// Scroll and layout configuration.
   final ListScrollConfig scroll;
@@ -65,6 +71,7 @@ class PagedView<T extends Object> extends StatelessWidget {
     required this.state,
     required this.fetchNextPage,
     required this.itemBuilder,
+    required this.grouping,
     required this.scroll,
     required this.isSearchMode,
     required this.query,
@@ -81,10 +88,29 @@ class PagedView<T extends Object> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final grouping = this.grouping;
+    final ItemBuilder<T> effectiveItemBuilder;
+    if (grouping is! KeyedGrouping<T>) {
+      effectiveItemBuilder = itemBuilder;
+    } else {
+      final flatItems = state.pages?.expand((page) => page).toList(growable: false) ?? <T>[];
+      assert(
+        groupsAreContiguous(flatItems, grouping.groupOf),
+        'Grouping on an async list needs each page ordered by group key; a group key reappeared '
+        'after its section ended, so its header would fragment.',
+      );
+      effectiveItemBuilder = groupedItemBuilder(
+        grouping,
+        itemBuilder,
+        scroll.scrollDirection,
+        flatItems,
+      );
+    }
+
     // The error slots read `state.error!`: ISP only builds an error indicator when an error is present,
     // so it is non-null at that point.
     final delegate = PagedChildBuilderDelegate<T>(
-      itemBuilder: itemBuilder,
+      itemBuilder: effectiveItemBuilder,
       firstPageProgressIndicatorBuilder: (context) =>
           firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
       newPageProgressIndicatorBuilder: (context) =>

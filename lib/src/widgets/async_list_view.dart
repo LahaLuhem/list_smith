@@ -5,6 +5,7 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/extensions/pagination_end_policy_resolver_extension.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
@@ -34,6 +35,9 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 
   /// Builds the widget for each item.
   final ItemBuilder<T> itemBuilder;
+
+  /// Splits the visible items into sections; [NoGrouping] (the default) renders a flat list.
+  final Grouping<T> grouping;
 
   /// Builds the separator between items; null for no separators.
   final IndexedWidgetBuilder? separatorBuilder;
@@ -69,6 +73,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   const AsyncListView({
     required this.source,
     required this.itemBuilder,
+    required this.grouping,
     required this.pullToRefresh,
     required this.query,
     required this.minSearchLength,
@@ -199,6 +204,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
           state: state,
           fetchNextPage: fetchNextPage,
           itemBuilder: widget.itemBuilder,
+          grouping: widget.grouping,
           scroll: widget.scroll,
           isSearchMode: isSearchMode,
           query: _debouncer.committedQuery,
