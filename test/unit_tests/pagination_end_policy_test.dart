@@ -79,6 +79,21 @@ void main() {
           policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: pageSize)),
         ).equals(ctx.example.val(endedKey) as bool);
       });
+
+  Bdd(endDetection)
+      .scenario('ExplicitHasMore ends only when the fetcher reports no more data')
+      .given('an ExplicitHasMore policy')
+      .when('it inspects the last page signal (a hasMore flag)')
+      .then('it ends on false, continues on true, and stays dormant on a null signal')
+      .run((_) {
+        const policy = ExplicitHasMorePolicy();
+        EndContext contextWith(Object? signal) =>
+            EndContext(pageItemCounts: const [5], pageSize: 20, lastPageSignal: signal);
+
+        check(policy.hasReachedEnd(contextWith(false))).isTrue();
+        check(policy.hasReachedEnd(contextWith(true))).isFalse();
+        check(policy.hasReachedEnd(contextWith(null))).isFalse();
+      });
 }
 
 /// A consumer-authored end policy: ends when the most recent page held fewer than a full page of

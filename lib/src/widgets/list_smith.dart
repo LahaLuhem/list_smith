@@ -112,6 +112,16 @@ class ListSmith<T extends Object> extends StatelessWidget {
          searchFetchPage != null || query.isEmpty,
          'A query was set without a searchFetchPage; pass searchFetchPage to enable search.',
        ),
+       assert(
+         endPolicy is! ExplicitHasMorePolicy || fetchPage.reportsSignal,
+         'ExplicitHasMorePolicy needs a signal-reporting fetcher; build fetchPage with '
+         'PageFetcher.withSignal.',
+       ),
+       assert(
+         endPolicy is! ExplicitHasMorePolicy || (searchFetchPage?.reportsSignal ?? true),
+         'ExplicitHasMorePolicy needs a signal-reporting search fetcher; build searchFetchPage with '
+         'SearchPageFetcher.withSignal.',
+       ),
        _source = AsyncSource(
          fetchPage: fetchPage,
          pageSize: pageSize,

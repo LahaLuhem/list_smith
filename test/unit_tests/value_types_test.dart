@@ -71,6 +71,7 @@ void main() {
         check(const FixedPageCountPolicy(pageCount: 5).toString())
           ..contains('FixedPageCountPolicy')
           ..contains('5');
+        check(const ExplicitHasMorePolicy().toString()).contains('ExplicitHasMorePolicy');
       });
 
   final sources = BddFeature('List source string form and search support');
