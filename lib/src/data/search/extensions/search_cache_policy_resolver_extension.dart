@@ -5,7 +5,7 @@ import '../models/search_cache_policy.dart';
 ///
 /// Kept as an unexported extension in its own file so the policy stays pure data while the "what to
 /// do on a transition" decision is a small, controller-free unit that can be unit-tested directly
-/// (the same split as `PaginationEndPolicyResolver`).
+/// (the same split as `PaginationEndPolicy.hasReachedEnd`).
 extension SearchCachePolicyResolverExtension on SearchCachePolicy {
   /// The action for a transition from [wasSearching] to [isSearching] under this policy.
   ///

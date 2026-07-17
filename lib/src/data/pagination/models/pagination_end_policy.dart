@@ -1,13 +1,23 @@
+// PaginationEndPolicy is an open, injected contract, not a function typedef: its built-in
+// implementations carry configuration (e.g. StopOnEmptyPagesPolicy.emptyRunBeforeEnd) and a
+// toString, and consumers implement it to add their own end-detection, none of which a bare function
+// can express.
+// ignore_for_file: one_member_abstracts
+import 'end_context.dart';
+
 part 'policies/fixed_page_count_policy.dart';
 part 'policies/stop_on_empty_pages_policy.dart';
 
 /// Decides when an async list has reached the end of its data.
 ///
-/// A sealed, injected policy; list_smith ships [StopOnEmptyPagesPolicy] (the default) and
-/// [FixedPageCountPolicy]. Sealed so more end-detection strategies can be added later (an explicit
-/// `hasMore`, a server sentinel) without a breaking change, and so the shell handles every case
-/// exhaustively.
-sealed class PaginationEndPolicy {
-  /// Const base constructor for the sealed hierarchy.
+/// An injected, open policy: after each page settles, list_smith rebuilds an [EndContext] from the
+/// pages loaded so far and calls [hasReachedEnd]. Ships [StopOnEmptyPagesPolicy] (the default) and
+/// [FixedPageCountPolicy]; implement this class to supply your own end-detection (for example ending
+/// when the last page came back shorter than the page size) without a change to list_smith.
+abstract class PaginationEndPolicy {
+  /// Const base constructor for subclasses.
   const PaginationEndPolicy();
+
+  /// Whether pagination has reached its end, given [context] over the pages loaded so far.
+  bool hasReachedEnd(EndContext context);
 }

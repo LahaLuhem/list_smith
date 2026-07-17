@@ -7,8 +7,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
-import '/src/data/pagination/extensions/pagination_end_policy_resolver_extension.dart';
-import '/src/data/pagination/models/pagination_end_policy.dart';
+import '/src/data/pagination/models/end_context.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -94,7 +93,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _controller = PagingController<int, T>(
-    getNextPageKey: (state) => _nextPageKey(state, widget.source.endPolicy),
+    getNextPageKey: _nextPageKey,
     fetchPage: _fetchPage,
   );
 
@@ -156,6 +155,22 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
       rethrow;
     }
+  }
+
+  /// The next 0-based page key for [state], or `null` once the end policy reports the end.
+  ///
+  /// Keys are the page count so far, so they stay 0-based and sequential. The end decision is the
+  /// injected [AsyncSource.endPolicy] applied to an [EndContext] rebuilt from the pages loaded so far.
+  int? _nextPageKey(PagingState<int, T> state) {
+    final pages = state.pages;
+    if (pages == null || pages.isEmpty) return 0;
+
+    final context = EndContext(
+      pageItemCounts: pages.map((page) => page.length).toList(growable: false),
+      pageSize: widget.source.pageSize,
+    );
+
+    return widget.source.endPolicy.hasReachedEnd(context) ? null : pages.length;
   }
 
   /// A display-only copy of [state] with items whose [AsyncSource.itemId] key already appeared earlier
@@ -258,16 +273,4 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
     return Future.sync(_controller.refresh);
   }
-}
-
-/// Computes the next 0-based page key for [state], or `null` once [endPolicy] reports the end.
-/// Keys are the page count so far, so they stay 0-based and sequential.
-int? _nextPageKey<T extends Object>(PagingState<int, T> state, PaginationEndPolicy endPolicy) {
-  final pages = state.pages;
-  if (pages == null || pages.isEmpty) return 0;
-
-  final pageItemCounts = pages.map((page) => page.length);
-  if (endPolicy.hasReachedEnd(pageItemCounts.toList(growable: false))) return null;
-
-  return pages.length;
 }

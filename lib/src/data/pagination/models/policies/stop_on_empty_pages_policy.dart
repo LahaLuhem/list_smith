@@ -16,5 +16,8 @@ final class StopOnEmptyPagesPolicy extends PaginationEndPolicy {
     : assert(emptyRunBeforeEnd >= 1, 'emptyRunBeforeEnd must be at least 1.');
 
   @override
+  bool hasReachedEnd(EndContext context) => context.trailingEmptyRun >= emptyRunBeforeEnd;
+
+  @override
   String toString() => 'StopOnEmptyPagesPolicy(emptyRunBeforeEnd: $emptyRunBeforeEnd)';
 }
