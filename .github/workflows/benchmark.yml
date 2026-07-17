@@ -32,10 +32,14 @@ jobs:
       - uses: astral-sh/setup-uv@v8.3.2
         with:
           enable-cache: true
+      # Pin the bare-python build/run steps to the analyzer's floor (.python-version) rather than
+      # whatever the runner ships, so CI matches the declared requires-python.
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: benchmark/python/.python-version
 
       # Candidate: build + run the AOT micros on the PR head. build/run use only the stdlib
-      # (subprocess + json), so plain python3 is enough; the analysis venv (scipy, for compare) is
-      # synced later, once.
+      # (subprocess + json), so no analysis venv is needed here; scipy for compare syncs later.
       - name: Micros - candidate (PR head)
         working-directory: benchmark/python
         run: |
@@ -70,3 +74,13 @@ jobs:
             "$RUNNER_TEMP/candidate/aggregated.json" \
             --out "$RUNNER_TEMP/compare" \
             --fail-on-regression
+
+      # Keep the compare artifacts (forest chart + COMPARE.md) even when the gate fails, so a
+      # flagged regression is inspectable from the run instead of lost in the step log.
+      - name: Upload compare artifacts
+        if: always() && steps.baseline.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: micro-compare
+          path: ${{ runner.temp }}/compare
+          if-no-files-found: warn

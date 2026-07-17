@@ -16,7 +16,7 @@
 name = "list-smith-bench"
 version = "0.1.0"
 description = "Benchmark orchestration + analysis for list_smith."
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 
 dependencies = [
     "numpy>=1.26,<3.0",
@@ -41,7 +41,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py313"
 
 [tool.pytest.ini_options]
 # Tests live under tests/; pytest auto-discovers test_*.py there.
