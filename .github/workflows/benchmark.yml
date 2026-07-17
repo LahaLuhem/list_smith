@@ -27,7 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-flutter
-      - uses: astral-sh/setup-uv@v7
+      # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
+      # Dependabot bumps this exact version like any other pin.
+      - uses: astral-sh/setup-uv@v8.3.2
         with:
           enable-cache: true
 

@@ -17,6 +17,7 @@ from list_smith_bench.data.utils.stats import (
     compute_compare_rows,
     group_samples,
     median,
+    records_per_scenario,
     regressions,
 )
 
@@ -184,3 +185,38 @@ class TestRegressions:
         baseline = [_record("a", {"m": [20.0, 20.1, 20.2, 20.3, 20.4]})]
         current = [_record("a", {"m": [14.0, 14.1, 14.2, 14.3, 14.4]})]  # faster
         assert regressions(compute_compare_rows(baseline, current), 10.0) == []
+
+
+class TestRecordsPerScenario:
+    def test_empty_returns_zero(self) -> None:
+        assert records_per_scenario([]) == 0
+
+    def test_counts_the_most_emitted_scalar_scenario(self) -> None:
+        # isp_scroll + observer_dispatch emit one record per iteration (scalar, not multi-record);
+        # the header figure is the biggest such count.
+        records = [
+            _record("isp_scroll", {"m": [1.0]}),
+            _record("isp_scroll", {"m": [1.0]}),
+            _record("observer_dispatch", {"m": [1.0]}),
+        ]
+        assert records_per_scenario(records) == 2
+
+    def test_multi_record_scenarios_ignored_when_a_scalar_exists(self) -> None:
+        # sync_search_scaling emits one record per size per iteration; that inflated count must not
+        # win over a genuine single-record-per-iteration scenario.
+        records = [
+            _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 1000}),
+            _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 10000}),
+            _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 100000}),
+            _record("isp_scroll", {"m": [1.0]}),
+        ]
+        assert records_per_scenario(records) == 1
+
+    def test_falls_back_to_max_when_all_multi_record(self) -> None:
+        # No scalar scenario present: fall back to the largest count across the multi-record ones.
+        records = [
+            _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 1000}),
+            _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 10000}),
+            _record("wrapping_overhead", {"m": [1.0]}, {"page_count": 10}),
+        ]
+        assert records_per_scenario(records) == 2

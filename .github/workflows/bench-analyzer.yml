@@ -1,0 +1,39 @@
+name: Benchmark analyzer tests
+
+# Unit tests + coverage gate for the pure-Python benchmark analyzer (benchmark/python).
+# The regression tripwire's math (stats.py: compute_compare_rows / regressions) is unit-tested
+# here, and the gate keeps that core covered. Pure Python (no Flutter/Dart), so it is separate
+# from the regression drive in benchmark.yml.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - benchmark/python/**
+      - .github/workflows/bench-analyzer.yml
+
+concurrency:
+  group: bench-analyzer-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyzer-tests:
+    name: Analyzer unit tests + coverage gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
+      # Dependabot bumps this exact version like any other pin.
+      - uses: astral-sh/setup-uv@v8.3.2
+        with:
+          enable-cache: true
+      # uv sync installs the dev group (pytest + pytest-cov). The --cov target is in pyproject
+      # addopts; the fail-under threshold is here so local single-test runs aren't blocked by it.
+      - name: pytest + coverage gate
+        working-directory: benchmark/python
+        run: |
+          uv sync
+          uv run pytest --cov-fail-under=90
