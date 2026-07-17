@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Added
 - \[#7\] groupBy + groupByHeaderBuilder
+- \[#5\] Android verified
 
 ## [0.0.1] - 2026-07-15
 ### Added
