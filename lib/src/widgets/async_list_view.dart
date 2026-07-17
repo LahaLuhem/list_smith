@@ -97,8 +97,15 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     fetchPage: _fetchPage,
   );
 
-  /// The normal-mode paging state kept aside while searching, for [KeepCachePolicy].
-  PagingState<int, T>? _normalSnapshot;
+  /// The normal-mode paging state (with its end signal) kept aside while searching, for
+  /// [KeepCachePolicy].
+  ({PagingState<int, T> state, Object? signal})? _normalSnapshot;
+
+  /// The end signal from the current stream's most recent fetch, fed to the end policy via
+  /// [EndContext.lastPageSignal]. Owned here because it is not derivable from the paging state: it
+  /// resets on refresh and snapshots with [_normalSnapshot] across a search toggle, so a signal-based
+  /// policy stays correct in either mode. Null until a signal-reporting fetcher sets it.
+  Object? _lastPageSignal;
 
   /// Memo for [_dedupedForDisplay]: the last raw state seen paired with the view derived from it, or
   /// null before the first de-dup. Keyed on paging-state identity; the controller hands out the same
@@ -142,10 +149,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     final isSearchMode = _isSearchQuery(committedQuery);
 
     try {
-      final page = isSearchMode
+      final (items, signal) = isSearchMode
           ? await source.searchFetchPage!(committedQuery, pageKey, source.pageSize)
           : await source.fetchPage(pageKey, source.pageSize);
-      final pageItems = page.toList(growable: false);
+      final pageItems = items.toList(growable: false);
+      _lastPageSignal = signal;
 
       widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
 
@@ -168,6 +176,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     final context = EndContext(
       pageItemCounts: pages.map((page) => page.length).toList(growable: false),
       pageSize: widget.source.pageSize,
+      lastPageSignal: _lastPageSignal,
     );
 
     return widget.source.endPolicy.hasReachedEnd(context) ? null : pages.length;
@@ -221,14 +230,22 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   void _applyCacheAction(CacheAction action) {
     switch ((action, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
-        _controller.value = snapshot;
+        _controller.value = snapshot.state;
+        _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
       case (.snapshotThenRefresh, _):
-        _normalSnapshot = _controller.value;
-        _controller.refresh();
+        _normalSnapshot = (state: _controller.value, signal: _lastPageSignal);
+        _resetPaging();
       case (.refresh, _) || (.restoreNormal, null):
-        _controller.refresh();
+        _resetPaging();
     }
+  }
+
+  /// Refreshes the controller and clears the end signal, so a signal-based policy starts the reloaded
+  /// stream fresh instead of reading the previous stream's last signal.
+  void _resetPaging() {
+    _lastPageSignal = null;
+    _controller.refresh();
   }
 
   @override
@@ -271,6 +288,6 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   Future<void> _onRefresh() {
     widget.observer?.onRefresh();
 
-    return Future.sync(_controller.refresh);
+    return Future.sync(_resetPaging);
   }
 }
