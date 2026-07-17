@@ -114,13 +114,11 @@ class ListSmith<T extends Object> extends StatelessWidget {
        ),
        assert(
          endPolicy is! ExplicitHasMorePolicy || fetchPage.reportsSignal,
-         'ExplicitHasMorePolicy needs a signal-reporting fetcher; build fetchPage with '
-         'PageFetcher.withSignal.',
+         'ExplicitHasMorePolicy needs a signal-reporting fetcher. Build fetchPage with PageFetcher.withSignal.',
        ),
        assert(
          endPolicy is! ExplicitHasMorePolicy || (searchFetchPage?.reportsSignal ?? true),
-         'ExplicitHasMorePolicy needs a signal-reporting search fetcher; build searchFetchPage with '
-         'SearchPageFetcher.withSignal.',
+         'ExplicitHasMorePolicy needs a signal-reporting search fetcher. Build searchFetchPage with SearchPageFetcher.withSignal.',
        ),
        _source = AsyncSource(
          fetchPage: fetchPage,

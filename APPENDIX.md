@@ -21,6 +21,7 @@ during the repository setup itself.
 - [Async search: one controller, two views](#async-two-view-search)
 - [Observer seam: async-only, no-op-method sink](#observer-seam)
 - [Grouping: erased key, sync buckets, async pre-sorted](#grouping-shape)
+- [Explicit end signals: open policy plus fetcher building block](#explicit-end-signals)
 
 <!-- TOC end -->
 
@@ -147,8 +148,9 @@ during the repository setup itself.
   cleanly and one shared holder could not.
 - **Pure resolver:** the trim + min-length gating and predicate filtering live in a widget-free
   `resolveSyncSearch(...)` returning `(visibleItems, isSearching)`, unit-tested directly. This
-  mirrors `PaginationEndPolicyResolver`: the branchy logic (an empty or too-short query shows
-  everything; an active query with no matches is the no-results surface) is tested without a widget.
+  mirrors the pure `PaginationEndPolicy.hasReachedEnd`: the branchy logic (an empty or too-short
+  query shows everything; an active query with no matches is the no-results surface) is tested
+  without a widget.
 - **Surfaces stay flat:** `emptyBuilder` (source empty) and `noResultsBuilder` (search matched
   nothing) are flat and shared with the async path, per Rule X (see
   [#async-surfaces-holder](#async-surfaces-holder)); a sync list carries none of the async surfaces,
@@ -178,7 +180,7 @@ during the repository setup itself.
 - **Cache policy is a pure decision plus an impure execution.** On a committed-query change,
   `SearchCachePolicy.actionFor(wasSearching, isSearching)` returns a `CacheAction`
   (`refresh` / `snapshotThenRefresh` / `restoreNormal`). That decision is widget- and controller-free,
-  so it is unit-tested directly (the `PaginationEndPolicyResolver` split again); the view executes it
+  so it is unit-tested directly (the `hasReachedEnd` split again); the view executes it
   against the controller. `Keep` snapshots `controller.value` on entering search and restores it on
   leaving (an instant return, no refetch); `Replace` always refetches; a search-to-search change
   refetches under either policy.
@@ -302,6 +304,46 @@ during the repository setup itself.
   parallel state has to snapshot/restore in lockstep with `KeepCachePolicy`, and a bug there corrupts
   pagination, not just display. Not worth the fragility while realistic lists stay well under the
   cliff; revisit if large-list jank is reported. `benchmark/micro/dedup_scaling.dart` is the tripwire.
+
+---
+
+<a id="explicit-end-signals"></a>
+## Explicit end signals: an open policy plus a fetcher building block
+
+- **Decision:** `PaginationEndPolicy` is an open `abstract class` a consumer can implement, not a
+  sealed set. The end decision is a public `hasReachedEnd(EndContext)` on the policy. list_smith
+  ships `StopOnEmptyPagesPolicy`, `FixedPageCountPolicy`, and `ExplicitHasMorePolicy`, and a
+  consumer can add their own (a short-last-page or null-cursor rule) without a change here.
+- **Why open, not sealed.** Issue #1 existed because a sealed policy forced list_smith to enumerate
+  every end-detection strategy. Opening it flips that: the common page-derivable rules become a few
+  lines of consumer code. It also deletes a workaround. The decision used to live in an unexported
+  resolver extension so the policy could stay pure data while the shell reached it from another
+  library; a public method on an open interface needs none of that, so the extension is gone and
+  tests call `hasReachedEnd` directly.
+- **The signal is a fetcher output, orthogonal to the policy.** A `hasMore` flag lives in the
+  network response, which only the fetcher sees, so no policy shape can conjure it: the policy
+  decides, the fetcher supplies. `PageFetcher` / `SearchPageFetcher` became small callable classes
+  (were bare typedefs) with two constructors. The default `.new` returns items only; `.withSignal`
+  returns `(items, Object? signal)`. The common path pays a one-constructor wrap and the signal
+  rides the same return, so `T` stays the consumer's DTO, never a `Response<T>` wrapper.
+- **The signal is erased to `Object?`.** `ExplicitHasMorePolicy` reads it as a `hasMore` bool; a
+  consumer's cursor policy reads it as their cursor. Erasure (the trick grouping uses for its key)
+  avoids a second type parameter on `ListSmith`. A return value beat a mutation channel (a
+  `Completer` or sink) because it fits the package's value-object grain and, unlike a `void`
+  completer, can carry a cursor.
+- **list_smith owns the signal's lifecycle, so policies stay pure.** The last fetch's signal lives
+  in `_lastPageSignal` (it is not derivable from the paging state). It feeds each
+  `EndContext.lastPageSignal`, resets on refresh, and is snapshotted with the normal state across a
+  `KeepCachePolicy` search toggle. Because the library owns that one field, every policy is a pure
+  function of its `EndContext` and stays correct across refresh and the normal-search transition,
+  with no consumer-side reset wiring. A guard asserts `ExplicitHasMorePolicy` is paired with a
+  `.withSignal` fetcher, so a "never ends" mispairing fails at construction.
+- **Scope: an end signal, not cursor-driven paging.** A cursor is carried only as a stop signal,
+  ending on a null cursor via a custom policy. It is not fed back as the next fetch's input; the
+  page key stays the 0-based index. Cursor-driven pagination is a larger change to the page-key
+  model, left to a follow-up.
+- **Layout:** `PageFetcher` and `SearchPageFetcher` live under `models/` now that they are classes,
+  not in `typedefs/` (which keeps only real typedefs, like `SyncSearchPredicate`).
 
 ---
 
