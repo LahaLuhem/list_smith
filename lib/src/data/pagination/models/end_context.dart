@@ -1,3 +1,4 @@
+/// @docImport 'page_fetcher.dart';
 /// @docImport 'pagination_end_policy.dart';
 library;
 
@@ -13,8 +14,13 @@ final class EndContext {
   /// The page size configured on the list, as passed to the fetcher.
   final int pageSize;
 
+  /// The end signal the most recent page's fetcher reported, or `null` when the fetcher reports none
+  /// (a plain [PageFetcher.new]) or no page has been fetched yet. A signal-based end policy reads this
+  /// (for example ending when a next-cursor is `null`); count-based policies ignore it.
+  final Object? lastPageSignal;
+
   /// Creates a context over the [pageItemCounts] seen so far and the list's [pageSize].
-  const EndContext({required this.pageItemCounts, required this.pageSize});
+  const EndContext({required this.pageItemCounts, required this.pageSize, this.lastPageSignal});
 
   /// The number of pages fetched so far.
   int get pageCount => pageItemCounts.length;
