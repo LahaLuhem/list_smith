@@ -33,7 +33,7 @@ void main() {
     await tester.pumpWidget(
       HostFrame(
         child: ListSmith<int>.async(
-          fetchPage: fetchPage,
+          fetchPage: PageFetcher(fetchPage),
           pageSize: _pageSize,
           pullToRefresh: true,
           itemBuilder: (_, item, _) => ScrollBenchItem(index: item),

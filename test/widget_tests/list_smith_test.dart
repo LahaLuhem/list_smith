@@ -11,15 +11,19 @@ void main() {
       'renders the right surface for the source state',
       examples: {
         'the first page of items': (
-          fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          fetchPage: PageFetcher(
+            (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          ),
           shows: 'item 1',
         ),
         'the empty surface when the source has no items': (
-          fetchPage: (_, _) async => const <int>[],
+          fetchPage: PageFetcher((_, _) async => const <int>[]),
           shows: 'No items',
         ),
         'the no-more footer once every page has loaded': (
-          fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          fetchPage: PageFetcher(
+            (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          ),
           shows: 'No more items',
         ),
       },
@@ -33,12 +37,15 @@ void main() {
 
     scenarioWidgets('shows the error surface, then retry recovers to the items', (tester) async {
       var calls = 0;
-      await _pumpList(tester, (pageIndex, _) async {
-        calls++;
-        if (calls == 1) throw Exception('network');
+      await _pumpList(
+        tester,
+        PageFetcher((pageIndex, _) async {
+          calls++;
+          if (calls == 1) throw Exception('network');
 
-        return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
-      });
+          return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+        }),
+      );
       await drain(tester);
 
       check(find.text('Something went wrong').evaluate()).length.equals(1);
@@ -99,8 +106,10 @@ void main() {
     ) async {
       await _pumpAsyncSearch(
         tester,
-        fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-        searchFetchPage: (_, _, _) async => const [99],
+        fetchPage: PageFetcher(
+          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
+        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
         query: '',
       );
       await settle(tester);
@@ -112,9 +121,10 @@ void main() {
     scenarioWidgets('a non-empty query shows the search results', (tester) async {
       await _pumpAsyncSearch(
         tester,
-        fetchPage: (_, _) async => const [1, 2, 3],
-        searchFetchPage: (query, pageIndex, _) async =>
-            pageIndex == 0 ? [query.length * 10] : const <int>[],
+        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
+        searchFetchPage: SearchPageFetcher(
+          (query, pageIndex, _) async => pageIndex == 0 ? [query.length * 10] : const <int>[],
+        ),
         query: 'ab',
       );
       await settle(tester);
@@ -126,8 +136,8 @@ void main() {
     scenarioWidgets('a search that matches nothing shows the no-results surface', (tester) async {
       await _pumpAsyncSearch(
         tester,
-        fetchPage: (_, _) async => const [1, 2, 3],
-        searchFetchPage: (_, _, _) async => const <int>[],
+        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
+        searchFetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
         query: 'zzz',
       );
       await settle(tester);
@@ -139,14 +149,15 @@ void main() {
       tester,
     ) async {
       var normalFetches = 0;
-      Future<Iterable<int>> fetchPage(int pageIndex, int _) async {
+      final fetchPage = PageFetcher<int>((pageIndex, _) async {
         normalFetches++;
 
         return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
-      }
+      });
 
-      Future<Iterable<int>> searchFetchPage(String _, int pageIndex, int _) async =>
-          pageIndex == 0 ? const [99] : const <int>[];
+      final searchFetchPage = SearchPageFetcher<int>(
+        (_, pageIndex, _) async => pageIndex == 0 ? const [99] : const <int>[],
+      );
 
       await _pumpAsyncSearch(
         tester,
@@ -183,14 +194,15 @@ void main() {
 
     scenarioWidgets('ReplaceCachePolicy refetches the normal list on clearing', (tester) async {
       var normalFetches = 0;
-      Future<Iterable<int>> fetchPage(int pageIndex, int _) async {
+      final fetchPage = PageFetcher<int>((pageIndex, _) async {
         normalFetches++;
 
         return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
-      }
+      });
 
-      Future<Iterable<int>> searchFetchPage(String _, int pageIndex, int _) async =>
-          pageIndex == 0 ? const [99] : const <int>[];
+      final searchFetchPage = SearchPageFetcher<int>(
+        (_, pageIndex, _) async => pageIndex == 0 ? const [99] : const <int>[],
+      );
 
       await _pumpAsyncSearch(
         tester,

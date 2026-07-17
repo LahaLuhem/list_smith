@@ -57,7 +57,7 @@ Give it a function that fetches a page and a builder for each item. That really 
 
 ```dart
 ListSmith.async(
-  fetchPage: (pageIndex, pageSize) => api.fetchArticles(page: pageIndex, size: pageSize),
+  fetchPage: PageFetcher((pageIndex, pageSize) => api.fetchArticles(page: pageIndex, size: pageSize)),
   itemBuilder: (context, article, index) => ArticleTile(article),
 )
 ```
@@ -86,7 +86,7 @@ materialised once for you). When a page comes back empty, that is the end of the
 ```dart
 ListSmith.async(
   pageSize: 30,
-  fetchPage: (pageIndex, pageSize) => repo.load(pageIndex, pageSize),
+  fetchPage: PageFetcher((pageIndex, pageSize) => repo.load(pageIndex, pageSize)),
   itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
@@ -119,7 +119,7 @@ key already appeared:
 
 ```dart
 ListSmith.async(
-  fetchPage: ...,
+  fetchPage: PageFetcher(...),
   itemId: (item) => item.id,
   itemBuilder: ...,
 )
@@ -174,8 +174,8 @@ pull-to-refresh still working in both:
 
 ```dart
 ListSmith.async(
-  fetchPage: (pageIndex, pageSize) => repo.feed(pageIndex, pageSize),
-  searchFetchPage: (query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize),
+  fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+  searchFetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
   query: searchQuery,
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -212,8 +212,8 @@ Widget build(BuildContext context) => Column(
     Expanded(
       child: ListSmith.async(
         query: _query,
-        fetchPage: (pageIndex, pageSize) => repo.feed(pageIndex, pageSize),
-        searchFetchPage: (query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize),
+        fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+        searchFetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
         itemBuilder: (context, item, index) => Text(item.title),
       ),
     ),
@@ -291,7 +291,7 @@ across every list for one consistent house style:
 
 ```dart
 ListSmith.async(
-  fetchPage: ...,
+  fetchPage: PageFetcher(...),
   itemBuilder: ...,
   emptyBuilder: (context) => const Center(child: Text('Nothing here yet')),
   surfaces: AsyncListSurfaces(
@@ -344,7 +344,7 @@ final class MyObserver extends ListSmithObserver {
 }
 
 ListSmith.async(
-  fetchPage: ...,
+  fetchPage: PageFetcher(...),
   itemBuilder: ...,
   observer: const MyObserver(),
 )

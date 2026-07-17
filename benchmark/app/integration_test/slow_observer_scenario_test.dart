@@ -70,7 +70,7 @@ void main() {
           HostFrame(
             key: ValueKey('${delayMillis}_$i'),
             child: ListSmith<int>.async(
-              fetchPage: fetchPage,
+              fetchPage: PageFetcher(fetchPage),
               pageSize: _pageSize,
               pullToRefresh: false,
               observer: observer,

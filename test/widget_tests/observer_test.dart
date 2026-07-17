@@ -12,7 +12,9 @@ void main() {
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        fetchPage: PageFetcher(
+          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
       );
       await drain(tester);
 
@@ -21,7 +23,11 @@ void main() {
 
     scenarioWidgets('onError fires with the thrown error when a fetch fails', (tester) async {
       final observer = RecordingListSmithObserver();
-      await _pumpObserved(tester, observer, fetchPage: (_, _) async => throw Exception('network'));
+      await _pumpObserved(
+        tester,
+        observer,
+        fetchPage: PageFetcher((_, _) async => throw Exception('network')),
+      );
       await drain(tester);
 
       check(observer.events).contains('error');
@@ -33,7 +39,9 @@ void main() {
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        fetchPage: PageFetcher(
+          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
       );
       await drain(tester);
 
@@ -52,16 +60,16 @@ void main() {
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: (_, _) async => const [1, 2, 3],
-        searchFetchPage: (_, _, _) async => const [99],
+        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
+        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
       );
       await drain(tester);
 
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: (_, _) async => const [1, 2, 3],
-        searchFetchPage: (_, _, _) async => const [99],
+        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
+        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
         query: 'ab',
       );
       await settle(tester);
@@ -74,7 +82,9 @@ void main() {
       await _pumpObserved(
         tester,
         null,
-        fetchPage: (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        fetchPage: PageFetcher(
+          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
       );
       await drain(tester);
 

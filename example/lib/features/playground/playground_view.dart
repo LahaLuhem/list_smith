@@ -79,7 +79,7 @@ class PlaygroundView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               key: ValueKey((viewModel.pageSize, viewModel.emptyRunBeforeEnd)),
-              fetchPage: viewModel.fetchPage,
+              fetchPage: PageFetcher(viewModel.fetchPage),
               pageSize: viewModel.pageSize,
               endPolicy: StopOnEmptyPagesPolicy(emptyRunBeforeEnd: viewModel.emptyRunBeforeEnd),
               pullToRefresh: viewModel.pullToRefresh,
