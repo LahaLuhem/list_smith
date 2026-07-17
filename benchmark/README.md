@@ -90,6 +90,33 @@ comparison is misleading. `results-local/` is gitignored; every record embeds it
 SHA, and capture date so each file is self-describing. Capture your own baseline before measuring the
 delta from a change.
 
+## CI regression gate
+
+[`.github/workflows/benchmark.yml`](../.github/workflows/benchmark.yml) builds and runs the
+micros twice on one runner (the PR head and an `origin/main` worktree) and fails the job on a
+significant regression past the threshold. Two things are deliberate; know them before trying to
+speed it up.
+
+**It only triggers on code whose timing it measures:** `lib/**`, `benchmark/micro/**`,
+`benchmark/harness/**`, and the workflow file. A PR touching only `benchmark/python`, the host app,
+or docs has no micro-timing delta to catch, so it skips the gate. Keep that path filter tight;
+widening it back to `benchmark/**` makes every unrelated PR pay the full cost for nothing.
+
+**It takes ~8 min, and most of that is irreducible.** The cost is the two run phases, not the build
+(~10s) or Flutter setup (cached). Each run is `iterations x pivots x ~2s`: benchmark_harness's
+`measure()` holds a fixed ~2s window per sample, so N=10 over three sizes is ~3.5 min per side, run
+twice. It does not parallelise:
+
+- Candidate and baseline **must share one runner**. GitHub VMs vary run to run, so a cross-machine
+  baseline would drown real regressions in noise (the same reason baselines aren't committed,
+  above). Caching the baseline result across runs is out for the same reason.
+- The micros **can't run concurrently**: CPU contention corrupts the timings the gate measures.
+
+If a genuine run (one that changed benchmarked code) is still too slow, the methodology-safe levers
+are to shorten the CI measure window (parameterise benchmark_harness to ~500ms for the gate while
+committed report runs keep 2s; per-sample gets noisier, but a >10% gate tolerates it) or trim the
+pivot sweep. Don't reach for parallelism.
+
 ## Result JSON schema
 
 Each micro/scenario emits records conforming to (see `harness/result_writer.dart`):
