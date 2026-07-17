@@ -1,8 +1,8 @@
+import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/pagination/typedefs/item_id.dart';
-import '/src/data/pagination/typedefs/page_fetcher.dart';
 import '/src/data/search/models/search_cache_policy.dart';
-import '/src/data/search/typedefs/search_page_fetcher.dart';
+import '/src/data/search/models/search_page_fetcher.dart';
 import '/src/data/search/typedefs/sync_search_predicate.dart';
 
 part 'sources/async_source.dart';

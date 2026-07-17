@@ -82,14 +82,14 @@ void main() {
       .then('supportsSearch reflects the fetcher and toString names the config')
       .run((_) {
         final plain = AsyncSource<int>(
-          fetchPage: (_, _) async => const <int>[],
+          fetchPage: PageFetcher((_, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           searchCachePolicy: const ReplaceCachePolicy(),
         );
         final searchable = AsyncSource<int>(
-          fetchPage: (_, _) async => const <int>[],
-          searchFetchPage: (_, _, _) async => const <int>[],
+          fetchPage: PageFetcher((_, _) async => const <int>[]),
+          searchFetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           searchCachePolicy: const ReplaceCachePolicy(),

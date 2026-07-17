@@ -46,8 +46,8 @@ class AsyncSearchView extends StatelessWidget {
               builder: (_, keepCache, _) => ValueListenableBuilder(
                 valueListenable: viewModel.queryListenable,
                 builder: (_, query, _) => ListSmith.async(
-                  fetchPage: viewModel.fetchPage,
-                  searchFetchPage: viewModel.searchFetchPage,
+                  fetchPage: PageFetcher(viewModel.fetchPage),
+                  searchFetchPage: SearchPageFetcher(viewModel.searchFetchPage),
                   query: query,
                   searchCachePolicy: keepCache
                       ? const KeepCachePolicy()

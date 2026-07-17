@@ -40,13 +40,15 @@ void main() {
       await pumpListSmith(
         tester,
         ListSmith.async(
-          fetchPage: (pageIndex, _) async => pageIndex == 0
-              ? const [
-                  (group: 'A', label: 'apple'),
-                  (group: 'A', label: 'avocado'),
-                  (group: 'B', label: 'banana'),
-                ]
-              : const <_Item>[],
+          fetchPage: PageFetcher(
+            (pageIndex, _) async => pageIndex == 0
+                ? const [
+                    (group: 'A', label: 'apple'),
+                    (group: 'A', label: 'avocado'),
+                    (group: 'B', label: 'banana'),
+                  ]
+                : const <_Item>[],
+          ),
           pullToRefresh: false,
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
@@ -63,13 +65,15 @@ void main() {
       await pumpListSmith(
         tester,
         ListSmith.async(
-          fetchPage: (pageIndex, _) async => pageIndex == 0
-              ? const [
-                  (group: 'A', label: 'apple'),
-                  (group: 'B', label: 'banana'),
-                  (group: 'A', label: 'avocado'),
-                ]
-              : const <_Item>[],
+          fetchPage: PageFetcher(
+            (pageIndex, _) async => pageIndex == 0
+                ? const [
+                    (group: 'A', label: 'apple'),
+                    (group: 'B', label: 'banana'),
+                    (group: 'A', label: 'avocado'),
+                  ]
+                : const <_Item>[],
+          ),
           pullToRefresh: false,
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),

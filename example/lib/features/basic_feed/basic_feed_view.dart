@@ -33,7 +33,7 @@ class BasicFeedView extends StatelessWidget {
           ),
           Expanded(
             child: ListSmith.async(
-              fetchPage: viewModel.fetchPage,
+              fetchPage: PageFetcher(viewModel.fetchPage),
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),

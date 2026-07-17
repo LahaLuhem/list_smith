@@ -2,15 +2,15 @@ import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
+import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/pagination/typedefs/item_id.dart';
-import '/src/data/pagination/typedefs/page_fetcher.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/search/models/search_cache_policy.dart';
-import '/src/data/search/typedefs/search_page_fetcher.dart';
+import '/src/data/search/models/search_page_fetcher.dart';
 import '/src/data/search/typedefs/sync_search_predicate.dart';
 import '/src/data/source/list_source.dart';
 import 'async_list_view.dart';

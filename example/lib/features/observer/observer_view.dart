@@ -46,8 +46,8 @@ class ObserverView extends StatelessWidget {
             child: ValueListenableBuilder(
               valueListenable: viewModel.queryListenable,
               builder: (_, query, _) => ListSmith.async(
-                fetchPage: viewModel.fetchPage,
-                searchFetchPage: viewModel.searchFetchPage,
+                fetchPage: PageFetcher(viewModel.fetchPage),
+                searchFetchPage: SearchPageFetcher(viewModel.searchFetchPage),
                 observer: viewModel.observer,
                 query: query,
                 separatorBuilder: (_, _) => const Divider(height: 1),
