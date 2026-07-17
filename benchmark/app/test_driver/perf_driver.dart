@@ -12,6 +12,10 @@ import 'package:integration_test/integration_test_driver.dart';
 /// `harness/result_writer.dart`. Run via
 /// `flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/<scenario>.dart`.
 Future<void> main() => integrationDriver(
+  // A healthy scenario settles in under a minute. Cap the driver wait well below
+  // the 20-min default so a wedged device (no frames produced, as in issue #5)
+  // fails fast instead of stalling for ~30 min.
+  timeout: const Duration(minutes: 5),
   responseDataCallback: (data) async {
     if (data == null) return;
 
