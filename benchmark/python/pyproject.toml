@@ -34,7 +34,7 @@ dependencies = [
 # Maintainer-only: linter / formatter + test runner. ruff replaces black + flake8 + isort; pytest
 # runs the pure-math unit tests under tests/.
 dev = [
-    "ruff>=0.6,<1.0",
+    "ruff>=0.15.22,<1.0",
     "pytest>=9.1,<10.0",
     "pytest-cov>=7.1,<8.0",
 ]
