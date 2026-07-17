@@ -144,6 +144,58 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
     return out_path
 
 
+def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
+    """Line plot of `microseconds_per_dedup` vs `item_count`, with the 60 Hz frame budget marked.
+
+    From the `dedup_scaling` micro: with an `itemId`, the async list de-dups overlapping pages as a
+    computed view over the paging state, re-walking every loaded item on each state change. This is
+    the worst case (itemId set, no real overlap, so nothing collapses). Where the line crosses the
+    frame-budget rule is the practical ceiling for `itemId` de-dup on a single live list.
+
+    Returns None (writes nothing) when the input has no `dedup_scaling` data.
+    """
+    metric = "microseconds_per_dedup"
+    if metric not in dataframe.columns or "item_count" not in dataframe.columns:
+        return None
+
+    plot_df = (
+        dataframe.filter(pl.col("scenario") == "dedup_scaling")
+        .filter(pl.col(metric).is_not_null())
+        .filter(pl.col("item_count").is_not_null())
+        .select(["item_count", metric])
+        .to_pandas()
+    )
+    if plot_df.empty:
+        return None
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    sns.pointplot(
+        data=plot_df,
+        x="item_count",
+        y=metric,
+        ax=ax,
+        errorbar=("pi", 50),
+        marker="o",
+        linestyle="-",
+        color="#8172b3",
+    )
+    ax.axhline(
+        FRAME_BUDGET_MICROS_60HZ,
+        color="#c0392b",
+        linestyle="--",
+        linewidth=1.0,
+        label="60 Hz frame budget (16.67 ms)",
+    )
+    ax.set_xlabel("Loaded list size (items)")
+    ax.set_ylabel("display de-dup cost (us)")
+    ax.set_title("itemId de-dup cost scales with the loaded list size")
+    ax.legend(loc="best")
+    plt.tight_layout()
+    fig.savefig(out_path, dpi=CHART_DPI)
+    plt.close(fig)
+    return out_path
+
+
 def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     """Grouped bars of per-frame build cost (avg / worst / p99) per scroll/refresh scenario.
 

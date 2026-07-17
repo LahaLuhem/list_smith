@@ -52,6 +52,9 @@ def cmd_report(args: argparse.Namespace) -> int:
     )
     if grouping_chart is not None:
         chart_paths.append(grouping_chart)
+    dedup_chart = charts.plot_dedup_scaling(dataframe, out_dir / "dedup_scaling.png")
+    if dedup_chart is not None:
+        chart_paths.append(dedup_chart)
     frame_chart = charts.plot_frame_costs(dataframe, out_dir / "frame_costs.png")
     if frame_chart is not None:
         chart_paths.append(frame_chart)

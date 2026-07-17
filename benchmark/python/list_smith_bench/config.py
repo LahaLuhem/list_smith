@@ -47,12 +47,18 @@ WARMUP_ITERATIONS: Final[int] = 2
 # Micros ignore duration (benchmark_harness self-times); the orchestrator still passes something.
 FALLBACK_DURATION: Final[int] = 10
 
-# Entrypoints that emit MORE THAN ONE record per run (one per pivot value): sync_search_scaling
-# and bucket_by_group_scaling sweep list sizes, wrapping_overhead sweeps loaded-page counts,
-# slow_observer sweeps observer delays. Used when picking the "iterations per scenario" figure for
-# report headers, so their per-pivot fan-out doesn't inflate it.
+# Entrypoints that emit MORE THAN ONE record per run (one per pivot value): sync_search_scaling,
+# bucket_by_group_scaling, and dedup_scaling sweep list sizes, wrapping_overhead sweeps loaded-page
+# counts, slow_observer sweeps observer delays. Used when picking the "iterations per scenario"
+# figure for report headers, so their per-pivot fan-out doesn't inflate it.
 MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
-    {"sync_search_scaling", "bucket_by_group_scaling", "wrapping_overhead", "slow_observer"}
+    {
+        "sync_search_scaling",
+        "bucket_by_group_scaling",
+        "dedup_scaling",
+        "wrapping_overhead",
+        "slow_observer",
+    }
 )
 
 # ---- chart style ----------------------------------------------------------

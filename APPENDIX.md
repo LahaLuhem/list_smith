@@ -270,6 +270,41 @@ during the repository setup itself.
 
 ---
 
+<a id="overlap-dedup"></a>
+## Overlap de-dup runs at the display layer, not before storage
+
+- **Decision:** `itemId` de-dup (drop items whose key already appeared on an earlier page) is a
+  computed view over the paging state, `_dedupedForDisplay` running ISP's `PagingState.filterItems`
+  in the build, not a filter applied to the pages the controller stores. The controller keeps the raw
+  pages the fetchers returned; only what renders is de-duped.
+- **Why not de-dup before storage (the issue #2 bug):** the end policy (`_nextPageKey`) reads the
+  item count of each stored page. De-dup before storage lets a fully-duplicate page collapse to empty,
+  and `StopOnEmptyPagesPolicy` reads that empty page as end-of-data and stops paginating even though
+  the backend had more past the overlap. Raw stored pages mean the policy sees what the backend
+  actually returned; a page that de-dups to nothing on screen still counts as a full page for end
+  detection. Realistic partial-boundary overlap never hit this (those pages stay non-empty); a
+  fully-duplicate mid-stream page, reachable with small page sizes, did.
+- **One path covers search for free.** Both fetch modes flow through the one controller and the one
+  display derivation, so `searchFetchPage` overlaps de-dup exactly like `fetchPage` ones, no second
+  code path.
+- **Cost, and why it's acceptable here:** the pass is O(loaded items) and re-runs on each state
+  change. There is no cheaper seam without storing de-duped pages and carrying a parallel raw
+  page-count side-channel for the end policy, because ISP re-materialises the whole page list on every
+  change anyway (`copyWith` re-wraps every page in `List.unmodifiable`). Measured
+  (`benchmark/micro/dedup_scaling.dart`, reference desktop, no real overlap so nothing collapses):
+  ~0.3 ms at 1k loaded items, ~3.5 ms at 10k, ~40 ms at 100k. It is memoised on paging-state identity,
+  so an ancestor rebuild that doesn't change the data (a keystroke before the search debounce commits)
+  reuses the last view, and it is skipped entirely when `itemId` is null. Sub-millisecond for the
+  lists most consumers build; the cliff is only at tens of thousands of items held in one live list,
+  which strains widget count and memory regardless.
+- **The side-channel design was rejected, for now.** Incremental de-dup in the fetch (a persistent
+  seen-set, O(page size) per fetch) with a raw-count side-channel would erase the cost, but that
+  parallel state has to snapshot/restore in lockstep with `KeepCachePolicy`, and a bug there corrupts
+  pagination, not just display. Not worth the fragility while realistic lists stay well under the
+  cliff; revisit if large-list jank is reported. `benchmark/micro/dedup_scaling.dart` is the tripwire.
+
+---
+
 **TODO (design pass and beyond).** Decisions still to be recorded here as they land, for example:
 the SDK floor rationale, the public API surface and why it's shaped that way, how sync vs async
 data sources are modelled, the search / cache interplay policy, and what `list_smith` deliberately
