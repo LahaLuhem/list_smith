@@ -128,6 +128,12 @@ ListSmith.async(
 The key is compared by value (`==` / `hashCode`), so an `int` or `String` id works; compose one like
 `'${item.a}:${item.b}'` for multi-field identity. Keyset/cursor pagination rarely needs it.
 
+De-dup runs over every loaded item each time a page arrives (O(items loaded) per page, never per
+scroll frame), and only when you pass `itemId`. That's well under a millisecond for the first few
+thousand items and grows from there, so it's a non-issue for normal feeds. If a single list holds
+tens of thousands of items, de-duplicate at the source (keyset/cursor pagination) instead of leaning
+on `itemId`.
+
 ## Pull to refresh
 
 On by default for `ListSmith.async`. Pull down, the list resets and reloads from the first page.
@@ -384,6 +390,10 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
 - **Grouping scales the same way, a bit cheaper.** A `Grouping` on `ListSmith.sync` buckets the
   filtered items into sections on each committed query: ~0.2 ms at 1k, ~2.4 ms at 10k, and ~27 ms at
   100k. Same "big list, lean on debounce or async" caveat as sync search.
+- **`itemId` de-dup is O(loaded) per page.** Opt-in, and off the scroll path (it runs when a page
+  arrives, not per frame). With no real overlap to collapse (the common case) it's ~0.3 ms at 1k
+  loaded items, ~3.4 ms at 10k, ~39 ms at 100k. Past tens of thousands of items in one live list,
+  de-duplicate at the source instead of leaning on `itemId`.
 - **Observers are on the critical path.** list_smith calls your `observer` synchronously while
   a page loads, so a slow callback delays rendering roughly 1:1 (a 50 ms observer pushed render
   latency to ~68 ms). Keep them cheap: log, count, report; do heavy work elsewhere.
@@ -400,6 +410,8 @@ regressions.
 ![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
 
 ![Sync grouping cost vs list size](benchmark/reports/bucket_by_group_scaling.png)
+
+![itemId de-dup cost vs loaded list size](benchmark/reports/dedup_scaling.png)
 
 ## Roadmap
 

@@ -101,6 +101,13 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   /// The normal-mode paging state kept aside while searching, for [KeepCachePolicy].
   PagingState<int, T>? _normalSnapshot;
 
+  /// Memo for [_dedupedForDisplay]: the last raw state seen paired with the view derived from it, or
+  /// null before the first de-dup. Keyed on paging-state identity; the controller hands out the same
+  /// [PagingState] instance until the data changes, so a rebuild that leaves it untouched (an ancestor
+  /// rebuild, e.g. a keystroke before the search debounce commits) reuses the view instead of
+  /// re-running the O(loaded) pass. Kept as one cell so the pair can't drift out of sync.
+  ({PagingState<int, T> raw, PagingState<int, T> display})? _displayMemo;
+
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
@@ -162,13 +169,22 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   /// order, so the `seen` set threads across them and the predicate keeps only each key's first
   /// sighting. We lean on that ordered pass rather than hand-rolling the fold; swap it for an explicit
   /// one if the rule ever outgrows a per-item predicate.
+  ///
+  /// The pass is O(loaded items) and runs on each state change, so it is memoised on state identity
+  /// ([_displayMemo]): a rebuild that doesn't touch the state reuses the last view for free. Only
+  /// opt-in (a non-null `itemId`) pays anything; without it this returns the state untouched.
   PagingState<int, T> _dedupedForDisplay(PagingState<int, T> state) {
     final itemId = widget.source.itemId;
     if (itemId == null) return state;
 
-    final seen = <Object>{};
+    final memo = _displayMemo;
+    if (memo != null && identical(state, memo.raw)) return memo.display;
 
-    return state.filterItems((item) => seen.add(itemId(item)));
+    final seen = <Object>{};
+    final displayState = state.filterItems((item) => seen.add(itemId(item)));
+    _displayMemo = (raw: state, display: displayState);
+
+    return displayState;
   }
 
   void _onQueryCommitted(String committedQuery) {

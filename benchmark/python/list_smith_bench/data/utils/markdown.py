@@ -109,6 +109,42 @@ def bucket_by_group_scaling_table(dataframe: pl.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
+def dedup_scaling_table(dataframe: pl.DataFrame) -> str:
+    """Markdown table of de-dup cost per `item_count` for the `dedup_scaling` micro."""
+    metric = "microseconds_per_dedup"
+    if metric not in dataframe.columns or "item_count" not in dataframe.columns:
+        return "_(no dedup_scaling data in input)_\n"
+
+    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col("item_count").is_not_null())
+    if df.is_empty():
+        return "_(no dedup_scaling data in input)_\n"
+
+    agg = (
+        df.group_by("item_count")
+        .agg(
+            pl.col(metric).count().alias("n"),
+            pl.col(metric).median().alias("median"),
+            pl.col(metric).quantile(0.25).alias("q25"),
+            pl.col(metric).quantile(0.75).alias("q75"),
+        )
+        .sort("item_count")
+    )
+
+    fmt = value_formatter("us")
+    rows = [
+        "| Loaded items | N | Median (us) | IQR (us) | Median (ms) |",
+        "|---:|---:|---:|---:|---:|",
+    ]
+    for row in agg.iter_rows(named=True):
+        iqr = row["q75"] - row["q25"]
+        median_ms = row["median"] / 1000.0
+        rows.append(
+            f"| {row['item_count']:,} | {row['n']} | {fmt(row['median'])} "
+            f"| {fmt(iqr)} | {median_ms:,.2f} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
 def overhead_table(dataframe: pl.DataFrame) -> str:
     """Table of the overhead micros: observer_dispatch + wrapping_overhead by page count."""
     fmt = value_formatter("us")
@@ -271,6 +307,26 @@ def render_summary_markdown(
 
     if "bucket_by_group_scaling.png" in chart_names:
         parts.append("\n![Sync grouping scaling](bucket_by_group_scaling.png)\n")
+
+    parts.extend(
+        [
+            "## Overlap de-dup cost vs loaded list size\n",
+            "From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, "
+            "the async list de-dups overlapping pages as a computed view over the paging "
+            "state (`_dedupedForDisplay` via `PagingState.filterItems`), re-walking every "
+            "loaded item on each state change so the stored pages stay raw and the end "
+            "policy can't mistake an all-duplicate page for the end (issue #2). This "
+            "measures the worst case: `itemId` set but no actual overlap, so nothing "
+            "collapses and every item is retained. It is opt-in and off the scroll path "
+            "(per page-load, not per frame), sub-millisecond for a few thousand loaded "
+            "items and climbing from there; past tens of thousands in one live list, "
+            "de-duplicate at the source instead.\n",
+            dedup_scaling_table(dataframe),
+        ]
+    )
+
+    if "dedup_scaling.png" in chart_names:
+        parts.append("\n![itemId de-dup scaling](dedup_scaling.png)\n")
 
     parts.extend(
         [
