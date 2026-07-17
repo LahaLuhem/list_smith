@@ -14,5 +14,8 @@ final class FixedPageCountPolicy extends PaginationEndPolicy {
     : assert(pageCount >= 1, 'pageCount must be at least 1.');
 
   @override
+  bool hasReachedEnd(EndContext context) => context.pageCount >= pageCount;
+
+  @override
   String toString() => 'FixedPageCountPolicy(pageCount: $pageCount)';
 }
