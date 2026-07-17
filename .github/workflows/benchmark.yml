@@ -8,9 +8,14 @@ name: Benchmark regression
 on:
   pull_request:
     branches: [main]
+    # Only the code whose timing this gate measures: the measured library, the micro entrypoints,
+    # and the shared harness. A PR touching only benchmark/python, the host app, docs, or other CI
+    # has no micro-timing delta to catch, so it skips this expensive same-runner gate (build + run
+    # the micros twice, ~4 min each side; see issue #4 / PR #10).
     paths:
       - lib/**
-      - benchmark/**
+      - benchmark/micro/**
+      - benchmark/harness/**
       - .github/workflows/benchmark.yml
 
 concurrency:
