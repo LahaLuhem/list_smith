@@ -94,13 +94,14 @@ ListSmith.async(
 ### Deciding where the data ends
 
 An empty page meaning "the end" is the sensible default, but it isn't always right. A calendar feed,
-say, can have an empty day in the middle with plenty of data after it. So end-detection is a policy
-you can swap out:
+say, can have an empty day in the middle with plenty of data after it. So end-detection is an open
+policy you can swap out, or write yourself:
 
 | Policy                               | Ends when                                                          |
 |--------------------------------------|--------------------------------------------------------------------|
 | `StopOnEmptyPagesPolicy` *(default)* | a page comes back empty (raise `emptyRunBeforeEnd` to allow gaps)  |
 | `FixedPageCountPolicy`               | a set number of pages have loaded                                  |
+| `ExplicitHasMorePolicy`              | the fetcher reports it, via `PageFetcher.withSignal`              |
 
 ```dart
 // Allow up to two empty pages before calling it the end:
@@ -108,6 +109,33 @@ endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),
 
 // Or just stop after five pages:
 endPolicy: const FixedPageCountPolicy(pageCount: 5),
+```
+
+If your backend already tells you whether there's more, let it. `ExplicitHasMorePolicy` reads a
+`hasMore` flag off each fetch and stops the moment the backend says it's the last page, instead of
+fetching one more empty page to find out. Report the flag with `PageFetcher.withSignal` (and
+`SearchPageFetcher.withSignal` if the list searches):
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher.withSignal((pageIndex, pageSize) async {
+    final response = await api.load(pageIndex, pageSize);
+    return (response.items, response.hasMore);
+  }),
+  endPolicy: const ExplicitHasMorePolicy(),
+  itemBuilder: (context, item, index) => Text(item.title),
+)
+```
+
+Want your own rule? `PaginationEndPolicy` is an open contract: implement `hasReachedEnd(EndContext)`
+and pass it as `endPolicy`. The context carries the per-page item counts, the page size, and the
+last fetch's signal, so "stop when the last page came back short" is a few lines:
+
+```dart
+class ShortLastPage extends PaginationEndPolicy {
+  @override
+  bool hasReachedEnd(EndContext c) => c.lastPageItemCount < c.pageSize;
+}
 ```
 
 ### De-duplicating overlapping pages
@@ -420,8 +448,8 @@ regressions.
 - [x] Sync (in-memory) search
 - [x] Async two-view search with a cache policy
 - [x] Lifecycle observer
-- [ ] `hasMore`-style end policies (`ExplicitHasMore`, `ServerSentinel`) for sources that report the
-  end themselves
+- [x] Explicit end signal from the fetcher: `ExplicitHasMorePolicy`, plus an open
+  `PaginationEndPolicy` contract for custom end-detection (e.g. a null next-cursor)
 
 ## The example app
 
