@@ -3,6 +3,9 @@
 - \[#7\] groupBy + groupByHeaderBuilder
 - \[#5\] Android verified
 
+### Changed
+- \[#4\] Verify regression + Bump python versions
+
 ## [0.0.1] - 2026-07-15
 ### Added
 - `ListSmith.async`: async pagination and pull-to-refresh over a page fetcher, with neutral, overridable widgets-layer surfaces.
