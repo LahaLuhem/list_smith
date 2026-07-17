@@ -143,7 +143,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
       widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
 
-      return _deduped(pageItems);
+      return pageItems;
     } on Object catch (error, stackTrace) {
       widget.observer?.onError(error, stackTrace);
 
@@ -151,16 +151,24 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     }
   }
 
-  /// Drops items whose [AsyncSource.itemId] key already appeared in a loaded page (or earlier in this
-  /// page), so overlapping pages don't render an item twice. A null `itemId` disables it (the pager
-  /// itself never de-duplicates). Runs against the pages loaded so far, i.e. before this one is added.
-  List<T> _deduped(List<T> pageItems) {
+  /// A display-only copy of [state] with items whose [AsyncSource.itemId] key already appeared earlier
+  /// dropped, so overlapping pages don't render an item twice. A null `itemId` disables it (the pager
+  /// itself never de-duplicates).
+  ///
+  /// De-dup is a display concern and stays off the controller's own pages: those stay raw, so
+  /// [_nextPageKey] feeds the end policy what the backend actually returned and a fully-duplicate page
+  /// is not mistaken for an empty end-of-data one. ISP's `PagingState.filterItems` is built for
+  /// exactly this ("use the returned value as computed state only"): it walks the pages in flattened
+  /// order, so the `seen` set threads across them and the predicate keeps only each key's first
+  /// sighting. We lean on that ordered pass rather than hand-rolling the fold; swap it for an explicit
+  /// one if the rule ever outgrows a per-item predicate.
+  PagingState<int, T> _dedupedForDisplay(PagingState<int, T> state) {
     final itemId = widget.source.itemId;
-    if (itemId == null) return pageItems;
+    if (itemId == null) return state;
 
-    final seen = _controller.value.pages?.expand((page) => page).map(itemId).toSet() ?? <Object>{};
+    final seen = <Object>{};
 
-    return pageItems.where((item) => seen.add(itemId(item))).toList(growable: false);
+    return state.filterItems((item) => seen.add(itemId(item)));
   }
 
   void _onQueryCommitted(String committedQuery) {
@@ -201,7 +209,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
         builder: (_, isSearchMode, _) => PagedView(
-          state: state,
+          state: _dedupedForDisplay(state),
           fetchNextPage: fetchNextPage,
           itemBuilder: widget.itemBuilder,
           grouping: widget.grouping,
