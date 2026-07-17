@@ -2,9 +2,14 @@
 ### Added
 - \[#7\] groupBy + groupByHeaderBuilder
 - \[#5\] Android verified
+- \[#1\] ExplicitHasMorePolicy: end pagination when the fetcher reports hasMore is false, so a trailing empty page is never fetched to find the end.
+- \[#1\] PageFetcher.withSignal and SearchPageFetcher.withSignal: return (items, signal) to report an end signal (a hasMore flag or a next-cursor) to the end policy.
+- \[#1\] Implement your own PaginationEndPolicy over EndContext for custom end-detection, e.g. stop on a short last page or a null next-cursor.
 
 ### Changed
 - \[#4\] Verify regression + Bump python versions
+- \[#1\] BREAKING: PageFetcher and SearchPageFetcher are now classes, not function typedefs. Wrap your fetch function, e.g. fetchPage: PageFetcher((pageIndex, pageSize) => ...).
+- \[#1\] PaginationEndPolicy is now an open interface: end-detection is a public hasReachedEnd(EndContext), previously an internal resolver over per-page counts.
 
 ### Fixed
 - \[#2\] keep pagination alive past an all-duplicate page
