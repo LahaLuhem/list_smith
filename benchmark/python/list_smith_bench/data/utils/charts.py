@@ -1,8 +1,9 @@
 """Chart renderers.
 
-Module-level matplotlib/polars/seaborn/pandas imports are intentional — this module only makes
-sense with the analysis stack installed. Subcommands gate the call site with a `find_spec` check so
-the import error points users at `uv sync`.
+Module-level matplotlib/polars/seaborn imports are intentional — this module only makes sense with
+the analysis stack installed. Subcommands gate the call site with a `find_spec` check so the import
+error points users at `uv sync`. seaborn takes the polars frames directly (dataframe interchange
+protocol, since 0.13), converting to pandas internally, so there is no pandas import here.
 
 Each plot fn returns the `Path` it wrote (threaded into a chart-paths list), or `None` when it has
 no data so the caller can skip the slot in markdown.
@@ -13,7 +14,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import pandas as pd
 import polars as pl
 import seaborn as sns
 
@@ -60,9 +60,8 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
         .filter(pl.col(metric).is_not_null())
         .filter(pl.col("list_size").is_not_null())
         .select(["list_size", metric])
-        .to_pandas()
     )
-    if plot_df.empty:
+    if plot_df.is_empty():
         return None
 
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -111,9 +110,8 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
         .filter(pl.col(metric).is_not_null())
         .filter(pl.col("list_size").is_not_null())
         .select(["list_size", metric])
-        .to_pandas()
     )
-    if plot_df.empty:
+    if plot_df.is_empty():
         return None
 
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -163,9 +161,8 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
         .filter(pl.col(metric).is_not_null())
         .filter(pl.col("item_count").is_not_null())
         .select(["item_count", metric])
-        .to_pandas()
     )
-    if plot_df.empty:
+    if plot_df.is_empty():
         return None
 
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -215,16 +212,12 @@ def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     if df.is_empty():
         return None
 
-    long = (
-        df.unpivot(
-            on=list(stat_labels.keys()),
-            index="scenario",
-            variable_name="stat",
-            value_name="ms",
-        )
-        .with_columns(pl.col("stat").replace(stat_labels))
-        .to_pandas()
-    )
+    long = df.unpivot(
+        on=list(stat_labels.keys()),
+        index="scenario",
+        variable_name="stat",
+        value_name="ms",
+    ).with_columns(pl.col("stat").replace(stat_labels))
 
     budget_ms = FRAME_BUDGET_MICROS_60HZ / 1000.0
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -342,8 +335,3 @@ def _forest_colour(row: CompareRow) -> str:
     if not row.significant:
         return FOREST_COLOUR_NOT_SIG
     return FOREST_COLOUR_REGRESSION if row.delta_pct > 0 else FOREST_COLOUR_IMPROVEMENT
-
-
-# `pd` is imported at module level so pandas is available when polars hands frames to seaborn via
-# `.to_pandas()` (which uses pyarrow under the hood). Reference it to suppress the unused warning.
-_ = pd
