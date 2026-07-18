@@ -15,6 +15,7 @@ import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/refresh/models/refresh.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
+import '/src/data/search/models/search.dart';
 import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
 import 'paged_view.dart';
@@ -26,9 +27,8 @@ import 'refresh_binding.dart';
 ///
 /// Unexported. [ListSmith] builds one of these for an [AsyncSource]. The fetch closure reads the
 /// debounced committed query: empty means normal mode ([AsyncSource.fetchPage]), non-empty means
-/// search mode ([AsyncSource.searchFetchPage]). A committed-query change runs the
-/// [AsyncSource.searchCachePolicy] against the controller. Defaults are resolved by [ListSmith.async];
-/// this widget re-declares none.
+/// search mode (the [AsyncSearch] fetcher). A committed-query change runs that search's cache policy
+/// against the controller. Defaults are resolved by [ListSmith.async]; this widget re-declares none.
 class AsyncListView<T extends Object> extends StatefulWidget {
   /// The async, paginated source: its fetchers, end policy, and search cache policy.
   final AsyncSource<T> source;
@@ -142,16 +142,22 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
   Future<List<T>> _fetchPage(int pageKey) async {
     final source = widget.source;
+    final search = source.search;
     final committedQuery = _debouncer.committedQuery;
     final isSearchMode = _isSearchQuery(committedQuery);
 
     try {
-      final (items, signal) = isSearchMode
-          ? await source.searchFetchPage!(committedQuery, pageKey, source.pageSize)
-          : await source.fetchPage(pageKey, source.pageSize);
-      final pageItems = items.toList(growable: false);
+      final (items, signal) = switch (search) {
+        final AsyncSearch<T> s when isSearchMode => await s.fetchPage(
+          committedQuery,
+          pageKey,
+          source.pageSize,
+        ),
+        AsyncSearch<T>() || NoSearch() => await source.fetchPage(pageKey, source.pageSize),
+      };
       _lastPageSignal = signal;
 
+      final pageItems = items.toList(growable: false);
       widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
 
       return pageItems;
@@ -211,10 +217,14 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
     final isSearchMode = _isSearchQuery(committedQuery);
-    final action = widget.source.searchCachePolicy.actionFor(
-      wasSearching: wasSearching,
-      isSearching: isSearchMode,
-    );
+    final search = widget.source.search;
+    final action = switch (search) {
+      final AsyncSearch<T> s => s.cachePolicy.actionFor(
+        wasSearching: wasSearching,
+        isSearching: isSearchMode,
+      ),
+      NoSearch() => CacheAction.refresh,
+    };
 
     _searchModeNotifier.value = isSearchMode;
     _applyCacheAction(action);

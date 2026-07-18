@@ -10,8 +10,7 @@ import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/refresh/models/refresh.dart';
-import '/src/data/search/models/search_cache_policy.dart';
-import '/src/data/search/models/search_page_fetcher.dart';
+import '/src/data/search/models/search.dart';
 import '/src/data/search/typedefs/sync_search_predicate.dart';
 import '/src/data/source/list_source.dart';
 import 'async_list_view.dart';
@@ -25,7 +24,7 @@ import 'sync_list_view.dart';
 /// app without importing a look it never chose.
 ///
 /// Build it with [ListSmith.async] (a paginated, pull-to-refresh list over a [PageFetcher], made
-/// searchable by also passing a [SearchPageFetcher]) or [ListSmith.sync] (an in-memory list searched
+/// searchable by also passing an [AsyncSearch]) or [ListSmith.sync] (an in-memory list searched
 /// by a [SyncSearchPredicate]). Internally it is a stateless dispatcher over a sealed [ListSource]:
 /// each named constructor builds one source case, and [build] routes that case to the engine for it,
 /// so no parameter meant for one mode is ever silently inert on another.
@@ -73,15 +72,16 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// arrive ordered by group key. See [Grouping.by].
   final Grouping<T> grouping;
 
-  /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [searchFetchPage].
+  /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [search].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
   /// pagination ends per `endPolicy` (by default, the first empty page). Pass [itemId] to de-duplicate
   /// items across overlapping pages (e.g. an offset-based source whose data shifts between fetches);
   /// without it, overlapping pages render the item once per page, as the underlying pager does no
-  /// de-duplication. Passing [searchFetchPage] opts into search: a non-empty [query] switches to a
-  /// search view fetched by it, and [searchCachePolicy] governs how the normal list carries across that
-  /// switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral defaults.
+  /// de-duplication. Pass [search] as an [AsyncSearch] to opt into search: a non-empty [query] then
+  /// switches to a search view fetched by it, and its cache policy governs how the normal list carries
+  /// across that switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral
+  /// defaults.
   /// Pull-to-refresh is on by default; pass [NoRefresh] to [refresh] to switch it off, or a
   /// [PullToRefresh] with a `refreshBuilder` to restyle its indicator.
   /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
@@ -94,8 +94,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     Refresh refresh = const PullToRefresh(),
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
     ItemId<T>? itemId,
-    SearchPageFetcher<T>? searchFetchPage,
-    SearchCachePolicy searchCachePolicy = const ReplaceCachePolicy(),
+    Search<T> search = const NoSearch(),
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = const Duration(milliseconds: 300),
@@ -108,16 +107,18 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.separatorBuilder,
     super.key,
   }) : assert(
-         searchFetchPage != null || query.isEmpty,
-         'A query was set without a searchFetchPage; pass searchFetchPage to enable search.',
+         search is AsyncSearch<T> || query.isEmpty,
+         'A query was set without search; pass search: AsyncSearch(...) to enable it.',
        ),
        assert(
          endPolicy is! ExplicitHasMorePolicy || fetchPage.reportsSignal,
          'ExplicitHasMorePolicy needs a signal-reporting fetcher. Build fetchPage with PageFetcher.withSignal.',
        ),
        assert(
-         endPolicy is! ExplicitHasMorePolicy || (searchFetchPage?.reportsSignal ?? true),
-         'ExplicitHasMorePolicy needs a signal-reporting search fetcher. Build searchFetchPage with SearchPageFetcher.withSignal.',
+         endPolicy is! ExplicitHasMorePolicy ||
+             search is! AsyncSearch<T> ||
+             search.fetchPage.reportsSignal,
+         'ExplicitHasMorePolicy needs a signal-reporting search fetcher. Build the AsyncSearch fetcher with SearchPageFetcher.withSignal.',
        ),
        grouping = grouping ?? NoGrouping<T>(),
        _source = AsyncSource(
@@ -125,8 +126,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          pageSize: pageSize,
          endPolicy: endPolicy,
          refresh: refresh,
-         searchCachePolicy: searchCachePolicy,
-         searchFetchPage: searchFetchPage,
+         search: search,
          itemId: itemId,
        );
 

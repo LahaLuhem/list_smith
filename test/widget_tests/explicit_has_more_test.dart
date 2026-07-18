@@ -78,7 +78,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          searchFetchPage: searchFetchPage,
+          search: AsyncSearch(fetchPage: searchFetchPage),
           endPolicy: const ExplicitHasMorePolicy(),
           query: 'q',
           searchDebounce: const Duration(milliseconds: 20),
@@ -105,9 +105,8 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: fetchPage,
-        searchFetchPage: searchFetchPage,
+        search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         endPolicy: const ExplicitHasMorePolicy(),
-        searchCachePolicy: const KeepCachePolicy(),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
         refresh: const NoRefresh(),

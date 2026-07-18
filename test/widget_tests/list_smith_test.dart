@@ -265,9 +265,8 @@ Future<void> _pumpAsyncSearch(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    searchFetchPage: searchFetchPage,
+    search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: cachePolicy),
     query: query,
-    searchCachePolicy: cachePolicy,
     searchDebounce: const Duration(milliseconds: 20),
     itemBuilder: (_, item, _) => Text('item $item'),
   ),

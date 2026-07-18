@@ -61,7 +61,7 @@ void main() {
         tester,
         observer,
         fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
-        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
+        search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const [99])),
       );
       await drain(tester);
 
@@ -69,7 +69,7 @@ void main() {
         tester,
         observer,
         fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
-        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
+        search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const [99])),
         query: 'ab',
       );
       await settle(tester);
@@ -97,13 +97,13 @@ Future<void> _pumpObserved(
   WidgetTester tester,
   ListSmithObserver? observer, {
   required PageFetcher<int> fetchPage,
-  SearchPageFetcher<int>? searchFetchPage,
+  Search<int> search = const NoSearch(),
   String query = '',
 }) => pumpListSmith(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    searchFetchPage: searchFetchPage,
+    search: search,
     query: query,
     observer: observer,
     searchDebounce: const Duration(milliseconds: 20),

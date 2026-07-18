@@ -124,7 +124,7 @@ during the repository setup itself.
   `PullToRefresh` case of the `refresh` seam, next to the on/off choice, so a refresh indicator can
   only be set on a list that actually refreshes. Putting it in the holder would let a `NoRefresh` list
   set an indicator that never shows, the ghost this package removes. (The wider principle, that an
-  opt-in feature's config lives with the feature, is the opt-in idiom unification from issue #3.)
+  opt-in feature's config lives with the feature, is the [unified opt-in idioms](#opt-in-idioms).)
 - **Why:** the `.async` constructor had grown a run of optional builders that buried the behavioural
   parameters (`fetchPage`, `pageSize`, `endPolicy`). Grouping them mirrors what `ListScrollConfig`
   does for the scrollable's knobs, shortens the call site, and lets a consumer define one surface set
@@ -177,9 +177,9 @@ during the repository setup itself.
 ## Async search: one controller, two views
 
 - **Decision:** async search rides a single `PagingController`. A mode-aware fetch closure reads the
-  debounced committed query: empty runs the normal `fetchPage`, non-empty runs `searchFetchPage`.
-  Search is opt-in (a null `searchFetchPage` is a plain pagination list), and search mode requires
-  both a non-empty query and a fetcher.
+  debounced committed query: empty runs the normal `fetchPage`, non-empty runs the `AsyncSearch`
+  fetcher. Search is opt-in (the default `NoSearch` is a plain pagination list), and search mode
+  requires both a non-empty query and an `AsyncSearch`.
 - **Why one controller, not two:** pagination and pull-to-refresh then compose for free, one end
   policy and one `refresh()` serve both modes, and there is no second controller to keep in sync.
   `refresh()` re-reads the query, so pulling to refresh in search mode reloads the current search.
@@ -190,13 +190,41 @@ during the repository setup itself.
   against the controller. `Keep` snapshots `controller.value` on entering search and restores it on
   leaving (an instant return, no refetch); `Replace` always refetches; a search-to-search change
   refetches under either policy.
-- **Safety of `searchFetchPage!`:** search mode is `query.isNotEmpty && source.supportsSearch`, so the
-  fetch closure only calls `searchFetchPage!` when it is non-null. A query set without a fetcher trips
-  an `assert` in debug and degrades to normal pagination in release, not a null-check crash.
+- **Reading the search case:** search mode is `query.isNotEmpty && source.supportsSearch` (where
+  `supportsSearch` is `search is AsyncSearch`), and the fetch closure pattern-matches the `AsyncSearch`
+  case to reach its fetcher, so there is no nullable fetcher to bang. A query set without an
+  `AsyncSearch` trips an `assert` in debug and degrades to normal pagination in release.
 - **Shared `QueryDebouncer`:** the debounce (timer, trim, skip-unchanged) was extracted from
   `SyncListView` into an unexported helper both views own (a 2c refactor-first step). The owner seeds
   the initial query synchronously and schedules each later change; a zero-debounce change commits on
   the next tick, which removed a `setState`-during-`didUpdateWidget` hazard the async path would hit.
+
+---
+
+<a id="opt-in-idioms"></a>
+## Unified opt-in idioms: every optional behaviour is a sealed, defaulted seam
+
+- **Decision (issue #3):** each optional async behaviour is opted into the same way, by passing a
+  non-default case of a sealed, defaulted seam. Refresh is `Refresh` (`PullToRefresh` default,
+  `NoRefresh` off); async search is `Search` (`NoSearch` default, `AsyncSearch` on); grouping
+  (`NoGrouping` / `Grouping.by`) and the end and cache policies already had this shape. The whole
+  `.async` surface now reads one way: a default you can ignore, or a named case for the feature.
+- **What it replaced:** a default-on `bool pullToRefresh` and a nullable `searchFetchPage` whose
+  presence was the opt-in. Three different shapes for "turn a feature on" (a bool, a nullable
+  callback, and sync's required `searchBy`) made the surface harder to learn than it needed to be.
+- **Why it also removes ghosts:** the loose shapes had leaked two inert parameters, the exact bug
+  list_smith exists to kill. `searchCachePolicy` sat on every `.async` list, doing nothing without a
+  search fetcher; `AsyncListSurfaces.refreshBuilder` sat there doing nothing when `pullToRefresh` was
+  false. Folding each feature's config into its own case (the cache policy into `AsyncSearch`, the
+  indicator into `PullToRefresh`) means a knob can only be set on a list that uses it.
+- **The rule:** an *optional* behaviour is a sealed, defaulted seam, opted into by passing a case.
+  Behaviour that is the whole reason a constructor exists stays a plain required parameter: `.sync`'s
+  `searchBy` is required, because an in-memory list with no predicate is just a `ListView.builder`.
+  Live input that changes every build (`query`, `minSearchLength`, `searchDebounce`) stays flat, not
+  folded into a seam, since a holder rebuilt every frame buys nothing.
+- **Pre-publish, so the break was free.** The package is not yet on pub.dev, so reshaping `.async`
+  cost nothing downstream. `SyncSearchPredicate`, `SearchPageFetcher`, and the `SearchCachePolicy`
+  cases stay public; they are now reached through `AsyncSearch(...)` rather than as flat parameters.
 
 ---
 
@@ -337,8 +365,8 @@ during the repository setup itself.
   detection. Realistic partial-boundary overlap never hit this (those pages stay non-empty); a
   fully-duplicate mid-stream page, reachable with small page sizes, did.
 - **One path covers search for free.** Both fetch modes flow through the one controller and the one
-  display derivation, so `searchFetchPage` overlaps de-dup exactly like `fetchPage` ones, no second
-  code path.
+  display derivation, so search-mode overlaps de-dup exactly like normal-mode ones, no second code
+  path.
 - **Cost, and why it's acceptable here:** the pass is O(loaded items) and re-runs on each state
   change. There is no cheaper seam without storing de-duped pages and carrying a parallel raw
   page-count side-channel for the end policy, because ISP re-materialises the whole page list on every

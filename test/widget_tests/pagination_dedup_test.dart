@@ -143,7 +143,7 @@ Future<void> _pumpPagedSearch(
   tester,
   ListSmith.async(
     fetchPage: PageFetcher((_, _) async => const <_Item>[]),
-    searchFetchPage: searchFetchPage,
+    search: AsyncSearch(fetchPage: searchFetchPage),
     itemId: itemId,
     pageSize: 5,
     refresh: const NoRefresh(),
