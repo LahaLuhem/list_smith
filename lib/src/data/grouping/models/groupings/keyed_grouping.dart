@@ -16,5 +16,32 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
   const KeyedGrouping._({required this.groupOf, required this.headerFor});
 
   @override
+  List<T> arrange(Iterable<T> items) => bucketByGroup(items, groupOf);
+
+  @override
+  ItemBuilder<T> decorate(
+    ItemBuilder<T> itemBuilder, {
+    required List<T> Function() flatItems,
+    required Axis axis,
+  }) {
+    final items = flatItems();
+    assert(
+      groupsAreContiguous(items, groupOf),
+      'Grouping on an async list needs each page ordered by group key; a group key reappeared '
+      'after its section ended, so its header would fragment.',
+    );
+
+    return (_, item, index) => GroupedItem<T>(
+      itemBuilder: itemBuilder,
+      groupOf: groupOf,
+      headerFor: headerFor,
+      scrollDirection: axis,
+      previous: index == 0 ? null : items[index - 1],
+      item: item,
+      index: index,
+    );
+  }
+
+  @override
   String toString() => 'KeyedGrouping()';
 }

@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
-import '/src/data/grouping/utils/grouping_resolver.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -12,7 +11,6 @@ import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
 import 'defaults/neutral_no_more_items_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
-import 'grouped_item.dart';
 
 /// Wraps ISP's [PagedListView], filling every delegate slot with list_smith's neutral defaults
 /// (or the consumer's overrides) so no Material surface leaks through, and bridging the bare error
@@ -116,22 +114,15 @@ class PagedView<T extends Object> extends StatelessWidget {
           );
   }
 
-  /// The item builder handed to ISP: [itemBuilder] unchanged when the list is not grouped, otherwise
-  /// one that prefixes each group's first item with its header. The loaded pages are flattened for the
-  /// group look-back (and the debug contiguity check) only when grouping is active.
-  ItemBuilder<T> _effectiveItemBuilder() {
-    final grouping = this.grouping;
-    if (grouping is! KeyedGrouping<T>) return itemBuilder;
-
-    final flatItems = state.pages?.expand((page) => page).toList(growable: false) ?? <T>[];
-    assert(
-      groupsAreContiguous(flatItems, grouping.groupOf),
-      'Grouping on an async list needs each page ordered by group key; a group key reappeared '
-      'after its section ended, so its header would fragment.',
-    );
-
-    return groupedItemBuilder(grouping, itemBuilder, scroll.scrollDirection, flatItems);
-  }
+  /// The item builder handed to ISP, produced by [Grouping.decorate]: [itemBuilder] unchanged when the
+  /// list is not grouped, otherwise one that prefixes each group's first item with its header. The
+  /// loaded pages are flattened for the group look-back (and the debug contiguity check) only when
+  /// grouping is active, since [Grouping.decorate] takes the flattened list as a lazy callback.
+  ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
+    itemBuilder,
+    flatItems: () => state.pages?.expand((page) => page).toList(growable: false) ?? <T>[],
+    axis: scroll.scrollDirection,
+  );
 
   /// Fills every ISP delegate slot with the neutral defaults or the consumer's overrides. The error
   /// slots read `state.error!`, non-null because ISP only builds an error indicator when an error is
