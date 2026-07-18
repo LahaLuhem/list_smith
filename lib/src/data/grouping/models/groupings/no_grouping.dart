@@ -2,10 +2,10 @@ part of '../grouping.dart';
 
 /// The absence of grouping: the list renders as a flat sequence with no section headers.
 ///
-/// The default [Grouping] for every list_smith list. It extends `Grouping<Never>` so the single
-/// `const NoGrouping()` is assignable to a `Grouping<T>` parameter of any item type (`Never` is a
-/// subtype of every type), which is what lets it be a `const` default without naming that type.
-final class NoGrouping extends Grouping<Never> {
+/// The default [Grouping] for every list_smith list, created as `NoGrouping<T>()` for the list's item
+/// type when the consumer passes no [Grouping]. Generic in [T] (rather than a single shared
+/// `Grouping<Never>` instance) so its per-item operations receive real `T`-typed values.
+final class NoGrouping<T extends Object> extends Grouping<T> {
   /// Creates the no-grouping default.
   const NoGrouping();
 
