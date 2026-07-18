@@ -20,7 +20,7 @@
 - [Pull to refresh](#pull-to-refresh)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
-    * [Paged, with `ListSmith.async` and a search fetcher](#paged-with-listsmithasync-and-a-search-fetcher)
+    * [Paged, with `ListSmith.async` and a search](#paged-with-listsmithasync-and-a-search)
         + [What happens to the feed while you search?](#what-happens-to-the-feed-while-you-search)
     * [You keep the search field](#you-keep-the-search-field)
 - [Grouping](#grouping)
@@ -193,17 +193,19 @@ There's no pagination or pull-to-refresh here, because there's nothing to page o
 that is already in memory. And if you don't need search at all, you don't need this: a plain
 `ListView.builder` will do.
 
-### Paged, with `ListSmith.async` and a search fetcher
+### Paged, with `ListSmith.async` and a search
 
-Add a `searchFetchPage` to an async list and it grows a second mode. An empty query shows the normal
-paginated feed; a non-empty one switches to paginated *search results* fetched by your search
+Pass `search: AsyncSearch(...)` to an async list and it grows a second mode. An empty query shows the
+normal paginated feed; a non-empty one switches to paginated *search results* fetched by your search
 function, and back again once the query clears. One list, two views, with pagination and
 pull-to-refresh still working in both:
 
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
-  searchFetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+  search: AsyncSearch(
+    fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+  ),
   query: searchQuery,
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -220,7 +222,7 @@ looking at? Another policy:
 | `KeepCachePolicy`                | the feed is snapshotted on the way in and restored on the way out, no refetch     |
 
 ```dart
-searchCachePolicy: const KeepCachePolicy(),
+search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
 ```
 
 ### You keep the search field
@@ -241,7 +243,9 @@ Widget build(BuildContext context) => Column(
       child: ListSmith.async(
         query: _query,
         fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
-        searchFetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+        search: AsyncSearch(
+          fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+        ),
         itemBuilder: (context, item, index) => Text(item.title),
       ),
     ),
@@ -288,8 +292,8 @@ The two paths order their sections differently, and the difference matters:
 - **`.sync` buckets for you.** It holds the whole list, so it gathers each group into one contiguous
   run (groups in the order they first appear, items kept in order within a group). Your input can
   arrive in any order.
-- **`.async` groups in arrival order.** It can't reorder across pages, so your `fetchPage` (and
-  `searchFetchPage`) must return items *already grouped by key*, all of one group before the next.
+- **`.async` groups in arrival order.** It can't reorder across pages, so your `fetchPage` (and the
+  `AsyncSearch` fetcher) must return items *already grouped by key*, all of one group before the next.
   A key that comes back after its section ended repeats the header; a debug-mode assert flags it.
 
 Two things worth knowing:

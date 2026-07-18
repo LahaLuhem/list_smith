@@ -47,11 +47,11 @@ class AsyncSearchView extends StatelessWidget {
                 valueListenable: viewModel.queryListenable,
                 builder: (_, query, _) => ListSmith.async(
                   fetchPage: PageFetcher(viewModel.fetchPage),
-                  searchFetchPage: SearchPageFetcher(viewModel.searchFetchPage),
+                  search: AsyncSearch(
+                    fetchPage: SearchPageFetcher(viewModel.searchFetchPage),
+                    cachePolicy: keepCache ? const KeepCachePolicy() : const ReplaceCachePolicy(),
+                  ),
                   query: query,
-                  searchCachePolicy: keepCache
-                      ? const KeepCachePolicy()
-                      : const ReplaceCachePolicy(),
                   separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (_, item, _) =>
                       PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),

@@ -86,6 +86,22 @@ void main() {
         check(const NoRefresh().toString()).equals('NoRefresh()');
       });
 
+  final searches = BddFeature('Search string form');
+
+  Bdd(searches)
+      .scenario('each search case names itself in toString')
+      .given('a NoSearch and an AsyncSearch')
+      .when('each is converted to a string')
+      .then('the string is the compact case form, and AsyncSearch names its cache policy')
+      .run((_) {
+        check(const NoSearch().toString()).equals('NoSearch()');
+        check(
+          AsyncSearch<int>(
+            fetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
+          ).toString(),
+        ).equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
+      });
+
   final sources = BddFeature('List source string form and search support');
 
   Bdd(sources)
@@ -99,15 +115,14 @@ void main() {
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           refresh: const PullToRefresh(),
-          searchCachePolicy: const ReplaceCachePolicy(),
+          search: const NoSearch(),
         );
         final searchable = AsyncSource<int>(
           fetchPage: PageFetcher((_, _) async => const <int>[]),
-          searchFetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           refresh: const PullToRefresh(),
-          searchCachePolicy: const ReplaceCachePolicy(),
+          search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const <int>[])),
         );
 
         check(plain.supportsSearch).isFalse();
