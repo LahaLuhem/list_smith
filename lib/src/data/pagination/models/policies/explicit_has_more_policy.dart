@@ -15,5 +15,8 @@ final class ExplicitHasMorePolicy extends PaginationEndPolicy {
   bool hasReachedEnd(EndContext context) => context.lastPageSignal == false;
 
   @override
+  bool get requiresSignal => true;
+
+  @override
   String toString() => 'ExplicitHasMorePolicy()';
 }

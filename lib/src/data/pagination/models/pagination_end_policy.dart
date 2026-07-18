@@ -1,8 +1,3 @@
-// PaginationEndPolicy is an open, injected contract, not a function typedef: its built-in
-// implementations carry configuration (e.g. StopOnEmptyPagesPolicy.emptyRunBeforeEnd) and a
-// toString, and consumers implement it to add their own end-detection, none of which a bare function
-// can express.
-// ignore_for_file: one_member_abstracts
 import 'end_context.dart';
 
 part 'policies/explicit_has_more_policy.dart';
@@ -22,4 +17,9 @@ abstract class PaginationEndPolicy {
 
   /// Whether pagination has reached its end, given [context] over the pages loaded so far.
   bool hasReachedEnd(EndContext context);
+
+  /// Whether this policy reads the fetcher's end signal ([EndContext.lastPageSignal]), so list_smith
+  /// requires a signal-reporting fetcher (`PageFetcher.withSignal`) at construction. Defaults to
+  /// `false`; a signal-based policy overrides it to `true`.
+  bool get requiresSignal => false;
 }

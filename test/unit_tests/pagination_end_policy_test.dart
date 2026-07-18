@@ -94,6 +94,18 @@ void main() {
         check(policy.hasReachedEnd(contextWith(true))).isFalse();
         check(policy.hasReachedEnd(contextWith(null))).isFalse();
       });
+
+  Bdd(endDetection)
+      .scenario('a policy declares whether it needs the fetcher end signal')
+      .given('the built-in end policies and a custom one')
+      .when('requiresSignal is read')
+      .then('only the signal-reading policy requires it')
+      .run((_) {
+        check(const StopOnEmptyPagesPolicy().requiresSignal).isFalse();
+        check(const FixedPageCountPolicy(pageCount: 1).requiresSignal).isFalse();
+        check(const ExplicitHasMorePolicy().requiresSignal).isTrue();
+        check(const _ShortLastPagePolicy().requiresSignal).isFalse();
+      });
 }
 
 /// A consumer-authored end policy: ends when the most recent page held fewer than a full page of
