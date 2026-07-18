@@ -145,6 +145,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     final search = source.search;
     final committedQuery = _debouncer.committedQuery;
     final isSearchMode = _isSearchQuery(committedQuery);
+    final previousSignal = _lastPageSignal;
 
     try {
       final (items, signal) = switch (search) {
@@ -152,8 +153,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
           committedQuery,
           pageKey,
           source.pageSize,
+          previousSignal,
         ),
-        AsyncSearch<T>() || NoSearch() => await source.fetchPage(pageKey, source.pageSize),
+        AsyncSearch<T>() ||
+        NoSearch() => await source.fetchPage(pageKey, source.pageSize, previousSignal),
       };
       _lastPageSignal = signal;
 

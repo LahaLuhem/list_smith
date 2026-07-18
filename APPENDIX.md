@@ -416,12 +416,38 @@ during the repository setup itself.
   function of its `EndContext` and stays correct across refresh and the normal-search transition,
   with no consumer-side reset wiring. A guard asserts `ExplicitHasMorePolicy` is paired with a
   `.withSignal` fetcher, so a "never ends" mispairing fails at construction.
-- **Scope: an end signal, not cursor-driven paging.** A cursor is carried only as a stop signal,
-  ending on a null cursor via a custom policy. It is not fed back as the next fetch's input; the
-  page key stays the 0-based index. Cursor-driven pagination is a larger change to the page-key
-  model, left to a follow-up.
+- **Scope: an end signal; cursor-driven paging came later.** #1 carried the cursor only as a stop
+  signal (ending on a null cursor), not fed back as the next fetch's input, and the page key stayed
+  the 0-based ordinal. Issue #14 made the signal bidirectional so it also drives the fetch, see
+  [Cursor-driven pagination](#cursor-driven-pagination). The page key stayed the ordinal, so that
+  follow-up was smaller than this bullet once expected.
 - **Layout:** `PageFetcher` and `SearchPageFetcher` live under `models/` now that they are classes,
   not in `typedefs/` (which keeps only real typedefs, like `SyncSearchPredicate`).
+
+---
+
+<a id="cursor-driven-pagination"></a>
+## Cursor-driven pagination: the signal, fed back
+
+- **Decision (issue #14):** a cursor drives the next fetch, not just the end. The `withSignal`
+  channel became bidirectional: the `Object?` a page returns is handed to the next fetch as
+  `previousSignal` (null for the first page), so the next fetch uses the cursor the previous page
+  returned. `StopOnNullSignalPolicy` ends the list on a null cursor.
+- **No new constructor, fetcher type, or generic.** The page-key change #1 anticipated turned out not
+  to be needed. list_smith keeps `PagingController<int, T>` (an ISP ordinal), and
+  the cursor rides `_lastPageSignal`, the field that already tracked the signal for end-detection.
+  `_fetchPage` passes it in; `_nextPageKey` still returns `pages.length`. `itemId`, grouping, and
+  refresh are all item-based, so they were untouched: the whole new surface is the third `withSignal`
+  argument plus `StopOnNullSignalPolicy`.
+- **Retry and refresh fall out for free.** `_lastPageSignal` only advances after a fetch succeeds, so
+  ISP retrying a failed page re-fetches it with the same cursor; refresh nulls the field, so the reload
+  restarts from the initial null cursor. Neither needed new code.
+- **The cursor stays `Object?`.** It is the same signal the end policy reads, so a real cursor generic
+  on `ListSmith` would split the channel's typing and reintroduce the second generic #1 avoided. The
+  consumer casts `previousSignal as MyCursor?` once, in their own fetch closure, where the type is
+  known. `SearchPageFetcher.withSignal` took the same third argument, so cursor-driven search works
+  with no separate seam (the two-view controller already snapshots the signal per stream); the
+  `requiresSignal` guard keeps a signal end policy paired with `.withSignal` fetchers on both.
 
 ---
 

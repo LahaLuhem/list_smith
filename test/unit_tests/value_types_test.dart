@@ -72,6 +72,7 @@ void main() {
           ..contains('FixedPageCountPolicy')
           ..contains('5');
         check(const ExplicitHasMorePolicy().toString()).contains('ExplicitHasMorePolicy');
+        check(const StopOnNullSignalPolicy().toString()).contains('StopOnNullSignalPolicy');
       });
 
   final refreshes = BddFeature('Refresh string form');

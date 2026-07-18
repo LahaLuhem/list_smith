@@ -54,4 +54,21 @@ class DemoRepository {
 
     return matchingItems.sublist(start, end > matchingItems.length ? matchingItems.length : end);
   }
+
+  /// Serves items keyed by an opaque cursor rather than a page index: the cursor-feed demo hands back
+  /// the cursor the previous page returned (null for the first page), and this returns the next slice
+  /// plus the cursor for the page after it, or `null` once the data runs out. The cursor here just
+  /// encodes the next offset as a string, but list_smith treats it as opaque.
+  Future<(List<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {
+    await Future<void>.delayed(latency);
+
+    final start = cursor is String ? int.parse(cursor) : 0;
+    if (start >= _items.length) return (const <DemoItem>[], null);
+
+    final end = start + pageSize;
+    final clampedEnd = end > _items.length ? _items.length : end;
+    final nextCursor = clampedEnd >= _items.length ? null : '$clampedEnd';
+
+    return (_items.sublist(start, clampedEnd), nextCursor);
+  }
 }

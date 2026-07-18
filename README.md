@@ -93,32 +93,31 @@ ListSmith.async(
 
 ### Deciding where the data ends
 
-An empty page meaning "the end" is the sensible default, but it isn't always right. A calendar feed,
-say, can have an empty day in the middle with plenty of data after it. So end-detection is an open
-policy you can swap out, or write yourself:
+An empty page meaning "the end" is the sensible default (a calendar feed can even have an empty day
+mid-list, which `emptyRunBeforeEnd` allows for). When your backend signals the end another way, swap
+the policy to match it. Pick by how your source behaves, not by mechanism:
 
-| Policy                               | Ends when                                                          |
-|--------------------------------------|--------------------------------------------------------------------|
-| `StopOnEmptyPagesPolicy` *(default)* | a page comes back empty (raise `emptyRunBeforeEnd` to allow gaps)  |
-| `FixedPageCountPolicy`               | a set number of pages have loaded                                  |
-| `ExplicitHasMorePolicy`              | the fetcher reports it, via `PageFetcher.withSignal`              |
+| Policy                               | Reach for it when                                                    |
+|--------------------------------------|----------------------------------------------------------------------|
+| `StopOnEmptyPagesPolicy` *(default)* | your source just runs dry (a short, then empty, page). Do nothing.   |
+| `FixedPageCountPolicy`               | you want a hard cap: a "top 100", or a teaser of N pages.            |
+| `ExplicitHasMorePolicy`              | your backend returns a `hasMore` / `isLast` flag per response.       |
+| `StopOnNullSignalPolicy`             | your backend is cursor-based, returning `null` when there's no more. |
+
+The default needs no `endPolicy` at all. The two count-based tweaks are one line each:
 
 ```dart
-// Allow up to two empty pages before calling it the end:
-endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),
-
-// Or just stop after five pages:
-endPolicy: const FixedPageCountPolicy(pageCount: 5),
+endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),  // tolerate up to two empty pages
+endPolicy: const FixedPageCountPolicy(pageCount: 5),            // stop after five pages
 ```
 
-If your backend already tells you whether there's more, let it. `ExplicitHasMorePolicy` reads a
-`hasMore` flag off each fetch and stops the moment the backend says it's the last page, instead of
-fetching one more empty page to find out. Report the flag with `PageFetcher.withSignal` (and
-`SearchPageFetcher.withSignal` if the list searches):
+The two signal-based ones read a value off each fetch, so they need `PageFetcher.withSignal` (and
+`SearchPageFetcher.withSignal` if the list searches). `ExplicitHasMorePolicy` stops the moment the
+backend says it's the last page, instead of fetching one more empty page to find out:
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher.withSignal((pageIndex, pageSize) async {
+  fetchPage: PageFetcher.withSignal((pageIndex, pageSize, _) async {
     final response = await api.load(pageIndex, pageSize);
     return (response.items, response.hasMore);
   }),
@@ -127,9 +126,10 @@ ListSmith.async(
 )
 ```
 
-Want your own rule? `PaginationEndPolicy` is an open contract: implement `hasReachedEnd(EndContext)`
-and pass it as `endPolicy`. The context carries the per-page item counts, the page size, and the
-last fetch's signal, so "stop when the last page came back short" is a few lines:
+`StopOnNullSignalPolicy` is the cursor case, shown just below. If none of the four fit,
+`PaginationEndPolicy` is an open contract: implement `hasReachedEnd(EndContext)` and pass it as
+`endPolicy`. The context carries the per-page counts, the page size, and the last fetch's signal, so
+"stop when the last page came back short" is a few lines:
 
 ```dart
 class ShortLastPage extends PaginationEndPolicy {
@@ -137,6 +137,28 @@ class ShortLastPage extends PaginationEndPolicy {
   bool hasReachedEnd(EndContext c) => c.lastPageItemCount < c.pageSize;
 }
 ```
+
+### Cursor pagination
+
+Keyset/cursor APIs don't take a page number; you hand back the cursor the previous page returned.
+That's the same `withSignal` channel: the signal a page returns is passed into the next fetch as
+`previousSignal` (null for the first page), and `StopOnNullSignalPolicy` ends the list when the cursor
+runs out.
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher.withSignal((_, pageSize, previousCursor) async {
+    final page = await api.list(cursor: previousCursor as String?, limit: pageSize);
+    return (page.items, page.nextCursor);   // null nextCursor ends it
+  }),
+  endPolicy: const StopOnNullSignalPolicy(),
+  itemBuilder: (context, item, index) => Text(item.title),
+)
+```
+
+The cursor is opaque to list_smith (an `Object?`), so cast it back to your type in the closure. It
+works for search too: give `AsyncSearch` a `SearchPageFetcher.withSignal` and the search stream drives
+its own cursor.
 
 ### De-duplicating overlapping pages
 
@@ -216,10 +238,10 @@ ListSmith.async(
 When the list flips between the feed and the search results, what should become of the feed you were
 looking at? Another policy:
 
-| Policy                           | Entering and leaving search                                                       |
-|----------------------------------|-----------------------------------------------------------------------------------|
-| `ReplaceCachePolicy` *(default)* | each mode loads clean; leaving search reloads the feed from the top               |
-| `KeepCachePolicy`                | the feed is snapshotted on the way in and restored on the way out, no refetch     |
+| Policy                           | Reach for it when                                                                            |
+|----------------------------------|----------------------------------------------------------------------------------------------|
+| `ReplaceCachePolicy` *(default)* | a clean reload each way is fine, or the feed should reflect changes made while searching.    |
+| `KeepCachePolicy`                | returning to the feed should be instant: its pages and scroll position are kept, no refetch. |
 
 ```dart
 search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
@@ -456,12 +478,14 @@ regressions.
 - [x] Lifecycle observer
 - [x] Explicit end signal from the fetcher: `ExplicitHasMorePolicy`, plus an open
   `PaginationEndPolicy` contract for custom end-detection (e.g. a null next-cursor)
+- [x] Cursor-driven pagination: drive each fetch from the previous page's cursor, with
+  `StopOnNullSignalPolicy` to end on a null cursor
 
 ## The example app
 
-The [`example/`](example/) app is the best place to watch it all work: a basic feed, fully custom
-surfaces, a playground with live knobs, both flavours of search, and an observer demo that streams
-every lifecycle event into a panel as you scroll, refresh, and type.
+The [`example/`](example/) app is the best place to watch it all work: a basic feed, a cursor feed,
+fully custom surfaces, a playground with live knobs, both flavours of search, and an observer demo
+that streams every lifecycle event into a panel as you scroll, refresh, and type.
 
 ## Contributing
 
