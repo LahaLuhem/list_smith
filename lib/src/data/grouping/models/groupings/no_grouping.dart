@@ -10,5 +10,15 @@ final class NoGrouping<T extends Object> extends Grouping<T> {
   const NoGrouping();
 
   @override
+  List<T> arrange(Iterable<T> items) => items is List<T> ? items : items.toList(growable: false);
+
+  @override
+  ItemBuilder<T> decorate(
+    ItemBuilder<T> itemBuilder, {
+    required List<T> Function() flatItems,
+    required Axis axis,
+  }) => itemBuilder;
+
+  @override
   String toString() => 'NoGrouping()';
 }

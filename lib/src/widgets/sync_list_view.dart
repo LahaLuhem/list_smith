@@ -5,7 +5,6 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/models/grouping.dart';
-import '/src/data/grouping/utils/grouping_resolver.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
@@ -14,7 +13,6 @@ import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
-import 'grouped_item.dart';
 
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and renders it with a plain widgets-layer `ListView`.
@@ -117,18 +115,11 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
       _debouncer.committedQuery,
       widget.minSearchLength,
     );
-    final grouping = widget.grouping;
 
-    final List<T> visibleItems;
-    if (grouping is KeyedGrouping<T>) {
-      visibleItems = bucketByGroup(search.visibleItems, grouping.groupOf);
-    } else if (search.isSearching) {
-      visibleItems = search.visibleItems.toList(growable: false);
-    } else {
-      visibleItems = _items;
-    }
-
-    return (visibleItems: visibleItems, isSearching: search.isSearching);
+    return (
+      visibleItems: widget.grouping.arrange(search.visibleItems),
+      isSearching: search.isSearching,
+    );
   }
 
   void _onQueryCommitted(String committedQuery) => _resultNotifier.value = _resolve();
@@ -154,11 +145,10 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
           ? null
           : ScrollCacheExtent.pixels(cacheExtentPixels);
 
-      final effectiveItemBuilder = groupedItemBuilder(
-        widget.grouping,
+      final effectiveItemBuilder = widget.grouping.decorate(
         widget.itemBuilder,
-        scroll.scrollDirection,
-        visibleItems,
+        flatItems: () => visibleItems,
+        axis: scroll.scrollDirection,
       );
 
       return separatorBuilder != null

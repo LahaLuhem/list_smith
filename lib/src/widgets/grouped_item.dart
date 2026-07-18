@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import '/src/data/grouping/models/grouping.dart';
 import '/src/data/grouping/utils/grouping_resolver.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 
@@ -59,25 +58,3 @@ class GroupedItem<T extends Object> extends StatelessWidget {
     );
   }
 }
-
-/// Wraps [itemBuilder] so each group's first item is prefixed with its header, or returns it unchanged
-/// when [grouping] is not a [KeyedGrouping].
-///
-/// The single place [GroupedItem] is built, shared by both render paths. [items] is the flattened list
-/// in display order; each cell looks one item back through it to decide whether it starts a group.
-ItemBuilder<T> groupedItemBuilder<T extends Object>(
-  Grouping<T> grouping,
-  ItemBuilder<T> itemBuilder,
-  Axis scrollDirection,
-  List<T> items,
-) => grouping is! KeyedGrouping<T>
-    ? itemBuilder
-    : (_, item, index) => GroupedItem<T>(
-        itemBuilder: itemBuilder,
-        groupOf: grouping.groupOf,
-        headerFor: grouping.headerFor,
-        scrollDirection: scrollDirection,
-        previous: index == 0 ? null : items[index - 1],
-        item: item,
-        index: index,
-      );
