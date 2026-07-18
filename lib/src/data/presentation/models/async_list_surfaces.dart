@@ -1,9 +1,9 @@
+/// @docImport '/src/data/refresh/models/refresh.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
 import 'package:flutter/widgets.dart';
 
-import '/src/data/refresh/models/list_smith_refresh_state.dart';
 import '../typedefs/error_builder.dart';
 
 /// Groups the overridable surfaces that only an async list has, so [ListSmith.async]'s behavioural
@@ -11,9 +11,10 @@ import '../typedefs/error_builder.dart';
 ///
 /// Every field is null by default, meaning "use list_smith's neutral widgets-layer default"; set one
 /// to replace that surface. The surfaces gathered here exist only on the async path (page loading,
-/// page errors, the end-of-list footer, and the pull-to-refresh indicator). Surfaces every list has,
-/// such as the empty-state builder, stay directly on the constructor so they read the same whether
-/// the list was built with `.async` or `.sync`.
+/// page errors, and the end-of-list footer). The pull-to-refresh indicator lives on [PullToRefresh],
+/// alongside the toggle that enables it. Surfaces every list has, such as the empty-state builder,
+/// stay directly on the constructor so they read the same whether the list was built with `.async` or
+/// `.sync`.
 ///
 /// Build one once and reuse it across every list to share a house style.
 @immutable
@@ -35,10 +36,6 @@ class AsyncListSurfaces {
   /// Builds the footer shown once every page has loaded; null uses the neutral default.
   final WidgetBuilder? noMoreItemsBuilder;
 
-  /// Draws the pull-to-refresh indicator; null uses the neutral default.
-  /// Has no effect when pull-to-refresh is disabled on the list.
-  final RefreshBuilder? refreshBuilder;
-
   /// Groups the async-only override surfaces; every field defaults to the neutral widgets-layer
   /// surface it replaces.
   const AsyncListSurfaces({
@@ -47,6 +44,5 @@ class AsyncListSurfaces {
     this.firstPageErrorBuilder,
     this.newPageErrorBuilder,
     this.noMoreItemsBuilder,
-    this.refreshBuilder,
   });
 }

@@ -128,7 +128,7 @@ Future<void> _pumpPagedList(
     fetchPage: fetchPage,
     itemId: itemId,
     pageSize: 5,
-    pullToRefresh: false,
+    refresh: const NoRefresh(),
     itemBuilder: (_, item, _) => Text('item ${item.id}'),
   ),
 );
@@ -146,7 +146,7 @@ Future<void> _pumpPagedSearch(
     searchFetchPage: searchFetchPage,
     itemId: itemId,
     pageSize: 5,
-    pullToRefresh: false,
+    refresh: const NoRefresh(),
     query: 'q',
     searchDebounce: const Duration(milliseconds: 20),
     itemBuilder: (_, item, _) => Text('item ${item.id}'),

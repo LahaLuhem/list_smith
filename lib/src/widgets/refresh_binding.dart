@@ -33,6 +33,7 @@ class RefreshBinding extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CustomRefreshIndicator(
     onRefresh: onRefresh,
+    child: child,
     builder: (context, child, controller) {
       final state = _stateOf(controller);
 
@@ -41,7 +42,6 @@ class RefreshBinding extends StatelessWidget {
         null => NeutralRefreshIndicator(state: state, child: child),
       };
     },
-    child: child,
   );
 
   static ListSmithRefreshState _stateOf(IndicatorController controller) =>

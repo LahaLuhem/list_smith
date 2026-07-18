@@ -49,7 +49,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
         ),
@@ -74,7 +74,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
         ),

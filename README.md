@@ -167,9 +167,9 @@ on `itemId`.
 On by default for `ListSmith.async`. Pull down, the list resets and reloads from the first page.
 Nothing to set up.
 
-Switch it off with `pullToRefresh: false`. Prefer your own indicator over the neutral one? Pass a
-`refreshBuilder` through the surfaces (more on those below). It receives a small, framework-free
-snapshot of the pull (a phase and a drag value), never the controller underneath.
+Switch it off with `refresh: NoRefresh()`. Want your own indicator instead of the neutral one? Give
+`PullToRefresh` a builder: `refresh: PullToRefresh(refreshBuilder: ...)`. It gets a small,
+framework-free snapshot of the pull (a phase and a drag value), never the controller underneath.
 
 ## Search
 
@@ -349,7 +349,9 @@ In `AsyncListSurfaces` (async lists only):
 | `firstPageErrorBuilder`   | the first page failed (receives the error + a retry call) |
 | `newPageErrorBuilder`     | a further page failed (receives the error + a retry call) |
 | `noMoreItemsBuilder`      | every page has loaded                                     |
-| `refreshBuilder`          | drawing the pull-to-refresh indicator                     |
+
+The pull-to-refresh indicator is set separately, on `PullToRefresh` (see the
+[Pull to refresh](#pull-to-refresh) section above).
 
 The error builders get `(context, error, onRetry)`, so a custom error view can offer a retry without
 you reaching for a controller. Leave any slot out and its neutral default fills in.

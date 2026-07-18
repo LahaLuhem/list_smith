@@ -72,7 +72,7 @@ void main() {
             child: ListSmith<int>.async(
               fetchPage: PageFetcher(fetchPage),
               pageSize: _pageSize,
-              pullToRefresh: false,
+              refresh: const NoRefresh(),
               observer: observer,
               itemBuilder: (_, item, _) => SizedBox(
                 height: _itemExtentPixels,

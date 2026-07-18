@@ -12,6 +12,7 @@ import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/refresh/models/refresh.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
 import '/src/data/source/list_source.dart';
@@ -40,9 +41,6 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 
   /// Builds the separator between items; null for no separators.
   final IndexedWidgetBuilder? separatorBuilder;
-
-  /// Whether pull-to-refresh is enabled.
-  final bool pullToRefresh;
 
   /// The current search query; empty drives normal mode, non-empty drives search mode.
   final String query;
@@ -73,7 +71,6 @@ class AsyncListView<T extends Object> extends StatefulWidget {
     required this.source,
     required this.itemBuilder,
     required this.grouping,
-    required this.pullToRefresh,
     required this.query,
     required this.minSearchLength,
     required this.searchDebounce,
@@ -276,13 +273,14 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
       ),
     );
 
-    if (!widget.pullToRefresh) return list;
-
-    return RefreshBinding(
-      onRefresh: _onRefresh,
-      refreshBuilder: surfaces.refreshBuilder,
-      child: list,
-    );
+    return switch (widget.source.refresh) {
+      NoRefresh() => list,
+      PullToRefresh(:final refreshBuilder) => RefreshBinding(
+        onRefresh: _onRefresh,
+        refreshBuilder: refreshBuilder,
+        child: list,
+      ),
+    };
   }
 
   Future<void> _onRefresh() {

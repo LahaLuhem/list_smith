@@ -34,7 +34,7 @@ void main() {
         child: ListSmith<int>.async(
           fetchPage: PageFetcher(fetchPage),
           pageSize: _pageSize,
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => ScrollBenchItem(index: item),
         ),
       ),

@@ -45,6 +45,9 @@ class CustomSurfacesView extends StatelessWidget {
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
               emptyBuilder: (_) => const CustomEmpty(),
+              refresh: PullToRefresh(
+                refreshBuilder: (_, child, state) => CustomRefresh(state: state, child: child),
+              ),
               surfaces: AsyncListSurfaces(
                 firstPageLoadingBuilder: (_) => const CustomLoading(),
                 newPageLoadingBuilder: (_) => const CustomLoading(compact: true),
@@ -53,7 +56,6 @@ class CustomSurfacesView extends StatelessWidget {
                 newPageErrorBuilder: (_, error, onRetry) =>
                     CustomError(error: error, onRetry: onRetry, compact: true),
                 noMoreItemsBuilder: (_) => const CustomEnd(),
-                refreshBuilder: (_, child, state) => CustomRefresh(state: state, child: child),
               ),
             ),
           ),

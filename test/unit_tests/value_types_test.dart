@@ -74,6 +74,18 @@ void main() {
         check(const ExplicitHasMorePolicy().toString()).contains('ExplicitHasMorePolicy');
       });
 
+  final refreshes = BddFeature('Refresh string form');
+
+  Bdd(refreshes)
+      .scenario('each refresh case names itself in toString')
+      .given('a PullToRefresh and a NoRefresh')
+      .when('each is converted to a string')
+      .then('the string is the compact case form')
+      .run((_) {
+        check(const PullToRefresh().toString()).equals('PullToRefresh()');
+        check(const NoRefresh().toString()).equals('NoRefresh()');
+      });
+
   final sources = BddFeature('List source string form and search support');
 
   Bdd(sources)
@@ -86,6 +98,7 @@ void main() {
           fetchPage: PageFetcher((_, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
+          refresh: const PullToRefresh(),
           searchCachePolicy: const ReplaceCachePolicy(),
         );
         final searchable = AsyncSource<int>(
@@ -93,6 +106,7 @@ void main() {
           searchFetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
+          refresh: const PullToRefresh(),
           searchCachePolicy: const ReplaceCachePolicy(),
         );
 
