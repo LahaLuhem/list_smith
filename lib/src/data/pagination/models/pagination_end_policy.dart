@@ -3,6 +3,7 @@ import 'end_context.dart';
 part 'policies/explicit_has_more_policy.dart';
 part 'policies/fixed_page_count_policy.dart';
 part 'policies/stop_on_empty_pages_policy.dart';
+part 'policies/stop_on_null_signal_policy.dart';
 
 /// Decides when an async list has reached the end of its data.
 ///

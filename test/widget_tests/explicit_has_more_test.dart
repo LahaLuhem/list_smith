@@ -26,7 +26,7 @@ void main() {
         [1, 2, 3],
         [4, 5, 6],
       ];
-      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _) async {
+      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _, _) async {
         requested.add(pageIndex);
         final items = pageIndex < dataPages.length ? dataPages[pageIndex] : const <int>[];
 
@@ -51,7 +51,8 @@ void main() {
 
     scenarioWidgets('shows the no-more footer once the fetcher reports the end', (tester) async {
       final fetchPage = PageFetcher<int>.withSignal(
-        (pageIndex, _) async => pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
+        (pageIndex, _, _) async =>
+            pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
       );
 
       await pumpListSmith(
@@ -68,10 +69,13 @@ void main() {
       check(find.text('No more items').evaluate()).length.equals(1);
     });
 
+    const item1Key = 'item 1';
+    const item99Key = 'item 99';
+
     scenarioWidgets('the signal governs the search stream too', (tester) async {
-      final fetchPage = PageFetcher<int>.withSignal((_, _) async => (const [1, 2, 3], true));
+      final fetchPage = PageFetcher<int>.withSignal((_, _, _) async => (const [1, 2, 3], true));
       final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (_, pageIndex, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
+        (_, pageIndex, _, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
       );
 
       await pumpListSmith(
@@ -89,7 +93,7 @@ void main() {
       await settle(tester);
 
       // Search page 0 reported hasMore=false via SearchPageFetcher.withSignal: results show, then end.
-      check(find.text('item 99').evaluate()).length.equals(1);
+      check(find.text(item99Key).evaluate()).length.equals(1);
       check(find.text('No more items').evaluate()).length.equals(1);
     });
 
@@ -97,10 +101,11 @@ void main() {
       tester,
     ) async {
       final fetchPage = PageFetcher<int>.withSignal(
-        (pageIndex, _) async => pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
+        (pageIndex, _, _) async =>
+            pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
       );
       final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (_, pageIndex, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
+        (_, pageIndex, _, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
       );
 
       Widget build(String query) => ListSmith.async(
@@ -115,24 +120,24 @@ void main() {
 
       await pumpListSmith(tester, build(''));
       await settle(tester);
-      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.text(item1Key).evaluate()).length.equals(1);
 
       await pumpListSmith(tester, build('x'));
       await settle(tester);
-      check(find.text('item 99').evaluate()).length.equals(1);
-      check(find.text('item 1').evaluate()).length.equals(0);
+      check(find.text(item99Key).evaluate()).length.equals(1);
+      check(find.text(item1Key).evaluate()).length.equals(0);
 
       await pumpListSmith(tester, build(''));
       await settle(tester);
 
       // Normal list restored (KeepCache) after a search that ended via the signal.
-      check(find.text('item 1').evaluate()).length.equals(1);
-      check(find.text('item 99').evaluate()).length.equals(0);
+      check(find.text(item1Key).evaluate()).length.equals(1);
+      check(find.text(item99Key).evaluate()).length.equals(0);
     });
 
     scenarioWidgets('pull-to-refresh re-enables pagination after the end', (tester) async {
       var firstPageFetches = 0;
-      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _) async {
+      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _, _) async {
         if (pageIndex == 0) firstPageFetches++;
 
         return pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false);
@@ -149,7 +154,7 @@ void main() {
       await drain(tester, frames: 8);
       check(firstPageFetches).equals(1);
 
-      await tester.fling(find.text('item 1'), const Offset(0, 300), 1000);
+      await tester.fling(find.text(item1Key), const Offset(0, 300), 1000);
       for (var frame = 0; frame < 6; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
@@ -157,7 +162,7 @@ void main() {
 
       // Refresh reset the ended state and re-fetched page 0.
       check(firstPageFetches).equals(2);
-      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.text(item1Key).evaluate()).length.equals(1);
     });
   });
 }

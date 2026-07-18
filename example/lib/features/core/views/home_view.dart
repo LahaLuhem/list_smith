@@ -7,6 +7,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/async_search/async_search_view.dart';
 import '/features/basic_feed/basic_feed_view.dart';
+import '/features/cursor_feed/cursor_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
 import '/features/grouping/grouping_view.dart';
 import '/features/observer/observer_view.dart';
@@ -32,6 +33,13 @@ class HomeView extends StatelessWidget {
             title: 'Basic feed',
             description: 'Async pagination and pull-to-refresh with the neutral default surfaces.',
             pageBuilder: (_) => const BasicFeedView(),
+          ),
+          _DemoTile(
+            icon: Icon(platformValue(material: Icons.link, cupertino: CupertinoIcons.link)),
+            title: 'Cursor feed',
+            description:
+                'Cursor-driven pagination: each fetch uses the cursor the previous page gave.',
+            pageBuilder: (_) => const CursorFeedView(),
           ),
           _DemoTile(
             icon: const PlatformIcon(PlatformIcons.wand),

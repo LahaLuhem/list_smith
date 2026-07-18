@@ -96,14 +96,33 @@ void main() {
       });
 
   Bdd(endDetection)
+      .scenario('StopOnNullSignal ends once a page reports a null signal, after the first page')
+      .given('a StopOnNullSignal policy')
+      .when('it inspects the last page signal (a next-cursor)')
+      .then('it ends on a null cursor, continues on a non-null one, and is dormant before any page')
+      .run((_) {
+        const policy = StopOnNullSignalPolicy();
+        EndContext contextWith({required int pageCount, required Object? signal}) => EndContext(
+          pageItemCounts: List<int>.filled(pageCount, 5),
+          pageSize: 20,
+          lastPageSignal: signal,
+        );
+
+        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: null))).isTrue();
+        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: 'cursor-2'))).isFalse();
+        check(policy.hasReachedEnd(contextWith(pageCount: 0, signal: null))).isFalse();
+      });
+
+  Bdd(endDetection)
       .scenario('a policy declares whether it needs the fetcher end signal')
       .given('the built-in end policies and a custom one')
       .when('requiresSignal is read')
-      .then('only the signal-reading policy requires it')
+      .then('only the signal-reading policies require it')
       .run((_) {
         check(const StopOnEmptyPagesPolicy().requiresSignal).isFalse();
         check(const FixedPageCountPolicy(pageCount: 1).requiresSignal).isFalse();
         check(const ExplicitHasMorePolicy().requiresSignal).isTrue();
+        check(const StopOnNullSignalPolicy().requiresSignal).isTrue();
         check(const _ShortLastPagePolicy().requiresSignal).isFalse();
       });
 }

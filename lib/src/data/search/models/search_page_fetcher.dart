@@ -10,9 +10,17 @@ library;
 /// query drives the normal [PageFetcher] path instead).
 ///
 /// Build one with [SearchPageFetcher.new] for items only, or [SearchPageFetcher.withSignal] to also
-/// report an end signal for the end policy (see [EndContext.lastPageSignal]).
+/// report an end signal for the end policy (see [EndContext.lastPageSignal]); with `withSignal` the
+/// signal is handed back to the next search fetch as `previousSignal` (null for the first page), so a
+/// cursor-driven search fetches the next page from the cursor the previous one returned.
 final class SearchPageFetcher<T extends Object> {
-  final Future<(Iterable<T>, Object?)> Function(String query, int pageIndex, int pageSize) _fetch;
+  final Future<(Iterable<T>, Object?)> Function(
+    String query,
+    int pageIndex,
+    int pageSize,
+    Object? previousSignal,
+  )
+  _fetch;
 
   /// Whether this fetcher reports an end signal, i.e. it was built with [SearchPageFetcher.withSignal].
   final bool reportsSignal;
@@ -21,18 +29,31 @@ final class SearchPageFetcher<T extends Object> {
   factory SearchPageFetcher(
     Future<Iterable<T>> Function(String query, int pageIndex, int pageSize) fetch,
   ) => SearchPageFetcher._(
-    (query, pageIndex, pageSize) async => (await fetch(query, pageIndex, pageSize), null),
+    (query, pageIndex, pageSize, _) async => (await fetch(query, pageIndex, pageSize), null),
     reportsSignal: false,
   );
 
   const SearchPageFetcher._(this._fetch, {required this.reportsSignal});
 
-  /// Wraps a function returning results alongside an end signal, surfaced as [EndContext.lastPageSignal].
+  /// Wraps a function that receives the previous page's `previousSignal` (null for the first page) and
+  /// returns results with a new end signal, surfaced as [EndContext.lastPageSignal] and handed to the
+  /// next fetch.
   factory SearchPageFetcher.withSignal(
-    Future<(Iterable<T>, Object?)> Function(String query, int pageIndex, int pageSize) fetch,
+    Future<(Iterable<T>, Object?)> Function(
+      String query,
+      int pageIndex,
+      int pageSize,
+      Object? previousSignal,
+    )
+    fetch,
   ) => SearchPageFetcher._(fetch, reportsSignal: true);
 
-  /// Fetches the page at [pageIndex] of results matching [query], as items and an optional end signal.
-  Future<(Iterable<T>, Object?)> call(String query, int pageIndex, int pageSize) =>
-      _fetch(query, pageIndex, pageSize);
+  /// Fetches the page at [pageIndex] of results matching [query], given the previous `previousSignal`,
+  /// as items and an optional end signal.
+  Future<(Iterable<T>, Object?)> call(
+    String query,
+    int pageIndex,
+    int pageSize,
+    Object? previousSignal,
+  ) => _fetch(query, pageIndex, pageSize, previousSignal);
 }
