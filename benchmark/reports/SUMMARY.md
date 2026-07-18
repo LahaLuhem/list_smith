@@ -1,6 +1,6 @@
 # Benchmark results
 
-Captured **2026-07-16** against `0.0.1` at `6e8008a` on Dart SDK 3.12.2. N=10 iterations.
+Captured **2026-07-18** against `0.0.1` at `63b7319` on Dart SDK 3.12.2. N=10 iterations.
 
 > Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS scheduler, thermal state). Your numbers WILL differ; capture your own local baseline before measuring a code delta.
 
@@ -10,10 +10,10 @@ The headline finding. `slow_observer` (profile-mode) wires an observer that bloc
 
 | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---:|---:|---:|---:|
-| 0 | 17.0 | 17.0 | 10 |
-| 25 | 43.1 | 18.1 | 10 |
-| 50 | 68.4 | 18.4 | 10 |
-| 100 | 118.7 | 18.7 | 10 |
+| 0 | 17.2 | 17.2 | 10 |
+| 25 | 44.0 | 19.0 | 10 |
+| 50 | 69.2 | 19.2 | 10 |
+| 100 | 119.4 | 19.4 | 10 |
 
 
 ![Render latency vs observer delay](observer_latency.png)
@@ -24,9 +24,9 @@ From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` 
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 371.14 | 4.35 | 0.37 |
-| 10,000 | 10 | 3,931 | 26.12 | 3.93 |
-| 100,000 | 10 | 41,191 | 391.72 | 41.19 |
+| 1,000 | 10 | 370.43 | 1.53 | 0.37 |
+| 10,000 | 10 | 3,925 | 44.34 | 3.93 |
+| 100,000 | 10 | 41,064 | 263.76 | 41.06 |
 
 
 ![Sync-search scaling](sync_search_scaling.png)
@@ -37,12 +37,25 @@ From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync groupi
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 229.34 | 5.03 | 0.23 |
-| 10,000 | 10 | 2,361 | 16.32 | 2.36 |
-| 100,000 | 10 | 26,958 | 417.28 | 26.96 |
+| 1,000 | 10 | 225.95 | 1.56 | 0.23 |
+| 10,000 | 10 | 2,353 | 26.33 | 2.35 |
+| 100,000 | 10 | 26,079 | 127.91 | 26.08 |
 
 
 ![Sync grouping scaling](bucket_by_group_scaling.png)
+
+## Overlap de-dup cost vs loaded list size
+
+From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the async list de-dups overlapping pages as a computed view over the paging state (`_dedupedForDisplay` via `PagingState.filterItems`), re-walking every loaded item on each state change so the stored pages stay raw and the end policy can't mistake an all-duplicate page for the end (issue #2). This measures the worst case: `itemId` set but no actual overlap, so nothing collapses and every item is retained. It is opt-in and off the scroll path (per page-load, not per frame), sub-millisecond for a few thousand loaded items and climbing from there; past tens of thousands in one live list, de-duplicate at the source instead.
+
+| Loaded items | N | Median (us) | IQR (us) | Median (ms) |
+|---:|---:|---:|---:|---:|
+| 1,000 | 10 | 320.82 | 16.65 | 0.32 |
+| 10,000 | 10 | 3,601 | 198.99 | 3.60 |
+| 100,000 | 10 | 41,703 | 2,001 | 41.70 |
+
+
+![itemId de-dup scaling](dedup_scaling.png)
 
 ## Wrapping overhead: list_smith on top of ISP
 
@@ -51,9 +64,9 @@ Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer 
 | Micro | Metric | Median (us) |
 |---|---|---:|
 | `observer_dispatch` | us / dispatch | 0.011 |
-| `wrapping_overhead` (1 page) | us / key | 0.519 |
-| `wrapping_overhead` (10 pages) | us / key | 1.28 |
-| `wrapping_overhead` (100 pages) | us / key | 7.85 |
+| `wrapping_overhead` (1 page) | us / key | 0.544 |
+| `wrapping_overhead` (10 pages) | us / key | 1.29 |
+| `wrapping_overhead` (100 pages) | us / key | 8.15 |
 
 ## UI scroll/refresh: per-frame build cost
 
@@ -61,9 +74,9 @@ From the profile-mode `integration_test` scenarios (real frames on this machine)
 
 | Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |
 |---|---:|---:|---:|---:|---:|
-| `bare_listview` | 610 | 0.53 | 1.64 | 1.21 | 0 |
-| `cri_refresh` | 850 | 0.42 | 2.87 | 1.01 | 0 |
-| `isp_scroll` | 610 | 0.58 | 2.48 | 1.57 | 0 |
+| `bare_listview` | 610 | 0.63 | 2.13 | 1.70 | 0 |
+| `cri_refresh` | 850 | 0.46 | 1.49 | 1.15 | 0 |
+| `isp_scroll` | 609 | 0.68 | 4.30 | 1.86 | 0 |
 
 
 ![Per-frame build cost](frame_costs.png)
