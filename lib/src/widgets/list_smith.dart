@@ -102,7 +102,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.searchDebounce = const Duration(milliseconds: 300),
     this.surfaces = const AsyncListSurfaces(),
     this.scroll = const ListScrollConfig(),
-    this.grouping = const NoGrouping(),
+    Grouping<T>? grouping,
     this.emptyBuilder,
     this.noResultsBuilder,
     this.observer,
@@ -120,6 +120,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          endPolicy is! ExplicitHasMorePolicy || (searchFetchPage?.reportsSignal ?? true),
          'ExplicitHasMorePolicy needs a signal-reporting search fetcher. Build searchFetchPage with SearchPageFetcher.withSignal.',
        ),
+       grouping = grouping ?? NoGrouping<T>(),
        _source = AsyncSource(
          fetchPage: fetchPage,
          pageSize: pageSize,
@@ -145,7 +146,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.minSearchLength = 0,
     this.searchDebounce = .zero,
     this.scroll = const ListScrollConfig(),
-    this.grouping = const NoGrouping(),
+    Grouping<T>? grouping,
     this.emptyBuilder,
     this.noResultsBuilder,
     this.separatorBuilder,
@@ -153,6 +154,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   }) : pullToRefresh = true,
        surfaces = const AsyncListSurfaces(),
        observer = null,
+       grouping = grouping ?? NoGrouping<T>(),
        _source = SyncSource(items: items, searchBy: searchBy);
 
   @override
