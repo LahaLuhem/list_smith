@@ -10,6 +10,7 @@
 - \[#4\] Verify regression + Bump python versions
 - \[#1\] BREAKING: PageFetcher and SearchPageFetcher are now classes, not function typedefs. Wrap your fetch function, e.g. fetchPage: PageFetcher((pageIndex, pageSize) => ...).
 - \[#1\] PaginationEndPolicy is now an open interface: end-detection is a public hasReachedEnd(EndContext), previously an internal resolver over per-page counts.
+- \[#16\] Grouping polymorphic dispatch
 
 ### Fixed
 - \[#2\] keep pagination alive past an all-duplicate page
