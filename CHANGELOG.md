@@ -11,6 +11,9 @@
 - \[#1\] BREAKING: PageFetcher and SearchPageFetcher are now classes, not function typedefs. Wrap your fetch function, e.g. fetchPage: PageFetcher((pageIndex, pageSize) => ...).
 - \[#1\] PaginationEndPolicy is now an open interface: end-detection is a public hasReachedEnd(EndContext), previously an internal resolver over per-page counts.
 - \[#16\] Grouping polymorphic dispatch
+- \[#3\] BREAKING: pull-to-refresh is now the refresh: seam (PullToRefresh default, NoRefresh to disable), replacing the pullToRefresh bool. Migrate pullToRefresh: false to refresh: NoRefresh().
+- \[#3\] BREAKING: the custom pull-to-refresh indicator moved from AsyncListSurfaces.refreshBuilder to PullToRefresh(refreshBuilder:). Migrate surfaces: AsyncListSurfaces(refreshBuilder: fn) to refresh: PullToRefresh(refreshBuilder: fn).
+- \[#3\] BREAKING: async search is now the search: seam (AsyncSearch(fetchPage:, cachePolicy:), default NoSearch), replacing searchFetchPage and searchCachePolicy. Migrate searchFetchPage: fn, searchCachePolicy: p to search: AsyncSearch(fetchPage: fn, cachePolicy: p).
 
 ### Fixed
 - \[#2\] keep pagination alive past an all-duplicate page
