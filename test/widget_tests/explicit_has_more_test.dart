@@ -38,7 +38,7 @@ void main() {
         ListSmith.async(
           fetchPage: fetchPage,
           endPolicy: const ExplicitHasMorePolicy(),
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -59,7 +59,7 @@ void main() {
         ListSmith.async(
           fetchPage: fetchPage,
           endPolicy: const ExplicitHasMorePolicy(),
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -82,7 +82,7 @@ void main() {
           endPolicy: const ExplicitHasMorePolicy(),
           query: 'q',
           searchDebounce: const Duration(milliseconds: 20),
-          pullToRefresh: false,
+          refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -110,7 +110,7 @@ void main() {
         searchCachePolicy: const KeepCachePolicy(),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
-        pullToRefresh: false,
+        refresh: const NoRefresh(),
         itemBuilder: (_, item, _) => Text('item $item'),
       );
 

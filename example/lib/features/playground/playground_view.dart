@@ -82,7 +82,7 @@ class PlaygroundView extends StatelessWidget {
               fetchPage: PageFetcher(viewModel.fetchPage),
               pageSize: viewModel.pageSize,
               endPolicy: StopOnEmptyPagesPolicy(emptyRunBeforeEnd: viewModel.emptyRunBeforeEnd),
-              pullToRefresh: viewModel.pullToRefresh,
+              refresh: viewModel.pullToRefresh ? const PullToRefresh() : const NoRefresh(),
               separatorBuilder: viewModel.separators ? (_, _) => const Divider(height: 1) : null,
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),

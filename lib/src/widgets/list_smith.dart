@@ -9,6 +9,7 @@ import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/refresh/models/refresh.dart';
 import '/src/data/search/models/search_cache_policy.dart';
 import '/src/data/search/models/search_page_fetcher.dart';
 import '/src/data/search/typedefs/sync_search_predicate.dart';
@@ -36,10 +37,6 @@ class ListSmith<T extends Object> extends StatelessWidget {
 
   /// Builds the separator between items; null for no separators.
   final IndexedWidgetBuilder? separatorBuilder;
-
-  /// Whether pull-to-refresh is enabled (async only). When false, no refresh gesture is wired and
-  /// the refresh builder in [surfaces] has no effect.
-  final bool pullToRefresh;
 
   /// Builds the surface shown when the source yields no items; null uses the neutral default.
   ///
@@ -84,7 +81,9 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// without it, overlapping pages render the item once per page, as the underlying pager does no
   /// de-duplication. Passing [searchFetchPage] opts into search: a non-empty [query] switches to a
   /// search view fetched by it, and [searchCachePolicy] governs how the normal list carries across that
-  /// switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral defaults;
+  /// switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral defaults.
+  /// Pull-to-refresh is on by default; pass [NoRefresh] to [refresh] to switch it off, or a
+  /// [PullToRefresh] with a `refreshBuilder` to restyle its indicator.
   /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
   /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry. [grouping]
   /// optionally shows the items in sections (see [Grouping.by]).
@@ -92,7 +91,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
     int pageSize = 20,
-    this.pullToRefresh = true,
+    Refresh refresh = const PullToRefresh(),
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
     ItemId<T>? itemId,
     SearchPageFetcher<T>? searchFetchPage,
@@ -125,6 +124,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          fetchPage: fetchPage,
          pageSize: pageSize,
          endPolicy: endPolicy,
+         refresh: refresh,
          searchCachePolicy: searchCachePolicy,
          searchFetchPage: searchFetchPage,
          itemId: itemId,
@@ -151,8 +151,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.noResultsBuilder,
     this.separatorBuilder,
     super.key,
-  }) : pullToRefresh = true,
-       surfaces = const AsyncListSurfaces(),
+  }) : surfaces = const AsyncListSurfaces(),
        observer = null,
        grouping = grouping ?? NoGrouping<T>(),
        _source = SyncSource(items: items, searchBy: searchBy);
@@ -164,7 +163,6 @@ class ListSmith<T extends Object> extends StatelessWidget {
       itemBuilder: itemBuilder,
       grouping: grouping,
       separatorBuilder: separatorBuilder,
-      pullToRefresh: pullToRefresh,
       query: query,
       minSearchLength: minSearchLength,
       searchDebounce: searchDebounce,

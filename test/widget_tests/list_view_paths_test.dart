@@ -109,7 +109,7 @@ Future<void> _pumpAsync(
     fetchPage: fetchPage,
     surfaces: surfaces,
     separatorBuilder: separatorBuilder,
-    pullToRefresh: false,
+    refresh: const NoRefresh(),
     itemBuilder: (_, item, _) => Text('item $item'),
   ),
 );

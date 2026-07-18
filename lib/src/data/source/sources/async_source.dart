@@ -19,6 +19,9 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Decides when pagination has reached the end (in either mode).
   final PaginationEndPolicy endPolicy;
 
+  /// Whether the list has pull-to-refresh, and how its indicator is drawn.
+  final Refresh refresh;
+
   /// Decides how cached items carry across a normal ↔ search transition.
   final SearchCachePolicy searchCachePolicy;
 
@@ -30,6 +33,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.fetchPage,
     required this.pageSize,
     required this.endPolicy,
+    required this.refresh,
     required this.searchCachePolicy,
     this.searchFetchPage,
     this.itemId,
@@ -40,5 +44,6 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
 
   @override
   String toString() =>
-      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, searchCachePolicy: $searchCachePolicy)';
+      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, refresh: $refresh, '
+      'searchCachePolicy: $searchCachePolicy)';
 }
