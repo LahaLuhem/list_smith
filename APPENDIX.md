@@ -21,6 +21,7 @@ during the repository setup itself.
 - [Async search: one controller, two views](#async-two-view-search)
 - [Observer seam: async-only, no-op-method sink](#observer-seam)
 - [Grouping: erased key, sync buckets, async pre-sorted](#grouping-shape)
+- [Grouping dispatches on the type; the views don't branch](#grouping-polymorphic-dispatch)
 - [Explicit end signals: open policy plus fetcher building block](#explicit-end-signals)
 
 <!-- TOC end -->
@@ -232,16 +233,18 @@ during the repository setup itself.
 <a id="grouping-shape"></a>
 ## Grouping: erased key, sync buckets, async pre-sorted
 
-- **Decision:** an optional `Grouping<T>` on both constructors, defaulting to `const NoGrouping()`;
-  opt in with `Grouping.by(groupBy:, headerBuilder:)`. A sealed, injected, defaulted seam like the
-  end and cache policies. Chosen over a nullable `ListGrouping<T>?` holder (a nullable inert field
-  again) and over flat `groupBy` + `headerBuilder` params (which allow the ghost combo of a header
-  builder with no grouper); the sealed seam makes "off" a real case and rules both out.
-  Breaking-change freedom (unpublished) let us take the cleaner shape.
-- **`NoGrouping extends Grouping<Never>` so the default stays `const`.** A generic `const
-  NoGrouping<T>()` is illegal (type variables can't appear in a constant), which would otherwise
-  force a nullable field. The off-case is `Grouping<Never>`, so the single `const NoGrouping()` is a
-  subtype of `Grouping<T>` for every `T` (`Never <: T`): a valid `const` default without naming `T`.
+- **Decision:** an optional `Grouping<T>` on both constructors, defaulting to `NoGrouping`; opt in
+  with `Grouping.by(groupBy:, headerBuilder:)`. A sealed, injected, defaulted seam like the end and
+  cache policies. Chosen over a nullable `ListGrouping<T>?` holder (a nullable inert field again) and
+  over flat `groupBy` + `headerBuilder` params (which allow the ghost combo of a header builder with
+  no grouper); the sealed seam makes "off" a real case and rules both out. Breaking-change freedom
+  (unpublished) let us take the cleaner shape.
+- **`NoGrouping<T>` is generic, defaulted per construction.** Each constructor fills an unset
+  `grouping` with `grouping ?? NoGrouping<T>()`. It was once a single `const NoGrouping()` of type
+  `Grouping<Never>` (a `const` default assignable to any `Grouping<T>`, since `Never <: T`), but the
+  polymorphic dispatch below needs `NoGrouping` at the real `T`, which a `Grouping<Never>` cannot give
+  without crashing at runtime. See [#grouping-polymorphic-dispatch](#grouping-polymorphic-dispatch).
+  The cost is one small allocation per list built without a grouping, off any hot path.
 - **The key type is erased, so `ListSmith` stays single-generic.** `Grouping.by<T, K>` infers `K`
   from `groupBy`, keeps it typed in `headerBuilder`, then stores `Object`-keyed closures. A second
   generic `ListSmith<T, K>` was rejected: Dart can't default a type parameter, so every non-grouping
@@ -249,13 +252,13 @@ during the repository setup itself.
   reaching the header builder came from the same instance's `groupBy`. Caveat (on `Grouping.by`): an
   untyped inline `groupBy` closure widens `T` to `Object` (its parameter is the type variable, and
   nested inference doesn't recover it), so type the parameter or pass a typed function.
-- **Header rides on the group's first item, not a sticky sliver.** A shared `groupedItemBuilder`
-  stacks the header before each group's first item in a `Flex` along the scroll axis, so ISP keeps
-  its single flat pager and list_smith keeps owning the scrollable (decision 3). A per-cell
-  look-back at the previous item's key marks where a group starts, O(1) per built cell. Sticky
-  headers would need a sliver `CustomScrollView` and, on async, splitting the pager plus
-  scroll-offset tracking (the fragility the package rejects), so they are deferred as a future
-  opt-in.
+- **Header rides on the group's first item, not a sticky sliver.** `KeyedGrouping.decorate` wraps
+  each cell in a `GroupedItem` that stacks the header before the group's first item in a `Flex` along
+  the scroll axis, so ISP keeps its single flat pager and list_smith keeps owning the scrollable
+  (decision 3). A per-cell look-back at the previous item's key marks where a group starts, O(1) per
+  built cell. Sticky headers would need a sliver `CustomScrollView` and, on async, splitting the
+  pager plus scroll-offset tracking (the fragility the package rejects), so they are deferred as a
+  future opt-in.
 - **Sync buckets; async trusts arrival order.** A sync list holds every item, so it reorders the
   filtered items into contiguous groups (`bucketByGroup` via `collection`'s `groupListsBy`; groups
   in first-appearance order, item order kept within a group), and the input can arrive in any order.
@@ -263,12 +266,54 @@ during the repository setup itself.
   a debug-only `groupsAreContiguous` assert flags a key that recurs after its section ended. Same
   sync-owns-the-data / async-is-incremental split as the rest of the package.
 - **A presentation transform, not a source or policy.** `grouping` is a shared param on `ListSmith`
-  (like `itemBuilder` / `scroll`), passed to both engines, not a field on the sealed source. Its
-  logic is widget-free and unit-tested (`bucketByGroup`, `isGroupStart`, `groupsAreContiguous`),
-  mirroring `resolveSyncSearch` and the policy resolvers. `resolveSyncSearch` returns a lazy view so
-  the grouped sync path buckets the filtered iterable with one materialisation; the sync view
+  (like `itemBuilder` / `scroll`), passed to both engines, not a field on the sealed source. Its pure
+  ordering and boundary logic stays widget-free and unit-tested (`bucketByGroup`, `isGroupStart`,
+  `groupsAreContiguous`, mirroring `resolveSyncSearch` and the policy resolvers); the per-build item
+  wrapping lives on the type itself as `Grouping.decorate` (see
+  [#grouping-polymorphic-dispatch](#grouping-polymorphic-dispatch)). `resolveSyncSearch` returns a lazy
+  view so the grouped sync path buckets the filtered iterable with one materialisation; the sync view
   re-resolves on an items or `grouping` identity change so toggling grouping takes effect (hence
   "hold the `Grouping` stable" on a large list, to avoid re-bucketing every build).
+
+---
+
+<a id="grouping-polymorphic-dispatch"></a>
+## Grouping dispatches on the type; the views don't branch
+
+- **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as two `@internal`
+  methods, so the view flow calls one delegate instead of testing `is KeyedGrouping` in three places.
+  `arrange(items)` is the sync display ordering (`NoGrouping` returns the items as-is, no copy when
+  they are already a `List`; `KeyedGrouping` buckets them via `bucketByGroup`). `decorate(itemBuilder,
+  flatItems:, axis:)` returns the per-build item builder (`NoGrouping` returns it unchanged;
+  `KeyedGrouping` wraps each cell in a `GroupedItem` and runs the debug contiguity assert). The pure
+  helpers (`bucketByGroup`, `isGroupStart`, `groupsAreContiguous`) are unchanged and called from the
+  methods. Same "delegate the decision to the type, keep the shell branch-free" move as the open
+  end-policy (see [#explicit-end-signals](#explicit-end-signals)).
+- **Sealed stays sealed.** Unlike `PaginationEndPolicy` (opened for consumer strategies), there is no
+  compelling consumer-defined-grouping case, and the methods return neutral types, so nothing leaks
+  either way; opening it later is a one-line change. The methods are `@internal` (`package:meta`):
+  callable across the package's own libraries, not consumer API, since grouping is configured through
+  `Grouping.by`.
+- **`NoGrouping` had to become generic.** A method with a `T`-typed parameter, on an instance reified
+  at `Never`, rejects a real argument at runtime: Dart makes such parameters covariant and checks
+  them, so `arrange(<String>[...])` on a `Grouping<Never>` throws `List<String> is not
+  Iterable<Never>`. The old `const NoGrouping()` default was exactly a `Grouping<Never>`, so keeping
+  it would crash every ungrouped list the moment `arrange` or `decorate` ran. Hence `NoGrouping<T>`
+  and the `grouping ?? NoGrouping<T>()` default (see [#grouping-shape](#grouping-shape)). A bare
+  `const NoGrouping()` in a *consumer's* concrete call still infers `NoGrouping<Foo>` and is fine;
+  only the library's own generic default could not name `T` inside a `const`.
+- **The ungrouped path still does no flatten.** `decorate` takes `flatItems` as a callback, and
+  `NoGrouping.decorate` never invokes it, so an ungrouped async list skips the O(loaded) page flatten
+  just as the old short-circuit did. Only `KeyedGrouping.decorate` calls `flatItems()`, once per
+  build, for the one-item look-back and the assert. The dispatch is per build, not per item: one
+  virtual call replaces one `is` check, so the render path is unchanged. Confirmed perf-neutral
+  against the `benchmark/micro` baseline.
+- **`GroupedItem` was decoupled from `KeyedGrouping`.** It takes the `groupOf` and `headerFor`
+  closures directly rather than the whole grouping, so `decorate` can build it without a cycle: the
+  grouping model imports the `GroupedItem` widget, and had `GroupedItem` kept a `KeyedGrouping` field
+  the two files would import each other. The trade is deliberate: `Grouping` gains a presentation
+  method, so the model is no longer purely widget-free, though its ordering and boundary logic still
+  is (the resolver helpers), and the dependency graph stays acyclic.
 
 ---
 
