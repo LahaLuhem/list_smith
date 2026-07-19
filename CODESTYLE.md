@@ -283,8 +283,9 @@ is unit-testable on its own. It is already the shape of `EndPolicy.hasReachedEnd
 - Pure decisions take a *data* context and return a value, e.g. `shouldAdvance(EmptyPageContext)`:
   the engine gathers the facts, the type decides. The context is exported (safe, documentable).
 - Effectful actions (which must fetch or mutate) take a *capability* context, the `BuildContext`
-  analogue, and return a `Future`. That context stays internal and unexported: it exposes mutation
-  hooks no consumer should call, and the axis is sealed so no consumer implements it.
+  analogue, and return a `Future`, e.g. `Reload.run(ReloadContext)`. That context stays internal and
+  unexported: it exposes mutation hooks (`fetch` / `commit` / `reset`) no consumer should call, and
+  the axis is sealed so no consumer implements it.
 
 ```dart
 // bad — the engine knows the variants

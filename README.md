@@ -20,6 +20,7 @@
     * [Cursor pagination](#cursor-pagination)
     * [De-duplicating overlapping pages](#de-duplicating-overlapping-pages)
 - [Pull to refresh](#pull-to-refresh)
+    * [What a pull reloads](#what-a-pull-reloads)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async` and a search](#paged-with-listsmithasync-and-a-search)
@@ -225,6 +226,40 @@ Nothing to set up.
 Switch it off with `refresh: NoRefresh()`. Want your own indicator instead of the neutral one? Give
 `PullToRefresh` a builder: `refresh: PullToRefresh(refreshBuilder: ...)`. It gets a small,
 framework-free snapshot of the pull (a phase and a drag value), never the controller underneath.
+
+### What a pull reloads
+
+The default is `ResetToFirstPage`: the list clears, snaps to the top, and reloads page one, the
+standard feed behaviour. If the user had scrolled deep, they lose their place. Pass
+`ReloadToCurrentDepth` to re-fetch every page they had loaded and keep their scroll depth instead:
+
+```dart
+refresh: const PullToRefresh(
+reload: ReloadToCurrentDepth(
+concurrency: 4,             // fetches in flight: 1 (default) serial, null all at once, K bounded
+onError: .commitSucceeded,  // default (best-effort); or .allOrNothing
+),
+)
+```
+
+`concurrency` trades speed against the backend load: `1` reloads a page at a time, `null` fires them all
+at once (only if your server tolerates it), `K` keeps at most K in flight. `onError` handles a
+page-fetch that fails after your fetcher's own retries: `commitSucceeded` keeps the pages that
+reloaded and leaves the failed one as it was; `allOrNothing` commits only if every page succeeds,
+otherwise it keeps the pre-refresh list untouched.
+
+Two caveats:
+
+- **Best-effort can seam.** A kept-old page beside freshly-reloaded neighbours can duplicate or gap
+  if the data shifted meanwhile. An `itemId` (above) de-dups the duplicates; gaps heal on the next
+  refresh.
+- **`withSignal` sources reload sequentially and atomically.** A cursor or `hasMore` source threads
+  a per-page signal, so page `k` needs page `k-1`: the reload walks in order, and any failure keeps
+  the old list whole (a half-rewritten chain can't be committed). `concurrency` and `onError` are
+  ignored there, but scroll depth is still kept.
+
+Retry stays in your fetcher, not here: wrap `fetchPage` (say with the `retry` package) so a
+transient blip is handled before it ever reaches the reload.
 
 ## Search
 
