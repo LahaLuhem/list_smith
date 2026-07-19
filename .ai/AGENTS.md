@@ -80,6 +80,14 @@ list_smith/
 
 The internal `lib/src/` layout is **TODO (design pass)**. `test/` will mirror it.
 
+**Nested-app lockfiles are opt-in.** The root `.gitignore` ignores `pubspec.lock` broadly, the
+library follows the "don't commit your own lockfile" convention. A nested app that *should* commit
+its lockfile opts in with a `!pubspec.lock` negation in its **own** `.gitignore`, not by loosening
+the root pattern (a broad `/pubspec.lock` anchor would auto-commit every nested package). `example/`
+opts in this way: it pins the parent via `path: ../`, and [`scripts/release.sh`](scripts/release.sh)
+resyncs + commits `example/pubspec.lock` on each release so the pinned version tracks the bump. A
+future nested package (e.g. a `benchmark/` app) stays ignored until it adds its own negation.
+
 ## Hard rules
 
 These are the general, architecture-independent rules. Package-specific rules (the widget's
