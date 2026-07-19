@@ -17,6 +17,7 @@ import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/refresh/models/refresh.dart';
+import '/src/data/refresh/models/reload_context.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
 import '/src/data/search/models/search.dart';
@@ -92,7 +93,8 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   State<AsyncListView<T>> createState() => _AsyncListViewState<T>();
 }
 
-class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
+class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
+    implements ReloadContext<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _controller = PagingController<int, T>(
     getNextPageKey: _nextPageKey,
@@ -147,11 +149,21 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
   Future<List<T>> _fetchPage(int pageKey) async {
+    final (items, signal) = await _fetchPageRaw(pageKey, _lastPageSignal);
+    _lastPageSignal = signal;
+
+    return items;
+  }
+
+  /// Fetches one page in the current mode (normal or search), fires the observer hooks, and returns the
+  /// page's items and end signal without touching [_lastPageSignal] — the caller threads signals. The
+  /// paging controller's [_fetchPage] threads forward; a reload threads its own and commits the final
+  /// signal via [commit].
+  Future<(List<T>, Object?)> _fetchPageRaw(int pageKey, Object? previousSignal) async {
     final source = widget.source;
     final search = source.search;
     final committedQuery = _debouncer.committedQuery;
     final isSearchMode = _isSearchQuery(committedQuery);
-    final previousSignal = _lastPageSignal;
 
     try {
       final (items, signal) = switch (search) {
@@ -164,12 +176,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
         AsyncSearch<T>() ||
         NoSearch() => await source.fetchPage(pageKey, source.pageSize, previousSignal),
       };
-      _lastPageSignal = signal;
-
       final pageItems = items.toList(growable: false);
       widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
 
-      return pageItems;
+      return (pageItems, signal);
     } on Object catch (error, stackTrace) {
       widget.observer?.onError(error, stackTrace);
 
@@ -294,6 +304,38 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     _controller.refresh();
   }
 
+  // --- ReloadContext<T>: the capability a Reload runs through on pull-to-refresh. ---
+
+  @override
+  List<List<T>> get loadedPages => _controller.value.pages ?? [];
+
+  @override
+  bool get isSignalBased => switch (widget.source.search) {
+    final AsyncSearch<T> s when _isSearchQuery(_debouncer.committedQuery) =>
+      s.fetchPage.reportsSignal,
+    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.reportsSignal,
+  };
+
+  @override
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) =>
+      _fetchPageRaw(index, previousSignal);
+
+  @override
+  void commit(List<List<T>> pages, {Object? lastSignal}) {
+    _lastPageSignal = lastSignal;
+    final keys = [for (var index = 0; index < pages.length; index++) index];
+    final probe = PagingState<int, T>(pages: pages, keys: keys);
+
+    _controller.value = PagingState<int, T>(
+      pages: pages,
+      keys: keys,
+      hasNextPage: _nextPageKey(probe) != null,
+    );
+  }
+
+  @override
+  void reset() => _resetPaging();
+
   @override
   Widget build(BuildContext context) {
     final surfaces = widget.surfaces;
@@ -344,6 +386,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   Future<void> _onRefresh() {
     widget.observer?.onRefresh();
 
-    return Future.sync(_resetPaging);
+    return switch (widget.source.refresh) {
+      PullToRefresh(:final reload) => reload.run(this),
+      NoRefresh() => Future<void>.value(),
+    };
   }
 }

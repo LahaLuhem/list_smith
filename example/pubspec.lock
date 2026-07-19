@@ -242,6 +242,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.1"
+  pool:
+    dependency: transitive
+    description:
+      name: pool
+      sha256: "978783255c543aa3586a1b3c21f6e9d720eb315376a915872c61ef8b5c20177d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.5.2"
   provider:
     dependency: transitive
     description:
