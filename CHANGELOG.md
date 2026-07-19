@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.1.0] - 2026-07-19
 ### Added
 - \[#7\] groupBy + groupByHeaderBuilder
 - \[#5\] Android verified
@@ -30,5 +30,5 @@
 - Opt-in `itemId` de-duplication for items repeated across overlapping pages.
 - Lifecycle observer `ListSmithObserver` (and `LoggingListSmithObserver`) for page-load, error, refresh, and search events.
 
-[Unreleased]: https://github.com/LahaLuhem/list_smith/compare/0.0.1...HEAD
+[0.1.0]: https://github.com/LahaLuhem/list_smith/compare/0.0.1...0.1.0
 [0.0.1]: https://github.com/LahaLuhem/list_smith/releases/tag/0.0.1
