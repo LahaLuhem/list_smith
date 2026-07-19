@@ -103,6 +103,23 @@ void main() {
         ).equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
       });
 
+  final emptyPageBehaviours = BddFeature('EmptyPageBehaviour string form');
+
+  Bdd(emptyPageBehaviours)
+      .scenario('each empty-page behaviour names itself in toString')
+      .given('a ShowEmptySurface and AdvanceToFirstNonEmpty (capped and uncapped)')
+      .when('each is converted to a string')
+      .then('the string is the compact case form, and AdvanceToFirstNonEmpty names its cap')
+      .run((_) {
+        check(const ShowEmptySurface().toString()).equals('ShowEmptySurface()');
+        check(const AdvanceToFirstNonEmpty().toString())
+          ..contains('AdvanceToFirstNonEmpty')
+          ..contains('null');
+        check(const AdvanceToFirstNonEmpty(maxPages: 7).toString())
+          ..contains('AdvanceToFirstNonEmpty')
+          ..contains('7');
+      });
+
   final sources = BddFeature('List source string form and search support');
 
   Bdd(sources)
@@ -115,6 +132,7 @@ void main() {
           fetchPage: PageFetcher((_, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
+          onEmptyPage: const ShowEmptySurface(),
           refresh: const PullToRefresh(),
           search: const NoSearch(),
         );
@@ -122,6 +140,7 @@ void main() {
           fetchPage: PageFetcher((_, _) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
+          onEmptyPage: const ShowEmptySurface(),
           refresh: const PullToRefresh(),
           search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const <int>[])),
         );

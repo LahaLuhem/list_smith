@@ -16,6 +16,8 @@
 - [Two kinds of list](#two-kinds-of-list)
 - [Pagination](#pagination)
     * [Deciding where the data ends](#deciding-where-the-data-ends)
+    * [When the first page comes back empty](#when-the-first-page-comes-back-empty)
+    * [Cursor pagination](#cursor-pagination)
     * [De-duplicating overlapping pages](#de-duplicating-overlapping-pages)
 - [Pull to refresh](#pull-to-refresh)
 - [Search](#search)
@@ -57,8 +59,8 @@ Give it a function that fetches a page and a builder for each item. That really 
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher((pageIndex, pageSize) => api.fetchArticles(page: pageIndex, size: pageSize)),
-  itemBuilder: (context, article, index) => ArticleTile(article),
+fetchPage: PageFetcher((pageIndex, pageSize) => api.fetchArticles(page: pageIndex, size: pageSize)),
+itemBuilder: (context, article, index) => ArticleTile(article),
 )
 ```
 
@@ -85,9 +87,9 @@ materialised once for you). When a page comes back empty, that is the end of the
 
 ```dart
 ListSmith.async(
-  pageSize: 30,
-  fetchPage: PageFetcher((pageIndex, pageSize) => repo.load(pageIndex, pageSize)),
-  itemBuilder: (context, item, index) => Text(item.title),
+pageSize: 30,
+fetchPage: PageFetcher((pageIndex, pageSize) => repo.load(pageIndex, pageSize)),
+itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
 
@@ -117,12 +119,12 @@ backend says it's the last page, instead of fetching one more empty page to find
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher.withSignal((pageIndex, pageSize, _) async {
-    final response = await api.load(pageIndex, pageSize);
-    return (response.items, response.hasMore);
-  }),
-  endPolicy: const ExplicitHasMorePolicy(),
-  itemBuilder: (context, item, index) => Text(item.title),
+fetchPage: PageFetcher.withSignal((pageIndex, pageSize, _) async {
+final response = await api.load(pageIndex, pageSize);
+return (response.items, response.hasMore);
+}),
+endPolicy: const ExplicitHasMorePolicy(),
+itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
 
@@ -133,10 +135,41 @@ ListSmith.async(
 
 ```dart
 class ShortLastPage extends PaginationEndPolicy {
-  @override
-  bool hasReachedEnd(EndContext c) => c.lastPageItemCount < c.pageSize;
+    @override
+    bool hasReachedEnd(EndContext c) => c.lastPageItemCount < c.pageSize;
 }
 ```
+
+### When the first page comes back empty
+
+The policies above decide *whether* more pages exist. Separately, when a page has no items to show
+while more still remain, the pager shows the empty surface, and with nothing on screen there's
+nothing to scroll, so it never fetches the pages that do have data. A calendar paged by day hits
+this on a quiet today: `emptyRunBeforeEnd` (or a signal policy) says "keep going", but the list
+sits on "nothing today" with no way back to the days that aren't empty.
+
+`onEmptyPage` closes that gap. Pass `AdvanceToFirstNonEmpty` and the list pages past empty pages
+itself, to the first page with items (or the true end), showing the loading surface while it does:
+
+```dart
+ListSmith.async(
+fetchPage: PageFetcher((pageIndex, pageSize) => calendar.dayPage(pageIndex, pageSize)),
+// An empty day isn't the end...
+endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 31),
+// ...so page straight past empty days to the first with entries.
+onEmptyPage: const AdvanceToFirstNonEmpty(),
+itemBuilder: (context, item, index) => Text(item.title),
+)
+```
+
+It only does anything under a policy that continues past empty pages, so the two pair up: a raised
+`emptyRunBeforeEnd`, or a signal policy, plus `AdvanceToFirstNonEmpty`. Under the default
+one-empty-page-ends policy an empty page really is the end, and the default `onEmptyPage`
+(`ShowEmptySurface`) shows the empty state at once, unchanged.
+
+Cap the scan with `AdvanceToFirstNonEmpty(maxPages: 31)`: once that many pages come back empty it
+gives up and shows the empty surface (pull-to-refresh re-scans). Leave it null to scan as far as
+the end policy allows.
 
 ### Cursor pagination
 
@@ -147,12 +180,12 @@ runs out.
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher.withSignal((_, pageSize, previousCursor) async {
-    final page = await api.list(cursor: previousCursor as String?, limit: pageSize);
-    return (page.items, page.nextCursor);   // null nextCursor ends it
-  }),
-  endPolicy: const StopOnNullSignalPolicy(),
-  itemBuilder: (context, item, index) => Text(item.title),
+fetchPage: PageFetcher.withSignal((_, pageSize, previousCursor) async {
+final page = await api.list(cursor: previousCursor as String?, limit: pageSize);
+return (page.items, page.nextCursor);   // null nextCursor ends it
+}),
+endPolicy: const StopOnNullSignalPolicy(),
+itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
 
@@ -169,9 +202,9 @@ key already appeared:
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher(...),
-  itemId: (item) => item.id,
-  itemBuilder: ...,
+fetchPage: PageFetcher(...),
+itemId: (item) => item.id,
+itemBuilder: ...,
 )
 ```
 
@@ -204,10 +237,10 @@ matches the current query. It filters client-side and shows a "no results" surfa
 
 ```dart
 ListSmith.sync(
-  items: allCities,
-  searchBy: (city, query) => city.name.toLowerCase().contains(query.toLowerCase()),
-  query: searchQuery, // you own the field; more on that below
-  itemBuilder: (context, city, index) => Text(city.name),
+items: allCities,
+searchBy: (city, query) => city.name.toLowerCase().contains(query.toLowerCase()),
+query: searchQuery, // you own the field; more on that below
+itemBuilder: (context, city, index) => Text(city.name),
 )
 ```
 
@@ -224,12 +257,12 @@ pull-to-refresh still working in both:
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
-  search: AsyncSearch(
-    fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
-  ),
-  query: searchQuery,
-  itemBuilder: (context, item, index) => Text(item.title),
+fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+search: AsyncSearch(
+fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+),
+query: searchQuery,
+itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
 
@@ -258,20 +291,20 @@ var _query = '';
 
 @override
 Widget build(BuildContext context) => Column(
-  children: [
-    // your field: a TextField, a CupertinoTextField, your design system's search bar, wherever
-    TextField(onChanged: (value) => setState(() => _query = value)),
-    Expanded(
-      child: ListSmith.async(
-        query: _query,
-        fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
-        search: AsyncSearch(
-          fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+    children: [
+        // your field: a TextField, a CupertinoTextField, your design system's search bar, wherever
+        TextField(onChanged: (value) => setState(() => _query = value)),
+        Expanded(
+            child: ListSmith.async(
+                query: _query,
+                fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+                search: AsyncSearch(
+                    fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+                ),
+                itemBuilder: (context, item, index) => Text(item.title),
+            ),
         ),
-        itemBuilder: (context, item, index) => Text(item.title),
-      ),
-    ),
-  ],
+    ],
 );
 ```
 
@@ -295,14 +328,14 @@ constructors, and the header is stacked above the first item of each section:
 
 ```dart
 ListSmith.sync(
-  items: contacts,
-  searchBy: (contact, query) => contact.name.toLowerCase().contains(query.toLowerCase()),
-  query: searchQuery,
-  grouping: Grouping.by(
-    groupBy: (Contact contact) => contact.team,
-    headerBuilder: (context, team) => SectionHeader(team),
-  ),
-  itemBuilder: (context, contact, index) => Text(contact.name),
+items: contacts,
+searchBy: (contact, query) => contact.name.toLowerCase().contains(query.toLowerCase()),
+query: searchQuery,
+grouping: Grouping.by(
+groupBy: (Contact contact) => contact.team,
+headerBuilder: (context, team) => SectionHeader(team),
+),
+itemBuilder: (context, contact, index) => Text(contact.name),
 )
 ```
 
@@ -345,14 +378,14 @@ across every list for one consistent house style:
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher(...),
-  itemBuilder: ...,
-  emptyBuilder: (context) => const Center(child: Text('Nothing here yet')),
-  surfaces: AsyncListSurfaces(
-    firstPageLoadingBuilder: (context) => const MySpinner(),
-    firstPageErrorBuilder: (context, error, onRetry) => MyError(error, onRetry: onRetry),
-    noMoreItemsBuilder: (context) => const Text("That's everything"),
-  ),
+fetchPage: PageFetcher(...),
+itemBuilder: ...,
+emptyBuilder: (context) => const Center(child: Text('Nothing here yet')),
+surfaces: AsyncListSurfaces(
+firstPageLoadingBuilder: (context) => const MySpinner(),
+firstPageErrorBuilder: (context, error, onRetry) => MyError(error, onRetry: onRetry),
+noMoreItemsBuilder: (context) => const Text("That's everything"),
+),
 )
 ```
 
@@ -393,16 +426,16 @@ error), never a controller or a paging type:
 
 ```dart
 final class MyObserver extends ListSmithObserver {
-  const MyObserver();
+    const MyObserver();
 
-  @override
-  void onError(Object error, StackTrace stackTrace) => crashReporter.record(error, stackTrace);
+    @override
+    void onError(Object error, StackTrace stackTrace) => crashReporter.record(error, stackTrace);
 }
 
 ListSmith.async(
-  fetchPage: PageFetcher(...),
-  itemBuilder: ...,
-  observer: const MyObserver(),
+fetchPage: PageFetcher(...),
+itemBuilder: ...,
+observer: const MyObserver(),
 )
 ```
 
@@ -423,8 +456,8 @@ other.
 
 ```dart
 scroll: const ListScrollConfig(
-  padding: EdgeInsets.all(16),
-  physics: BouncingScrollPhysics(),
+padding: EdgeInsets.all(16),
+physics: BouncingScrollPhysics(),
 ),
 ```
 

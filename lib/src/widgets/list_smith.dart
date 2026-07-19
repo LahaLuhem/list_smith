@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
+import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
 import '/src/data/pagination/typedefs/item_id.dart';
@@ -75,7 +76,11 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [search].
   ///
   /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
-  /// pagination ends per `endPolicy` (by default, the first empty page). Pass [itemId] to de-duplicate
+  /// pagination ends per `endPolicy` (by default, the first empty page). When `endPolicy` continues
+  /// past empty pages (a raised `emptyRunBeforeEnd` or a signal policy), also pass [onEmptyPage] as
+  /// [AdvanceToFirstNonEmpty] so an empty page pages through to the first page with items instead of
+  /// stalling on the empty surface (e.g. a per-date calendar whose current day has no entries). Pass
+  /// [itemId] to de-duplicate
   /// items across overlapping pages (e.g. an offset-based source whose data shifts between fetches);
   /// without it, overlapping pages render the item once per page, as the underlying pager does no
   /// de-duplication. Pass [search] as an [AsyncSearch] to opt into search: a non-empty [query] then
@@ -93,6 +98,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     int pageSize = 20,
     Refresh refresh = const PullToRefresh(),
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+    EmptyPageBehaviour onEmptyPage = const ShowEmptySurface(),
     ItemId<T>? itemId,
     Search<T> search = const NoSearch(),
     this.query = '',
@@ -123,6 +129,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          fetchPage: fetchPage,
          pageSize: pageSize,
          endPolicy: endPolicy,
+         onEmptyPage: onEmptyPage,
          refresh: refresh,
          search: search,
          itemId: itemId,

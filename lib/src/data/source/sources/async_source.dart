@@ -16,6 +16,9 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Decides when pagination has reached the end (in either mode).
   final PaginationEndPolicy endPolicy;
 
+  /// What the list does when a page has no items but [endPolicy] reports that more pages remain.
+  final EmptyPageBehaviour onEmptyPage;
+
   /// Whether the list has pull-to-refresh, and how its indicator is drawn.
   final Refresh refresh;
 
@@ -30,6 +33,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.fetchPage,
     required this.pageSize,
     required this.endPolicy,
+    required this.onEmptyPage,
     required this.refresh,
     required this.search,
     this.itemId,
@@ -40,5 +44,6 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
 
   @override
   String toString() =>
-      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, refresh: $refresh, search: $search)';
+      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, onEmptyPage: $onEmptyPage, '
+      'refresh: $refresh, search: $search)';
 }
