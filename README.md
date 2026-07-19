@@ -241,8 +241,8 @@ onError: .commitSucceeded,  // default (best-effort); or .allOrNothing
 )
 ```
 
-`concurrency` trades speed against the backend load: `1` reloads a page at a time, `null` fires them all
-at once (only if your server tolerates it), `K` keeps at most K in flight. `onError` handles a
+`concurrency` trades speed against the backend load: `1` reloads a page at a time, `null` fires them
+all at once (only if your server tolerates it), `K` keeps at most K in flight. `onError` handles a
 page-fetch that fails after your fetcher's own retries: `commitSucceeded` keeps the pages that
 reloaded and leaves the failed one as it was; `allOrNothing` commits only if every page succeeds,
 otherwise it keeps the pre-refresh list untouched.

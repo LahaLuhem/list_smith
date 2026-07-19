@@ -12,14 +12,16 @@ The app opens on a hub linking to:
 - **Custom surfaces**: every surface (loading, error, empty, end, pull indicator) replaced with a
   platform-adaptive one, plus a toggle to inject fetch failures and exercise the error and retry
   path.
-- **Playground**: live knobs for page size, the end policy, fetch latency, pull-to-refresh, and
-  separators.
+- **Playground**: live knobs for page size, the end policy, empty-page handling, fetch latency,
+  pull-to-refresh, and separators.
 - **Sync search**: `ListSmith.sync` filtering an in-memory list client-side, with the no-results
   surface.
 - **Async search**: `ListSmith.async` two-view search (a paginated feed switching to paginated search
   results and back), with a live toggle between the keep and replace cache policies.
 - **Observer**: `ListSmith.async` wired to a `ListSmithObserver` that streams each lifecycle event
   (page load, error, refresh, query commit, mode change) into a live log, plus a failure toggle.
+- **Reload**: pull-to-refresh strategies, reset to the first page, or re-fetch every loaded page to
+  keep scroll depth, with concurrency and best-effort/atomic knobs plus a failure toggle.
 
 Tap the app-bar control on any screen to flip light and dark.
 
