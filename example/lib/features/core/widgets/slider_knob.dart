@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A labelled slider for the playground, showing the current [valueText] beside
+/// A labelled slider for a demo's knobs, showing the current [valueText] beside
 /// the [label] and a [PlatformSlider] below.
 class SliderKnob extends StatelessWidget {
   final String label;

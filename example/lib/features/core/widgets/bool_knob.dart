@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A labelled boolean control for the playground, backed by a [PlatformSwitch].
+/// A labelled boolean control for a demo's knobs, backed by a [PlatformSwitch].
 class BoolKnob extends StatelessWidget {
   final String label;
   final bool value;

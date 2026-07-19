@@ -3,17 +3,18 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 
 /// Backs the Playground demo. Holds the live-editable list config and serves a
-/// deliberately gappy source (page 2 is empty, more data follows) so the
-/// end-policy knob has a visible effect.
+/// deliberately gappy source (the first page is empty, data follows) so the
+/// end-policy and empty-page knobs have a visible effect.
 ///
 /// The preview depends on all of these knobs at once, so this uses
 /// `notifyListeners()` (the many-sites case) rather than per-field notifiers.
 /// See `CODESTYLE.md`.
 final class PlaygroundViewModel extends ViewModel {
-  static const _dataPages = {0, 1, 3, 4};
+  static const _dataPages = {1, 2, 4, 5};
 
   var _pageSize = 20;
-  var _emptyRunBeforeEnd = 1;
+  var _emptyRunBeforeEnd = 2;
+  var _pagePastEmpty = true;
   var _latencyMs = 600.0;
   var _pullToRefresh = true;
   var _separators = true;
@@ -21,6 +22,8 @@ final class PlaygroundViewModel extends ViewModel {
   int get pageSize => _pageSize;
 
   int get emptyRunBeforeEnd => _emptyRunBeforeEnd;
+
+  bool get pagePastEmpty => _pagePastEmpty;
 
   double get latencyMs => _latencyMs;
 
@@ -35,6 +38,11 @@ final class PlaygroundViewModel extends ViewModel {
 
   void onEmptyRunChanged(double value) {
     _emptyRunBeforeEnd = value.round();
+    notifyListeners();
+  }
+
+  void onPagePastEmptyToggled({required bool value}) {
+    _pagePastEmpty = value;
     notifyListeners();
   }
 

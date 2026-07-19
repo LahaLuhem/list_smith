@@ -12,6 +12,7 @@ import '/features/custom_surfaces/custom_surfaces_view.dart';
 import '/features/grouping/grouping_view.dart';
 import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
+import '/features/reload/reload_view.dart';
 import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
 import 'home_view_model.dart';
@@ -79,6 +80,13 @@ class HomeView extends StatelessWidget {
             title: 'Observer',
             description: 'Watch lifecycle events stream into a live log via an injected observer.',
             pageBuilder: (_) => const ObserverView(),
+          ),
+          _DemoTile(
+            icon: Icon(platformValue(material: Icons.refresh, cupertino: CupertinoIcons.refresh)),
+            title: 'Reload',
+            description:
+                'Pull-to-refresh strategies: keep scroll depth or reset, best-effort or atomic.',
+            pageBuilder: (_) => const ReloadView(),
           ),
         ],
       ),
