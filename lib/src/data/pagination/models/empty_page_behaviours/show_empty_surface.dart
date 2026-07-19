@@ -11,5 +11,8 @@ final class ShowEmptySurface extends EmptyPageBehaviour {
   const ShowEmptySurface();
 
   @override
+  bool shouldAdvance(EmptyPageContext context) => false;
+
+  @override
   String toString() => 'ShowEmptySurface()';
 }

@@ -265,11 +265,41 @@ identical convention with `/features/…` for its cross-feature imports (see
 <a id="package-patterns"></a>
 ## Package-specific patterns
 
-**TODO (design pass).** The load-bearing structural patterns specific to `list_smith` (the public
-widget's constructor shape, how sync vs async sources are modelled, the search/cache policy, any
-controller contract) are defined once the architecture is designed. This section will hold those
-rules and their "prefer / over" examples, with rationale cross-linked to `APPENDIX.md`. Until
-then, follow the general rules above and ask when a structural choice comes up.
+<a id="patterns-behaviour-in-the-type"></a>
+### Behaviour lives in the sealed type, not in an orchestrator type-switch
+
+An injected, sealed behaviour axis (`PaginationEndPolicy`, `EmptyPageBehaviour`,
+`SearchCachePolicy`, `Grouping`) carries its own logic as a polymorphic method the async engine
+calls blindly. The engine must not `is`-test the concrete variant and implement each case itself.
+
+**Why:** the engine stays a thin dispatcher, like the framework calling `Widget.build` without
+knowing the subtype, so new variants (and new axes) drop in without touching it, and each behaviour
+is unit-testable on its own. It is already the shape of `EndPolicy.hasReachedEnd(EndContext)`,
+`SearchCachePolicy.actionFor(...)`, `Grouping.decorate(...)`, and
+`EmptyPageBehaviour.shouldAdvance(EmptyPageContext)`.
+
+**How:**
+
+- Pure decisions take a *data* context and return a value, e.g. `shouldAdvance(EmptyPageContext)`:
+  the engine gathers the facts, the type decides. The context is exported (safe, documentable).
+- Effectful actions (which must fetch or mutate) take a *capability* context, the `BuildContext`
+  analogue, and return a `Future`. That context stays internal and unexported: it exposes mutation
+  hooks no consumer should call, and the axis is sealed so no consumer implements it.
+
+```dart
+// bad — the engine knows the variants
+if (onEmptyPage is AdvanceToFirstNonEmpty) { /* advance logic lives here */ }
+
+// good — the engine gathers facts, the type decides
+if (onEmptyPage.shouldAdvance(EmptyPageContext(/* … */))) { /* just act */ }
+```
+
+The one `switch` that legitimately stays engine-side is widget-tree assembly (`Refresh` on/off
+decides whether to wrap the subtree in `RefreshBinding`), which no type can own.
+
+**TODO (design pass).** Remaining load-bearing patterns (the public widget's constructor shape, sync
+vs async source modelling, any controller contract) land here as the architecture settles, with
+rationale cross-linked to `APPENDIX.md`.
 
 ---
 

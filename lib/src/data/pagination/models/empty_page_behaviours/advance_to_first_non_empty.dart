@@ -26,5 +26,12 @@ final class AdvanceToFirstNonEmpty extends EmptyPageBehaviour {
     : assert(maxPages == null || maxPages > 0, 'maxPages must be positive when set.');
 
   @override
+  bool shouldAdvance(EmptyPageContext context) {
+    final cap = maxPages;
+
+    return context.isEmpty && context.moreAvailable && (cap == null || context.pagesLoaded < cap);
+  }
+
+  @override
   String toString() => 'AdvanceToFirstNonEmpty(maxPages: $maxPages)';
 }

@@ -1,3 +1,4 @@
+/// @docImport '/src/data/pagination/models/empty_page_behaviour.dart';
 /// @docImport '/src/data/search/models/search_cache_policy.dart';
 /// @docImport 'list_smith.dart';
 library;
@@ -9,7 +10,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
-import '/src/data/pagination/models/empty_page_behaviour.dart';
+import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -222,15 +223,14 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     return displayState;
   }
 
-  /// Pages the controller past an empty page itself when [AsyncSource.onEmptyPage] is
-  /// [AdvanceToFirstNonEmpty].
+  /// Pages the controller past an empty page itself when [EmptyPageBehaviour.shouldAdvance] says so.
   ///
-  /// The pager parks on an empty page (nothing on screen to scroll, so its scroll-driven fetch never
-  /// fires), so list_smith requests the next page until one has items or the end policy stops. Runs on
-  /// every controller change; deferred to a microtask so it never re-enters the controller's own
-  /// notification, and re-checked on arrival because the state can move between scheduling and running.
-  /// The controller ignores a fetch while one is in flight or the list has ended, so the guard here
-  /// only spares needless microtasks.
+  /// The pager parks on an empty page (nothing on screen to scroll, so its scroll-driven fetch never fires),
+  /// so list_smith requests the next page until the behaviour stops asking
+  /// (a page has items, the end policy stops, or the cap is hit). Runs on every controller change.
+  /// Deferred to a microtask so it never re-enters the controller's own notification, and re-checked
+  /// on arrival because the state can move between scheduling and running. The controller ignores a
+  /// fetch while one is in flight or the list has ended, so the guard here only spares needless microtasks.
   void _maybeAdvancePastEmptyPage() {
     if (!_shouldAdvancePastEmpty(_controller.value)) return;
 
@@ -239,24 +239,19 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     });
   }
 
-  /// Whether [state] is an empty page that [AdvanceToFirstNonEmpty] should page past: the displayed
-  /// items are empty, the end policy still reports a next page ([_nextPageKey]), and the optional
-  /// [AdvanceToFirstNonEmpty.maxPages] cap is not yet reached. Emptiness is read off the de-duplicated
-  /// view (what the user sees), the end decision off the raw pages (what the policy sees), each matching
-  /// how it is judged elsewhere. Gates both the auto-fetch and the loading surface shown meanwhile, so
-  /// the two never disagree.
-  bool _shouldAdvancePastEmpty(PagingState<int, T> state) {
-    final behaviour = widget.source.onEmptyPage;
-    if (behaviour is! AdvanceToFirstNonEmpty) return false;
-
-    final displayItems = _dedupedForDisplay(state).items;
-    if (displayItems == null || displayItems.isNotEmpty) return false;
-    if (_nextPageKey(state) == null) return false;
-
-    final maxPages = behaviour.maxPages;
-
-    return maxPages == null || (state.pages?.length ?? 0) < maxPages;
-  }
+  /// Gathers the [EmptyPageContext] from [state] and defers the decision to
+  /// [EmptyPageBehaviour.shouldAdvance]. Emptiness is read off the de-duplicated view (what the user
+  /// sees), more-available off the raw pages via the end policy ([_nextPageKey]), each matching how it
+  /// is judged elsewhere. Gates both the auto-fetch and the loading surface shown meanwhile, so the two
+  /// never disagree.
+  bool _shouldAdvancePastEmpty(PagingState<int, T> state) =>
+      widget.source.onEmptyPage.shouldAdvance(
+        EmptyPageContext(
+          isEmpty: _dedupedForDisplay(state).items?.isEmpty ?? false,
+          moreAvailable: _nextPageKey(state) != null,
+          pagesLoaded: state.pages?.length ?? 0,
+        ),
+      );
 
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;

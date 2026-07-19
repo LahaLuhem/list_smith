@@ -4,6 +4,8 @@
 /// @docImport 'pagination_end_policy.dart';
 library;
 
+import 'empty_page_context.dart';
+
 part 'empty_page_behaviours/advance_to_first_non_empty.dart';
 part 'empty_page_behaviours/show_empty_surface.dart';
 
@@ -28,4 +30,12 @@ part 'empty_page_behaviours/show_empty_surface.dart';
 sealed class EmptyPageBehaviour {
   /// Const base constructor for the sealed hierarchy.
   const EmptyPageBehaviour();
+
+  /// Whether the list should page past the current empty page, given [context].
+  ///
+  /// Called after each page settles. [ShowEmptySurface] always answers `false`; [AdvanceToFirstNonEmpty]
+  /// answers `true` while the list is empty, more pages remain, and its `maxPages` cap is not yet
+  /// reached. The orchestrator gathers the [EmptyPageContext] facts and acts on the answer, so the
+  /// decision stays here rather than in a type-switch upstream.
+  bool shouldAdvance(EmptyPageContext context);
 }
