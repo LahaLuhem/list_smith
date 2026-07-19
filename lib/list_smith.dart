@@ -7,6 +7,7 @@ export 'src/data/grouping/typedefs/group_header_builder.dart';
 export 'src/data/grouping/typedefs/group_key_of.dart';
 export 'src/data/observer/models/list_smith_observer.dart';
 export 'src/data/observer/models/sinks/logging_list_smith_observer.dart';
+export 'src/data/pagination/models/empty_page_behaviour.dart';
 export 'src/data/pagination/models/end_context.dart';
 export 'src/data/pagination/models/page_fetcher.dart';
 export 'src/data/pagination/models/pagination_end_policy.dart';

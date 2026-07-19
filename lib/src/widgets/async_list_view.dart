@@ -2,11 +2,14 @@
 /// @docImport 'list_smith.dart';
 library;
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
+import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -18,6 +21,7 @@ import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart'
 import '/src/data/search/models/search.dart';
 import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
+import 'defaults/neutral_loading_indicator.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 
@@ -120,6 +124,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
+    _controller.addListener(_maybeAdvancePastEmptyPage);
   }
 
   @override
@@ -217,6 +222,42 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     return displayState;
   }
 
+  /// Pages the controller past an empty page itself when [AsyncSource.onEmptyPage] is
+  /// [AdvanceToFirstNonEmpty].
+  ///
+  /// The pager parks on an empty page (nothing on screen to scroll, so its scroll-driven fetch never
+  /// fires), so list_smith requests the next page until one has items or the end policy stops. Runs on
+  /// every controller change; deferred to a microtask so it never re-enters the controller's own
+  /// notification, and re-checked on arrival because the state can move between scheduling and running.
+  /// The controller ignores a fetch while one is in flight or the list has ended, so the guard here
+  /// only spares needless microtasks.
+  void _maybeAdvancePastEmptyPage() {
+    if (!_shouldAdvancePastEmpty(_controller.value)) return;
+
+    scheduleMicrotask(() {
+      if (mounted && _shouldAdvancePastEmpty(_controller.value)) _controller.fetchNextPage();
+    });
+  }
+
+  /// Whether [state] is an empty page that [AdvanceToFirstNonEmpty] should page past: the displayed
+  /// items are empty, the end policy still reports a next page ([_nextPageKey]), and the optional
+  /// [AdvanceToFirstNonEmpty.maxPages] cap is not yet reached. Emptiness is read off the de-duplicated
+  /// view (what the user sees), the end decision off the raw pages (what the policy sees), each matching
+  /// how it is judged elsewhere. Gates both the auto-fetch and the loading surface shown meanwhile, so
+  /// the two never disagree.
+  bool _shouldAdvancePastEmpty(PagingState<int, T> state) {
+    final behaviour = widget.source.onEmptyPage;
+    if (behaviour is! AdvanceToFirstNonEmpty) return false;
+
+    final displayItems = _dedupedForDisplay(state).items;
+    if (displayItems == null || displayItems.isNotEmpty) return false;
+    if (_nextPageKey(state) == null) return false;
+
+    final maxPages = behaviour.maxPages;
+
+    return maxPages == null || (state.pages?.length ?? 0) < maxPages;
+  }
+
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
     final isSearchMode = _isSearchQuery(committedQuery);
@@ -266,23 +307,32 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
       controller: _controller,
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
-        builder: (_, isSearchMode, _) => PagedView(
-          state: _dedupedForDisplay(state),
-          fetchNextPage: fetchNextPage,
-          itemBuilder: widget.itemBuilder,
-          grouping: widget.grouping,
-          scroll: widget.scroll,
-          isSearchMode: isSearchMode,
-          query: _debouncer.committedQuery,
-          separatorBuilder: widget.separatorBuilder,
-          firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
-          newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
-          firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
-          newPageErrorBuilder: surfaces.newPageErrorBuilder,
-          emptyBuilder: widget.emptyBuilder,
-          noResultsBuilder: widget.noResultsBuilder,
-          noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
-        ),
+        builder: (context, isSearchMode, _) {
+          // AdvanceToFirstNonEmpty pages past an empty page itself; show the loading surface while
+          // it does, so the empty surface is reserved for the true end (or the maxPages give-up).
+          if (_shouldAdvancePastEmpty(state)) {
+            return surfaces.firstPageLoadingBuilder?.call(context) ??
+                const NeutralLoadingIndicator();
+          }
+
+          return PagedView(
+            state: _dedupedForDisplay(state),
+            fetchNextPage: fetchNextPage,
+            itemBuilder: widget.itemBuilder,
+            grouping: widget.grouping,
+            scroll: widget.scroll,
+            isSearchMode: isSearchMode,
+            query: _debouncer.committedQuery,
+            separatorBuilder: widget.separatorBuilder,
+            firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
+            newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
+            firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
+            newPageErrorBuilder: surfaces.newPageErrorBuilder,
+            emptyBuilder: widget.emptyBuilder,
+            noResultsBuilder: widget.noResultsBuilder,
+            noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
+          );
+        },
       ),
     );
 
