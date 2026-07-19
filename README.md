@@ -31,7 +31,6 @@
 - [Watching what it does](#watching-what-it-does)
 - [Scroll and layout](#scroll-and-layout)
 - [Performance](#performance)
-- [Roadmap](#roadmap)
 - [The example app](#the-example-app)
 - [Contributing](#contributing)
 
@@ -536,18 +535,6 @@ regressions.
 ![Sync grouping cost vs list size](benchmark/reports/bucket_by_group_scaling.png)
 
 ![itemId de-dup cost vs loaded list size](benchmark/reports/dedup_scaling.png)
-
-## Roadmap
-
-- [x] Async pagination with swappable end-detection
-- [x] Pull-to-refresh
-- [x] Sync (in-memory) search
-- [x] Async two-view search with a cache policy
-- [x] Lifecycle observer
-- [x] Explicit end signal from the fetcher: `ExplicitHasMorePolicy`, plus an open
-  `PaginationEndPolicy` contract for custom end-detection (e.g. a null next-cursor)
-- [x] Cursor-driven pagination: drive each fetch from the previous page's cursor, with
-  `StopOnNullSignalPolicy` to end on a null cursor
 
 ## The example app
 
