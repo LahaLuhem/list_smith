@@ -5,6 +5,9 @@
 - \[#1\] ExplicitHasMorePolicy: end pagination when the fetcher reports hasMore is false, so a trailing empty page is never fetched to find the end.
 - \[#1\] PageFetcher.withSignal and SearchPageFetcher.withSignal: return (items, signal) to report an end signal (a hasMore flag or a next-cursor) to the end policy.
 - \[#1\] Implement your own PaginationEndPolicy over EndContext for custom end-detection, e.g. stop on a short last page or a null next-cursor.
+- \[#14\] Cursor-driven pagination: PageFetcher.withSignal and SearchPageFetcher.withSignal now receive the previous page's signal as previousSignal, so a cursor source drives the next fetch from the cursor the previous page returned.
+- \[#14\] StopOnNullSignalPolicy: end pagination when the fetcher returns a null cursor (the cursor-paging counterpart to ExplicitHasMorePolicy).
+- \[#14\] PaginationEndPolicy.requiresSignal: a policy declares whether it reads the fetcher's end signal, so a signal-reporting fetcher is required at construction.
 
 ### Changed
 - \[#4\] Verify regression + Bump python versions
