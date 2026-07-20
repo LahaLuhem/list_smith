@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Added
 - \[#28\] Add a depth-preserving pull-to-refresh strategy (ReloadToCurrentDepth)
+- \[#25\] SyncSearchPredicates: ready-made sync-search predicate builders. fields (contains), prefix (starts-with), exact (equals), allTerms (multi-word AND), and any/every to combine predicates.
 
 ### Fixed
 - \[#26\] Add EmptyPageBehaviour to page past empty pages
