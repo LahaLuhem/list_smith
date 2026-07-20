@@ -2,7 +2,7 @@ name: list_smith
 description: >-
   A developer-first Flutter package that wraps ListView.builder for real-world
   lists: async pagination, pull-to-refresh, and sync-or-async search.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/LahaLuhem/list_smith?tab=readme-ov-file
 repository: https://github.com/LahaLuhem/list_smith
 issue_tracker: https://github.com/LahaLuhem/list_smith/issues
