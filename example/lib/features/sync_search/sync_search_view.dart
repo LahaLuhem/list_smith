@@ -4,12 +4,15 @@ import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/data/models/demo_item.dart';
 import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'sync_search_view_model.dart';
 
 /// Client-side search over an in-memory list with `ListSmith.sync`: instant filtering, no paging.
-/// Clear the query to see every item; search for something absent to see the no-results surface.
+/// Uses `SyncSearchPredicates.fields` to match either title or subtitle (the package's convenience
+/// for "any listed field contains the query"). Clear the query to see every item; search for
+/// something absent to see the no-results surface.
 class SyncSearchView extends StatelessWidget {
   const SyncSearchView({super.key});
 
@@ -37,9 +40,12 @@ class SyncSearchView extends StatelessWidget {
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: viewModel.queryListenable,
-              builder: (_, query, _) => ListSmith.sync(
+              builder: (_, query, _) => ListSmith<DemoItem>.sync(
                 items: viewModel.items,
-                searchBy: (item, query) => item.matches(query),
+                searchBy: SyncSearchPredicates.fields([
+                  (item) => item.title,
+                  (item) => item.subtitle,
+                ]),
                 query: query,
                 separatorBuilder: (_, _) => const Divider(height: 1),
                 itemBuilder: (_, item, _) =>
