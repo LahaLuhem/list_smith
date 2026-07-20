@@ -274,19 +274,32 @@ This is where the two constructors part ways the most.
 ### In memory, with `ListSmith.sync`
 
 Already holding the whole list? Give `.sync` the items and a predicate that decides whether an item
-matches the current query. It filters client-side and shows a "no results" surface when nothing does:
+matches the current query. It filters client-side and shows a "no results" surface when nothing does.
+
+The common case is "keep the item when any of its text fields contains the query", so there's a
+builder for exactly that, `SyncSearchPredicates.fields`:
 
 ```dart
 ListSmith.sync(
   items: allCities,
-  searchBy: (city, query) => city.name.toLowerCase().contains(query.toLowerCase()),
+  searchBy: SyncSearchPredicates.fields<City>([(city) => city.name, (city) => city.country]),
   query: searchQuery, // you own the field; more on that below
   itemBuilder: (context, city, index) => Text(city.name),
 )
 ```
 
-The predicate is yours: match exact, case-insensitive, or fuzzy. Swap the `contains` above for a
-package like [fuzzywuzzy](https://pub.dev/packages/fuzzywuzzy) and near-misses still hit:
+That's a case-insensitive substring match over every field you list, and `null` fields are skipped,
+so nullable ones need no `?? ''`. Name the item type (`fields<City>`) so it resolves while
+`ListSmith.sync` is still working out its element type.
+
+Need something else? The predicate is yours, it's just a `bool Function(item, query)`, so match
+exact, prefix, or case-sensitive by hand:
+
+```dart
+searchBy: (city, query) => city.name.toLowerCase().contains(query.toLowerCase()),
+```
+
+Or swap in [fuzzywuzzy](https://pub.dev/packages/fuzzywuzzy) so near-misses still hit:
 
 ```dart
 import 'package:fuzzywuzzy/fuzzywuzzy.dart';
