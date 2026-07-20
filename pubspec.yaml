@@ -14,6 +14,18 @@ topics:
   - pull-to-refresh
   - search
 
+screenshots:
+  - description: >-
+      A tour: async pagination and pull-to-refresh, client-side search with the no-results
+      surface, and grouping into labelled sections.
+    path: doc/screenshots/1-overview.webp
+  - description: >-
+      Grouping a filtered list into labelled sections, rendered natively on Android (Material).
+    path: doc/screenshots/2-android-material.png
+  - description: >-
+      The same list and code, rendered natively on iOS (Cupertino).
+    path: doc/screenshots/3-ios-cupertino.png
+
 environment:
   sdk: ">=3.12.0 <4.0.0"
   flutter: ">=3.44.0"

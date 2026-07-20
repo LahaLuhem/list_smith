@@ -47,6 +47,17 @@ it wraps and hides. And it brings **no design system**. Every surface it draws i
 `widgets`-layer default, so the list drops into a Material app, a Cupertino app, or your own bespoke
 thing without dragging in a look you didn't choose.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/1-overview.webp" width="260" alt="list_smith in action: pagination, pull-to-refresh, search, and grouping">
+</p>
+
+<table>
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/2-android-material.png" width="240" alt="Grouping demo on Android"><br><sub><b>Android</b> · Material</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/3-ios-cupertino.png" width="240" alt="The same demo on iOS"><br><sub><b>iOS</b> · Cupertino</sub></td>
+  </tr>
+</table>
+
 ## Install
 
 ```sh

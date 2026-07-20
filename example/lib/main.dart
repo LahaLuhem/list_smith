@@ -36,6 +36,7 @@ class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
     valueListenable: _themeMode,
     builder: (context, themeMode, _) => PlatformApp(
       title: 'list_smith example',
+      debugShowCheckedModeBanner: false,
       materialAppData: MaterialAppData(
         theme: ConstTheme.materialLight,
         darkTheme: ConstTheme.materialDark,
