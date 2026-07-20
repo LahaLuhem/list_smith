@@ -459,6 +459,14 @@ during the repository setup itself.
   by hand: keep an item when any extracted field contains the query, case-insensitively. The raw
   `searchBy` primitive is untouched and stays the escape hatch. Anticipated when `.sync` shipped (see
   [#sync-search-shape](#sync-search-shape)).
+- **A small family, one shared helper:** `fields` (contains) grew siblings that are the same loop
+  with a different test: `prefix` (starts-with), `exact` (equals), and `allTerms` (every whitespace
+  term must hit some field, the one multi-word case plain `contains` misses). `fields`, `prefix`, and
+  `exact` share a private `_anyField(extractors, test)` (materialise, assert,
+  `map().nonNulls.any(test)`), so each is a one-liner (refactor-first: `fields` moved onto the helper
+  before the siblings landed). `any` (OR) and `every` (AND) combine predicates rather than fields.
+  Each is knob-free and named for what it does, over a `mode:` enum that would reintroduce the knobs
+  the primitive avoids.
 - **Why a holder, not `SyncSearchPredicate.fields`:** the issue sketched the factory as a static on
   the type itself, but `SyncSearchPredicate` is a real function typedef (see the layout note under
   [explicit end signals](#explicit-end-signals): `typedefs/` keeps only real typedefs), and Dart
@@ -473,9 +481,9 @@ during the repository setup itself.
   returns `SyncSearchPredicate<T>`, not the holder, so a named constructor is not even an option.
 - **No case knob:** matching is case-insensitive substring only. The primitive bakes in zero matching
   policy on purpose; the convenience bakes in exactly the common one and nothing else, so there is no
-  `caseSensitive` flag left sitting inert. Case-sensitive, diacritic-folded, prefix, fuzzy, or
-  tokenised matching drops back to a hand-written `searchBy`. A flag is a non-breaking optional
-  param to add later if the need shows up.
+  `caseSensitive` flag left sitting inert. Case-sensitive, diacritic-folded, or fuzzy matching drops
+  back to a hand-written `searchBy`. A flag is a non-breaking optional param to add later if the need
+  shows up.
 - **`String?` extractors, nulls dropped:** each extractor is `String? Function(T)`, so a nullable
   field (`(c) => c.subtitle`) compiles with no `?? ''`. Nulls are removed with `.nonNulls` before
   matching (a null field never matches and never throws). Extractors are materialised once
@@ -484,12 +492,13 @@ during the repository setup itself.
   and past the min-length gate from `resolveSyncSearch`, so the builder neither re-trims nor
   special-cases the empty query, and it costs the same per item as the hand-written `contains` it
   replaces.
-- **Inference caveat, name the type inline:** used inline as `ListSmith.sync(searchBy:
+- **Inference caveat, pin the type on the list:** used inline as `ListSmith.sync(searchBy:
   SyncSearchPredicates.fields([...]))`, the widget's element type and the builder's type parameter
-  infer together and the un-annotated extractor closures come out nullable, so the item type is
-  named at the call site: `fields<City>([...])`. Inherent to any generic builder used inline (a
-  top-level function or a `SyncSearchPredicate.fields` static would need it too), not the holder
-  choice. The README, the `fields` dartdoc, and the example all show the `<T>`.
+  infer together and the un-annotated extractor closures come out nullable. Pin it on the list,
+  `ListSmith<City>.sync(...)`: naming it once there covers every builder passed, which reads better
+  than annotating each `fields<City>` when combining builders. Inherent to any generic builder used
+  inline (a top-level function or a `SyncSearchPredicate.fields` static would need it too), not the
+  holder choice. The README, the dartdoc, and the example all show it.
 
 ---
 
