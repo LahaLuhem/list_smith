@@ -1,4 +1,7 @@
 ## [Unreleased]
+### Added
+- \[#28\] Add a depth-preserving pull-to-refresh strategy (ReloadToCurrentDepth)
+
 ### Fixed
 - \[#26\] Add EmptyPageBehaviour to page past empty pages
 
