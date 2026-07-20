@@ -451,6 +451,48 @@ during the repository setup itself.
 
 ---
 
+<a id="sync-searchable-fields"></a>
+## Sync `searchableFields` convenience: a builder that returns the typedef
+
+- **Decision (issue #25):** `SyncSearchPredicates.fields([...])`, a static factory on a namespace
+  holder that returns a [SyncSearchPredicate], baking the predicate nearly every `.sync` list writes
+  by hand: keep an item when any extracted field contains the query, case-insensitively. The raw
+  `searchBy` primitive is untouched and stays the escape hatch. Anticipated when `.sync` shipped (see
+  [#sync-search-shape](#sync-search-shape)).
+- **Why a holder, not `SyncSearchPredicate.fields`:** the issue sketched the factory as a static on
+  the type itself, but `SyncSearchPredicate` is a real function typedef (see the layout note under
+  [explicit end signals](#explicit-end-signals): `typedefs/` keeps only real typedefs), and Dart
+  typedefs cannot carry static members. Hanging `.fields` on the name would mean converting it to a
+  callable class like `PageFetcher`, which breaks bare-closure `searchBy` (`(c, q) => ...` needs
+  wrapping) and contradicts the typedef/class split. A separate holder that returns the typedef
+  keeps closures working, stays purely additive (minor bump, no break), and matches how the
+  package already namespaces builders (`Grouping.by`, `PageFetcher.withSignal`).
+- **`abstract final class` namespace:** the holder has only a static `fields`, so it is
+  `abstract final` (cannot be instantiated or subclassed). `avoid_classes_with_only_static_members`
+  is off for exactly this. `prefer_constructors_over_static_methods` does not fire, because `fields`
+  returns `SyncSearchPredicate<T>`, not the holder, so a named constructor is not even an option.
+- **No case knob:** matching is case-insensitive substring only. The primitive bakes in zero matching
+  policy on purpose; the convenience bakes in exactly the common one and nothing else, so there is no
+  `caseSensitive` flag left sitting inert. Case-sensitive, diacritic-folded, prefix, fuzzy, or
+  tokenised matching drops back to a hand-written `searchBy`. A flag is a non-breaking optional
+  param to add later if the need shows up.
+- **`String?` extractors, nulls dropped:** each extractor is `String? Function(T)`, so a nullable
+  field (`(c) => c.subtitle`) compiles with no `?? ''`. Nulls are removed with `.nonNulls` before
+  matching (a null field never matches and never throws). Extractors are materialised once
+  (`toList(growable: false)`) because the returned closure iterates them per item, and an empty list
+  is a debug `assert` (it would silently match nothing on every search). The query arrives trimmed
+  and past the min-length gate from `resolveSyncSearch`, so the builder neither re-trims nor
+  special-cases the empty query, and it costs the same per item as the hand-written `contains` it
+  replaces.
+- **Inference caveat, name the type inline:** used inline as `ListSmith.sync(searchBy:
+  SyncSearchPredicates.fields([...]))`, the widget's element type and the builder's type parameter
+  infer together and the un-annotated extractor closures come out nullable, so the item type is
+  named at the call site: `fields<City>([...])`. Inherent to any generic builder used inline (a
+  top-level function or a `SyncSearchPredicate.fields` static would need it too), not the holder
+  choice. The README, the `fields` dartdoc, and the example all show the `<T>`.
+
+---
+
 **TODO (design pass and beyond).** Decisions still to be recorded here as they land, for example:
 the SDK floor rationale, the public API surface and why it's shaped that way, how sync vs async
 data sources are modelled, the search / cache interplay policy, and what `list_smith` deliberately
