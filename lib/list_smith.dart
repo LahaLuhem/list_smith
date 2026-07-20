@@ -26,5 +26,6 @@ export 'src/data/refresh/models/reload.dart' show Reload, ReloadToCurrentDepth, 
 export 'src/data/search/models/search.dart' show AsyncSearch, NoSearch, Search;
 export 'src/data/search/models/search_cache_policy.dart';
 export 'src/data/search/models/search_page_fetcher.dart';
+export 'src/data/search/models/sync_search_predicates.dart';
 export 'src/data/search/typedefs/sync_search_predicate.dart';
 export 'src/widgets/list_smith.dart';
