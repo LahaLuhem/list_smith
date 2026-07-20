@@ -276,24 +276,28 @@ This is where the two constructors part ways the most.
 Already holding the whole list? Give `.sync` the items and a predicate that decides whether an item
 matches the current query. It filters client-side and shows a "no results" surface when nothing does.
 
-The common case is "keep the item when any of its text fields contains the query", so there's a
-builder for exactly that, `SyncSearchPredicates.fields`:
+The common case is "keep the item when any text field contains the query", so there's a builder for
+exactly that, `SyncSearchPredicates.fields`:
 
 ```dart
-ListSmith.sync(
+ListSmith<City>.sync(
   items: allCities,
-  searchBy: SyncSearchPredicates.fields<City>([(city) => city.name, (city) => city.country]),
+  searchBy: SyncSearchPredicates.fields([(city) => city.name, (city) => city.country]),
   query: searchQuery, // you own the field; more on that below
   itemBuilder: (context, city, index) => Text(city.name),
 )
 ```
 
 That's a case-insensitive substring match over every field you list, and `null` fields are skipped,
-so nullable ones need no `?? ''`. Name the item type (`fields<City>`) so it resolves while
-`ListSmith.sync` is still working out its element type.
+so nullable ones need no `?? ''`. Type the list (`ListSmith<City>.sync`) so the builder's item type
+resolves; naming it once covers every builder you pass.
 
-Need something else? The predicate is yours, it's just a `bool Function(item, query)`, so match
-exact, prefix, or case-sensitive by hand:
+Same idea, different match: `prefix` (starts-with, for type-ahead), `exact` (equals), and `allTerms`
+(every whitespace term must hit a field, so `"john smith"` finds `"Smith, John"`). Combine any of
+them, or your own predicate, with `SyncSearchPredicates.any` (OR) and `.every` (AND).
+
+Need something else, case-sensitive or diacritic-folded matching, say? The predicate is yours, it's
+just a `bool Function(item, query)`:
 
 ```dart
 searchBy: (city, query) => city.name.toLowerCase().contains(query.toLowerCase()),
