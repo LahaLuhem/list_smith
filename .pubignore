@@ -47,3 +47,9 @@ example/CODESTYLE.md
 example/android/
 example/ios/
 example/devtools_options.yaml
+
+# Demo media. The screenshots are declared in pubspec.yaml's `screenshots:` field, so they
+# must ship in the tarball for pub.dev's gallery to render them (they're also inlined in
+# README.md via absolute GitHub raw URLs). Only the source screen recording is excluded;
+# the shipped `.webp` is generated from it.
+doc/screenshots/*.webm
