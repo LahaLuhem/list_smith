@@ -39,7 +39,7 @@ jobs:
           enable-cache: true
       # Pin the bare-python build/run steps to the analyzer's floor (.python-version) rather than
       # whatever the runner ships, so CI matches the declared requires-python.
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version-file: benchmark/python/.python-version
 
