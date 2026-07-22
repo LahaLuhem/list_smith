@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v7
       # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
       # Dependabot bumps this exact version like any other pin.
-      - uses: astral-sh/setup-uv@v8.3.2
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
           enable-cache: true
       # uv sync installs the dev group (pytest + pytest-cov). The --cov target is in pyproject

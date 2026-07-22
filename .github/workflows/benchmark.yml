@@ -34,7 +34,7 @@ jobs:
       - uses: ./.github/actions/setup-flutter
       # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
       # Dependabot bumps this exact version like any other pin.
-      - uses: astral-sh/setup-uv@v8.3.2
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
           enable-cache: true
       # Pin the bare-python build/run steps to the analyzer's floor (.python-version) rather than
