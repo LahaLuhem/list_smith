@@ -22,8 +22,8 @@ dependencies = [
     "numpy>=1.26,<3.0",
     "scipy>=1.11,<2.0",
     # polars (Rust-backed) for analysis; converts to pandas only at the seaborn boundary.
-    "polars>=1.0,<2.0",
-    "matplotlib>=3.8,<4.0",
+    "polars>=1.43.0,<2.0",
+    "matplotlib>=3.11.1,<4.0",
     # seaborn gives publication-quality stats plots for ~zero boilerplate; pulls pandas transitively.
     "seaborn>=0.13,<1.0",
     # pyarrow backs polars.DataFrame.to_pandas() — the bridge to seaborn's pandas-only plotting API.
