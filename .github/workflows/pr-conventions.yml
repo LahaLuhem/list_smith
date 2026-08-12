@@ -111,3 +111,22 @@ jobs:
               exit 1
               ;;
           esac
+
+  # main's required check; the job id IS the context, so no `name:` and no rename.
+  # APPENDIX.md#dependabot-automerge
+  conventions-ok:
+    needs: [branch-name, commit-conventions, sem-label]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            branch-name=${{ needs.branch-name.result }}
+            commit-conventions=${{ needs.commit-conventions.result }}
+            sem-label=${{ needs.sem-label.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

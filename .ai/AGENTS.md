@@ -105,7 +105,12 @@ contract, the search/cache policy) are **TODO (design pass)**.
 5. **Semver, strictly.** Any change to a public signature, a deletion, or a behavioural change
    of a documented contract is breaking. Surface the implication before the diff lands. `cider`
    enforces the version-bump discipline.
-6. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
+6. **`repo-ok`, `package-ok`, `example-ok`, `conventions-ok`, `bench-analyzer-ok` are `main`'s
+   required checks.** Each closes one PR workflow, and the job id *is* the context: renaming one,
+   giving it a `name:`, dropping it, or path-filtering its workflow un-gates Dependabot automerge
+   silently. Touch one, update the ruleset in the same pass:
+   [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
+7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
    headers are written by [`scripts/release.sh`](scripts/release.sh); the `## [Unreleased]`
    buffer is appended to by
    [`.github/workflows/changelog.yml`](.github/workflows/changelog.yml) from the merged PR title

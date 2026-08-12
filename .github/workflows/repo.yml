@@ -69,3 +69,22 @@ jobs:
       - run: |
           # shellcheck disable=SC2086
           docker run --rm -v "$PWD:/work:ro" "$LINTERPOL_IMAGE" $LINT_CMD
+
+  # main's required check; the job id IS the context, so no `name:` and no rename.
+  # APPENDIX.md#dependabot-automerge
+  repo-ok:
+    needs: [format, lint-manifest, lint]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            format=${{ needs.format.result }}
+            lint-manifest=${{ needs.lint-manifest.result }}
+            lint=${{ needs.lint.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

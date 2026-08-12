@@ -12,6 +12,9 @@
 # Minor + patch bumps are grouped into one PR per ecosystem to cut noise; major
 # bumps still arrive as individual PRs so they can be reviewed in isolation.
 #
+# `uv` and `github-actions` minor/patch bumps automerge once CI is green; `pub`
+# and every major stay manual. Rationale: APPENDIX.md#dependabot-automerge.
+#
 # The example app is added in a later pass. Its Dependabot entries (a `pub`
 # entry for /example and a `gradle` entry for /example/android) will be added
 # then; there's nothing to resolve under /example until it exists.

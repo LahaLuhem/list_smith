@@ -36,3 +36,25 @@ jobs:
           working-directory: example
       - run: dart pub global activate dependency_validator
       - run: dart pub global run dependency_validator
+
+  # main's required check; the job id IS the context, so no `name:` and no rename.
+  # APPENDIX.md#dependabot-automerge
+  example-ok:
+    needs: [analyze, deps]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    # The file-level default points at example/, which this job never checks out.
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            analyze=${{ needs.analyze.result }}
+            deps=${{ needs.deps.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

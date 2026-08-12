@@ -5,12 +5,11 @@ name: Benchmark analyzer tests
 # here, and the gate keeps that core covered. Pure Python (no Flutter/Dart), so it is separate
 # from the regression drive in benchmark.yml.
 
+# No `paths:` filter on purpose: this closes a required check, and a filtered workflow never
+# reports on a PR that misses its paths. APPENDIX.md#dependabot-automerge
 on:
   pull_request:
     branches: [main]
-    paths:
-      - benchmark/python/**
-      - .github/workflows/bench-analyzer.yml
 
 concurrency:
   group: bench-analyzer-${{ github.event.pull_request.number || github.ref }}
@@ -37,3 +36,19 @@ jobs:
         run: |
           uv sync
           uv run pytest --cov-fail-under=90
+
+  # main's required check; the job id IS the context, so no `name:` and no rename.
+  # APPENDIX.md#dependabot-automerge
+  bench-analyzer-ok:
+    needs: [analyzer-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: analyzer-tests=${{ needs.analyzer-tests.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

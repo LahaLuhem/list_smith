@@ -1,0 +1,58 @@
+name: Dependabot auto-merge
+
+# Arms GitHub's native auto-merge on CI-only Dependabot bumps; Dependabot has no
+# automerge option of its own. What merges and why: APPENDIX.md#dependabot-automerge
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-automerge
+  cancel-in-progress: true
+
+# pull_request_target because Dependabot's `pull_request` token is read-only.
+# Safe as in changelog.yml: PR code is never checked out.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    name: Enable auto-merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+
+      # `package-ecosystem` is the branch-name segment, so github-actions
+      # arrives underscored. `update-type` is the group's *highest* semver step.
+      - name: Decide eligibility
+        id: gate
+        env:
+          ECOSYSTEM: ${{ steps.meta.outputs.package-ecosystem }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          eligible=false
+          case "$ECOSYSTEM" in
+            uv | github_actions)
+              case "$UPDATE_TYPE" in
+                version-update:semver-patch | version-update:semver-minor)
+                  eligible=true
+                  ;;
+              esac
+              ;;
+          esac
+          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
+          echo "$ECOSYSTEM / $UPDATE_TYPE -> automerge: $eligible"
+
+      # `--auto` only queues it; main's required checks decide the rest. GITHUB_TOKEN,
+      # not the changelog App: the App bypasses the ruleset it would need to wait on.
+      - name: Enable auto-merge
+        if: steps.gate.outputs.eligible == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --rebase "$PR_URL"

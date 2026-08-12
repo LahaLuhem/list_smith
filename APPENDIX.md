@@ -22,6 +22,7 @@ anchors stable across renames. A decision log, appended as decisions land.
 - [Explicit end signals: open policy plus fetcher building block](#explicit-end-signals)
 - [Cursor-driven pagination: the signal, fed back](#cursor-driven-pagination)
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
+- [Dependabot automerges the boring tier, behind five aggregate checks](#dependabot-automerge)
 
 <!-- TOC end -->
 
@@ -426,6 +427,51 @@ anchors stable across renames. A decision log, appended as decisions land.
   parameter infer together and the closures come out nullable, so write `ListSmith<City>.sync(...)`:
   naming it once covers every builder, better than annotating each. Inherent to any generic builder
   used inline, not the holder choice.
+
+---
+
+<a id="dependabot-automerge"></a>
+## Dependabot automerges the boring tier, behind five aggregate checks
+
+[`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) arms GitHub's native
+auto-merge (rebase) for patch and minor bumps in `uv` and `github-actions`; every `pub` bump and
+every major waits for a human. Dependabot has no `automerge` config key the way Renovate does, so
+the mechanism is a workflow. Ported from
+[`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager), which runs it behind four.
+
+- **`pub` stays manual** because a root-pubspec bump reaches every consumer's resolution and is
+  semver-relevant (hard rule 5), and bots are exempt from
+  [`changelog.yml`](.github/workflows/changelog.yml), so it would land on pub.dev with no release
+  note. `uv` is benchmark tooling and `github-actions` is CI wiring; neither reaches a published
+  byte.
+- **Minor, not just patch,** because `dependabot.yml` groups minor with patch and `fetch-metadata`
+  reports a group's *highest* step. Patch-only would skip any batch holding one minor, which is
+  most of them.
+- **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks and ignores
+  failing ones that aren't, so this is safe only while `main`'s ruleset is **active** and requires
+  all five contexts. Keep `required_signatures` out of it: rebase-merge emits unsigned commits
+  (`f280108` and its three neighbours), so it would block every rebase merge, bot or human.
+- **Aggregates, not the real job names.** [`repo.yml`](.github/workflows/repo.yml) fans its lint
+  matrix out of [`lint-checks.json`](.github/lint-checks.json), so those contexts move whenever a
+  linter does; `package.yml` and `example.yml` both hold a job displayed as *Flutter analyze*, which
+  no ruleset could tell apart. Each workflow instead closes with one `*-ok` job that `needs` its
+  siblings; five names are the contract, the jobs behind them are free to move. They inspect
+  `needs.*.result` by hand because a skipped job passes a required check, which is what keeps
+  `conventions-ok` green on bot PRs.
+- **`bench-analyzer.yml` gave up its path filter to join them.** A filtered workflow never reports
+  on a PR that misses its paths, so it cannot back a required check, and leaving it unrequired was
+  worse: every `uv` bump touches `benchmark/python/**`, so its tests are what matters most on
+  exactly the PRs being automated. ~20s with the uv cache, so it runs everywhere rather than behind
+  bespoke change detection. [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and
+  stays unrequired: no Dependabot PR can touch `lib/**`, and it costs ~8 minutes a side.
+- **`GITHUB_TOKEN`, not the changelog App.** The App sits in the ruleset's bypass list so it can
+  push `CHANGELOG.md` to `main`, and a bypass covers the ruleset whole, status checks included. The
+  cost is that a `GITHUB_TOKEN` merge triggers no further workflows, so
+  [`package.yml`](.github/workflows/package.yml)'s push-to-main run is skipped on automerged PRs;
+  for these two ecosystems that run only re-tests Dart neither touches.
+- **`pull_request_target`** because Dependabot's `pull_request` token is read-only and arming
+  auto-merge needs write. Safe as in `changelog.yml`: the workflow loads from `main` and PR code is
+  never checked out.
 
 ---
 
