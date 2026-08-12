@@ -22,7 +22,7 @@ dependencies = [
     "numpy>=1.26,<3.0",
     "scipy>=1.11,<2.0",
     # polars (Rust-backed) for analysis; converts to pandas only at the seaborn boundary.
-    "polars>=1.43.1,<2.0",
+    "polars>=1.43.2,<2.0",
     "matplotlib>=3.11.1,<4.0",
     # seaborn gives publication-quality stats plots for ~zero boilerplate; pulls pandas transitively.
     "seaborn>=0.13,<1.0",
@@ -34,7 +34,7 @@ dependencies = [
 # Maintainer-only: linter / formatter + test runner. ruff replaces black + flake8 + isort; pytest
 # runs the pure-math unit tests under tests/.
 dev = [
-    "ruff>=0.16.0,<1.0",
+    "ruff>=0.16.2,<1.0",
     "pytest>=9.1,<10.0",
     "pytest-cov>=7.1,<8.0",
 ]
