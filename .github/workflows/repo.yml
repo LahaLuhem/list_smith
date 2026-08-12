@@ -17,12 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: dart-lang/setup-dart@v1
+      # Formatter output is version-sensitive, so take Dart from Flutter rather than
+      # Dart stable, which runs ahead of it. Why: APPENDIX.md#ci-format-sdk. The
+      # composite stays skipped: format scans in place, so no pub get is needed.
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: stable
-      # Format scans files in place; no pub-get needed. The setup-flutter composite
-      # is reserved for jobs that need resolved dependencies, skipping it here
-      # saves ~10-30s per run.
+          channel: stable # Matches .fvmrc.
+          cache: true
       - run: dart format --output=none --set-exit-if-changed .
 
   # Container-based lint checks (tool + args) and the linterpol image tag live in

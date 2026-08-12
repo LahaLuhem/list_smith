@@ -22,6 +22,8 @@ anchors stable across renames. A decision log, appended as decisions land.
 - [Explicit end signals: open policy plus fetcher building block](#explicit-end-signals)
 - [Cursor-driven pagination: the signal, fed back](#cursor-driven-pagination)
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
+- [A narrow controller: intents out, nothing back](#controller-handle)
+- [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind five aggregate checks](#dependabot-automerge)
 
 <!-- TOC end -->
@@ -458,6 +460,29 @@ anchors stable across renames. A decision log, appended as decisions land.
   `lib/`. It earns its place when item mutations (#24) add intents; swapping then is internal.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless; one
   through a controller no list ever received is a wiring mistake.
+
+---
+
+<a id="ci-format-sdk"></a>
+## The format gate runs Flutter's Dart, not standalone Dart
+
+**What broke:** [`repo.yml`](.github/workflows/repo.yml)'s format job installed Dart stable directly,
+skipping the `setup-flutter` composite to save a `pub get` it doesn't need. Dart stable runs ahead of
+Flutter's bundled Dart and the formatter changed between them, so a tree clean locally met a red gate
+reformatting files the pull request never touched.
+
+**Why Flutter's Dart, not a pinned version:** whatever CI rejects, a local `dart format .` has to be
+able to fix. Dart stable can't promise that once it drifts from Flutter's bundled Dart, and a literal
+pin can't either once it drifts from [`.fvmrc`](.fvmrc). The SDK the package already targets is the
+only version that stays in step by construction. The job still skips the composite, so it keeps the
+speed.
+
+**No job can go the other way, onto pure Dart.** The package depends on `flutter` from the SDK and its
+tests are widget tests, so analyze, test, the dependency validator, the example, and the benchmark all
+need Flutter to resolve at all. [`changelog.yml`](.github/workflows/changelog.yml) is the one
+genuinely Dart-only job, and already runs `dart-lang/setup-dart`.
+
+Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) and ported here.
 
 ---
 
