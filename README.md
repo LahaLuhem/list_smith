@@ -21,6 +21,7 @@
     * [De-duplicating overlapping pages](#de-duplicating-overlapping-pages)
 - [Pull to refresh](#pull-to-refresh)
     * [What a pull reloads](#what-a-pull-reloads)
+    * [Refreshing from code](#refreshing-from-code)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async` and a search](#paged-with-listsmithasync-and-a-search)
@@ -43,7 +44,8 @@ state in between, and never asks you to touch any of them.
 
 Two things set it apart. It stays **fully out of your way**: you never see a `ScrollController`, a
 `PagingController`, or the [`infinite_scroll_pagination`](https://pub.dev/packages/infinite_scroll_pagination)
-it wraps and hides. And it brings **no design system**. Every surface it draws is a plain
+it wraps and hides. The one handle it does offer, [refreshing from code](#refreshing-from-code), is
+deliberately tiny. And it brings **no design system**. Every surface it draws is a plain
 `widgets`-layer default, so the list drops into a Material app, a Cupertino app, or your own bespoke
 thing without dragging in a look you didn't choose.
 
@@ -277,6 +279,32 @@ import 'package:retry/retry.dart';
 fetchPage: PageFetcher((pageIndex, pageSize) =>
   retry(() => api.load(pageIndex, pageSize), retryIf: (e) => e is SocketException)),
 ```
+
+### Refreshing from code
+
+A pull isn't always the trigger: a toolbar button, a re-tapped tab, a reload after the user posts
+something. Pass a `ListSmithController` and call `refresh()`.
+
+```dart
+final controller = ListSmithController();
+
+ListSmith.async(fetchPage: PageFetcher(...), itemBuilder: ..., controller: controller)
+
+await controller.refresh();  // from a button, a tab listener, wherever
+```
+
+It runs exactly what a pull runs, so your `PullToRefresh` config still applies: `ReloadToCurrentDepth`
+keeps scroll depth here too, and an active search reloads the search, not the feed. It works under
+`NoRefresh` as well, which switches off the *gesture*, not refreshing, and falls back to
+`ResetToFirstPage`.
+
+- **No indicator.** That belongs to the pull; your button owns its progress, hence the returned future.
+- **Awaiting follows the reload.** `ResetToFirstPage` completes as the list clears, not when fresh
+  data lands; `ReloadToCurrentDepth` waits for the refetch.
+- **Double-taps are free.** A call made while a refresh runs joins it instead of starting a second.
+
+Nothing to dispose, and async-only: a `.sync` list has nothing to reload. To *watch* the list rather
+than drive it, use an [observer](#watching-what-it-does).
 
 ## Search
 

@@ -298,9 +298,29 @@ if (onEmptyPage.shouldAdvance(EmptyPageContext(/* … */))) { /* just act */ }
 The one `switch` that legitimately stays engine-side is widget-tree assembly (`Refresh` on/off
 decides whether to wrap the subtree in `RefreshBinding`), which no type can own.
 
+<a id="patterns-controller-contract"></a>
+### A consumer handle carries intents, never engine state
+
+A handle the consumer constructs and passes in (`ListSmithController`) exposes verbs, not machinery:
+no `PagingController`, no `PagingState`, no read-back of paging internals.
+
+**Why:** the pager is hidden on purpose, and a handle that hands state back re-exposes it by the back
+door. Watching the list is the observer's job. Full rationale:
+[`APPENDIX.md#controller-handle`](APPENDIX.md#controller-handle).
+
+**How:**
+
+- One verb per consumer intent, returning `Future<void>` that completes when the work does.
+- Attach the engine's *existing* entry point (the closure the gesture already drives), so the handle
+  never carries a second implementation that can drift from it.
+- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. A detached handle no-ops
+  rather than throwing; assert only for what can only be a wiring mistake (nothing ever attached).
+- Use a plain callback while there is one intent; promote to an `@internal` capability interface (the
+  `ReloadContext` shape) once there are several. `one_member_abstracts` flags the premature one.
+
 **TODO (design pass).** Remaining load-bearing patterns (the public widget's constructor shape, sync
-vs async source modelling, any controller contract) land here as the architecture settles, with
-rationale cross-linked to `APPENDIX.md`.
+vs async source modelling) land here as the architecture settles, with rationale cross-linked to
+`APPENDIX.md`.
 
 ---
 

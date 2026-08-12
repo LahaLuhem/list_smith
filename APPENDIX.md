@@ -430,6 +430,37 @@ anchors stable across renames. A decision log, appended as decisions land.
 
 ---
 
+<a id="controller-handle"></a>
+## A narrow controller: intents out, nothing back
+
+- **Decision (issue #23):** an optional `ListSmithController` on `ListSmith.async`, carrying one
+  intent, `refresh()`. A bounded exception to the hidden pager; the line held is that no
+  `PagingController`, `PagingState`, or other ISP type is reachable through it.
+- **Only refresh was unreachable.** The issue also floated `scrollToTop` and `jumpTo(index)`, but a
+  consumer can already scroll via `ListScrollConfig.controller`, so those are sugar and this is
+  capability. Scroll intents follow separately; index-scrolling needs fixed extents, putting it with
+  the sliver/grid work.
+- **Intents, not state.** No `isRefreshing`, count, or `hasMore`: notification is the observer's job
+  ([#observer-seam](#observer-seam)), and a state-bearing handle re-exposes the pager by the back door.
+- **One refresh path.** The handle attaches the engine's own `_onRefresh`, the closure the gesture
+  drives, so the configured `Reload` and search-mode behaviour are shared by construction rather than
+  by a second implementation that could drift.
+- **`NoRefresh` means no gesture, not no refresh**, so its previously-unreachable arm now runs
+  `ResetToFirstPage`. A gesture-less list therefore can't pick a strategy; a per-call
+  `refresh({Reload? using})` or a `Reload` getter on the `Refresh` seam is the build-upward path.
+- **Silent.** Animating the indicator would flash it, then hand straight to the first-page loader
+  under the default `ResetToFirstPage`: the two-spinner outcome
+  [#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1) rejected. The button owns its progress.
+- **Coalesced**, since a button can double-fire where the gesture can't (the indicator must be idle).
+  Not a fix for the in-flight-fetch race in issue #36.
+- **A callback, not a capability interface.** A one-method `abstract interface class` (the
+  `ReloadContext` shape) trips `one_member_abstracts` and would have been the first `// ignore:` in
+  `lib/`. It earns its place when item mutations (#24) add intents; swapping then is internal.
+- **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless; one
+  through a controller no list ever received is a wiring mistake.
+
+---
+
 <a id="dependabot-automerge"></a>
 ## Dependabot automerges the boring tier, behind five aggregate checks
 
