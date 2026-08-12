@@ -102,10 +102,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     implements ReloadContext<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
-  late final _controller = PagingController<int, T>(
-    getNextPageKey: _nextPageKey,
-    fetchPage: _fetchPage,
-  );
+  late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
 
   /// The normal-mode paging state (with its end signal) kept aside while searching, for
   /// [KeepCachePolicy].
@@ -137,7 +134,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
-    _controller.addListener(_maybeAdvancePastEmptyPage);
+    _pager.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(_onRefresh);
   }
 
@@ -156,7 +153,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void dispose() {
     widget.controller?.detach();
     _debouncer.dispose();
-    _controller.dispose();
+    _pager.dispose();
     _searchModeNotifier.dispose();
 
     super.dispose();
@@ -258,10 +255,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// on arrival because the state can move between scheduling and running. The controller ignores a
   /// fetch while one is in flight or the list has ended, so the guard here only spares needless microtasks.
   void _maybeAdvancePastEmptyPage() {
-    if (!_shouldAdvancePastEmpty(_controller.value)) return;
+    if (!_shouldAdvancePastEmpty(_pager.value)) return;
 
     scheduleMicrotask(() {
-      if (mounted && _shouldAdvancePastEmpty(_controller.value)) _controller.fetchNextPage();
+      if (mounted && _shouldAdvancePastEmpty(_pager.value)) _pager.fetchNextPage();
     });
   }
 
@@ -302,11 +299,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void _applyCacheAction(CacheAction action) {
     switch ((action, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
-        _controller.value = snapshot.state;
+        _pager.value = snapshot.state;
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
       case (.snapshotThenRefresh, _):
-        _normalSnapshot = (state: _controller.value, signal: _lastPageSignal);
+        _normalSnapshot = (state: _pager.value, signal: _lastPageSignal);
         _resetPaging();
       case (.refresh, _) || (.restoreNormal, null):
         _resetPaging();
@@ -317,13 +314,13 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// stream fresh instead of reading the previous stream's last signal.
   void _resetPaging() {
     _lastPageSignal = null;
-    _controller.refresh();
+    _pager.refresh();
   }
 
   // --- ReloadContext<T>: the capability a Reload runs through on pull-to-refresh. ---
 
   @override
-  List<List<T>> get loadedPages => _controller.value.pages ?? [];
+  List<List<T>> get loadedPages => _pager.value.pages ?? [];
 
   @override
   bool get isSignalBased => switch (widget.source.search) {
@@ -342,7 +339,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final keys = [for (var index = 0; index < pages.length; index++) index];
     final probe = PagingState<int, T>(pages: pages, keys: keys);
 
-    _controller.value = PagingState<int, T>(
+    _pager.value = PagingState<int, T>(
       pages: pages,
       keys: keys,
       hasNextPage: _nextPageKey(probe) != null,
@@ -357,7 +354,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final surfaces = widget.surfaces;
 
     final list = PagingListener(
-      controller: _controller,
+      controller: _pager,
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
         builder: (context, isSearchMode, _) {
