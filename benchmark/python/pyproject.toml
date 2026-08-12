@@ -19,7 +19,7 @@ description = "Benchmark orchestration + analysis for list_smith."
 requires-python = ">=3.13"
 
 dependencies = [
-    "numpy>=1.26,<3.0",
+    "numpy>=2.5.2,<3.0",
     "scipy>=1.11,<2.0",
     # polars (Rust-backed) for analysis; converts to pandas only at the seaborn boundary.
     "polars>=1.43.2,<2.0",
