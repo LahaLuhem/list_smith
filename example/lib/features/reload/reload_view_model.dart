@@ -20,6 +20,10 @@ final class ReloadViewModel extends ViewModel {
   /// Per-page fetch count, stamped onto each item so reloads are visible; not reactive state.
   final _attempts = <int, int>{};
   final _injectFailures = ValueNotifier(false);
+  final _refreshing = ValueNotifier(false);
+
+  /// Drives the list from the "Refresh from code" button, running whatever [reload] describes.
+  final controller = ListSmithController();
 
   var _keepDepth = true;
   var _concurrency = 1;
@@ -34,6 +38,9 @@ final class ReloadViewModel extends ViewModel {
   /// Whether the next reload should fail one page (to exercise the error policy); read live by
   /// [fetchPage].
   ValueListenable<bool> get injectFailures => _injectFailures;
+
+  /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
+  ValueListenable<bool> get refreshing => _refreshing;
 
   /// The reload strategy the current knobs describe, handed to `PullToRefresh`.
   Reload get reload => _keepDepth
@@ -82,9 +89,23 @@ final class ReloadViewModel extends ViewModel {
   // ignore: use_setters_to_change_properties
   void onInjectFailuresToggled({required bool value}) => _injectFailures.value = value;
 
+  /// Refreshes without a pull, holding the button busy until `refresh()` completes: that is once the
+  /// refetch lands under [ReloadToCurrentDepth], but only once the list clears under
+  /// [ResetToFirstPage], where the list's own first-page loader takes over.
+  Future<void> onRefreshPressed() async {
+    _refreshing.value = true;
+
+    try {
+      await controller.refresh();
+    } finally {
+      if (!disposed) _refreshing.value = false;
+    }
+  }
+
   @override
   void dispose() {
     _injectFailures.dispose();
+    _refreshing.dispose();
 
     super.dispose();
   }
