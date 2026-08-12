@@ -38,6 +38,9 @@ hard rules once they exist.
   subset). The lint posture in `analysis_options.yaml` is deliberately strict: `strict-casts`,
   `strict-inference`, `strict-raw-types`, plus a long `errors:` block promoting many lints to
   errors. Pedantic mode is intentional, not negotiable.
+- **The `dart format` gate runs Flutter's Dart**, not standalone Dart stable, which runs ahead of it
+  and formats differently. Keep formatter checks on the Flutter toolchain, so what CI rejects is what
+  a local `dart format .` fixes. Why: [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
 - **`flutter_test`** for widget and unit tests.
 - **`dependency_validator`** guards the dependency set; `dart_dependency_validator.yaml` scopes
   it to the published surface and skips the example. It runs as a global tool
