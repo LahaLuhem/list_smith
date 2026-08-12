@@ -150,5 +150,30 @@ void main() {
       // Each item carries its per-page fetch stamp, "load #1" on the first load.
       check(find.textContaining('load #1').evaluate().length).isGreaterThan(0);
     });
+
+    scenarioWidgets('the reload demo refreshes from code, with no pull', (tester) async {
+      // The knob panel plus its button needs the taller surface to sit above the list unclipped.
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Reload'), 100);
+      await tester.tap(find.text('Reload'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      check(find.textContaining('load #1').evaluate().length).isGreaterThan(0);
+
+      await tester.tap(find.text('Refresh from code'));
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      // The button ran the pull's own reload (depth kept by default), so every page is re-stamped.
+      check(find.textContaining('load #2').evaluate().length).isGreaterThan(0);
+      check(find.textContaining('load #1').evaluate()).length.equals(0);
+    });
   });
 }

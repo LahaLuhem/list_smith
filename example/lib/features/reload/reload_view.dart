@@ -12,7 +12,8 @@ import 'reload_view_model.dart';
 
 /// Demonstrates the pull-to-refresh reload strategy. Scroll to load a few pages, then pull: with "Keep
 /// scroll depth" on, every loaded page is re-fetched in place (watch the "load #" stamp bump); off, the
-/// list resets to the first page. Inject a failure to see best-effort against all-or-nothing.
+/// list resets to the first page. Inject a failure to see best-effort against all-or-nothing. The
+/// button drives the same reload through a `ListSmithController`, with no gesture.
 class ReloadView extends StatelessWidget {
   const ReloadView({super.key});
 
@@ -35,7 +36,8 @@ class ReloadView extends StatelessWidget {
                   description:
                       'Scroll to load a few pages, then pull to refresh. "Keep scroll depth" re-fetches '
                       'every loaded page in place (the "load #" stamp bumps); off resets to the first '
-                      'page. Inject a failure to compare best-effort with all-or-nothing.',
+                      'page. Inject a failure to compare best-effort with all-or-nothing. The button '
+                      'runs the same reload without a pull, staying busy as long as refresh() takes.',
                 ),
                 BoolKnob(
                   label: 'Keep scroll depth',
@@ -64,6 +66,14 @@ class ReloadView extends StatelessWidget {
                   value: viewModel.atomic,
                   onChanged: (value) => viewModel.onAtomicToggled(value: value),
                 ),
+                ValueListenableBuilder(
+                  valueListenable: viewModel.refreshing,
+                  builder: (context, refreshing, _) => PlatformButton(
+                    onPressed: viewModel.onRefreshPressed,
+                    isEnabled: !refreshing,
+                    child: Text(refreshing ? 'Refreshing…' : 'Refresh from code'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -72,6 +82,7 @@ class ReloadView extends StatelessWidget {
               fetchPage: PageFetcher(viewModel.fetchPage),
               pageSize: 12,
               refresh: PullToRefresh(reload: viewModel.reload),
+              controller: viewModel.controller,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
