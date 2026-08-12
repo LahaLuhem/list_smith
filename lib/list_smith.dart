@@ -2,6 +2,7 @@
 /// pull-to-refresh.
 library;
 
+export 'src/data/control/models/list_smith_controller.dart';
 export 'src/data/grouping/models/grouping.dart' show Grouping, NoGrouping;
 export 'src/data/grouping/typedefs/group_header_builder.dart';
 export 'src/data/grouping/typedefs/group_key_of.dart';

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
@@ -19,8 +20,8 @@ import 'sync_list_view.dart';
 
 /// A developer-first list handling async pagination and pull-to-refresh, or sync in-memory search.
 ///
-/// Wraps `ListView.builder` and owns the scrollable and any controller, so consumers pass a data
-/// source, an [ItemBuilder], and config, never a `ListView` or a controller. Every visible surface
+/// Wraps `ListView.builder` and owns the scrollable and the pager, so consumers pass a data source,
+/// an [ItemBuilder], and config, never a `ListView` or the paging controller. Every visible surface
 /// has a neutral, widgets-layer default, so the list drops into a Material, Cupertino, or bespoke
 /// app without importing a look it never chose.
 ///
@@ -51,6 +52,10 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Optional lifecycle observer for the async list (page loads, errors, refresh, search), for
   /// logging or telemetry; null is silent. Async-only, like [surfaces]: `.sync` exposes no observer.
   final ListSmithObserver? observer;
+
+  /// Optional handle for refreshing the list from code; null leaves refresh gesture-only.
+  /// Async-only, like [observer]: an in-memory `.sync` list has nothing to reload.
+  final ListSmithController? controller;
 
   /// The current search query, owned and passed in by the consumer; trimmed and gated by
   /// [minSearchLength]. Drives sync filtering, and async search when a search fetcher is provided.
@@ -90,8 +95,9 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Pull-to-refresh is on by default; pass [NoRefresh] to [refresh] to switch it off, or a
   /// [PullToRefresh] with a `refreshBuilder` to restyle its indicator.
   /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
-  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry. [grouping]
-  /// optionally shows the items in sections (see [Grouping.by]).
+  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry, and
+  /// [controller] to refresh the list from code (a button, a tab re-tap) instead of only pulling.
+  /// [grouping] optionally shows the items in sections (see [Grouping.by]).
   ListSmith.async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
@@ -110,6 +116,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     this.emptyBuilder,
     this.noResultsBuilder,
     this.observer,
+    this.controller,
     this.separatorBuilder,
     super.key,
   }) : assert(
@@ -158,6 +165,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     super.key,
   }) : surfaces = const AsyncListSurfaces(),
        observer = null,
+       controller = null,
        grouping = grouping ?? NoGrouping<T>(),
        _source = SyncSource(items: items, searchBy: searchBy);
 
@@ -176,6 +184,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
       surfaces: surfaces,
       scroll: scroll,
       observer: observer,
+      controller: controller,
     ),
     final SyncSource<T> source => SyncListView<T>(
       source: source,

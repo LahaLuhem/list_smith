@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
+import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
@@ -17,6 +18,7 @@ import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/refresh/models/refresh.dart';
+import '/src/data/refresh/models/reload.dart';
 import '/src/data/refresh/models/reload_context.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
@@ -72,6 +74,9 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   /// Optional lifecycle observer for logging or telemetry; null is silent.
   final ListSmithObserver? observer;
 
+  /// Optional handle the consumer refreshes this list through; null leaves refresh gesture-only.
+  final ListSmithController? controller;
+
   /// Creates the async paged list around an [AsyncSource].
   const AsyncListView({
     required this.source,
@@ -86,6 +91,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
     this.emptyBuilder,
     this.noResultsBuilder,
     this.observer,
+    this.controller,
     super.key,
   });
 
@@ -121,6 +127,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
+  /// The refresh currently running, so a second trigger joins it instead of starting a rival reload
+  /// (the gesture can't double-fire, but a [ListSmithController] can). Null when none is in flight.
+  Future<void>? _refreshInFlight;
+
   @override
   void initState() {
     super.initState();
@@ -128,17 +138,23 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
     _controller.addListener(_maybeAdvancePastEmptyPage);
+    widget.controller?.attach(_onRefresh);
   }
 
   @override
   void didUpdateWidget(AsyncListView<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?.detach();
+      widget.controller?.attach(_onRefresh);
+    }
     if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
   }
 
   @override
   void dispose() {
+    widget.controller?.detach();
     _debouncer.dispose();
     _controller.dispose();
     _searchModeNotifier.dispose();
@@ -383,12 +399,18 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     };
   }
 
-  Future<void> _onRefresh() {
+  /// The one refresh entry point, gesture or programmatic: a [ListSmithController] attaches this.
+  Future<void> _onRefresh() =>
+      _refreshInFlight ??= _runRefresh().whenComplete(() => _refreshInFlight = null);
+
+  /// Announces the refresh, then runs the configured [Reload]. A `NoRefresh` list has no gesture but
+  /// is still refreshable from code, so it falls back to the pager's own reset.
+  Future<void> _runRefresh() {
     widget.observer?.onRefresh();
 
     return switch (widget.source.refresh) {
       PullToRefresh(:final reload) => reload.run(this),
-      NoRefresh() => Future<void>.value(),
+      NoRefresh() => const ResetToFirstPage().run(this),
     };
   }
 }
