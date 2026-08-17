@@ -2,6 +2,9 @@
 ### Added
 - \[#23\] Add ListSmithController to refresh an async list from code (a button, a tab re-tap)
 
+### Changed
+- Raise the SDK floor to Dart 3.13 / Flutter 3.47
+
 ## [0.1.1] - 2026-07-20
 ### Added
 - \[#28\] Add a depth-preserving pull-to-refresh strategy (ReloadToCurrentDepth)
