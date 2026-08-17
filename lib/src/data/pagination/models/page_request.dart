@@ -2,6 +2,8 @@
 /// @docImport 'pagination_end_policy.dart';
 library;
 
+import '../enums/fetch_trigger.dart';
+
 /// The inputs of one page fetch, handed to a [PageFetcher] as a single value.
 ///
 /// One object rather than a positional argument list, so a later fetch-time fact arrives as a field
@@ -17,6 +19,14 @@ base class PageRequest {
   /// fetcher that reports none (a plain [PageFetcher.new]). A cursor source reads its cursor here.
   final Object? previousSignal;
 
+  /// Why this page was asked for, so a caching repository can route the fetch.
+  final FetchTrigger trigger;
+
   /// Creates a request for the page at [pageIndex].
-  const new({required this.pageIndex, required this.pageSize, this.previousSignal});
+  const new({
+    required this.pageIndex,
+    required this.pageSize,
+    required this.trigger,
+    this.previousSignal,
+  });
 }
