@@ -18,7 +18,7 @@ final class EmptyPageContext {
   final int pagesLoaded;
 
   /// Creates a context over the current empty-page state.
-  const EmptyPageContext({
+  const new({
     required this.isEmpty,
     required this.moreAvailable,
     required this.pagesLoaded,

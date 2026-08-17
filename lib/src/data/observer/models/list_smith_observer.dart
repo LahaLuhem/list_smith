@@ -38,7 +38,7 @@ library;
 /// or hand off to async work.
 abstract base class ListSmithObserver {
   /// Const default constructor; subclasses are encouraged to be const.
-  const ListSmithObserver();
+  const new();
 
   /// Called after a page is fetched and materialised, before it is handed to the list.
   ///

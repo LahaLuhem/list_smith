@@ -6,7 +6,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 class CustomLoading extends StatelessWidget {
   final bool compact;
 
-  const CustomLoading({this.compact = false, super.key});
+  const new({this.compact = false, super.key});
 
   @override
   Widget build(BuildContext context) => compact

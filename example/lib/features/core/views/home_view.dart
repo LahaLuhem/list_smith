@@ -19,7 +19,7 @@ import 'home_view_model.dart';
 
 /// The landing hub: a tappable list of the individual `list_smith` demos.
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -101,7 +101,7 @@ class _DemoTile extends StatelessWidget {
   final String description;
   final WidgetBuilder pageBuilder;
 
-  const _DemoTile({
+  const new({
     required this.icon,
     required this.title,
     required this.description,

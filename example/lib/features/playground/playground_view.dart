@@ -14,7 +14,7 @@ import 'playground_view_model.dart';
 /// and the end policy are captured at construction, so the preview is keyed on them to force a fresh list.
 /// The rest update in place.
 class PlaygroundView extends StatelessWidget {
-  const PlaygroundView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(

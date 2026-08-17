@@ -23,7 +23,7 @@ class RefreshBinding extends StatelessWidget {
   final RefreshBuilder? refreshBuilder;
 
   /// Creates a pull-to-refresh binding around [child].
-  const RefreshBinding({
+  const new({
     required this.child,
     required this.onRefresh,
     this.refreshBuilder,

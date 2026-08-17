@@ -5,7 +5,7 @@ part of '../refresh.dart';
 /// Pass it to `.async`'s `refresh` to opt out; the default is [PullToRefresh].
 final class NoRefresh extends Refresh {
   /// Creates the no-refresh case.
-  const NoRefresh();
+  const new();
 
   @override
   String toString() => 'NoRefresh()';

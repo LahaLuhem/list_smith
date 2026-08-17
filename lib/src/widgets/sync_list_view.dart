@@ -55,7 +55,7 @@ class SyncListView<T extends Object> extends StatefulWidget {
   final ListScrollConfig scroll;
 
   /// Creates the sync search list around a [SyncSource].
-  const SyncListView({
+  const new({
     required this.source,
     required this.query,
     required this.minSearchLength,

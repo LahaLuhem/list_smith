@@ -21,7 +21,7 @@ part 'groupings/no_grouping.dart';
 /// constructor built the list; the two paths differ only in how they order items (see [Grouping.by]).
 sealed class Grouping<T extends Object> {
   /// Const base constructor for the sealed hierarchy.
-  const Grouping();
+  const new();
 
   /// Orders [items] into their display sequence. Called once per resolve, on the sync path only.
   ///

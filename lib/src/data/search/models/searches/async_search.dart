@@ -15,7 +15,7 @@ final class AsyncSearch<T extends Object> extends Search<T> {
   final SearchCachePolicy cachePolicy;
 
   /// Creates an async search over [fetchPage], with an optional [cachePolicy].
-  const AsyncSearch({required this.fetchPage, this.cachePolicy = const ReplaceCachePolicy()});
+  const new({required this.fetchPage, this.cachePolicy = const ReplaceCachePolicy()});
 
   @override
   String toString() => 'AsyncSearch(cachePolicy: $cachePolicy)';

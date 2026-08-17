@@ -16,5 +16,5 @@ part 'refreshes/pull_to_refresh.dart';
 /// refreshes, so no builder is ever left inert on a non-refreshing list.
 sealed class Refresh {
   /// Const base constructor for the sealed hierarchy.
-  const Refresh();
+  const new();
 }

@@ -20,7 +20,7 @@ const _listSizes = <int>[1000, 10000, 100000];
 const _groupCount = 8;
 
 final class _BucketByGroupScaling extends BenchmarkBase {
-  _BucketByGroupScaling(this.listSize) : super('bucket_by_group_scaling_n$listSize');
+  new(this.listSize) : super('bucket_by_group_scaling_n$listSize');
 
   final int listSize;
   late final List<int> _items;

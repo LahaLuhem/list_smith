@@ -9,7 +9,7 @@ part of '../search_cache_policy.dart';
 /// the user was.
 final class KeepCachePolicy extends SearchCachePolicy {
   /// Creates a policy that keeps and restores the normal-mode list.
-  const KeepCachePolicy();
+  const new();
 
   @override
   String toString() => 'KeepCachePolicy()';

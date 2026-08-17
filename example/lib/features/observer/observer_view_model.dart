@@ -75,7 +75,7 @@ final class ObserverViewModel extends ViewModel {
 final class _EventLogObserver extends ListSmithObserver {
   final void Function(String event) _record;
 
-  _EventLogObserver(this._record);
+  new(this._record);
 
   @override
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) =>

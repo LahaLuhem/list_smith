@@ -17,7 +17,7 @@ class ListSmithRefreshState {
   final double value;
 
   /// Creates a refresh state for the given [phase] and pull [value].
-  const ListSmithRefreshState({required this.phase, required this.value});
+  const new({required this.phase, required this.value});
 
   @override
   String toString() => 'ListSmithRefreshState(phase: $phase, value: $value)';

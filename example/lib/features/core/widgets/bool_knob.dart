@@ -7,7 +7,7 @@ class BoolKnob extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const BoolKnob({required this.label, required this.value, required this.onChanged, super.key});
+  const new({required this.label, required this.value, required this.onChanged, super.key});
 
   @override
   Widget build(BuildContext context) => Row(

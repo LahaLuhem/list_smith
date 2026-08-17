@@ -27,7 +27,7 @@ const _itemsPerPage = 20;
 
 /// Re-de-dup every loaded page and re-wrap, mirroring `filterItems` + `copyWith`.
 final class _DedupScaling extends BenchmarkBase {
-  _DedupScaling(this.itemCount) : super('dedup_scaling_n$itemCount');
+  new(this.itemCount) : super('dedup_scaling_n$itemCount');
 
   final int itemCount;
   late final List<List<_Item>> _pages;
@@ -57,7 +57,7 @@ final class _DedupScaling extends BenchmarkBase {
 
 /// A reference-identity item keyed by [id], the shape `itemId` de-dups (fresh objects, no `==`).
 final class _Item {
-  const _Item(this.id);
+  const new(this.id);
 
   final int id;
 }

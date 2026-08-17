@@ -65,7 +65,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   final WidgetBuilder? noMoreItemsBuilder;
 
   /// Creates the paged view around the current [state].
-  const PagedView({
+  const new({
     required this.state,
     required this.fetchNextPage,
     required this.itemBuilder,
@@ -157,7 +157,7 @@ class _ResolvedError extends StatelessWidget {
   final ErrorBuilder? builder;
   final bool compact;
 
-  const _ResolvedError({
+  const new({
     required this.error,
     required this.onRetry,
     this.builder,

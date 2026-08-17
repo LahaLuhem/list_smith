@@ -8,7 +8,7 @@ part of '../search_cache_policy.dart';
 /// list should reflect anything that changed while searching.
 final class ReplaceCachePolicy extends SearchCachePolicy {
   /// Creates the default replace policy.
-  const ReplaceCachePolicy();
+  const new();
 
   @override
   String toString() => 'ReplaceCachePolicy()';

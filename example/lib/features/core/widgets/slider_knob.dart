@@ -13,7 +13,7 @@ class SliderKnob extends StatelessWidget {
 
   final ValueChanged<double> onChanged;
 
-  const SliderKnob({
+  const new({
     required this.label,
     required this.valueText,
     required this.value,

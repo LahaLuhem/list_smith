@@ -12,7 +12,7 @@ import 'async_search_view_model.dart';
 /// Async two-view search with `ListSmith.async`: a paginated feed that switches to paginated search
 /// results and back, with a live `SearchCachePolicy` toggle (Keep vs the default Replace).
 class AsyncSearchView extends StatelessWidget {
-  const AsyncSearchView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -70,7 +70,7 @@ class _KeepCacheToggle extends StatelessWidget {
   final ValueListenable<bool> keepCache;
   final ValueChanged<bool> onChanged;
 
-  const _KeepCacheToggle({required this.keepCache, required this.onChanged});
+  const new({required this.keepCache, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(

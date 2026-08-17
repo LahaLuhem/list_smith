@@ -14,7 +14,7 @@ class EventLogPanel extends StatelessWidget {
   /// Empties the log.
   final VoidCallback onClear;
 
-  const EventLogPanel({required this.events, required this.onClear, super.key});
+  const new({required this.events, required this.onClear, super.key});
 
   @override
   Widget build(BuildContext context) => SizedBox(

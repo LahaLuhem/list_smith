@@ -15,7 +15,7 @@ final class SyncSource<T extends Object> extends ListSource<T> {
   final SyncSearchPredicate<T> searchBy;
 
   /// Bundles the in-memory search configuration built from the `.sync` constructor.
-  const SyncSource({required this.items, required this.searchBy});
+  const new({required this.items, required this.searchBy});
 
   @override
   String toString() => 'SyncSource()';

@@ -9,7 +9,7 @@ class DemoItem {
   final String title;
   final String subtitle;
 
-  const DemoItem({required this.id, required this.title, required this.subtitle});
+  const new({required this.id, required this.title, required this.subtitle});
 
   /// Whether this item matches [query] (case-insensitive substring of [title]). Used by the async
   /// search fetch and the grouping demo. The sync search demo instead builds its predicate with

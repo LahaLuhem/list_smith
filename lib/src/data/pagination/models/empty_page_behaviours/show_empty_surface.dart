@@ -8,7 +8,7 @@ part of '../empty_page_behaviour.dart';
 /// the first page with items instead.
 final class ShowEmptySurface extends EmptyPageBehaviour {
   /// Creates the show-empty-surface behaviour (the default).
-  const ShowEmptySurface();
+  const new();
 
   @override
   bool shouldAdvance(EmptyPageContext context) => false;

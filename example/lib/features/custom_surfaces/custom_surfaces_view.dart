@@ -16,7 +16,7 @@ import 'widgets/custom_refresh.dart';
 /// Demonstrates replacing every neutral surface with a platform-adaptive one,
 /// and (via the failure toggle) the error + retry path.
 class CustomSurfacesView extends StatelessWidget {
-  const CustomSurfacesView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -70,7 +70,7 @@ class _FailureToggle extends StatelessWidget {
   final ValueListenable<bool> injectFailures;
   final ValueChanged<bool> onChanged;
 
-  const _FailureToggle({required this.injectFailures, required this.onChanged});
+  const new({required this.injectFailures, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(

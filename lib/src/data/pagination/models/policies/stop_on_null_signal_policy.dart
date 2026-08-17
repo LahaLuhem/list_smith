@@ -9,7 +9,7 @@ part of '../pagination_end_policy.dart';
 /// guard is [EndContext.pageCount] `> 0`.
 final class StopOnNullSignalPolicy extends PaginationEndPolicy {
   /// Creates a policy that ends when a page's fetcher returns a `null` signal (e.g. a null cursor).
-  const StopOnNullSignalPolicy();
+  const new();
 
   @override
   bool hasReachedEnd(EndContext context) => context.pageCount > 0 && context.lastPageSignal == null;

@@ -34,7 +34,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   final int index;
 
   /// Creates a grouped item cell.
-  const GroupedItem({
+  const new({
     required this.itemBuilder,
     required this.groupOf,
     required this.headerFor,

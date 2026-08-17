@@ -20,7 +20,7 @@ final class EndContext {
   final Object? lastPageSignal;
 
   /// Creates a context over the [pageItemCounts] seen so far and the list's [pageSize].
-  const EndContext({required this.pageItemCounts, required this.pageSize, this.lastPageSignal});
+  const new({required this.pageItemCounts, required this.pageSize, this.lastPageSignal});
 
   /// The number of pages fetched so far.
   int get pageCount => pageItemCounts.length;

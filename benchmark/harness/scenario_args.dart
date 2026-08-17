@@ -27,7 +27,7 @@ final class ScenarioArgs {
   /// Wall-clock seconds a long-running scenario should run; micro-benchmarks ignore this.
   final int durationSeconds;
 
-  const ScenarioArgs._({
+  const new _({
     required this.iterations,
     required this.outputPath,
     required this.gitSha,
@@ -37,7 +37,7 @@ final class ScenarioArgs {
 
   /// Parses the standard flags from [argv], exiting with a non-zero code on failure (benchmarks are
   /// non-interactive, so a thrown exception would have no handler).
-  factory ScenarioArgs.parse(List<String> argv) {
+  factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {
       final arg = argv[i];

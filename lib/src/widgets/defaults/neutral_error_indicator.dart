@@ -27,7 +27,7 @@ class NeutralErrorIndicator extends StatelessWidget {
   final bool compact;
 
   /// Creates the neutral error surface for [error], wiring retry to [onRetry].
-  const NeutralErrorIndicator({
+  const new({
     required this.error,
     required this.onRetry,
     this.compact = false,

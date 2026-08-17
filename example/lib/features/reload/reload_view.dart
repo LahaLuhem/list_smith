@@ -15,7 +15,7 @@ import 'reload_view_model.dart';
 /// list resets to the first page. Inject a failure to see best-effort against all-or-nothing. The
 /// button drives the same reload through a `ListSmithController`, with no gesture.
 class ReloadView extends StatelessWidget {
-  const ReloadView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(

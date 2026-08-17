@@ -14,7 +14,7 @@ import 'widgets/event_log_panel.dart';
 /// query-committed, mode change) streams into a live log below the list. Scroll to page, pull to
 /// refresh, search, or flip "Inject failures" to make each event fire.
 class ObserverView extends StatelessWidget {
-  const ObserverView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -68,7 +68,7 @@ class _InjectFailureToggle extends StatelessWidget {
   final ValueListenable<bool> shouldInjectFailures;
   final ValueChanged<bool> onChanged;
 
-  const _InjectFailureToggle({required this.shouldInjectFailures, required this.onChanged});
+  const new({required this.shouldInjectFailures, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(

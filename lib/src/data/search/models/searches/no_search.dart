@@ -7,7 +7,7 @@ part of '../search.dart';
 /// `Search<T>`.
 final class NoSearch extends Search<Never> {
   /// Creates the no-search default.
-  const NoSearch();
+  const new();
 
   @override
   String toString() => 'NoSearch()';

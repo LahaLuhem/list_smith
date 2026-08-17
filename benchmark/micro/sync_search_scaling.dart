@@ -18,7 +18,7 @@ import '../harness/scenario_args.dart';
 const _listSizes = <int>[1000, 10000, 100000];
 
 final class _SyncSearchScaling extends BenchmarkBase {
-  _SyncSearchScaling(this.listSize) : super('sync_search_scaling_n$listSize');
+  new(this.listSize) : super('sync_search_scaling_n$listSize');
 
   final int listSize;
   late final List<String> _items;

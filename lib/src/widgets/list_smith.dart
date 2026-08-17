@@ -98,7 +98,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry, and
   /// [controller] to refresh the list from code (a button, a tab re-tap) instead of only pulling.
   /// [grouping] optionally shows the items in sections (see [Grouping.by]).
-  ListSmith.async({
+  new async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
     int pageSize = 20,
@@ -150,7 +150,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// default). [emptyBuilder] shows when [items] is empty and [noResultsBuilder] when a search
   /// matches nothing; both fall back to neutral defaults. [grouping] optionally shows the items in
   /// sections (see [Grouping.by]).
-  ListSmith.sync({
+  new sync({
     required Iterable<T> items,
     required SyncSearchPredicate<T> searchBy,
     required this.itemBuilder,

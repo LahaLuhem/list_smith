@@ -10,7 +10,7 @@ import 'package:list_smith/list_smith.dart';
 /// [sleep] (`dart:io`), pausing the event loop exactly as a slow synchronous callback would. Mirrors
 /// `better_internet_connectivity_checker`'s `SlowObserver`.
 final class SlowListSmithObserver extends ListSmithObserver {
-  SlowListSmithObserver({this.delay = const Duration(milliseconds: 50)});
+  new({this.delay = const Duration(milliseconds: 50)});
 
   final Duration delay;
   final callCounts = <String, int>{};

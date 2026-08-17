@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 /// A minimal frame giving a pumped list a [Directionality], a [MediaQuery], and bounded constraints,
 /// so a scenario can host a `ListSmith` without a full app shell.
 class HostFrame extends StatelessWidget {
-  const HostFrame({required this.child, super.key});
+  const new({required this.child, super.key});
 
   final Widget child;
 

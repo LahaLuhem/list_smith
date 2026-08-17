@@ -8,7 +8,7 @@ import '/src/utils/neutral_theme.dart';
 /// consumers override the empty builder to customise it.
 class NeutralEmptyIndicator extends StatelessWidget {
   /// Creates the neutral empty-state surface.
-  const NeutralEmptyIndicator({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => Center(

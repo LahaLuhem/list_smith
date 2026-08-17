@@ -21,7 +21,7 @@ final class ReloadToCurrentDepth extends Reload {
   final ReloadOnError onError;
 
   /// Creates a reload-to-current-depth strategy.
-  const ReloadToCurrentDepth({this.concurrency = 1, this.onError = .commitSucceeded})
+  const new({this.concurrency = 1, this.onError = .commitSucceeded})
     : assert(concurrency == null || concurrency > 0, 'concurrency must be positive or null.');
 
   @override
