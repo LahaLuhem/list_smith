@@ -107,6 +107,35 @@ ListSmith.async(
 )
 ```
 
+### Knowing why a page was fetched
+
+Your `fetchPage` gets called for more than one reason, and a repository that caches usually wants to
+treat them differently: serving a pull-to-refresh out of the cache rather defeats the pull.
+`request.trigger` says which it was.
+
+| `FetchTrigger` | What happened                                                        |
+|----------------|----------------------------------------------------------------------|
+| `initialLoad`  | the first page of a cold list                                        |
+| `nextPage`     | the user neared the end, so the next page was asked for              |
+| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                |
+| `retry`        | this page's last attempt threw, and Retry was tapped                 |
+| `queryChanged` | a committed search query changed, entering or leaving search included |
+
+```dart
+fetchPage: PageFetcher((request) => repo.load(
+  request.pageIndex,
+  request.pageSize,
+  forceRefresh: switch (request.trigger) {
+    FetchTrigger.refresh || FetchTrigger.retry => true,
+    FetchTrigger.initialLoad || FetchTrigger.nextPage || FetchTrigger.queryChanged => false,
+  },
+)),
+```
+
+It reports the fact and stops there. Whether that means bypassing your cache, revalidating, or
+serving stale while you refetch is yours to decide. `refresh` covers the gesture and the controller
+alike, since the controller reloads exactly as a pull does.
+
 ### Deciding where the data ends
 
 An empty page meaning "the end" is the sensible default (a calendar feed can even have an empty day

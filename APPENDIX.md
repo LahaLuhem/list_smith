@@ -24,6 +24,7 @@ anchors stable across renames. A decision log, appended as decisions land.
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
 - [A narrow controller: intents out, nothing back](#controller-handle)
 - [Fetchers take a request object, not an argument list](#page-request-object)
+- [Fetchers are told why they were called](#fetch-trigger)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind six aggregate checks](#dependabot-automerge)
 
@@ -492,6 +493,40 @@ anchors stable across renames. A decision log, appended as decisions land.
   `'cursor$pageIndex'` into `'cursor$request.pageIndex'`, interpolating the request and appending a
   literal `.pageIndex`. Analyzer clean, tests green, value wrong: the cursor was only ever checked
   for null in that scenario. Grep for `$request.` after any such rename.
+
+---
+
+<a id="fetch-trigger"></a>
+## Fetchers are told why they were called
+
+- **Decision (issue #45, step 2):** every `PageRequest` carries a `FetchTrigger`: `initialLoad`,
+  `nextPage`, `refresh`, `retry`, `queryChanged`. A caching repository can now bypass its cache for
+  a pull-to-refresh, which the single fetch lane made impossible.
+- **A fact, not an instruction.** Rejected a `shouldBypassCache` bool: this package can't know whether
+  the right answer is bypass, revalidate, or stale-while-revalidate, and a bool can't hold a
+  five-valued fact without silently relabelling whatever is added later. Also rejected a second
+  `onBypassCacheFetchPage`, which needs a mirror on `AsyncSearch`, has nothing keeping the two
+  agreeing on paging semantics, and would be called for every page of a `ReloadToCurrentDepth` anyway.
+- **Plain enum.** The one candidate for per-value config is "does this restart the cursor chain", and
+  both reset paths already funnel through `_resetPaging()`, so attaching it would restate what that
+  helper enforces. Trip-wire: the first trigger needing that reset elsewhere earns an enhanced-enum
+  field.
+- **A one-shot latch, because the default reload doesn't fetch through itself.**
+  `PagingController.refresh()` only resets state; the view drives the re-fetch later. So `_resetPaging`
+  latches the trigger and the next fetch consumes it, leaving the page after that derived again. A
+  flag scoped to the refresh call would be cleared before page 0 was even requested.
+  `ReloadToCurrentDepth` fetches through `ReloadContext.fetch` instead, so the engine settles
+  `.refresh` inside its own implementation and the seam keeps its signature: no `Reload` has a reason
+  to report anything else.
+- **`retry` costs a field, and the alternative is a lie.** ISP clears `error` before re-invoking the
+  fetch and wires Retry to the same callback as scroll, so it isn't derivable from paging state. One
+  `_lastFailedPageIndex`, cleared on success and on restart. Without it a retry reports `nextPage` and
+  the repository serves the cached miss that just failed; `queryChanged` is its own value for the same
+  reason rather than folded into `initialLoad`.
+- **`restoreNormal` latches nothing**, since it restores without fetching and a latch would leak into
+  whatever the user did next. It still drops the retry marker, or a failed search page could mark the
+  restored list's next page as a retry. `commit()` needs neither: a reload commits exactly `depth`
+  pages, so the next fetch is `depth` and can't collide with a lower failed index.
 
 ---
 

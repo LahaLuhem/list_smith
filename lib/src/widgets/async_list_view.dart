@@ -11,9 +11,11 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
+import '/src/data/pagination/enums/fetch_trigger.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/pagination/models/page_request.dart';
+import '/src/data/pagination/utils/fetch_trigger_resolver.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -120,6 +122,14 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// items, but the post-await writes below are ours, so they need their own check.
   var _generation = 0;
 
+  /// The trigger the next paging-controller fetch reports, latched by a reset because the re-fetch it
+  /// causes arrives later, from the view. One-shot, so the page after it is derived again.
+  FetchTrigger? _pendingTrigger;
+
+  /// The page whose last attempt threw, so its re-fetch reports [FetchTrigger.retry]. Not derivable
+  /// from paging state: ISP clears `error` before re-invoking the fetch.
+  int? _lastFailedPageIndex;
+
   /// Memo for [_dedupedForDisplay]: the last raw state seen paired with the view derived from it, or
   /// null before the first de-dup. Keyed on paging-state identity; the controller hands out the same
   /// [PagingState] instance until the data changes, so a rebuild that leaves it untouched (an ancestor
@@ -167,22 +177,32 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
+  /// The paging controller's fetch: consumes any latched trigger, then threads the signal forward.
   Future<List<T>> _fetchPage(int pageKey) async {
     final generation = _generation;
-    final (items, signal) = await _fetchPageRaw(pageKey, _lastPageSignal);
+    final trigger = resolveTrigger(
+      pageIndex: pageKey,
+      pending: _pendingTrigger,
+      lastFailedPageIndex: _lastFailedPageIndex,
+    );
+    _pendingTrigger = null;
+
+    final (items, signal) = await _fetchPageRaw(pageKey, _lastPageSignal, trigger);
     if (generation == _generation) _lastPageSignal = signal;
 
     return items;
   }
 
-  /// Fetches one page in the current mode (normal or search), announces it if it is still current, and
-  /// returns the page's items and end signal without touching [_lastPageSignal]: the caller threads
-  /// signals. The paging controller's [_fetchPage] threads forward; a reload threads its own and commits
-  /// the final signal via [commit].
+  /// Fetches one page in the current mode (normal or search), leaving [_lastPageSignal] to the caller:
+  /// [_fetchPage] threads it forward, a reload threads its own and commits via [commit].
   ///
-  /// A page superseded mid-flight fires no `onPageLoaded`, since the list drops it. An error still
-  /// fires `onError`: the request did fail, and that is worth reporting whether or not anyone waited.
-  Future<(List<T>, Object?)> _fetchPageRaw(int pageKey, Object? previousSignal) async {
+  /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
+  /// error still fires `onError`: the request did fail, whoever was waiting.
+  Future<(List<T>, Object?)> _fetchPageRaw(
+    int pageKey,
+    Object? previousSignal,
+    FetchTrigger trigger,
+  ) async {
     final generation = _generation;
     final source = widget.source;
     final search = source.search;
@@ -196,6 +216,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
             query: committedQuery,
             pageIndex: pageKey,
             pageSize: source.pageSize,
+            trigger: trigger,
             previousSignal: previousSignal,
           ),
         ),
@@ -203,17 +224,20 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
           PageRequest(
             pageIndex: pageKey,
             pageSize: source.pageSize,
+            trigger: trigger,
             previousSignal: previousSignal,
           ),
         ),
       };
       final pageItems = items.toList(growable: false);
       if (generation == _generation) {
+        _lastFailedPageIndex = null;
         widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
       }
 
       return (pageItems, signal);
     } on Object catch (error, stackTrace) {
+      if (generation == _generation) _lastFailedPageIndex = pageKey;
       widget.observer?.onError(error, stackTrace);
 
       rethrow;
@@ -319,22 +343,26 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void _applyCacheAction(CacheAction action) {
     switch ((action, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
+        // No fetch here, so no trigger to latch: the next one is whatever the user does next.
         _generation++;
+        _lastFailedPageIndex = null;
         _pager.value = snapshot.state;
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
       case (.snapshotThenRefresh, _):
         _normalSnapshot = (state: _pager.value, signal: _lastPageSignal);
-        _resetPaging();
+        _resetPaging(.queryChanged);
       case (.refresh, _) || (.restoreNormal, null):
-        _resetPaging();
+        _resetPaging(.queryChanged);
     }
   }
 
-  /// Refreshes the controller and clears the end signal, so a signal-based policy starts the reloaded
-  /// stream fresh instead of reading the previous stream's last signal.
-  void _resetPaging() {
+  /// Restarts the stream: invalidates in-flight writes, latches [nextTrigger] for the re-fetch this
+  /// drives, and clears the end signal so a signal policy can't read the old stream's last one.
+  void _resetPaging(FetchTrigger nextTrigger) {
     _generation++;
+    _lastFailedPageIndex = null;
+    _pendingTrigger = nextTrigger;
     _lastPageSignal = null;
     _pager.refresh();
   }
@@ -351,9 +379,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.reportsSignal,
   };
 
+  // Every fetch through this seam is part of a reload, so no Reload needs to report the trigger.
   @override
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) =>
-      _fetchPageRaw(index, previousSignal);
+      _fetchPageRaw(index, previousSignal, .refresh);
 
   @override
   void commit(List<List<T>> pages, {Object? lastSignal}) {
@@ -370,7 +399,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   }
 
   @override
-  void reset() => _resetPaging();
+  void reset() => _resetPaging(.refresh);
 
   @override
   Widget build(BuildContext context) {

@@ -17,6 +17,7 @@ final class SearchPageRequest extends PageRequest {
     required this.query,
     required super.pageIndex,
     required super.pageSize,
+    required super.trigger,
     super.previousSignal,
   });
 }
