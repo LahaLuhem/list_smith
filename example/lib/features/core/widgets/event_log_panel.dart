@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A fixed-height panel showing the observer's recorded events, newest first, with a clear button.
+/// A fixed-height panel showing a demo's recorded events, newest first, with a clear button.
 ///
 /// Deliberately a plain widgets-layer surface (like list_smith's own defaults) so it reads under both
 /// the Material and Cupertino shells; only the header's clear button borrows a platform control.
