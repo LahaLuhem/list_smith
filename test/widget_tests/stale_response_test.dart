@@ -85,6 +85,87 @@ void main() {
       );
       check(pageOneLoads.toList()).length.equals(1);
     });
+
+    scenarioWidgets('a page superseded by a depth-reload commit stays silent', (tester) async {
+      final hold = Completer<void>();
+      final observer = RecordingListSmithObserver();
+      final controller = ListSmithController();
+      // Page 2 is fetched once, while pages 0 and 1 are already in, so holding it by index is enough:
+      // the reload only re-fetches the pages that landed.
+      final fetchPage = PageFetcher<int>((request) async {
+        final pageIndex = request.pageIndex;
+        if (pageIndex == 2) await hold.future;
+
+        return [pageIndex * 3, pageIndex * 3 + 1, pageIndex * 3 + 2];
+      });
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: fetchPage,
+          controller: controller,
+          observer: observer,
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 12);
+
+      // Premise: pages 0 and 1 are in and page 2 is in flight, so the reload's depth is 2.
+      check(observer.events.where((event) => event.startsWith('pageLoaded')).toList()).length
+          .equals(2);
+
+      await controller.refresh();
+      await drain(tester, frames: 16);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester);
+
+      // commit() bumped the generation, so page 2's late arrival announces nothing. Its *items* still
+      // land on top of the commit; that half is #36, and this guard is not a fix for it.
+      check(observer.events.where((event) => event.startsWith('pageLoaded(index: 2,'))).isEmpty();
+    });
+
+    scenarioWidgets('a search page superseded by a KeepCache restore stays silent', (tester) async {
+      final hold = Completer<void>();
+      final observer = RecordingListSmithObserver();
+      final searchFetchPage = SearchPageFetcher<int>((request) async {
+        await hold.future;
+
+        return const [99];
+      });
+
+      Widget build(String query) => ListSmith.async(
+        fetchPage: PageFetcher(
+          (request) async => [request.pageIndex * 3, request.pageIndex * 3 + 1],
+        ),
+        search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
+        query: query,
+        searchDebounce: const Duration(milliseconds: 20),
+        refresh: const NoRefresh(),
+        observer: observer,
+        itemBuilder: (_, item, _) => Text('item $item'),
+      );
+
+      await pumpListSmith(tester, build(''));
+      await settle(tester);
+
+      // Enter search: the normal list is snapshotted and the search's first page is left in flight.
+      await pumpListSmith(tester, build('x'));
+      await settle(tester);
+
+      // Leave search again, restoring the snapshot while that search page is still out there.
+      await pumpListSmith(tester, build(''));
+      await settle(tester);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester);
+
+      // The restore bumped the generation, so the abandoned search page announces nothing.
+      check(observer.events.where((event) => event.contains('search: true'))).isEmpty();
+    });
   });
 }
 
