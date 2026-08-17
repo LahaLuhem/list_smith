@@ -30,15 +30,19 @@ final class ObserverViewModel extends ViewModel {
   /// The recorded observer events, newest first.
   ValueListenable<List<String>> get eventsListenable => _events;
 
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
-    final page = await _repository.fetchPage(pageIndex, pageSize);
+  Future<List<DemoItem>> fetchPage(PageRequest request) async {
+    final page = await _repository.fetchPage(request.pageIndex, request.pageSize);
     if (_shouldInjectFailuresNotifier.value) throw Exception('Simulated network failure');
 
     return page;
   }
 
-  Future<List<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) async {
-    final page = await _repository.searchFetchPage(query, pageIndex, pageSize);
+  Future<List<DemoItem>> searchFetchPage(SearchPageRequest request) async {
+    final page = await _repository.searchFetchPage(
+      request.query,
+      request.pageIndex,
+      request.pageSize,
+    );
     if (_shouldInjectFailuresNotifier.value) throw Exception('Simulated network failure');
 
     return page;

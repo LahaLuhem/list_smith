@@ -13,6 +13,7 @@ import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
+import '/src/data/pagination/models/page_request.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -23,6 +24,7 @@ import '/src/data/refresh/models/reload_context.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
 import '/src/data/search/models/search.dart';
+import '/src/data/search/models/search_page_request.dart';
 import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
 import 'defaults/neutral_loading_indicator.dart';
@@ -190,13 +192,20 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     try {
       final (items, signal) = switch (search) {
         final AsyncSearch<T> s when isSearchMode => await s.fetchPage(
-          committedQuery,
-          pageKey,
-          source.pageSize,
-          previousSignal,
+          SearchPageRequest(
+            query: committedQuery,
+            pageIndex: pageKey,
+            pageSize: source.pageSize,
+            previousSignal: previousSignal,
+          ),
         ),
-        AsyncSearch<T>() ||
-        NoSearch() => await source.fetchPage(pageKey, source.pageSize, previousSignal),
+        AsyncSearch<T>() || NoSearch() => await source.fetchPage(
+          PageRequest(
+            pageIndex: pageKey,
+            pageSize: source.pageSize,
+            previousSignal: previousSignal,
+          ),
+        ),
       };
       final pageItems = items.toList(growable: false);
       if (generation == _generation) {

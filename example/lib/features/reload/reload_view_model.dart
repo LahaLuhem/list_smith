@@ -50,7 +50,9 @@ final class ReloadViewModel extends ViewModel {
         )
       : const ResetToFirstPage();
 
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
+  Future<List<DemoItem>> fetchPage(PageRequest request) async {
+    final PageRequest(:pageIndex, :pageSize) = request;
+
     await Future<void>.delayed(_latency);
 
     final attempt = _attempts[pageIndex] = (_attempts[pageIndex] ?? 0) + 1;

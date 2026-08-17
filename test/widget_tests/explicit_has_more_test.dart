@@ -10,7 +10,7 @@ void main() {
     scenarioWidgets('asserts when paired with a plain (non-signal) fetcher', (tester) async {
       expect(
         () => ListSmith.async(
-          fetchPage: PageFetcher((_, _) async => const <int>[]),
+          fetchPage: PageFetcher((_) async => const <int>[]),
           endPolicy: const ExplicitHasMorePolicy(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -26,11 +26,13 @@ void main() {
         [1, 2, 3],
         [4, 5, 6],
       ];
-      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _, _) async {
-        requested.add(pageIndex);
-        final items = pageIndex < dataPages.length ? dataPages[pageIndex] : const <int>[];
+      final fetchPage = PageFetcher<int>.withSignal((request) async {
+        requested.add(request.pageIndex);
+        final items = request.pageIndex < dataPages.length
+            ? dataPages[request.pageIndex]
+            : const <int>[];
 
-        return (items, pageIndex < dataPages.length - 1);
+        return (items, request.pageIndex < dataPages.length - 1);
       });
 
       await pumpListSmith(
@@ -51,8 +53,8 @@ void main() {
 
     scenarioWidgets('shows the no-more footer once the fetcher reports the end', (tester) async {
       final fetchPage = PageFetcher<int>.withSignal(
-        (pageIndex, _, _) async =>
-            pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
+        (request) async =>
+            request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
       );
 
       await pumpListSmith(
@@ -73,9 +75,9 @@ void main() {
     const item99Key = 'item 99';
 
     scenarioWidgets('the signal governs the search stream too', (tester) async {
-      final fetchPage = PageFetcher<int>.withSignal((_, _, _) async => (const [1, 2, 3], true));
+      final fetchPage = PageFetcher<int>.withSignal((_) async => (const [1, 2, 3], true));
       final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (_, pageIndex, _, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
+        (request) async => request.pageIndex == 0 ? (const [99], false) : (const <int>[], false),
       );
 
       await pumpListSmith(
@@ -101,11 +103,11 @@ void main() {
       tester,
     ) async {
       final fetchPage = PageFetcher<int>.withSignal(
-        (pageIndex, _, _) async =>
-            pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
+        (request) async =>
+            request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
       );
       final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (_, pageIndex, _, _) async => pageIndex == 0 ? (const [99], false) : (const <int>[], false),
+        (request) async => request.pageIndex == 0 ? (const [99], false) : (const <int>[], false),
       );
 
       Widget build(String query) => ListSmith.async(
@@ -137,10 +139,10 @@ void main() {
 
     scenarioWidgets('pull-to-refresh re-enables pagination after the end', (tester) async {
       var firstPageFetches = 0;
-      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _, _) async {
-        if (pageIndex == 0) firstPageFetches++;
+      final fetchPage = PageFetcher<int>.withSignal((request) async {
+        if (request.pageIndex == 0) firstPageFetches++;
 
-        return pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false);
+        return request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false);
       });
 
       await pumpListSmith(

@@ -14,13 +14,10 @@ void main() {
     ) async {
       final received = <({String query, Object? cursor})>[];
       final holds = {'a:1': Completer<void>(), 'ab:0': Completer<void>()};
-      final searchFetchPage = SearchPageFetcher<int>.withSignal((
-        query,
-        pageIndex,
-        _,
-        previousCursor,
-      ) async {
-        received.add((query: query, cursor: previousCursor));
+      final searchFetchPage = SearchPageFetcher<int>.withSignal((request) async {
+        final SearchPageRequest(:query, :pageIndex, :previousSignal) = request;
+
+        received.add((query: query, cursor: previousSignal));
         await holds['$query:$pageIndex']?.future;
 
         return (const [1, 2, 3], '$query:$pageIndex');
@@ -54,8 +51,10 @@ void main() {
       var calls = 0;
       final hold = Completer<void>();
       // Holds the second fetch, page 1 of the pre-refresh stream, so it lands after the reload.
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
+      final fetchPage = PageFetcher<int>((request) async {
         if (calls++ == 1) await hold.future;
+
+        final pageIndex = request.pageIndex;
 
         return pageIndex < 2 ? [pageIndex * 3 + 1, pageIndex * 3 + 2] : const <int>[];
       });
@@ -98,7 +97,7 @@ Future<void> _pumpSearch(
 }) => pumpListSmith(
   tester,
   ListSmith.async(
-    fetchPage: PageFetcher.withSignal((_, _, _) async => (const [0], null)),
+    fetchPage: PageFetcher.withSignal((_) async => (const [0], null)),
     search: AsyncSearch(fetchPage: searchFetchPage),
     query: query,
     searchDebounce: const Duration(milliseconds: 20),

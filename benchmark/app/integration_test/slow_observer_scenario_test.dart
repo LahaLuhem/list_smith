@@ -57,9 +57,11 @@ void main() {
         final stopwatch = Stopwatch()..start();
         int? dataReadyMicros;
 
-        Future<List<int>> fetchPage(int pageIndex, int pageSize) async {
+        Future<List<int>> fetchPage(PageRequest request) async {
           // Stamp when the page's data is ready, BEFORE list_smith fires the (slow) observer.
           dataReadyMicros ??= stopwatch.elapsedMicroseconds;
+
+          final PageRequest(:pageIndex, :pageSize) = request;
 
           return List<int>.generate(pageSize, (index) => pageIndex * pageSize + index);
         }

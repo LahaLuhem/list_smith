@@ -13,7 +13,7 @@ void main() {
         tester,
         observer,
         fetchPage: PageFetcher(
-          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         ),
       );
       await drain(tester);
@@ -26,7 +26,7 @@ void main() {
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: PageFetcher((_, _) async => throw Exception('network')),
+        fetchPage: PageFetcher((_) async => throw Exception('network')),
       );
       await drain(tester);
 
@@ -40,7 +40,7 @@ void main() {
         tester,
         observer,
         fetchPage: PageFetcher(
-          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         ),
       );
       await drain(tester);
@@ -60,16 +60,16 @@ void main() {
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
-        search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const [99])),
+        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
+        search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const [99])),
       );
       await drain(tester);
 
       await _pumpObserved(
         tester,
         observer,
-        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
-        search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const [99])),
+        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
+        search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const [99])),
         query: 'ab',
       );
       await settle(tester);
@@ -83,7 +83,7 @@ void main() {
         tester,
         null,
         fetchPage: PageFetcher(
-          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         ),
       );
       await drain(tester);

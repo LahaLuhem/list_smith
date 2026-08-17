@@ -56,10 +56,10 @@ void main() {
 
     scenarioWidgets('cursor search drives the search stream from its own cursor', (tester) async {
       final received = <Object?>[];
-      final searchFetchPage = SearchPageFetcher<int>.withSignal((_, _, _, previousCursor) async {
-        received.add(previousCursor);
+      final searchFetchPage = SearchPageFetcher<int>.withSignal((request) async {
+        received.add(request.previousSignal);
 
-        return switch (previousCursor) {
+        return switch (request.previousSignal) {
           null => (const [10, 11], 's1'),
           's1' => (const [12, 13], null),
           _ => (const <int>[], null),
@@ -69,7 +69,7 @@ void main() {
       await pumpListSmith(
         tester,
         ListSmith.async(
-          fetchPage: PageFetcher.withSignal((_, _, _) async => (const [1, 2, 3], null)),
+          fetchPage: PageFetcher.withSignal((_) async => (const [1, 2, 3], null)),
           search: AsyncSearch(fetchPage: searchFetchPage),
           endPolicy: const StopOnNullSignalPolicy(),
           query: 'q',
@@ -90,13 +90,13 @@ void main() {
 }
 
 /// A fake cursor-paged backend: three pages chained by opaque string cursors, then a `null` cursor
-/// that ends it. It dispatches on the `previousCursor` it is handed, not the page index, so it proves
-/// the cursor drives the fetch; [received] records each cursor the fetcher saw.
+/// that ends it. It dispatches on the request's `previousSignal`, not its page index, so it proves the
+/// cursor drives the fetch; [received] records each cursor the fetcher saw.
 PageFetcher<int> _cursorFetcher(List<Object?> received) =>
-    PageFetcher<int>.withSignal((_, _, previousCursor) async {
-      received.add(previousCursor);
+    PageFetcher<int>.withSignal((request) async {
+      received.add(request.previousSignal);
 
-      return switch (previousCursor) {
+      return switch (request.previousSignal) {
         null => (const [1, 2, 3], 'c1'),
         'c1' => (const [4, 5, 6], 'c2'),
         'c2' => (const [7, 8, 9], null),
