@@ -7,6 +7,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/async_search/async_search_view.dart';
 import '/features/basic_feed/basic_feed_view.dart';
+import '/features/cache_routing/cache_routing_view.dart';
 import '/features/cursor_feed/cursor_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
 import '/features/grouping/grouping_view.dart';
@@ -80,6 +81,14 @@ class HomeView extends StatelessWidget {
             title: 'Observer',
             description: 'Watch lifecycle events stream into a live log via an injected observer.',
             pageBuilder: (_) => const ObserverView(),
+          ),
+          _DemoTile(
+            icon: Icon(platformValue(material: Icons.storage, cupertino: CupertinoIcons.tray_full)),
+            title: 'Cache routing',
+            description:
+                'Route a caching repository on PageRequest.trigger: a refresh bypasses the '
+                'cache, a scroll reads it.',
+            pageBuilder: (_) => const CacheRoutingView(),
           ),
           _DemoTile(
             icon: Icon(platformValue(material: Icons.refresh, cupertino: CupertinoIcons.refresh)),

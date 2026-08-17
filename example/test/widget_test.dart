@@ -134,6 +134,41 @@ void main() {
       check(find.text('Alpha').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets(
+      'cache routing serves the cold load from the network, then bypasses on a pull',
+      (tester) async {
+        // Intro, knob, list, clear-cache row and log panel stack up; give the list room to render.
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await pumpExampleApp(tester);
+
+        await tester.scrollUntilVisible(find.text('Cache routing'), 100);
+        await tester.tap(find.text('Cache routing'));
+        await tester.pump();
+        for (var frame = 0; frame < 8; frame++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+
+        // The cold load reported initialLoad and went to the network, stamping its rows.
+        check(find.textContaining('initialLoad · network').evaluate().length).isGreaterThan(0);
+        check(find.textContaining('from fetch #1').evaluate().length).isGreaterThan(0);
+
+        await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+        for (var frame = 0; frame < 10; frame++) {
+          await tester.pump(const Duration(milliseconds: 300));
+        }
+
+        // The pull reported refresh, so the fetch skipped the cache and re-stamped the first page.
+        check(find.textContaining('refresh · network (bypassed)').evaluate().length)
+            .isGreaterThan(0);
+        check(find.textContaining('from fetch #1').evaluate()).length.equals(0);
+        // The pages it then paged on to reported nextPage, so those came back from the cache: both
+        // halves of the routing, not just the bypass.
+        check(find.textContaining('· cache').evaluate().length).isGreaterThan(0);
+      },
+    );
+
     scenarioWidgets('reload demo loads its stamped feed', (tester) async {
       await pumpExampleApp(tester);
 
