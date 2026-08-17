@@ -26,12 +26,11 @@ final class SearchPageFetcher<T extends Object> {
   final bool reportsSignal;
 
   /// Wraps a function returning one page of results for a `query`, 0-based `pageIndex`, and `pageSize`.
-  factory(
-    Future<Iterable<T>> Function(String query, int pageIndex, int pageSize) fetch,
-  ) => SearchPageFetcher._(
-    (query, pageIndex, pageSize, _) async => (await fetch(query, pageIndex, pageSize), null),
-    reportsSignal: false,
-  );
+  factory(Future<Iterable<T>> Function(String query, int pageIndex, int pageSize) fetch) =>
+      SearchPageFetcher._(
+        (query, pageIndex, pageSize, _) async => (await fetch(query, pageIndex, pageSize), null),
+        reportsSignal: false,
+      );
 
   const new _(this._fetch, {required this.reportsSignal});
 

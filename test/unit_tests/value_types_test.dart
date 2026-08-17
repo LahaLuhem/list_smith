@@ -97,9 +97,8 @@ void main() {
       .run((_) {
         check(const NoSearch().toString()).equals('NoSearch()');
         check(
-          AsyncSearch<int>(
-            fetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
-          ).toString(),
+          AsyncSearch<int>(fetchPage: SearchPageFetcher((_, _, _) async => const <int>[]))
+              .toString(),
         ).equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
       });
 

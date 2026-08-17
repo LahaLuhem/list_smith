@@ -68,9 +68,8 @@ void main() {
           country: ctx.example.val(countryKey) as String?,
         );
 
-        check(
-          searchBy(item, ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)
@@ -129,9 +128,8 @@ void main() {
           country: ctx.example.val(countryKey) as String?,
         );
 
-        check(
-          searchBy(item, ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)
@@ -190,9 +188,8 @@ void main() {
           country: ctx.example.val(countryKey) as String?,
         );
 
-        check(
-          searchBy(item, ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)
@@ -253,9 +250,8 @@ void main() {
           country: ctx.example.val(countryKey) as String?,
         );
 
-        check(
-          searchBy(item, ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)
@@ -275,9 +271,8 @@ void main() {
           SyncSearchPredicates.exact([(city) => city.country]),
         ]);
 
-        check(
-          searchBy((name: 'Paris', country: 'France'), ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy((name: 'Paris', country: 'France'), ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)
@@ -317,9 +312,8 @@ void main() {
           country: ctx.example.val(countryKey) as String?,
         );
 
-        check(
-          searchBy(item, ctx.example.val(queryKey) as String),
-        ).equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, ctx.example.val(queryKey) as String))
+            .equals(ctx.example.val(matchesKey) as bool);
       });
 
   Bdd(predicates)

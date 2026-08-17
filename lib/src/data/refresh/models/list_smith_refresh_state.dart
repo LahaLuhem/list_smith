@@ -36,5 +36,8 @@ class ListSmithRefreshState {
 /// Returns a widget that composes the indicator with `child`. `state` carries the phase and drag progress.
 /// The underlying controller is never exposed, so a custom indicator reacts to the pull without
 /// reaching into list_smith's internals.
-typedef RefreshBuilder =
-    Widget Function(BuildContext context, Widget child, ListSmithRefreshState state);
+typedef RefreshBuilder = Widget Function(
+  BuildContext context,
+  Widget child,
+  ListSmithRefreshState state,
+);

@@ -33,9 +33,8 @@ void main() {
         );
         final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
 
-        check(
-          policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)),
-        ).equals(ctx.example.val(endedKey) as bool);
+        check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)))
+            .equals(ctx.example.val(endedKey) as bool);
       });
 
   const countKey = 'count';
@@ -54,9 +53,8 @@ void main() {
         final policy = FixedPageCountPolicy(pageCount: ctx.example.val(countKey) as int);
         final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
 
-        check(
-          policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)),
-        ).equals(ctx.example.val(endedKey) as bool);
+        check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)))
+            .equals(ctx.example.val(endedKey) as bool);
       });
 
   // The end policy is an open contract: a consumer can supply their own without a change to
@@ -75,9 +73,8 @@ void main() {
         final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
         final pageSize = ctx.example.val(pageSizeKey) as int;
 
-        check(
-          policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: pageSize)),
-        ).equals(ctx.example.val(endedKey) as bool);
+        check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: pageSize)))
+            .equals(ctx.example.val(endedKey) as bool);
       });
 
   Bdd(endDetection)

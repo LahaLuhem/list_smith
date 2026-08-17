@@ -75,9 +75,8 @@ void main() {
       check(find.text('item 2').evaluate()).length.equals(1); // page 0 fresh
       check(find.text('item 1001').evaluate()).length.equals(1); // page 1 kept old
       check(find.text('item 2002').evaluate()).length.equals(1); // page 2 fresh
-      check(
-        find.text('item 1002').evaluate(),
-      ).length.equals(0); // page 1's failed fresh never shows
+      check(find.text('item 1002').evaluate()).length
+          .equals(0); // page 1's failed fresh never shows
     });
 
     scenarioWidgets('all-or-nothing keeps every page old when one fails', (tester) async {

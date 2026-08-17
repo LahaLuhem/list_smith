@@ -157,12 +157,7 @@ class _ResolvedError extends StatelessWidget {
   final ErrorBuilder? builder;
   final bool compact;
 
-  const new({
-    required this.error,
-    required this.onRetry,
-    this.builder,
-    this.compact = false,
-  });
+  const new({required this.error, required this.onRetry, this.builder, this.compact = false});
 
   @override
   Widget build(BuildContext context) {

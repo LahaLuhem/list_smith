@@ -24,11 +24,10 @@ final class PageFetcher<T extends Object> {
   final bool reportsSignal;
 
   /// Wraps a function returning one page of items; end-of-data is left to the [PaginationEndPolicy].
-  factory(Future<Iterable<T>> Function(int pageIndex, int pageSize) fetch) =>
-      PageFetcher._(
-        (pageIndex, pageSize, _) async => (await fetch(pageIndex, pageSize), null),
-        reportsSignal: false,
-      );
+  factory(Future<Iterable<T>> Function(int pageIndex, int pageSize) fetch) => PageFetcher._(
+    (pageIndex, pageSize, _) async => (await fetch(pageIndex, pageSize), null),
+    reportsSignal: false,
+  );
 
   const new _(this._fetch, {required this.reportsSignal});
 
