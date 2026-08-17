@@ -12,9 +12,11 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [Install](#install)
+- [Upgrading from 0.1.x](#upgrading-from-01x)
 - [A quick taste](#a-quick-taste)
 - [Two kinds of list](#two-kinds-of-list)
 - [Pagination](#pagination)
+    * [Knowing why a page was fetched](#knowing-why-a-page-was-fetched)
     * [Deciding where the data ends](#deciding-where-the-data-ends)
     * [When the first page comes back empty](#when-the-first-page-comes-back-empty)
     * [Cursor pagination](#cursor-pagination)
@@ -65,6 +67,28 @@ thing without dragging in a look you didn't choose.
 ```sh
 flutter pub add list_smith
 ```
+
+## Upgrading from 0.1.x
+
+`0.2.0` changes one thing: your fetch closures take a single request object instead of positional
+arguments. The `.new` / `.withSignal` split, the return types, and every other parameter are untouched.
+
+```dart
+// 0.1.x
+fetchPage: PageFetcher((pageIndex, pageSize) => repo.load(pageIndex, pageSize)),
+
+// 0.2.0
+fetchPage: PageFetcher((request) => repo.load(request.pageIndex, request.pageSize)),
+```
+
+The old arguments are the request's fields, under the same names: `pageIndex`, `pageSize`,
+`previousSignal`, plus `query` on a `SearchPageFetcher`. All four constructors moved the same way, so
+the rewrite is mechanical. One thing to watch if you do it with find-and-replace: brace your
+interpolations, since `'$pageIndex'` becomes `'${request.pageIndex}'`, and `'$request.pageIndex'`
+silently interpolates the request instead.
+
+The request also carries a new [`trigger`](#knowing-why-a-page-was-fetched) field, saying *why* the
+page was asked for. Reading it is optional.
 
 ## A quick taste
 
