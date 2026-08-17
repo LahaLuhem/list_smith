@@ -7,8 +7,8 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
+import '/features/core/widgets/event_log_panel.dart';
 import 'observer_view_model.dart';
-import 'widgets/event_log_panel.dart';
 
 /// `ListSmith.async` wired to a `ListSmithObserver`: every lifecycle event (page load, error, refresh,
 /// query-committed, mode change) streams into a live log below the list. Scroll to page, pull to
