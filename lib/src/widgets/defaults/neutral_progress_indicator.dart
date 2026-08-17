@@ -16,7 +16,7 @@ class NeutralProgressIndicator extends StatefulWidget {
   final double size;
 
   /// Creates a neutral spinner [size] logical pixels across.
-  const NeutralProgressIndicator({this.size = 24, super.key});
+  const new({this.size = 24, super.key});
 
   @override
   State<NeutralProgressIndicator> createState() => _NeutralProgressIndicatorState();
@@ -53,7 +53,7 @@ class _ArcPainter extends CustomPainter {
 
   final Color colour;
 
-  const _ArcPainter({required this.colour});
+  const new({required this.colour});
 
   @override
   void paint(Canvas canvas, Size size) {

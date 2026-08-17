@@ -16,7 +16,7 @@ class NeutralLoadingIndicator extends StatelessWidget {
   final bool compact;
 
   /// Creates the neutral loading surface; pass `compact: true` for the new-page footer form.
-  const NeutralLoadingIndicator({this.compact = false, super.key});
+  const new({this.compact = false, super.key});
 
   @override
   Widget build(BuildContext context) => compact

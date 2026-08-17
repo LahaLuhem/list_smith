@@ -9,7 +9,7 @@ part of '../pagination_end_policy.dart';
 /// [StopOnNullSignalPolicy]; this built-in covers the boolean case.
 final class ExplicitHasMorePolicy extends PaginationEndPolicy {
   /// Creates a policy that ends when a page's fetcher reports `hasMore: false`.
-  const ExplicitHasMorePolicy();
+  const new();
 
   @override
   bool hasReachedEnd(EndContext context) => context.lastPageSignal == false;

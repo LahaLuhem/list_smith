@@ -14,7 +14,7 @@ import 'grouping_view_model.dart';
 /// grouping buckets it into three contiguous sections. Typing narrows the list and the sections
 /// re-form over the matches.
 class GroupingView extends StatelessWidget {
-  const GroupingView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -65,7 +65,7 @@ class GroupingView extends StatelessWidget {
 class _SectionHeader extends StatelessWidget {
   final String label;
 
-  const _SectionHeader({required this.label});
+  const new({required this.label});
 
   @override
   Widget build(BuildContext context) => Padding(

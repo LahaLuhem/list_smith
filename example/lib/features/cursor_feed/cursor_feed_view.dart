@@ -12,7 +12,7 @@ import 'cursor_feed_view_model.dart';
 /// first page), and `StopOnNullSignalPolicy` ends the list when the source returns a null cursor.
 /// Built on `PageFetcher.withSignal`, whose end signal doubles as the driving cursor.
 class CursorFeedView extends StatelessWidget {
-  const CursorFeedView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(

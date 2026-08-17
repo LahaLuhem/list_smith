@@ -12,7 +12,7 @@ class CustomError extends StatelessWidget {
   final VoidCallback onRetry;
   final bool compact;
 
-  const CustomError({required this.error, required this.onRetry, this.compact = false, super.key});
+  const new({required this.error, required this.onRetry, this.compact = false, super.key});
 
   @override
   Widget build(BuildContext context) => compact

@@ -130,7 +130,7 @@ void main() {
 /// A consumer-authored end policy: ends when the most recent page held fewer than a full page of
 /// items. Lives in the test to prove [PaginationEndPolicy] is implementable from outside list_smith.
 final class _ShortLastPagePolicy extends PaginationEndPolicy {
-  const _ShortLastPagePolicy();
+  const new();
 
   @override
   bool hasReachedEnd(EndContext context) => context.lastPageItemCount < context.pageSize;

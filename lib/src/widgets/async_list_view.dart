@@ -78,7 +78,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   final ListSmithController? controller;
 
   /// Creates the async paged list around an [AsyncSource].
-  const AsyncListView({
+  const new({
     required this.source,
     required this.itemBuilder,
     required this.grouping,

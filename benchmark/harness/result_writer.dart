@@ -15,7 +15,7 @@ final class ResultWriter {
   final IOSink _sink;
   var _firstRecord = true;
 
-  ResultWriter._(this._scenario, this._sdkVersion, this._packageVersion, this._gitSha, this._sink);
+  new _(this._scenario, this._sdkVersion, this._packageVersion, this._gitSha, this._sink);
 
   /// Opens [outputPath] for writing and emits the JSON-array prefix `[`.
   ///

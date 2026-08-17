@@ -12,7 +12,7 @@ class DemoScaffold extends StatelessWidget {
   final String title;
   final Widget body;
 
-  const DemoScaffold({required this.title, required this.body, super.key});
+  const new({required this.title, required this.body, super.key});
 
   @override
   Widget build(BuildContext context) => PlatformScaffold(
@@ -27,7 +27,7 @@ class DemoScaffold extends StatelessWidget {
 
 /// Cycles the app-wide theme mode (system -> light -> dark) from the app bar.
 class _BrightnessToggle extends StatelessWidget {
-  const _BrightnessToggle();
+  const new();
 
   @override
   Widget build(BuildContext context) {

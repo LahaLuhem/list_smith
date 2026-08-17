@@ -16,7 +16,7 @@ void main() => runApp(const ListSmithExampleApp());
 /// screen can flip brightness live (see the app-bar control in `DemoScaffold`).
 /// Platform follows the real device.
 class ListSmithExampleApp extends StatefulWidget {
-  const ListSmithExampleApp({super.key});
+  const new({super.key});
 
   @override
   State<ListSmithExampleApp> createState() => _ListSmithExampleAppState();

@@ -12,7 +12,7 @@ final class StopOnEmptyPagesPolicy extends PaginationEndPolicy {
   final int emptyRunBeforeEnd;
 
   /// Creates a policy that ends after [emptyRunBeforeEnd] consecutive empty pages.
-  const StopOnEmptyPagesPolicy({this.emptyRunBeforeEnd = 1})
+  const new({this.emptyRunBeforeEnd = 1})
     : assert(emptyRunBeforeEnd >= 1, 'emptyRunBeforeEnd must be at least 1.');
 
   @override

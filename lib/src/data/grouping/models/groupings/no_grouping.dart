@@ -7,7 +7,7 @@ part of '../grouping.dart';
 /// `Grouping<Never>` instance) so its per-item operations receive real `T`-typed values.
 final class NoGrouping<T extends Object> extends Grouping<T> {
   /// Creates the no-grouping default.
-  const NoGrouping();
+  const new();
 
   @override
   List<T> arrange(Iterable<T> items) => items is List<T> ? items : items.toList(growable: false);

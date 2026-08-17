@@ -38,7 +38,7 @@ class AsyncListSurfaces {
 
   /// Groups the async-only override surfaces; every field defaults to the neutral widgets-layer
   /// surface it replaces.
-  const AsyncListSurfaces({
+  const new({
     this.firstPageLoadingBuilder,
     this.newPageLoadingBuilder,
     this.firstPageErrorBuilder,

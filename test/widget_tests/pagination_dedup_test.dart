@@ -113,7 +113,7 @@ void main() {
 /// A reference-identity item: two `_Item`s with the same [id] are DIFFERENT objects (no `==`
 /// override), modelling a refetch that returns the same data as new instances.
 class _Item {
-  _Item(this.id);
+  new(this.id);
 
   final int id;
 }

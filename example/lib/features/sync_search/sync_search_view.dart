@@ -14,7 +14,7 @@ import 'sync_search_view_model.dart';
 /// for "any listed field contains the query"). Clear the query to see every item; search for
 /// something absent to see the no-results surface.
 class SyncSearchView extends StatelessWidget {
-  const SyncSearchView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(

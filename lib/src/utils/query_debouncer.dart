@@ -19,7 +19,7 @@ class QueryDebouncer {
   Timer? _timer;
 
   /// Creates a debouncer that reports each committed query to [onCommitted].
-  QueryDebouncer({required this.onCommitted});
+  new({required this.onCommitted});
 
   /// The current committed (trimmed) query.
   String get committedQuery => _committedQuery;

@@ -12,7 +12,7 @@ import 'basic_feed_view_model.dart';
 /// `ListSmith.async` and its neutral default surfaces (loading, empty,
 /// end-of-list, error). Pull down to reset; scroll to load more.
 class BasicFeedView extends StatelessWidget {
-  const BasicFeedView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(

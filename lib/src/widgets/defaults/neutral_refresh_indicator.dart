@@ -19,7 +19,7 @@ class NeutralRefreshIndicator extends StatelessWidget {
   final ListSmithRefreshState state;
 
   /// Creates the neutral refresh indicator around [child] for [state].
-  const NeutralRefreshIndicator({required this.child, required this.state, super.key});
+  const new({required this.child, required this.state, super.key});
 
   @override
   Widget build(BuildContext context) {

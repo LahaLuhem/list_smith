@@ -29,7 +29,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   final ItemId<T>? itemId;
 
   /// Bundles the async configuration built from the `.async` constructor.
-  const AsyncSource({
+  const new({
     required this.fetchPage,
     required this.pageSize,
     required this.endPolicy,

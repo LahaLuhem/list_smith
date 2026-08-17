@@ -26,19 +26,19 @@ final class SearchPageFetcher<T extends Object> {
   final bool reportsSignal;
 
   /// Wraps a function returning one page of results for a `query`, 0-based `pageIndex`, and `pageSize`.
-  factory SearchPageFetcher(
+  factory(
     Future<Iterable<T>> Function(String query, int pageIndex, int pageSize) fetch,
   ) => SearchPageFetcher._(
     (query, pageIndex, pageSize, _) async => (await fetch(query, pageIndex, pageSize), null),
     reportsSignal: false,
   );
 
-  const SearchPageFetcher._(this._fetch, {required this.reportsSignal});
+  const new _(this._fetch, {required this.reportsSignal});
 
   /// Wraps a function that receives the previous page's `previousSignal` (null for the first page) and
   /// returns results with a new end signal, surfaced as [EndContext.lastPageSignal] and handed to the
   /// next fetch.
-  factory SearchPageFetcher.withSignal(
+  factory withSignal(
     Future<(Iterable<T>, Object?)> Function(
       String query,
       int pageIndex,

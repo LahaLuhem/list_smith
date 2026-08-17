@@ -5,7 +5,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 /// A platform-adaptive empty surface, shown when the source has no items at all.
 class CustomEmpty extends StatelessWidget {
-  const CustomEmpty({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => Center(

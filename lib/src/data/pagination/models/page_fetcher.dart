@@ -24,18 +24,18 @@ final class PageFetcher<T extends Object> {
   final bool reportsSignal;
 
   /// Wraps a function returning one page of items; end-of-data is left to the [PaginationEndPolicy].
-  factory PageFetcher(Future<Iterable<T>> Function(int pageIndex, int pageSize) fetch) =>
+  factory(Future<Iterable<T>> Function(int pageIndex, int pageSize) fetch) =>
       PageFetcher._(
         (pageIndex, pageSize, _) async => (await fetch(pageIndex, pageSize), null),
         reportsSignal: false,
       );
 
-  const PageFetcher._(this._fetch, {required this.reportsSignal});
+  const new _(this._fetch, {required this.reportsSignal});
 
   /// Wraps a function that receives the previous page's `previousSignal` (null for the first page) and
   /// returns one page of items with a new end signal (for example a `hasMore` flag or a next-cursor),
   /// surfaced to the end policy as [EndContext.lastPageSignal] and handed to the next fetch.
-  factory PageFetcher.withSignal(
+  factory withSignal(
     Future<(Iterable<T>, Object?)> Function(int pageIndex, int pageSize, Object? previousSignal)
     fetch,
   ) => PageFetcher._(fetch, reportsSignal: true);

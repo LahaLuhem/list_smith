@@ -8,7 +8,7 @@ import '/src/utils/neutral_theme.dart';
 /// and i18n-safe. Imposes no design system; consumers override the no-results builder to replace it.
 class NeutralNoResultsIndicator extends StatelessWidget {
   /// Creates the neutral no-results surface.
-  const NeutralNoResultsIndicator({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => Center(

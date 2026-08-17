@@ -10,7 +10,7 @@ class NeutralNoMoreItemsIndicator extends StatelessWidget {
   static const double _padding = 16;
 
   /// Creates the neutral end-of-list footer.
-  const NeutralNoMoreItemsIndicator({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => Padding(

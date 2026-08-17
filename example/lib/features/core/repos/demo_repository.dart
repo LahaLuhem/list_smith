@@ -13,7 +13,7 @@ class DemoRepository {
   /// The size of the fixed dataset.
   final int totalItems;
 
-  DemoRepository({this.latency = const Duration(milliseconds: 600), this.totalItems = 137});
+  new({this.latency = const Duration(milliseconds: 600), this.totalItems = 137});
 
   late final _items = List.generate(
     totalItems,

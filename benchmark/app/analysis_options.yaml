@@ -4,6 +4,15 @@
 #   --dart-define, the only way to parameterize an integration_test (it takes no argv).
 # - avoid_redundant_argument_values: a --dart-define value can equal a param default under its own
 #   default (e.g. page size 20); the argument must stay for the define to apply.
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 include: ../../analysis_options.yaml
 
 linter:

@@ -18,7 +18,7 @@ const _pageCounts = <int>[1, 10, 100];
 const _itemsPerPage = 20;
 
 final class _WrappingOverhead extends BenchmarkBase {
-  _WrappingOverhead(this.pageCount) : super('wrapping_overhead_p$pageCount');
+  new(this.pageCount) : super('wrapping_overhead_p$pageCount');
 
   final int pageCount;
   late final List<List<int>> _pages;

@@ -22,7 +22,7 @@ final class AdvanceToFirstNonEmpty extends EmptyPageBehaviour {
   final int? maxPages;
 
   /// Creates an advance-past-empty behaviour, optionally capped at [maxPages] fetches.
-  const AdvanceToFirstNonEmpty({this.maxPages})
+  const new({this.maxPages})
     : assert(maxPages == null || maxPages > 0, 'maxPages must be positive when set.');
 
   @override

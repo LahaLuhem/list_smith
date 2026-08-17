@@ -14,7 +14,7 @@ class CustomRefresh extends StatelessWidget {
   final Widget child;
   final ListSmithRefreshState state;
 
-  const CustomRefresh({required this.child, required this.state, super.key});
+  const new({required this.child, required this.state, super.key});
 
   @override
   Widget build(BuildContext context) {

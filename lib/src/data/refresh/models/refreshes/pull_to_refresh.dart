@@ -15,7 +15,7 @@ final class PullToRefresh extends Refresh {
   final Reload reload;
 
   /// Creates the pull-to-refresh case, optionally with a custom [refreshBuilder] and [reload] strategy.
-  const PullToRefresh({this.refreshBuilder, this.reload = const ResetToFirstPage()});
+  const new({this.refreshBuilder, this.reload = const ResetToFirstPage()});
 
   @override
   String toString() => 'PullToRefresh()';

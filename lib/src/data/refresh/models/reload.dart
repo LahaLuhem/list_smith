@@ -22,7 +22,7 @@ part 'reloads/reset_to_first_page.dart';
 /// it, never inspecting the concrete type (see the CODESTYLE "behaviour lives in the sealed type" rule).
 sealed class Reload {
   /// Const base constructor for the sealed hierarchy.
-  const Reload();
+  const new();
 
   /// Performs the reload through [context]. The async engine calls this on each pull-to-refresh;
   /// consumers construct a variant but never call it, like building a `Widget` without calling `build`.

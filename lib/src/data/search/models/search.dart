@@ -17,5 +17,5 @@ part 'searches/no_search.dart';
 /// cache policy is never left inert.
 sealed class Search<T extends Object> {
   /// Const base constructor for the sealed hierarchy.
-  const Search();
+  const new();
 }

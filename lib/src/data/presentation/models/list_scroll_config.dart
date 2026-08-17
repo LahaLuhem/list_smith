@@ -26,7 +26,7 @@ class ListScrollConfig {
   final double? cacheExtent;
 
   /// Creates a scroll/layout configuration; every field defaults to the framework's own default.
-  const ListScrollConfig({
+  const new({
     this.padding,
     this.physics,
     this.controller,

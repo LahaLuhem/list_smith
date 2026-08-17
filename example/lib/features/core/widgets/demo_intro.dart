@@ -7,7 +7,7 @@ class DemoIntro extends StatelessWidget {
   final String title;
   final String description;
 
-  const DemoIntro({required this.title, required this.description, super.key});
+  const new({required this.title, required this.description, super.key});
 
   @override
   Widget build(BuildContext context) => Column(

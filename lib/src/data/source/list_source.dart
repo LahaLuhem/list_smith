@@ -16,5 +16,5 @@ part 'sources/sync_source.dart';
 /// instead of juggling nullable mode-fields (no parameter is ever silently inert). Never exposed:
 /// consumers configure the list through the constructor parameters, not by constructing a source.
 sealed class ListSource<T extends Object> {
-  const ListSource();
+  const new();
 }

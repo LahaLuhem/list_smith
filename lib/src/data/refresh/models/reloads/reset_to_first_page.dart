@@ -4,7 +4,7 @@ part of '../reload.dart';
 /// default. A pull returns the list to the top with fresh data.
 final class ResetToFirstPage extends Reload {
   /// Creates the reset-to-first-page reload (the default).
-  const ResetToFirstPage();
+  const new();
 
   @override
   Future<void> run<T extends Object>(ReloadContext<T> context) => Future.syncValue(context.reset());

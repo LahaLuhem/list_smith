@@ -13,7 +13,7 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
   /// Builds a group's header from its key, erased to `Object`.
   final Widget Function(BuildContext context, Object key) headerFor;
 
-  const KeyedGrouping._({required this.groupOf, required this.headerFor});
+  const new _({required this.groupOf, required this.headerFor});
 
   @override
   List<T> arrange(Iterable<T> items) => bucketByGroup(items, groupOf);

@@ -29,7 +29,7 @@ part 'empty_page_behaviours/show_empty_surface.dart';
 /// the list shows the empty surface and stalls on the first empty page.
 sealed class EmptyPageBehaviour {
   /// Const base constructor for the sealed hierarchy.
-  const EmptyPageBehaviour();
+  const new();
 
   /// Whether the list should page past the current empty page, given [context].
   ///

@@ -10,5 +10,5 @@ part 'policies/replace_cache_policy.dart';
 /// normal ↔ search boundary.
 sealed class SearchCachePolicy {
   /// Const base constructor for the sealed hierarchy.
-  const SearchCachePolicy();
+  const new();
 }

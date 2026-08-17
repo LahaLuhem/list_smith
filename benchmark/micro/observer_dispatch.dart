@@ -14,7 +14,7 @@ import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
 final class _ObserverDispatch extends BenchmarkBase {
-  _ObserverDispatch(this._observer) : super('observer_dispatch');
+  new(this._observer) : super('observer_dispatch');
 
   final ListSmithObserver? _observer;
 
@@ -25,7 +25,7 @@ final class _ObserverDispatch extends BenchmarkBase {
 /// A minimal observer that counts page-load callbacks and does no other work; mirrors a steady-state
 /// consumer observer with no expensive side effect on the hot path.
 final class _CountingObserver extends ListSmithObserver {
-  _CountingObserver();
+  new();
 
   var count = 0;
 
