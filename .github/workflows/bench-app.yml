@@ -1,0 +1,48 @@
+name: Benchmark host app checks
+
+# `flutter analyze` for the integration_test host app. It is its own package with its own
+# `analysis_options.yaml` inheriting the root posture, so `package.yml`'s `analyze lib test`
+# never reaches it.
+
+# No `paths:` filter on purpose: this closes a required check, and a filtered workflow never
+# reports on a PR that misses its paths. APPENDIX.md#dependabot-automerge
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: bench-app-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: benchmark/app
+      - run: flutter --no-version-check analyze .
+
+  # main's required check; the job id IS the context, so no `name:` and no rename.
+  # APPENDIX.md#dependabot-automerge
+  bench-app-ok:
+    needs: [analyze]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: analyze=${{ needs.analyze.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1
