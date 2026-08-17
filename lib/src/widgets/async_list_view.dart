@@ -114,6 +114,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// policy stays correct in either mode. Null until a signal-reporting fetcher sets it.
   Object? _lastPageSignal;
 
+  /// Bumped by every path that invalidates in-flight work. ISP's own token drops a superseded page's
+  /// items, but the post-await writes below are ours, so they need their own check.
+  var _generation = 0;
+
   /// Memo for [_dedupedForDisplay]: the last raw state seen paired with the view derived from it, or
   /// null before the first de-dup. Keyed on paging-state identity; the controller hands out the same
   /// [PagingState] instance until the data changes, so a rebuild that leaves it untouched (an ancestor
@@ -162,17 +166,22 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
   Future<List<T>> _fetchPage(int pageKey) async {
+    final generation = _generation;
     final (items, signal) = await _fetchPageRaw(pageKey, _lastPageSignal);
-    _lastPageSignal = signal;
+    if (generation == _generation) _lastPageSignal = signal;
 
     return items;
   }
 
-  /// Fetches one page in the current mode (normal or search), fires the observer hooks, and returns the
-  /// page's items and end signal without touching [_lastPageSignal] — the caller threads signals. The
-  /// paging controller's [_fetchPage] threads forward; a reload threads its own and commits the final
-  /// signal via [commit].
+  /// Fetches one page in the current mode (normal or search), announces it if it is still current, and
+  /// returns the page's items and end signal without touching [_lastPageSignal]: the caller threads
+  /// signals. The paging controller's [_fetchPage] threads forward; a reload threads its own and commits
+  /// the final signal via [commit].
+  ///
+  /// A page superseded mid-flight fires no `onPageLoaded`, since the list drops it. An error still
+  /// fires `onError`: the request did fail, and that is worth reporting whether or not anyone waited.
   Future<(List<T>, Object?)> _fetchPageRaw(int pageKey, Object? previousSignal) async {
+    final generation = _generation;
     final source = widget.source;
     final search = source.search;
     final committedQuery = _debouncer.committedQuery;
@@ -190,7 +199,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         NoSearch() => await source.fetchPage(pageKey, source.pageSize, previousSignal),
       };
       final pageItems = items.toList(growable: false);
-      widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
+      if (generation == _generation) {
+        widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
+      }
 
       return (pageItems, signal);
     } on Object catch (error, stackTrace) {
@@ -299,6 +310,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void _applyCacheAction(CacheAction action) {
     switch ((action, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
+        _generation++;
         _pager.value = snapshot.state;
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
@@ -313,6 +325,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Refreshes the controller and clears the end signal, so a signal-based policy starts the reloaded
   /// stream fresh instead of reading the previous stream's last signal.
   void _resetPaging() {
+    _generation++;
     _lastPageSignal = null;
     _pager.refresh();
   }
@@ -335,6 +348,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   @override
   void commit(List<List<T>> pages, {Object? lastSignal}) {
+    _generation++;
     _lastPageSignal = lastSignal;
     final keys = [for (var index = 0; index < pages.length; index++) index];
     final probe = PagingState<int, T>(pages: pages, keys: keys);
