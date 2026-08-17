@@ -27,8 +27,8 @@ screenshots:
     path: doc/screenshots/3-ios-cupertino.png
 
 environment:
-  sdk: ">=3.12.0 <4.0.0"
-  flutter: ">=3.44.0"
+  sdk: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.0"
 
 dependencies:
   flutter:
