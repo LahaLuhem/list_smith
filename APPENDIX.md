@@ -24,7 +24,7 @@ anchors stable across renames. A decision log, appended as decisions land.
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
 - [A narrow controller: intents out, nothing back](#controller-handle)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
-- [Dependabot automerges the boring tier, behind five aggregate checks](#dependabot-automerge)
+- [Dependabot automerges the boring tier, behind six aggregate checks](#dependabot-automerge)
 
 <!-- TOC end -->
 
@@ -487,7 +487,7 @@ Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) 
 ---
 
 <a id="dependabot-automerge"></a>
-## Dependabot automerges the boring tier, behind five aggregate checks
+## Dependabot automerges the boring tier, behind six aggregate checks
 
 [`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) arms GitHub's native
 auto-merge (rebase) for patch and minor bumps in `uv` and `github-actions`; every `pub` bump and
@@ -505,21 +505,25 @@ the mechanism is a workflow. Ported from
   most of them.
 - **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks and ignores
   failing ones that aren't, so this is safe only while `main`'s ruleset is **active** and requires
-  all five contexts. Keep `required_signatures` out of it: rebase-merge emits unsigned commits
+  all six contexts. Keep `required_signatures` out of it: rebase-merge emits unsigned commits
   (`f280108` and its three neighbours), so it would block every rebase merge, bot or human.
 - **Aggregates, not the real job names.** [`repo.yml`](.github/workflows/repo.yml) fans its lint
   matrix out of [`lint-checks.json`](.github/lint-checks.json), so those contexts move whenever a
   linter does; `package.yml` and `example.yml` both hold a job displayed as *Flutter analyze*, which
-  no ruleset could tell apart. Each workflow instead closes with one `*-ok` job that `needs` its
-  siblings; five names are the contract, the jobs behind them are free to move. They inspect
+  no ruleset could tell apart, and `bench-app.yml` adds a third. Each workflow instead closes with
+  one `*-ok` job that `needs` its siblings; six names are the contract, the jobs behind them are
+  free to move. They inspect
   `needs.*.result` by hand because a skipped job passes a required check, which is what keeps
   `conventions-ok` green on bot PRs.
-- **`bench-analyzer.yml` gave up its path filter to join them.** A filtered workflow never reports
-  on a PR that misses its paths, so it cannot back a required check, and leaving it unrequired was
-  worse: every `uv` bump touches `benchmark/python/**`, so its tests are what matters most on
-  exactly the PRs being automated. ~20s with the uv cache, so it runs everywhere rather than behind
-  bespoke change detection. [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and
-  stays unrequired: no Dependabot PR can touch `lib/**`, and it costs ~8 minutes a side.
+- **`bench-analyzer.yml` and `bench-app.yml` gave up their path filters to join them.** A filtered
+  workflow never reports on a PR that misses its paths, so it cannot back a required check, and
+  leaving the analyzer tests unrequired was worse: every `uv` bump touches `benchmark/python/**`,
+  so its tests are what matters most on exactly the PRs being automated. ~20s with the uv cache, so
+  it runs everywhere rather than behind bespoke change detection.
+  [`bench-app.yml`](.github/workflows/bench-app.yml) takes the same trade for one `flutter analyze`
+  on the host app, which nothing else covered: `package.yml` analyses `lib test` only.
+  [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and stays unrequired: no
+  Dependabot PR can touch `lib/**`, and it costs ~8 minutes a side.
 - **`GITHUB_TOKEN`, not the changelog App.** The App sits in the ruleset's bypass list so it can
   push `CHANGELOG.md` to `main`, and a bypass covers the ruleset whole, status checks included. The
   cost is that a `GITHUB_TOKEN` merge triggers no further workflows, so
