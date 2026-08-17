@@ -10,8 +10,8 @@ void main() {
     scenarioWidgets('a failing later page shows the new-page error surface', (tester) async {
       await _pumpAsync(
         tester,
-        fetchPage: PageFetcher((pageIndex, _) async {
-          if (pageIndex == 0) return const [1, 2, 3];
+        fetchPage: PageFetcher((request) async {
+          if (request.pageIndex == 0) return const [1, 2, 3];
 
           throw Exception('later page');
         }),
@@ -28,7 +28,7 @@ void main() {
       await _pumpAsync(
         tester,
         fetchPage: PageFetcher(
-          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         ),
         separatorBuilder: (_, _) => const Text('sep'),
       );

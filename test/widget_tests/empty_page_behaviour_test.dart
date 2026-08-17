@@ -11,10 +11,10 @@ void main() {
     // test can assert exactly how far the list paged on its own.
     ({PageFetcher<int> fetchPage, List<int> requested}) recordingFetcher(List<List<int>> pages) {
       final requested = <int>[];
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
-        requested.add(pageIndex);
+      final fetchPage = PageFetcher<int>((request) async {
+        requested.add(request.pageIndex);
 
-        return pageIndex < pages.length ? pages[pageIndex] : const <int>[];
+        return request.pageIndex < pages.length ? pages[request.pageIndex] : const <int>[];
       });
 
       return (fetchPage: fetchPage, requested: requested);

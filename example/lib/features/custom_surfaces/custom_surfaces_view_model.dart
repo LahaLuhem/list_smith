@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
@@ -20,8 +21,8 @@ final class CustomSurfacesViewModel extends ViewModel {
   // ignore: use_setters_to_change_properties
   void onFailureToggled({required bool value}) => _shouldInjectFailuresNotifier.value = value;
 
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
-    final page = await _repository.fetchPage(pageIndex, pageSize);
+  Future<List<DemoItem>> fetchPage(PageRequest request) async {
+    final page = await _repository.fetchPage(request.pageIndex, request.pageSize);
     if (_shouldInjectFailuresNotifier.value) throw Exception('Simulated network failure');
 
     return page;

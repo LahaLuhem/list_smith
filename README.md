@@ -72,7 +72,7 @@ Give it a function that fetches a page and a builder for each item. That really 
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher((pageIndex, pageSize) => api.fetchArticles(page: pageIndex, size: pageSize)),
+  fetchPage: PageFetcher((request) => api.fetchArticles(page: request.pageIndex, size: request.pageSize)),
   itemBuilder: (context, article, index) => ArticleTile(article),
 )
 ```
@@ -94,14 +94,15 @@ Each takes only the parameters that make sense for it, so nothing you pass is ev
 
 ## Pagination
 
-`ListSmith.async` calls your `fetchPage` with a 0-based page index and the page size, then asks for
-the next page as the user nears the end. Return the items for that page (any `Iterable`; it gets
-materialised once for you). When a page comes back empty, that is the end of the road:
+`ListSmith.async` calls your `fetchPage` with a `PageRequest` (a 0-based `pageIndex`, the `pageSize`,
+and the previous page's `previousSignal`), then asks for the next page as the user nears the end.
+Return the items for that page (any `Iterable`; it gets materialised once for you). When a page comes
+back empty, that is the end of the road:
 
 ```dart
 ListSmith.async(
   pageSize: 30,
-  fetchPage: PageFetcher((pageIndex, pageSize) => repo.load(pageIndex, pageSize)),
+  fetchPage: PageFetcher((request) => repo.load(request.pageIndex, request.pageSize)),
   itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
@@ -132,8 +133,8 @@ backend says it's the last page, instead of fetching one more empty page to find
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher.withSignal((pageIndex, pageSize, _) async {
-    final response = await api.load(pageIndex, pageSize);
+  fetchPage: PageFetcher.withSignal((request) async {
+    final response = await api.load(request.pageIndex, request.pageSize);
     return (response.items, response.hasMore);
   }),
   endPolicy: const ExplicitHasMorePolicy(),
@@ -166,7 +167,7 @@ itself, to the first page with items (or the true end), showing the loading surf
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher((pageIndex, pageSize) => calendar.dayPage(pageIndex, pageSize)),
+  fetchPage: PageFetcher((request) => calendar.dayPage(request.pageIndex, request.pageSize)),
   // An empty day isn't the end...
   endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 31),
   // ...so page straight past empty days to the first with entries.
@@ -187,14 +188,14 @@ the end policy allows.
 ### Cursor pagination
 
 Keyset/cursor APIs don't take a page number; you hand back the cursor the previous page returned.
-That's the same `withSignal` channel: the signal a page returns is passed into the next fetch as
+That's the same `withSignal` channel: the signal a page returns arrives on the next request as
 `previousSignal` (null for the first page), and `StopOnNullSignalPolicy` ends the list when the cursor
 runs out.
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher.withSignal((_, pageSize, previousCursor) async {
-    final page = await api.list(cursor: previousCursor as String?, limit: pageSize);
+  fetchPage: PageFetcher.withSignal((request) async {
+    final page = await api.list(cursor: request.previousSignal as String?, limit: request.pageSize);
     return (page.items, page.nextCursor);   // null nextCursor ends it
   }),
   endPolicy: const StopOnNullSignalPolicy(),
@@ -276,8 +277,8 @@ Retry stays in your fetcher, not here: wrap `fetchPage` with a package like
 ```dart
 import 'package:retry/retry.dart';
 
-fetchPage: PageFetcher((pageIndex, pageSize) =>
-  retry(() => api.load(pageIndex, pageSize), retryIf: (e) => e is SocketException)),
+fetchPage: PageFetcher((request) =>
+  retry(() => api.load(request.pageIndex, request.pageSize), retryIf: (e) => e is SocketException)),
 ```
 
 ### Refreshing from code
@@ -363,9 +364,9 @@ pull-to-refresh still working in both:
 
 ```dart
 ListSmith.async(
-  fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+  fetchPage: PageFetcher((request) => repo.feed(request.pageIndex, request.pageSize)),
   search: AsyncSearch(
-    fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+    fetchPage: SearchPageFetcher((r) => repo.search(r.query, r.pageIndex, r.pageSize)),
   ),
   query: searchQuery,
   itemBuilder: (context, item, index) => Text(item.title),
@@ -403,9 +404,9 @@ Widget build(BuildContext context) => Column(
     Expanded(
       child: ListSmith.async(
         query: _query,
-        fetchPage: PageFetcher((pageIndex, pageSize) => repo.feed(pageIndex, pageSize)),
+        fetchPage: PageFetcher((request) => repo.feed(request.pageIndex, request.pageSize)),
         search: AsyncSearch(
-          fetchPage: SearchPageFetcher((query, pageIndex, pageSize) => repo.search(query, pageIndex, pageSize)),
+          fetchPage: SearchPageFetcher((r) => repo.search(r.query, r.pageIndex, r.pageSize)),
         ),
         itemBuilder: (context, item, index) => Text(item.title),
       ),

@@ -96,10 +96,8 @@ void main() {
       .then('the string is the compact case form, and AsyncSearch names its cache policy')
       .run((_) {
         check(const NoSearch().toString()).equals('NoSearch()');
-        check(
-          AsyncSearch<int>(fetchPage: SearchPageFetcher((_, _, _) async => const <int>[]))
-              .toString(),
-        ).equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
+        check(AsyncSearch<int>(fetchPage: SearchPageFetcher((_) async => const <int>[])).toString())
+            .equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
       });
 
   final emptyPageBehaviours = BddFeature('EmptyPageBehaviour string form');
@@ -128,7 +126,7 @@ void main() {
       .then('supportsSearch reflects the fetcher and toString names the config')
       .run((_) {
         final plain = AsyncSource<int>(
-          fetchPage: PageFetcher((_, _) async => const <int>[]),
+          fetchPage: PageFetcher((_) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           onEmptyPage: const ShowEmptySurface(),
@@ -136,12 +134,12 @@ void main() {
           search: const NoSearch(),
         );
         final searchable = AsyncSource<int>(
-          fetchPage: PageFetcher((_, _) async => const <int>[]),
+          fetchPage: PageFetcher((_) async => const <int>[]),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
           onEmptyPage: const ShowEmptySurface(),
           refresh: const PullToRefresh(),
-          search: AsyncSearch(fetchPage: SearchPageFetcher((_, _, _) async => const <int>[])),
+          search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const <int>[])),
         );
 
         check(plain.supportsSearch).isFalse();

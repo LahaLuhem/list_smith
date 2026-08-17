@@ -11,10 +11,10 @@ void main() {
     // page from its first load; `attempts` records how many times each index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher() {
       final attempts = <int, int>{};
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
-        final attempt = attempts[pageIndex] = (attempts[pageIndex] ?? 0) + 1;
+      final fetchPage = PageFetcher<int>((request) async {
+        final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
 
-        return [pageIndex * 1000 + attempt];
+        return [request.pageIndex * 1000 + attempt];
       });
 
       return (fetchPage: fetchPage, attempts: attempts);
@@ -132,10 +132,10 @@ void main() {
       final searchAttempts = <int, int>{};
       final controller = ListSmithController();
       final search = AsyncSearch<int>(
-        fetchPage: SearchPageFetcher((_, pageIndex, _) async {
-          searchAttempts[pageIndex] = (searchAttempts[pageIndex] ?? 0) + 1;
+        fetchPage: SearchPageFetcher((request) async {
+          searchAttempts[request.pageIndex] = (searchAttempts[request.pageIndex] ?? 0) + 1;
 
-          return [pageIndex];
+          return [request.pageIndex];
         }),
       );
 

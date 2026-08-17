@@ -23,6 +23,7 @@ anchors stable across renames. A decision log, appended as decisions land.
 - [Cursor-driven pagination: the signal, fed back](#cursor-driven-pagination)
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
 - [A narrow controller: intents out, nothing back](#controller-handle)
+- [Fetchers take a request object, not an argument list](#page-request-object)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind six aggregate checks](#dependabot-automerge)
 
@@ -460,6 +461,37 @@ anchors stable across renames. A decision log, appended as decisions land.
   `lib/`. It earns its place when item mutations (#24) add intents; swapping then is internal.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless; one
   through a controller no list ever received is a wiring mistake.
+
+---
+
+<a id="page-request-object"></a>
+## Fetchers take a request object, not an argument list
+
+- **Decision (issue #45, step 1):** `PageFetcher` and `SearchPageFetcher` take one `PageRequest` /
+  `SearchPageRequest` instead of three and four positional arguments. Structure only, no behaviour
+  change: the same 147 tests pass unedited either side of it.
+- **Why now.** #45 needs to tell the fetcher *why* it was called (scroll, refresh, retry), and the
+  positional lists were already at three and four. A fourth and fifth positional argument reads badly
+  at the call site, and the fetch-time fact after that would break the signature again. With an object,
+  every later addition is a field.
+- **Landed before the trigger, not with it.** Step 1 carries no `trigger` field at all. That keeps the
+  ~60-site mechanical rewrite free of semantics, so it reviews as a rename; step 2 adds the field and
+  the resolution and touches no call site, since adding a field is source-compatible for a consumer
+  who only reads the request. The alternative (ship the field hardcoded to one value) would have put
+  a wrong value through the mechanical diff and exported an enum whose other cases nothing produces.
+- **`base` + `final`, not a sealed pair.** Consumers only ever read these, so the hierarchy needs no
+  exhaustive switch; the shared base is there to declare the three common fields once. `SearchPageRequest`
+  keeps `query` non-null rather than the normal path carrying a nullable one that is never set.
+- **The return side is untouched.** `.new` still means items-only and `.withSignal` items-plus-signal:
+  that split is about the *output* tuple ([#explicit-end-signals](#explicit-end-signals)), and
+  unifying the input convention is no argument for reopening it. A `PageResult` wrapper stays rejected
+  for the same reason it was the first time.
+- **Breaking, deliberately.** Every consumer's fetch closure changes. Taken now because the request
+  object is the last break this axis needs, and because a break is cheapest at 0.x.
+- **A bulk rewrite needs a real check, not a green suite.** The 60-site pass silently turned
+  `'cursor$pageIndex'` into `'cursor$request.pageIndex'`, interpolating the request and appending a
+  literal `.pageIndex`. Analyzer clean, tests green, value wrong: the cursor was only ever checked
+  for null in that scenario. Grep for `$request.` after any such rename.
 
 ---
 

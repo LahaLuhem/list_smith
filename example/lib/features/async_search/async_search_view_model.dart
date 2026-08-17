@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
@@ -18,11 +19,11 @@ final class AsyncSearchViewModel extends ViewModel {
   /// reload it (the default `ReplaceCachePolicy`).
   ValueListenable<bool> get keepCacheListenable => _keepCacheNotifier;
 
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) =>
-      _repository.fetchPage(pageIndex, pageSize);
+  Future<List<DemoItem>> fetchPage(PageRequest request) =>
+      _repository.fetchPage(request.pageIndex, request.pageSize);
 
-  Future<List<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) =>
-      _repository.searchFetchPage(query, pageIndex, pageSize);
+  Future<List<DemoItem>> searchFetchPage(SearchPageRequest request) =>
+      _repository.searchFetchPage(request.query, request.pageIndex, request.pageSize);
 
   // A setter can't be torn off as the search field's onChanged callback.
   // ignore: use_setters_to_change_properties

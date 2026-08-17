@@ -12,17 +12,17 @@ void main() {
       examples: {
         'the first page of items': (
           fetchPage: PageFetcher(
-            (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+            (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
           ),
           shows: 'item 1',
         ),
         'the empty surface when the source has no items': (
-          fetchPage: PageFetcher((_, _) async => const <int>[]),
+          fetchPage: PageFetcher((_) async => const <int>[]),
           shows: 'No items',
         ),
         'the no-more footer once every page has loaded': (
           fetchPage: PageFetcher(
-            (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+            (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
           ),
           shows: 'No more items',
         ),
@@ -39,11 +39,11 @@ void main() {
       var calls = 0;
       await _pumpList(
         tester,
-        PageFetcher((pageIndex, _) async {
+        PageFetcher((request) async {
           calls++;
           if (calls == 1) throw Exception('network');
 
-          return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+          return request.pageIndex == 0 ? const [1, 2, 3] : const <int>[];
         }),
       );
       await drain(tester);
@@ -107,9 +107,9 @@ void main() {
       await _pumpAsyncSearch(
         tester,
         fetchPage: PageFetcher(
-          (pageIndex, _) async => pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
         ),
-        searchFetchPage: SearchPageFetcher((_, _, _) async => const [99]),
+        searchFetchPage: SearchPageFetcher((_) async => const [99]),
         query: '',
       );
       await settle(tester);
@@ -121,9 +121,9 @@ void main() {
     scenarioWidgets('a non-empty query shows the search results', (tester) async {
       await _pumpAsyncSearch(
         tester,
-        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
+        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
         searchFetchPage: SearchPageFetcher(
-          (query, pageIndex, _) async => pageIndex == 0 ? [query.length * 10] : const <int>[],
+          (request) async => request.pageIndex == 0 ? [request.query.length * 10] : const <int>[],
         ),
         query: 'ab',
       );
@@ -136,8 +136,8 @@ void main() {
     scenarioWidgets('a search that matches nothing shows the no-results surface', (tester) async {
       await _pumpAsyncSearch(
         tester,
-        fetchPage: PageFetcher((_, _) async => const [1, 2, 3]),
-        searchFetchPage: SearchPageFetcher((_, _, _) async => const <int>[]),
+        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
+        searchFetchPage: SearchPageFetcher((_) async => const <int>[]),
         query: 'zzz',
       );
       await settle(tester);
@@ -149,14 +149,14 @@ void main() {
       tester,
     ) async {
       var normalFetches = 0;
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
+      final fetchPage = PageFetcher<int>((request) async {
         normalFetches++;
 
-        return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+        return request.pageIndex == 0 ? const [1, 2, 3] : const <int>[];
       });
 
       final searchFetchPage = SearchPageFetcher<int>(
-        (_, pageIndex, _) async => pageIndex == 0 ? const [99] : const <int>[],
+        (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
       );
 
       await _pumpAsyncSearch(
@@ -194,14 +194,14 @@ void main() {
 
     scenarioWidgets('ReplaceCachePolicy refetches the normal list on clearing', (tester) async {
       var normalFetches = 0;
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
+      final fetchPage = PageFetcher<int>((request) async {
         normalFetches++;
 
-        return pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+        return request.pageIndex == 0 ? const [1, 2, 3] : const <int>[];
       });
 
       final searchFetchPage = SearchPageFetcher<int>(
-        (_, pageIndex, _) async => pageIndex == 0 ? const [99] : const <int>[],
+        (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
       );
 
       await _pumpAsyncSearch(

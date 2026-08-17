@@ -12,11 +12,11 @@ void main() {
     // many times each page index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher({int? failPageOnReload}) {
       final attempts = <int, int>{};
-      final fetchPage = PageFetcher<int>((pageIndex, _) async {
-        final attempt = attempts[pageIndex] = (attempts[pageIndex] ?? 0) + 1;
-        if (pageIndex == failPageOnReload && attempt == 2) throw Exception('reload boom');
+      final fetchPage = PageFetcher<int>((request) async {
+        final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
+        if (request.pageIndex == failPageOnReload && attempt == 2) throw Exception('reload boom');
 
-        return [pageIndex * 1000 + attempt];
+        return [request.pageIndex * 1000 + attempt];
       });
 
       return (fetchPage: fetchPage, attempts: attempts);
@@ -106,8 +106,9 @@ void main() {
 
     scenarioWidgets('a withSignal source reloads sequentially and atomically', (tester) async {
       final attempts = <int, int>{};
-      final fetchPage = PageFetcher<int>.withSignal((pageIndex, _, _) async {
-        final attempt = attempts[pageIndex] = (attempts[pageIndex] ?? 0) + 1;
+      final fetchPage = PageFetcher<int>.withSignal((request) async {
+        final pageIndex = request.pageIndex;
+        final attempt = attempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
         if (pageIndex == 1 && attempt == 2) throw Exception('reload boom');
 
         return ([pageIndex * 1000 + attempt], pageIndex < 2 ? 'cursor$pageIndex' : null);

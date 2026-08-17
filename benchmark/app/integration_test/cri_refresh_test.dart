@@ -27,8 +27,10 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('pull-to-refresh on a list_smith async list (CRI)', (tester) async {
-    Future<List<int>> fetchPage(int pageIndex, int pageSize) async =>
-        List<int>.generate(pageSize, (index) => pageIndex * pageSize + index);
+    Future<List<int>> fetchPage(PageRequest request) async => List<int>.generate(
+      request.pageSize,
+      (index) => request.pageIndex * request.pageSize + index,
+    );
 
     await tester.pumpWidget(
       HostFrame(

@@ -1,3 +1,6 @@
+/// @docImport '/src/data/pagination/models/page_request.dart';
+library;
+
 import 'package:flutter/widgets.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
@@ -80,7 +83,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
 
   /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [search].
   ///
-  /// [fetchPage] receives a 0-based page index and `pageSize` and returns one page of items;
+  /// [fetchPage] receives a [PageRequest] and returns one page of items;
   /// pagination ends per `endPolicy` (by default, the first empty page). When `endPolicy` continues
   /// past empty pages (a raised `emptyRunBeforeEnd` or a signal policy), also pass [onEmptyPage] as
   /// [AdvanceToFirstNonEmpty] so an empty page pages through to the first page with items instead of

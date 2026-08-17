@@ -41,7 +41,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: PageFetcher(
-            (pageIndex, _) async => pageIndex == 0
+            (request) async => request.pageIndex == 0
                 ? const [
                     (group: 'A', label: 'apple'),
                     (group: 'A', label: 'avocado'),
@@ -66,7 +66,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: PageFetcher(
-            (pageIndex, _) async => pageIndex == 0
+            (request) async => request.pageIndex == 0
                 ? const [
                     (group: 'A', label: 'apple'),
                     (group: 'B', label: 'banana'),

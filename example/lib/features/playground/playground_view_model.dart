@@ -1,3 +1,4 @@
+import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
@@ -61,7 +62,9 @@ final class PlaygroundViewModel extends ViewModel {
     notifyListeners();
   }
 
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
+  Future<List<DemoItem>> fetchPage(PageRequest request) async {
+    final PageRequest(:pageIndex, :pageSize) = request;
+
     await Future<void>.delayed(Duration(milliseconds: _latencyMs.round()));
     if (!_dataPages.contains(pageIndex)) return const [];
 
