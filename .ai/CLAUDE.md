@@ -102,11 +102,9 @@ pipeline-owned (see *Forbidden* below). Don't plan or make a CHANGELOG edit or a
   matching `X.Y.Z` tag is the trigger and is itself a confirm-first action.
 - **Never** push a semver tag without explicit instruction. The tag authenticates to pub.dev via
   OIDC with no manual confirmation step on the pub.dev side.
-- **Never** run `cider` commands or manually edit `CHANGELOG.md` (including `## [Unreleased]`) or
-  the `version:` field. Those are owned by `scripts/release.sh` and the changelog automation;
-  manual edits get reordered or overwritten. If the user wants a release, suggest
-  `scripts/release.sh <bump>`; don't run it (it pushes to `origin/main` and triggers publish). The
-  `cider:` block in `pubspec.yaml` is static config, hand-editable.
+- **Never** run `cider` or hand-edit `CHANGELOG.md` / `version:`; AGENTS.md hard rule 7 has the
+  why. If the user wants a release, suggest `scripts/release.sh <bump>`, but don't run it: it
+  pushes to `origin/main` and triggers publish.
 - **Never** edit `pubspec.lock` directly (it's `flutter pub get`'s output).
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
 - **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`): ask first.
@@ -121,9 +119,9 @@ pipeline-owned (see *Forbidden* below). Don't plan or make a CHANGELOG edit or a
 - `dart format --output=none --set-exit-if-changed .` clean (100-column width matches
   `analysis_options.yaml`).
 - `flutter test` green (where tests exist).
-- Lint clean via the linterpol image for whatever changed: `shellcheck` (shell), `actionlint`
-  (workflows), `rumdl` (Markdown), `ryl` (YAML). The check set and per-tool config live in
-  [`.github/lint-checks.json`](.github/lint-checks.json), `.rumdl.toml`, and `.yamllint.yaml`.
+- Lint clean via the linterpol image for whatever changed. The check set is
+  [`.github/lint-checks.json`](.github/lint-checks.json); per-tool config lives in `.rumdl.toml`
+  and `.yamllint.yaml`.
 - `flutter pub publish --dry-run` clean if the change is publish-relevant. Do not bump the version
   or edit the CHANGELOG to make it pass; `scripts/release.sh` owns those.
 - Public API additions carry `///` dartdoc and are reflected in the README.

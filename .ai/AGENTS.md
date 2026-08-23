@@ -22,13 +22,12 @@ maker/craft metaphor, a sibling in spirit to the maintainer's `minted` package.
 
 ## Stack
 
-- **Flutter >= 3.44, Dart >= 3.12** (constraints in `pubspec.yaml`; the SDK is pinned to the
-  `stable` channel in `.fvmrc`). Bump the floor only when a new stable language feature is
-  actually consumed, and record why in `APPENDIX.md`.
+- **The SDK floor lives in `pubspec.yaml`'s `environment:` block**, the channel in `.fvmrc`. Bump
+  the floor only when a new stable language feature is actually consumed, and record why in
+  `APPENDIX.md`.
 - **`flutter analyze`** for pedantic static analysis (or `dart analyze` for any pure-Dart
-  subset). The lint posture in `analysis_options.yaml` is deliberately strict: `strict-casts`,
-  `strict-inference`, `strict-raw-types`, plus a long `errors:` block promoting many lints to
-  errors. Pedantic mode is intentional, not negotiable.
+  subset). `analysis_options.yaml` holds the posture: strict language modes plus a long `errors:`
+  block promoting many lints to errors. Pedantic mode is intentional, not negotiable.
 - **The `dart format` gate runs Flutter's Dart**, not standalone Dart stable, which runs ahead of it
   and formats differently. Keep formatter checks on the Flutter toolchain, so what CI rejects is what
   a local `dart format .` fixes. Why: [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
@@ -36,17 +35,12 @@ maker/craft metaphor, a sibling in spirit to the maintainer's `minted` package.
 - **`dependency_validator`** guards the dependency set; `dart_dependency_validator.yaml` scopes
   it to the published surface and skips the example. It runs as a global tool
   (`dart pub global activate dependency_validator`), not a dev-dependency.
-- **Container-based linters** (`shellcheck` for shell, `actionlint` for workflows, `rumdl` for
-  Markdown, `ryl` for YAML) run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
-  Docker image, not local installs, so only Docker (plus `jq`) is needed. The check set and
-  image tag live in one manifest, [`.github/lint-checks.json`](.github/lint-checks.json);
-  `repo.yml` fans a CI matrix out over it and `scripts/release.sh`'s preflight loops the same
-  file, so the two can't drift. **Adding a linter is one entry in that manifest**, no workflow
-  or script edit. Per-tool config lives in `.rumdl.toml` and `.yamllint.yaml`.
-- **CHANGELOG and the `version:` field are owned by
-  [`scripts/release.sh`](scripts/release.sh)** (via `cider`). Do not run `cider` by hand and do
-  not edit `CHANGELOG.md` or `version:` directly. The `cider:` block in `pubspec.yaml` is static
-  config (URLs, link templates) and is hand-editable.
+- **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
+  Docker image, not local installs, so only Docker (plus `jq`) is needed. The check set and image
+  tag live in one manifest, [`.github/lint-checks.json`](.github/lint-checks.json); `repo.yml`
+  fans a CI matrix out over it and `scripts/release.sh`'s preflight loops the same file, so the
+  two can't drift. **Adding a linter is one entry in that manifest**, no workflow or script edit.
+  Per-tool config lives in `.rumdl.toml` and `.yamllint.yaml`.
 - **Published to pub.dev.** `.pubignore` controls the tarball; `.editorconfig` is the source of
   truth for text-file conventions (line width 100, LF, UTF-8).
 
@@ -57,18 +51,18 @@ list_smith/
 ├── lib/
 │   ├── list_smith.dart             Public entry; `export 'src/…'` only
 │   └── src/                        Implementation (private by convention)
-├── test/                           `flutter test` units + widget tests
+├── test/
 ├── example/                        Runnable Flutter demo; own pubspec, CODESTYLE and AGENTS
-├── analysis_options.yaml           Strict-mode + opinionated lints
+├── analysis_options.yaml
 ├── dart_dependency_validator.yaml  Scopes dependency_validator (excludes example/)
 ├── pubspec.yaml                    Deps + cider config + topics
-├── .pubignore                      Files excluded from `flutter pub publish`
+├── .pubignore
 ├── .fvmrc / .editorconfig          Local SDK pin / text-file formatting
-├── .github/workflows/              CI: repo, package, example, publish, changelog, pr-conventions
-├── CHANGELOG.md                    Pipeline-owned; appears on pub.dev
+├── .github/workflows/
+├── CHANGELOG.md                    Pipeline-owned (hard rule 7)
 ├── README.md                       pub.dev landing page
 ├── APPENDIX.md                     Design rationale (anchor-keyed)
-├── CODESTYLE.md                    Package code style
+├── CODESTYLE.md
 └── .ai/                            This file + CLAUDE.md (symlinked to repo root)
 ```
 
@@ -108,7 +102,8 @@ These are the general, architecture-independent rules.
    headers are written by [`scripts/release.sh`](scripts/release.sh); the `## [Unreleased]`
    buffer is appended to by
    [`.github/workflows/changelog.yml`](.github/workflows/changelog.yml) from the merged PR title
-   (governed by its `sem-*` label). Same prohibition on the `version:` field.
+   (governed by its `sem-*` label). Same prohibition on the `version:` field and on running
+   `cider` by hand. The `cider:` block in `pubspec.yaml` is static config and is hand-editable.
 8. **Workflows write out the action defaults they rely on**, even when the default is already the
    value you want. Every `github-actions` bump automerges, majors included, and an action major is
    usually a default-flip that CI stays green through, since Actions warns on an unknown input

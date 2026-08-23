@@ -86,9 +86,9 @@ The script refuses to proceed unless every check passes:
 - `cider` on PATH.
 - `jq` on PATH (reads the lint manifest, `.github/lint-checks.json`).
 - `docker` on PATH with the daemon running. The lint checks from
-  `.github/lint-checks.json` (`shellcheck`, `actionlint`, `rumdl`, `ryl`) run via the
-  linterpol image (`ghcr.io/lahaluhem/linterpol:latest`), not local installs; a
-  stopped daemon fails preflight fast with a clear message.
+  `.github/lint-checks.json` run via the linterpol image named in that same
+  manifest, not local installs; a stopped daemon fails preflight fast with a
+  clear message.
 - Working tree clean, on `main`, in sync with `origin/main` (fetches first).
 - `CHANGELOG.md` has a non-empty `## Unreleased` (or `## [Unreleased]`) section.
 - `dart format`, `flutter analyze`, and `flutter test` all clean.

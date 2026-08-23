@@ -691,9 +691,8 @@ class-shaped to mock.
 - **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `flutter analyze` for Dart.
   It runs from the [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image, so the only
   local requirement is Docker (plus `jq`). Both `scripts/release.sh` preflight and
-  `.github/workflows/repo.yml` enforce it; they read the check set (shellcheck, actionlint, rumdl,
-  ryl) and the image tag from one manifest, [`.github/lint-checks.json`](.github/lint-checks.json),
-  so neither can drift.
+  `.github/workflows/repo.yml` enforce it; they read the check set and the image tag from one
+  manifest, [`.github/lint-checks.json`](.github/lint-checks.json), so neither can drift.
 - **Prefer `# shellcheck disable=SC<code>` + a one-line "why" over refactoring for simple cases.**
   Refactor when the warning points at a real bug; reach for the directive when the code is correct
   and ShellCheck is just over-conservative. Always pair the directive with a comment.
