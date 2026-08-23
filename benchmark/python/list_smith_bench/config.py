@@ -42,8 +42,6 @@ DEFAULT_SCENARIO_DEVICE: Final[str] = "macos"
 # ---- run defaults ---------------------------------------------------------
 
 DEFAULT_ITERATIONS: Final[int] = 10
-# Warmup iterations the analyzer trims when aggregating; the entrypoint still emits every iteration.
-WARMUP_ITERATIONS: Final[int] = 2
 # Micros ignore duration (benchmark_harness self-times); the orchestrator still passes something.
 FALLBACK_DURATION: Final[int] = 10
 

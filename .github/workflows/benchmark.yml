@@ -1,8 +1,9 @@
 name: Benchmark regression
 
-# Micro-benchmark regression tripwire. Runs the AOT micros on both the PR head and origin/main on
-# the SAME runner (GitHub VMs vary run-to-run, so a cross-machine baseline would drown real
-# regressions in noise), then fails the job if any metric regressed significantly. The macOS-only,
+# Micro-benchmark regression tripwire. Builds the AOT micros for both the PR head and origin/main,
+# then measures them INTERLEAVED on the SAME runner (VMs vary ~2.7x run-to-run, so a cross-machine
+# baseline would drown real regressions; alternating the sides stops a mid-job shift landing on
+# one of them), then fails the job if any metric regressed significantly. The macOS-only,
 # timing-flaky scenario drives are deliberately NOT run here; they stay local.
 
 on:
@@ -49,17 +50,15 @@ jobs:
           python-version-file: benchmark/python/.python-version
           update-environment: true
 
-      # Candidate: build + run the AOT micros on the PR head. build/run use only the stdlib
+      # Build both sides first, then measure them interleaved. build uses only the stdlib
       # (subprocess + json), so no analysis venv is needed here; scipy for compare syncs later.
-      - name: Micros - candidate (PR head)
+      - name: Build micros - candidate (PR head)
         working-directory: benchmark/python
-        run: |
-          python3 run.py build
-          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/candidate"
+        run: python3 run.py build
 
       # Baseline: the SAME micros on origin/main, in a worktree, on THIS runner. Skips cleanly if
       # main has no suite yet (the bootstrap PR adding this), so the gate never errors on absence.
-      - name: Micros - baseline (origin/main)
+      - name: Build micros - baseline (origin/main)
         id: baseline
         run: |
           git fetch --no-tags --depth=1 origin main
@@ -71,7 +70,19 @@ jobs:
           fi
           cd "$RUNNER_TEMP/base/benchmark/python"
           python3 run.py build
-          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/baseline"
+
+      # One pass over both builds, alternating sides every iteration, so anything that shifts
+      # mid-job lands on both equally instead of on whichever ran first (issue #43).
+      - name: Micros - interleaved
+        if: steps.baseline.outputs.skip != 'true'
+        working-directory: benchmark/python
+        run: |
+          python3 run.py ab \
+            --candidate-build ../build \
+            --baseline-build "$RUNNER_TEMP/base/benchmark/build" \
+            --candidate-out "$RUNNER_TEMP/candidate" \
+            --baseline-out "$RUNNER_TEMP/baseline" \
+            --scratch "$RUNNER_TEMP/ab"
 
       # Gate: diff baseline vs candidate, fail on a significant regression. Needs the analysis
       # stack, so sync it here. Artifacts go to a temp dir, never the committed reports/.
