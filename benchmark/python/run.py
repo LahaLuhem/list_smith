@@ -1,25 +1,8 @@
 #!/usr/bin/env python3
 """Entry point for the `list_smith` benchmark suite.
 
-Thin argparse + dispatch shim. Subcommands live under `list_smith_bench/subcommands/`:
-
-- `build`    AOT-compile all micros (parallel)
-- `run`      execute micros + drive UI scenarios, write per-scenario + aggregated JSON
-- `report`   render PNG charts + SUMMARY.md
-- `compare`  Mann-Whitney diff two runs → forest chart + COMPARE.md
-
-Workflow (run from `benchmark/python/`):
-
-    uv sync                                    # one-time: create .venv + install deps
-    uv run python run.py build                 # AOT-compile all micros
-    uv run python run.py run --iterations 10 --out ../results-local/run-1/
-    uv run python run.py report ../results-local/run-1/aggregated.json
-    uv run python run.py compare BASE/aggregated.json NEW/aggregated.json
-
-`report` defaults to writing into `benchmark/reports/` (committed, referenced from the README). Pass
-`--out` for ad-hoc local snapshots.
-
-Methodology (see ../README.md): AOT compile not JIT; N >= 10; median + IQR; per-machine baselines.
+Thin argparse + dispatch shim; the subcommands live under `list_smith_bench/subcommands/`.
+See ../README.md for the workflow and the measurement methodology.
 """
 
 from __future__ import annotations

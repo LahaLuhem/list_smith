@@ -1,15 +1,7 @@
-# Project metadata + dependencies for the benchmark orchestrator / analyzer.
+# Project metadata + dependencies for the benchmark orchestrator / analyzer. Managed by `uv`
+# (https://docs.astral.sh/uv/); ../README.md has the install + run workflow.
 #
-# Managed by `uv` (https://docs.astral.sh/uv/). Install + run:
-#
-#     cd benchmark/python
-#     uv sync                          # create .venv, install everything
-#     uv run python run.py build       # AOT-compile micros
-#     uv run python run.py run         # execute + capture JSON
-#     uv run ruff check .              # lint
-#     uv run ruff format .             # format
-#
-# `uv.lock` is committed for reproducible runs — perf claims are only defensible if the analysis
+# `uv.lock` is committed for reproducible runs: perf claims are only defensible if the analysis
 # stack is pinned.
 
 [project]
