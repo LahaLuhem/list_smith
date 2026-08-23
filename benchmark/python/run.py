@@ -16,6 +16,7 @@ from list_smith_bench.config import (
     REGRESSION_THRESHOLD_PCT,
     RESULTS_DIR,
 )
+from list_smith_bench.subcommands.ab import cmd_ab
 from list_smith_bench.subcommands.build import cmd_build
 from list_smith_bench.subcommands.compare import cmd_compare
 from list_smith_bench.subcommands.report import cmd_report
@@ -33,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_run_parser(sub)
     _add_report_parser(sub)
     _add_compare_parser(sub)
+    _add_ab_parser(sub)
 
     args = parser.parse_args(argv)
     return args.func(args)
@@ -114,6 +116,29 @@ def _add_compare_parser(sub: argparse._SubParsersAction) -> None:
         help=f"percent slower to fail on (default {REGRESSION_THRESHOLD_PCT:.0f})",
     )
     parser_compare.set_defaults(func=cmd_compare)
+
+
+def _add_ab_parser(sub: argparse._SubParsersAction) -> None:
+    parser_ab = sub.add_parser(
+        "ab", help="run two builds' micros interleaved, alternating sides every iteration"
+    )
+    parser_ab.add_argument("--candidate-build", required=True, help="build dir for the candidate")
+    parser_ab.add_argument("--baseline-build", required=True, help="build dir for the baseline")
+    parser_ab.add_argument("--candidate-out", required=True, help="output dir for the candidate")
+    parser_ab.add_argument("--baseline-out", required=True, help="output dir for the baseline")
+    parser_ab.add_argument(
+        "--iterations",
+        type=int,
+        default=DEFAULT_ITERATIONS,
+        help=f"iterations per micro per side (default {DEFAULT_ITERATIONS})",
+    )
+    parser_ab.add_argument(
+        "--scratch", help="scratch dir for per-run JSON (default: under --candidate-out)"
+    )
+    parser_ab.add_argument(
+        "--scenarios", nargs="*", help="restrict to named micros (default: all present in both)"
+    )
+    parser_ab.set_defaults(func=cmd_ab)
 
 
 if __name__ == "__main__":

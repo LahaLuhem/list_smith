@@ -19,7 +19,7 @@ from list_smith_bench.data.dtos.result_record import ResultRecord
 from list_smith_bench.data.utils.stats import compute_compare_rows, regressions
 
 # One run's jitter, hardcoded rather than seeded so a Python RNG change can't move the test. Ten
-# samples per side: DEFAULT_ITERATIONS, with nothing trimmed (WARMUP_ITERATIONS is unused).
+# samples per side: DEFAULT_ITERATIONS, one process each once interleaved.
 _JITTER: tuple[float, ...] = (1.000, 0.994, 1.012, 0.988, 1.006, 1.017, 0.991, 1.003, 0.985, 1.009)
 _BASE_MICROS = 380.0
 # Per-process level lottery. `wrapping_overhead[page_count=100]` is allocation-throughput bound, so
