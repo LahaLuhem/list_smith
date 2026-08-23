@@ -138,8 +138,8 @@ def _print_compare_table(rows: list[CompareRow]) -> None:
 
     print()
     print(
-        "spread = pooled within-side variation; 'x noise' = delta over that spread. A delta inside "
-        "its own noise is a wobble whatever its p-value."
+        "spread = pooled within-side variation; 'x noise' = delta over it. A delta inside its own "
+        "noise is a wobble whatever its p-value."
     )
     floor = p_value_floor(rows[0].baseline_count, rows[0].current_count)
     print(

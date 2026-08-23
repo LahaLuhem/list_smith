@@ -238,8 +238,8 @@ class TestPooledSpread:
     def test_single_sample_side_reports_no_spread(self) -> None:
         assert pooled_spread_pct([100.0], [100.0]) == 0.0
 
-    def test_zero_median_reports_no_spread(self) -> None:
-        """A zero centre has no meaningful percentage spread, and must not divide by zero."""
+    def test_zero_median_side_contributes_nothing(self) -> None:
+        """A zero centre has no percentage spread, so only the other side counts (and no div/0)."""
         assert pooled_spread_pct([0.0, 0.0, 0.0], [1.0, 2.0, 3.0]) > 0.0
 
     def test_rows_carry_the_spread(self) -> None:

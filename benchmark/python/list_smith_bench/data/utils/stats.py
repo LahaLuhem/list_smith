@@ -43,20 +43,16 @@ def _coefficient_of_variation(values: list[float]) -> float:
 def pooled_spread_pct(baseline: list[float], current: list[float]) -> float:
     """The two sides' within-side variation, averaged: the noise a delta has to clear.
 
-    Reported next to the delta because p cannot express magnitude once the sample sets separate
-    completely, and neither can Cliff's delta: both saturate. Measured on a real false positive,
-    `wrapping_overhead[100]` and `wrapping_overhead[10]` scored Cliff's +1.00 and -1.00 for a +22.3%
-    and a -6.4% delta. Their spreads (2.2% and 0.6%) are what tell the two apart. See issue #43.
+    p and Cliff's delta both saturate once the sets separate, so neither can size a gap; this can.
+    Evidence in issue #43.
     """
     return (_coefficient_of_variation(baseline) + _coefficient_of_variation(current)) / 2.0
 
 
 def p_value_floor(baseline_count: int, current_count: int) -> float:
-    """The smallest p `compute_compare_rows` can report at these sample sizes.
+    """The smallest p reachable at these sample sizes, from two perfectly separated sets.
 
-    Two perfectly separated sets of these sizes: no real comparison can score below it. Worth
-    printing, because a row sitting at the floor has separated completely, which says nothing about
-    how big the gap is.
+    Printed with the table so a row sitting at the floor reads as "separated", not "large gap".
     """
     from scipy import stats as scipy_stats
 
