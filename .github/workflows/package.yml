@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-flutter
       # Explicit paths: lib + test are the root package. The example is a
       # separate package with its own pubspec and is analysed by example.yml,
@@ -33,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-flutter
       # Published 5.0.5 caps `analyzer` below the 14.1.0 that Dart 3.13 syntax needs to parse. Until
       # Workiva/dependency_validator#181 releases, run its branch; merging deletes it and fails here
@@ -47,6 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-flutter
       # `flutter test --coverage` writes coverage/lcov.info directly, so no
       # separate format_coverage step is needed.

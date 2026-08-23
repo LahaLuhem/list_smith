@@ -30,6 +30,9 @@ runs:
         key: pub-flutter-${{ runner.os }}-${{ hashFiles(format('{0}/pubspec.lock', inputs.working-directory)) }}  # yamllint disable-line rule:line-length
         restore-keys: |
           pub-flutter-${{ runner.os }}-
+        # A cold cache must stay non-fatal, and we want a real restore, not a probe.
+        fail-on-cache-miss: false
+        lookup-only: false
 
     - name: flutter pub get
       shell: bash

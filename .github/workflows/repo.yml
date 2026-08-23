@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # Formatter output is version-sensitive, so take Dart from Flutter rather than
       # Dart stable, which runs ahead of it. Why: APPENDIX.md#ci-format-sdk. The
       # composite stays skipped: format scans in place, so no pub get is needed.
@@ -39,6 +41,8 @@ jobs:
       image: ${{ steps.read.outputs.image }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - id: read
         # Fail loudly on a missing/malformed/empty manifest instead of emitting an
         # empty matrix, which would run zero linters and pass the job green.
@@ -63,6 +67,8 @@ jobs:
       LINT_CMD: ${{ matrix.check.cmd }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # The checkout mounts read-only at the image's /work workdir. $LINT_CMD is
       # intentionally unquoted so the runner shell word-splits it into the tool +
       # args and glob-expands (e.g. scripts/*.sh) against the checkout before the

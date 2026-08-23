@@ -31,17 +31,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-flutter
-      # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
-      # Dependabot bumps this exact version like any other pin.
-      - uses: astral-sh/setup-uv@v9.0.0
         with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-flutter
+      # Full-version pin: v8+ dropped the floating @v8 tag. `latest-known` = newest uv whose
+      # checksum this action ships, so the install is always verified. Hard rule 8.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: latest-known
           enable-cache: true
-      # Pin the bare-python build/run steps to the analyzer's floor (.python-version) rather than
-      # whatever the runner ships, so CI matches the declared requires-python.
+          prune-cache: false
+          download-from-astral-mirror: true
+      # Pin the bare-python build/run steps to the analyzer's floor (.python-version), not
+      # whatever the runner ships. `update-environment` is what makes `python3` that one.
       - uses: actions/setup-python@v7
         with:
           python-version-file: benchmark/python/.python-version
+          update-environment: true
 
       # Candidate: build + run the AOT micros on the PR head. build/run use only the stdlib
       # (subprocess + json), so no analysis venv is needed here; scipy for compare syncs later.
@@ -81,11 +87,16 @@ jobs:
             --fail-on-regression
 
       # Keep the compare artifacts (forest chart + COMPARE.md) even when the gate fails, so a
-      # flagged regression is inspectable from the run instead of lost in the step log.
+      # flagged regression is inspectable from the run instead of lost in the step log. The raw
+      # per-side runs go up too: every record carries `started_at`, so a flake can be diagnosed
+      # from the artifact after the fact instead of argued about (issue #43).
       - name: Upload compare artifacts
         if: always() && steps.baseline.outputs.skip != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: micro-compare
-          path: ${{ runner.temp }}/compare
+          path: |
+            ${{ runner.temp }}/compare
+            ${{ runner.temp }}/candidate/aggregated.json
+            ${{ runner.temp }}/baseline/aggregated.json
           if-no-files-found: warn

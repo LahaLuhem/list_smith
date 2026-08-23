@@ -557,9 +557,9 @@ Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) 
 ## Dependabot automerges the boring tier, behind six aggregate checks
 
 [`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) arms GitHub's native
-auto-merge (rebase) for patch and minor bumps in `uv` and `github-actions`; every `pub` bump and
-every major waits for a human. Dependabot has no `automerge` config key the way Renovate does, so
-the mechanism is a workflow. Ported from
+auto-merge (rebase) for every `github-actions` bump, majors included, and for patch and minor
+bumps in `uv`; every `pub` bump and every `uv` major waits for a human. Dependabot has no
+`automerge` config key the way Renovate does, so the mechanism is a workflow. Ported from
 [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager), which runs it behind four.
 
 - **`pub` stays manual** because a root-pubspec bump reaches every consumer's resolution and is
@@ -570,6 +570,12 @@ the mechanism is a workflow. Ported from
 - **Minor, not just patch,** because `dependabot.yml` groups minor with patch and `fetch-metadata`
   reports a group's *highest* step. Patch-only would skip any batch holding one minor, which is
   most of them.
+- **`github-actions` majors ride along; hard rule 8 is what pays for it.** A green check is a weak
+  oracle here: Actions warns on an unknown input rather than failing, and majors in this ecosystem
+  are default-flips more often than API breaks. `setup-uv` v9 flipped `prune-cache` to `false`, v10
+  made `enable-cache: auto` skip `pull_request_target`, `workflow_run`, `release` and tag pushes;
+  both would have merged green while quietly changing CI. v10 was a real no-op here only because
+  every `setup-uv` step already wrote `enable-cache: true` instead of leaning on `auto`.
 - **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks and ignores
   failing ones that aren't, so this is safe only while `main`'s ruleset is **active** and requires
   all six contexts. Keep `required_signatures` out of it: rebase-merge emits unsigned commits

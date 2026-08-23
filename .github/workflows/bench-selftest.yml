@@ -1,0 +1,114 @@
+name: Benchmark gate self-test
+
+# Measures the regression gate's FALSE-POSITIVE rate on a real runner (issue #43).
+#
+# Builds ONE commit and compares it against ITSELF, in the same candidate-then-baseline order the
+# real gate uses. Both sides are the same binaries, so every metric the gate flags here is noise by
+# definition. Run it before and after a change to the gate and compare the trip counts; each
+# dispatch is 5 independent runs over ~13 metrics, so re-dispatch to double the sample.
+#
+# Manual only: it is a measurement, not a check, and it never fails on a trip (the trip is the
+# datum). Deliberately not on `pull_request` — it would double an already expensive job.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: Self-comparison ${{ matrix.run }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Independent samples: one flaky runner must not cancel the rest of the measurement.
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-flutter
+      # Full-version pin: v8+ dropped the floating @v8 tag. `latest-known` = newest uv whose
+      # checksum this action ships, so the install is always verified. Hard rule 8.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: latest-known
+          enable-cache: true
+          prune-cache: false
+          download-from-astral-mirror: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: benchmark/python/.python-version
+          update-environment: true
+
+      # One build, two runs of those same binaries, back to back. Any difference between the two is
+      # the runner, never the code.
+      - name: Run the same commit twice
+        working-directory: benchmark/python
+        run: |
+          python3 run.py build
+          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/sideA"
+          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/sideB"
+
+      # The gate's own verdict, captured rather than enforced.
+      - name: Gate verdict and timing separation
+        working-directory: benchmark/python
+        run: |
+          uv sync
+
+          set +e
+          uv run python run.py compare \
+            "$RUNNER_TEMP/sideA/aggregated.json" \
+            "$RUNNER_TEMP/sideB/aggregated.json" \
+            --out "$RUNNER_TEMP/compare" \
+            --fail-on-regression > "$RUNNER_TEMP/compare.log" 2>&1
+          gate_exit=$?
+          set -e
+          cat "$RUNNER_TEMP/compare.log"
+
+          separation=$(uv run python - <<'PY'
+          import json
+          import os
+
+          from list_smith_bench.data.utils.drift import side_timing_separation
+
+          temp = os.environ["RUNNER_TEMP"]
+          with open(f"{temp}/sideA/aggregated.json") as handle:
+              side_a = json.load(handle)
+          with open(f"{temp}/sideB/aggregated.json") as handle:
+              side_b = json.load(handle)
+
+          print(f"{side_timing_separation(side_a, side_b):.3f}")
+          PY
+          )
+
+          if [ "$gate_exit" -eq 0 ]; then
+            verdict='pass (no false positive)'
+          else
+            verdict='**TRIPPED — false positive**'
+          fi
+
+          {
+            echo "### Self-comparison ${{ matrix.run }}"
+            echo
+            echo "- gate: $verdict"
+            echo "- side timing separation: \`$separation\` of the job span (0.5 = fully blocked, 0.0 = interleaved)"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/compare.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload self-test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate-selftest-${{ matrix.run }}
+          path: |
+            ${{ runner.temp }}/compare
+            ${{ runner.temp }}/compare.log
+            ${{ runner.temp }}/sideA/aggregated.json
+            ${{ runner.temp }}/sideB/aggregated.json
+          if-no-files-found: warn

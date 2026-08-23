@@ -5,25 +5,21 @@ on:
     types: [closed]
     branches: [main]
 
-# Serialize so back-to-back merges don't race on the push to main.
-# cancel-in-progress is OFF, every merged PR must actually get its line.
+# Serialized, and never cancelled: every merged PR must actually get its line.
 concurrency:
   group: changelog-main
   cancel-in-progress: false
 
-# pull_request_target runs in the base-repo context, so GITHUB_TOKEN write
-# scopes are honoured even when the PR comes from a fork. The workflow file
-# always loads from main (never from the PR), and we never check out PR code,
-# so the write token is not exposed to PR-controlled scripts.
+# pull_request_target for write scopes on fork PRs. Safe because the workflow loads from main
+# and PR code is never checked out, so the token never meets PR-controlled scripts.
 permissions:
   contents: write
 
 jobs:
   log:
     name: Append cider entry
-    # Skip merged bot PRs: they carry no sem-* label, so there's no cider type
-    # to resolve. Dependabot bumps don't get an automatic CHANGELOG entry,
-    # add one by hand if a root-package bump is user-visible.
+    # Bot PRs carry no sem-* label, so there's no cider type to resolve. Add an entry by hand if
+    # a root-package bump turns out to be user-visible.
     if: >-
       github.event.pull_request.merged == true &&
       github.event.pull_request.user.login != 'dependabot[bot]'
@@ -58,29 +54,29 @@ jobs:
         if: steps.sem.outputs.type == 'skip'
         run: echo 'sem-skip applied, no changelog entry.'
 
-      # Mint a short-lived (~1 h) installation token for the GitHub App
-      # configured to bypass main's ruleset. We can't use the default
-      # GITHUB_TOKEN here because branch protection blocks
-      # `github-actions[bot]` direct pushes, and the bot identity is not
-      # surface-able in the ruleset's bypass list. The App is, via the
-      # ruleset's "Apps" bypass tab, and the install token authenticates
-      # as the App.
+      # An App token, not GITHUB_TOKEN: the ruleset's "Apps" bypass tab can list the App, but not
+      # `github-actions[bot]`, whose direct pushes branch protection blocks. Owner/repositories are
+      # written out so the token's reach can't widen under us (hard rule 8). Lives ~1 h.
       - uses: actions/create-github-app-token@v3
         id: app-token
         if: steps.sem.outputs.type != 'skip'
         with:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          skip-token-revoke: false
 
+      # The only checkout in the repo that keeps credentials: the App token has to survive into
+      # the `git push` below. Hard rule 8.
       - uses: actions/checkout@v7
         if: steps.sem.outputs.type != 'skip'
         with:
           ref: main
           token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
 
-      # No project deps needed, cider is installed via `pub global activate`.
-      # Skip the setup-flutter composite (which runs `flutter pub get`) for the
-      # same reason repo.yml's format job does: ~10-30s faster per run.
+      # cider comes from `pub global activate`, so no project deps and no setup-flutter composite.
       - uses: dart-lang/setup-dart@v1
         if: steps.sem.outputs.type != 'skip'
         with:
@@ -96,17 +92,14 @@ jobs:
           TYPE: ${{ steps.sem.outputs.type }}
           TITLE: ${{ github.event.pull_request.title }}
         run: |
-          # The numeric prefix on the email is the bot's GitHub user ID
-          # (stable across repos for the same App), it's what links commits
-          # to the App's avatar in GitHub's UI. Look up via:
-          # `curl -s https://api.github.com/users/<slug>%5Bbot%5D | jq .id`
+          # The email's numeric prefix is the bot's GitHub user ID, which is what links commits
+          # to the App's avatar. Look up: api.github.com/users/<slug>%5Bbot%5D | jq .id
           git config user.name  '${{ steps.app-token.outputs.app-slug }}[bot]'
           email='287673903+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
           git config user.email "$email"
           dart pub global run cider log "$TYPE" "$TITLE"
           git add CHANGELOG.md
-          # [skip ci] now matters: App-token pushes DO trigger workflows
-          # (unlike GITHUB_TOKEN pushes, which don't). The marker prevents
-          # this commit from re-triggering the package CI on main.
+          # [skip ci] matters here: App-token pushes DO trigger workflows, unlike GITHUB_TOKEN
+          # ones, so without it this commit re-triggers the package CI on main.
           git commit -m 'Changelog updated [skip ci]'
           git push origin HEAD:main

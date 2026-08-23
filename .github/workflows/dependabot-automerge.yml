@@ -23,9 +23,14 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
+      # Verification stays on explicitly: this metadata is what the automerge decision trusts,
+      # and it now waves majors through. Hard rule 8.
       - name: Dependabot metadata
         id: meta
         uses: dependabot/fetch-metadata@v3
+        with:
+          skip-verification: false
+          skip-commit-verification: false
 
       # `package-ecosystem` is the branch-name segment, so github-actions
       # arrives underscored. `update-type` is the group's *highest* semver step.
@@ -37,7 +42,12 @@ jobs:
         run: |
           eligible=false
           case "$ECOSYSTEM" in
-            uv | github_actions)
+            # Majors too: an action major is a default-flip, and green can't catch one
+            # (unknown inputs only warn). Guard is explicitness: APPENDIX.md#dependabot-automerge
+            github_actions)
+              eligible=true
+              ;;
+            uv)
               case "$UPDATE_TYPE" in
                 version-update:semver-patch | version-update:semver-minor)
                   eligible=true

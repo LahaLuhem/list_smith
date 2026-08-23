@@ -118,6 +118,10 @@ contract, the search/cache policy) are **TODO (design pass)**.
    buffer is appended to by
    [`.github/workflows/changelog.yml`](.github/workflows/changelog.yml) from the merged PR title
    (governed by its `sem-*` label). Same prohibition on the `version:` field.
+8. **Workflows write out the action defaults they rely on**, even when the default is already the
+   value you want. Every `github-actions` bump automerges, majors included, and an action major is
+   usually a default-flip that CI stays green through, since Actions warns on an unknown input
+   rather than failing: [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 
 ## PR conventions
 

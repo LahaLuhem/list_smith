@@ -24,11 +24,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Full-version pin: setup-uv v8+ dropped the floating @v8 tag (none to track).
-      # Dependabot bumps this exact version like any other pin.
-      - uses: astral-sh/setup-uv@v9.0.0
         with:
+          persist-credentials: false
+      # Full-version pin: v8+ dropped the floating @v8 tag. `latest-known` = newest uv whose
+      # checksum this action ships, so the install is always verified. Hard rule 8.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: latest-known
           enable-cache: true
+          prune-cache: false
+          download-from-astral-mirror: true
       # uv sync installs the dev group (pytest + pytest-cov). The --cov target is in pyproject
       # addopts; the fail-under threshold is here so local single-test runs aren't blocked by it.
       - name: pytest + coverage gate

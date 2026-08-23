@@ -26,6 +26,8 @@ jobs:
         working-directory: benchmark/app
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: benchmark/app
