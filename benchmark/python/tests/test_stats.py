@@ -17,6 +17,8 @@ from list_smith_bench.data.utils.stats import (
     compute_compare_rows,
     group_samples,
     median,
+    p_value_floor,
+    pooled_spread_pct,
     records_per_scenario,
     regressions,
 )
@@ -220,3 +222,44 @@ class TestRecordsPerScenario:
             _record("wrapping_overhead", {"m": [1.0]}, {"page_count": 10}),
         ]
         assert records_per_scenario(records) == 2
+
+
+class TestPooledSpread:
+    """The noise scale a delta has to clear, reported because p and Cliff's delta both saturate."""
+
+    def test_identical_tight_samples_have_near_zero_spread(self) -> None:
+        assert pooled_spread_pct([100.0] * 5, [100.0] * 5) == 0.0
+
+    def test_spread_averages_the_two_sides(self) -> None:
+        # One side flat, the other varying: the pooled figure sits between them, not at either end.
+        spread = pooled_spread_pct([100.0] * 5, [90.0, 95.0, 100.0, 105.0, 110.0])
+        assert 0.0 < spread < 10.0
+
+    def test_single_sample_side_reports_no_spread(self) -> None:
+        assert pooled_spread_pct([100.0], [100.0]) == 0.0
+
+    def test_zero_median_reports_no_spread(self) -> None:
+        """A zero centre has no meaningful percentage spread, and must not divide by zero."""
+        assert pooled_spread_pct([0.0, 0.0, 0.0], [1.0, 2.0, 3.0]) > 0.0
+
+    def test_rows_carry_the_spread(self) -> None:
+        base = [_record("s", {"m": [10.0]}), _record("s", {"m": [11.0]})]
+        curr = [_record("s", {"m": [20.0]}), _record("s", {"m": [22.0]})]
+        row = compute_compare_rows(base, curr)[0]
+
+        assert row.spread_pct > 0.0
+        assert row.delta_over_spread > 1.0
+
+
+class TestPValueFloor:
+    """A row sitting at the floor separated completely; it says nothing about how big the gap is."""
+
+    def test_floor_matches_the_gate_s_own_sample_size(self) -> None:
+        # Ten per side is DEFAULT_ITERATIONS with nothing trimmed; scipy goes asymptotic above 8.
+        assert p_value_floor(10, 10) == pytest.approx(0.000183, abs=1e-5)
+
+    def test_smaller_samples_cannot_reach_as_low(self) -> None:
+        assert p_value_floor(5, 5) > p_value_floor(10, 10)
+
+    def test_degenerate_sizes_report_no_significance(self) -> None:
+        assert p_value_floor(0, 10) == 1.0
