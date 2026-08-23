@@ -27,11 +27,9 @@ class CompareRow:
     current_median: float
     delta_pct: float
     p_value: float
-    # Pooled within-side coefficient of variation: the run-to-run noise the delta has to clear. A
-    # delta far inside this is a wobble whatever its p-value, which p alone cannot say once the two
-    # sample sets separate completely (issue #43).
+    # Pooled within-side variation: the run-to-run noise this delta has to clear (issue #43).
     spread_pct: float = 0.0
-    # Samples behind each median, so a renderer can name the smallest p reachable at this size.
+    # Samples per side, so a renderer can name the smallest p reachable at this size.
     baseline_count: int = 0
     current_count: int = 0
 
