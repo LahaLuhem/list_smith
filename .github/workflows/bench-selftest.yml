@@ -13,6 +13,13 @@ name: Benchmark gate self-test
 on:
   workflow_dispatch:
 
+# `cancel-in-progress: false`, spelled out per hard rule 8 and against `benchmark.yml`'s `true`: a
+# run in flight here is a measurement, and cancelling one silently shrinks the sample it was
+# dispatched to collect. A second dispatch queues behind the first instead of killing it.
+concurrency:
+  group: bench-selftest-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
