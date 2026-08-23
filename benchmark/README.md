@@ -147,9 +147,9 @@ maintainer refresh on a quiet machine; contributor runs should pass `--out` to a
 
 Phase 1 (apparatus, proven end to end across both runners):
 
-- **Micro `sync_search_scaling`** — `resolveSyncSearch` cost as the in-memory list grows (choke point:
+- **Micro `sync_search_scaling`**: `resolveSyncSearch` cost as the in-memory list grows (choke point:
   large sync-search filtering on the UI thread).
-- **Scenario `slow_observer`** — render latency when a slow synchronous observer sits on list_smith's
+- **Scenario `slow_observer`**: render latency when a slow synchronous observer sits on list_smith's
   own fetch path (choke point: the observer delays the list rendering, not just a side effect).
 
 Still to come (fan-out): the observer-dispatch and wrapping-overhead micros; the large-sync-filter,

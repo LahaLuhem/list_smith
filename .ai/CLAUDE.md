@@ -4,10 +4,6 @@ Claude-Code-specific guidance. Project facts, stack, hard rules, and AI-agent gu
 [AGENTS.md](AGENTS.md); the full code-style guide lives in [`CODESTYLE.md`](CODESTYLE.md); design
 rationale lives in [`APPENDIX.md`](APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
 
-> **Setup-phase note.** The infra is in place; the public API and internal architecture are not
-> designed yet. Where a rule below depends on architecture that doesn't exist, it's marked
-> **TODO (design pass)**. Surface design questions rather than guessing.
-
 ## Role & context
 
 You're assisting with **list_smith**: a developer-first Flutter package that wraps
@@ -81,8 +77,6 @@ for 7 days, and a tag push triggers an automated publish).
 - You're adding or removing a dependency in `pubspec.yaml`.
 - You're changing `analysis_options.yaml`; lint posture is project-wide and any toggle deserves a
   written reason in APPENDIX.
-- **TODO (design pass):** once the widget pattern exists, adding to it will likely warrant a plan
-  step too. Record that here when it lands.
 
 For a single-file, single-concern change inside `lib/src/`, just do it.
 
@@ -134,5 +128,3 @@ pipeline-owned (see *Forbidden* below). Don't plan or make a CHANGELOG edit or a
   or edit the CHANGELOG to make it pass; `scripts/release.sh` owns those.
 - Public API additions carry `///` dartdoc and are reflected in the README.
 - Explicitly call out what you did NOT verify.
-- **TODO (design pass):** add the package-specific done criteria (the widget contract, any
-  behavioural guards) once the architecture is designed.

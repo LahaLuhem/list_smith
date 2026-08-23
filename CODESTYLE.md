@@ -318,10 +318,6 @@ door. Watching the list is the observer's job. Full rationale:
 - Use a plain callback while there is one intent; promote to an `@internal` capability interface (the
   `ReloadContext` shape) once there are several. `one_member_abstracts` flags the premature one.
 
-**TODO (design pass).** Remaining load-bearing patterns (the public widget's constructor shape, sync
-vs async source modelling) land here as the architecture settles, with rationale cross-linked to
-`APPENDIX.md`.
-
 ---
 
 <a id="idioms"></a>

@@ -608,6 +608,4 @@ bumps in `uv`; every `pub` bump and every `uv` major waits for a human. Dependab
 
 ---
 
-**TODO (design pass and beyond).** Decisions still to be recorded here as they land, for example: the
-SDK floor rationale, the public API surface and why it's shaped that way, and what `list_smith`
-deliberately does *not* do (learning from the pitfalls of the package it replaces).
+**Still to record.** The SDK-floor rationale, and what `list_smith` deliberately does *not* do.

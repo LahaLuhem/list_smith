@@ -3,11 +3,6 @@
 Tool-agnostic brief for any coding agent (Copilot, Cursor, Codex, Claude Code, ...) working
 in this package. Claude-Code-specific guidance lives in [CLAUDE.md](CLAUDE.md).
 
-> **Setup-phase note.** The repository scaffolding and infra are in place, but the public API
-> and internal architecture have not been designed yet. Sections below marked **TODO (design
-> pass)** are deliberately left open until that work lands. Don't invent architecture to fill
-> them; raise the design questions instead.
-
 ## Project goal
 
 A developer-first Flutter package that wraps `ListView.builder` for real-world lists, doing
@@ -24,10 +19,6 @@ three jobs properly:
 good ideas, removes the "ghost params" (constructor parameters that silently do nothing on one
 path), fixes the known correctness bugs, and puts developer experience first. The name is a
 maker/craft metaphor, a sibling in spirit to the maintainer's `minted` package.
-
-**TODO (design pass):** the public widget(s), their parameters, the search/cache policy model,
-and the `lib/src/` structure are all still to be designed. This file will gain the concrete
-hard rules once they exist.
 
 ## Stack
 
@@ -65,9 +56,9 @@ hard rules once they exist.
 list_smith/
 ├── lib/
 │   ├── list_smith.dart             Public entry; `export 'src/…'` only
-│   └── src/                        Implementation (private by convention). TODO (design pass)
+│   └── src/                        Implementation (private by convention)
 ├── test/                           `flutter test` units + widget tests
-├── example/                        Runnable Flutter demo. TODO (added in a later pass)
+├── example/                        Runnable Flutter demo; own pubspec, CODESTYLE and AGENTS
 ├── analysis_options.yaml           Strict-mode + opinionated lints
 ├── dart_dependency_validator.yaml  Scopes dependency_validator (excludes example/)
 ├── pubspec.yaml                    Deps + cider config + topics
@@ -81,7 +72,8 @@ list_smith/
 └── .ai/                            This file + CLAUDE.md (symlinked to repo root)
 ```
 
-The internal `lib/src/` layout is **TODO (design pass)**. `test/` will mirror it.
+`test/` is organised by test kind (`unit_tests/`, `widget_tests/`, `support/`), not as a mirror of
+`lib/src/`.
 
 **Nested-app lockfiles are opt-in.** The root `.gitignore` ignores `pubspec.lock` broadly, the
 library follows the "don't commit your own lockfile" convention. A nested app that *should* commit
@@ -93,8 +85,7 @@ future nested package (e.g. a `benchmark/` app) stays ignored until it adds its 
 
 ## Hard rules
 
-These are the general, architecture-independent rules. Package-specific rules (the widget's
-contract, the search/cache policy) are **TODO (design pass)**.
+These are the general, architecture-independent rules.
 
 1. **The public API lives only in `lib/list_smith.dart`**, which re-exports from `lib/src/`.
    Don't make users import `package:list_smith/src/…`; the `src/` subtree is private by
