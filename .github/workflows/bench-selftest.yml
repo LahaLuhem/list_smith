@@ -94,7 +94,8 @@ jobs:
             echo "### Self-comparison ${{ matrix.run }}"
             echo
             echo "- gate: $verdict"
-            echo "- side timing separation: \`$separation\` of the job span (0.5 = fully blocked, 0.0 = interleaved)"
+            echo "- side timing separation: \`$separation\` of the job span"
+            echo "  (0.5 = each side in its own half, 0.0 = fully interleaved)"
             echo
             echo '```text'
             cat "$RUNNER_TEMP/compare.log"
