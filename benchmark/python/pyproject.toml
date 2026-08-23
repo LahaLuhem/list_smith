@@ -53,7 +53,7 @@ pythonpath = ["."]
 # -ra: short summary for everything except passes. --strict-markers: catch @pytest.mark typos.
 # --cov gates the analyzer's pure-logic core (stats.py); the fail-under threshold lives in CI
 # (.github/workflows/bench-analyzer.yml) so local single-test runs aren't blocked by it.
-addopts = "-ra --strict-markers --cov=list_smith_bench.data.utils.stats --cov-report=term-missing"
+addopts = "-ra --strict-markers --cov=list_smith_bench.data.utils.stats --cov=list_smith_bench.data.utils.drift --cov-report=term-missing"
 
 [tool.ruff.lint]
 # E pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade, SIM simplify, N naming, RUF ruff.
