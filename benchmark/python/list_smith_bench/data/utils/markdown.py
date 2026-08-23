@@ -7,6 +7,7 @@ large (43,000 us) and small (390 us) figures readable in one column.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from pathlib import Path
 
@@ -364,15 +365,19 @@ def compare_table(rows: list[CompareRow]) -> str:
 
     fmt = value_formatter("us")
     out = [
-        "| Scenario | Metric | Baseline median | Current median | Delta | p-value | Sig? |",
-        "|---|---|---:|---:|---:|---:|:---:|",
+        "| Scenario | Metric | Baseline median | Current median | Delta | Spread | x noise "
+        "| p-value | Sig? |",
+        "|---|---|---:|---:|---:|---:|---:|---:|:---:|",
     ]
     for row in sorted(rows, key=lambda r: (r.scenario, r.metric)):
         delta = f"{row.delta_pct:+.1f}%" if row.delta_finite else "n/a"
+        noise = row.delta_over_spread
+        noise_str = f"{noise:.1f}x" if math.isfinite(noise) else "n/a"
         sig = "**Yes**" if row.significant else ""
         out.append(
             f"| `{row.scenario}` | `{row.metric}` | {fmt(row.baseline_median)} "
-            f"| {fmt(row.current_median)} | {delta} | {row.p_value:.4f} | {sig} |"
+            f"| {fmt(row.current_median)} | {delta} | {row.spread_pct:.2f}% | {noise_str} "
+            f"| {row.p_value:.4f} | {sig} |"
         )
     return "\n".join(out) + "\n"
 

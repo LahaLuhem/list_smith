@@ -9,12 +9,17 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import math
 import sys
 from pathlib import Path
 
 from list_smith_bench.data.dtos.compare_row import CompareRow
 from list_smith_bench.data.utils.io import load_aggregated, resolve_outdir
-from list_smith_bench.data.utils.stats import compute_compare_rows, regressions
+from list_smith_bench.data.utils.stats import (
+    compute_compare_rows,
+    p_value_floor,
+    regressions,
+)
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
@@ -106,11 +111,12 @@ def _regression_exit_code(rows: list[CompareRow], args: argparse.Namespace) -> i
 def _print_compare_table(rows: list[CompareRow]) -> None:
     """Print the Mann-Whitney significance table to stdout for interactive use."""
     header = (
-        f"{'scenario':<40} {'metric':<28} "
-        f"{'baseline':>12} {'current':>12} {'delta':>10} {'p-value':>10} {'sig?':<5}"
+        f"{'scenario':<40} {'metric':<32} "
+        f"{'baseline':>12} {'current':>12} {'delta':>10} {'spread':>8} {'x noise':>8} "
+        f"{'p-value':>10} {'sig?':<5}"
     )
     print(header)
-    print("-" * 122)
+    print("-" * 144)
 
     if not rows:
         print("(no comparable (scenario, metric) pairs in the two inputs)")
@@ -121,13 +127,25 @@ def _print_compare_table(rows: list[CompareRow]) -> None:
         any_significant = any_significant or row.significant
         sig_marker = "*" if row.significant else ""
         delta_str = f"{row.delta_pct:>+9.1f}%" if row.delta_finite else "       inf"
+        noise = row.delta_over_spread
+        noise_str = f"{noise:>7.1f}x" if math.isfinite(noise) else "      -"
         print(
-            f"{row.scenario:<40} {row.metric:<28} "
+            f"{row.scenario:<40} {row.metric:<32} "
             f"{row.baseline_median:>12.3f} {row.current_median:>12.3f} "
-            f"{delta_str} {row.p_value:>10.4f} {sig_marker:<5}"
+            f"{delta_str} {row.spread_pct:>7.2f}% {noise_str} "
+            f"{row.p_value:>10.4f} {sig_marker:<5}"
         )
 
     print()
+    print(
+        "spread = pooled within-side variation; 'x noise' = delta over that spread. A delta inside "
+        "its own noise is a wobble whatever its p-value."
+    )
+    floor = p_value_floor(rows[0].baseline_count, rows[0].current_count)
+    print(
+        f"p bottoms out at {floor:.4f} for {rows[0].baseline_count} samples per side: a row there "
+        "separated completely, which is not the same as a large gap."
+    )
     if any_significant:
         print("* = statistically significant at p < 0.05 (Mann-Whitney U)")
     else:

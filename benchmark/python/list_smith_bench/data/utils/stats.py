@@ -27,6 +27,47 @@ def median(values: list[float]) -> float:
     return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
 
 
+def _coefficient_of_variation(values: list[float]) -> float:
+    """Sample standard deviation as a percentage of the median; 0.0 when it cannot be computed."""
+    if len(values) < 2:
+        return 0.0
+    centre = median(values)
+    if centre == 0:
+        return 0.0
+    mean = sum(values) / len(values)
+    variance = sum((value - mean) ** 2 for value in values) / (len(values) - 1)
+
+    return math.sqrt(variance) / abs(centre) * 100.0
+
+
+def pooled_spread_pct(baseline: list[float], current: list[float]) -> float:
+    """The two sides' within-side variation, averaged: the noise a delta has to clear.
+
+    Reported next to the delta because p cannot express magnitude once the sample sets separate
+    completely, and neither can Cliff's delta: both saturate. Measured on a real false positive,
+    `wrapping_overhead[100]` and `wrapping_overhead[10]` scored Cliff's +1.00 and -1.00 for a +22.3%
+    and a -6.4% delta. Their spreads (2.2% and 0.6%) are what tell the two apart. See issue #43.
+    """
+    return (_coefficient_of_variation(baseline) + _coefficient_of_variation(current)) / 2.0
+
+
+def p_value_floor(baseline_count: int, current_count: int) -> float:
+    """The smallest p `compute_compare_rows` can report at these sample sizes.
+
+    Two perfectly separated sets of these sizes: no real comparison can score below it. Worth
+    printing, because a row sitting at the floor has separated completely, which says nothing about
+    how big the gap is.
+    """
+    from scipy import stats as scipy_stats
+
+    if baseline_count < 1 or current_count < 1:
+        return 1.0
+    low = list(range(baseline_count))
+    high = [value + baseline_count for value in range(current_count)]
+
+    return float(scipy_stats.mannwhitneyu(low, high, alternative="two-sided").pvalue)
+
+
 def group_samples(records: list[ResultRecord]) -> dict[tuple[str, str], list[float]]:
     """Flatten records into `{(scenario, metric): [all samples across iterations]}`.
 
@@ -142,6 +183,9 @@ def compute_compare_rows(
                 current_median=curr_median,
                 delta_pct=delta_pct,
                 p_value=float(p_value),
+                spread_pct=pooled_spread_pct(base_samples, curr_samples),
+                baseline_count=len(base_samples),
+                current_count=len(curr_samples),
             )
         )
 

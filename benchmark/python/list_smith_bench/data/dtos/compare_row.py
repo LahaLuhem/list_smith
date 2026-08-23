@@ -27,6 +27,13 @@ class CompareRow:
     current_median: float
     delta_pct: float
     p_value: float
+    # Pooled within-side coefficient of variation: the run-to-run noise the delta has to clear. A
+    # delta far inside this is a wobble whatever its p-value, which p alone cannot say once the two
+    # sample sets separate completely (issue #43).
+    spread_pct: float = 0.0
+    # Samples behind each median, so a renderer can name the smallest p reachable at this size.
+    baseline_count: int = 0
+    current_count: int = 0
 
     @property
     def significant(self) -> bool:
@@ -35,3 +42,13 @@ class CompareRow:
     @property
     def delta_finite(self) -> bool:
         return math.isfinite(self.delta_pct)
+
+    @property
+    def delta_over_spread(self) -> float:
+        """How many times the run-to-run noise this delta is; `inf` when the spread is zero."""
+        if not self.delta_finite:
+            return math.inf
+        if self.spread_pct <= 0:
+            return math.inf if self.delta_pct else 0.0
+
+        return abs(self.delta_pct) / self.spread_pct
