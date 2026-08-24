@@ -261,6 +261,55 @@ void main() {
       check(find.text('item 4').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('a held page does not land after a reset-to-first-page refresh', (
+      tester,
+    ) async {
+      final hold = Completer<void>();
+      final controller = ListSmithController();
+      var pageTwoCalls = 0;
+      final fetchPage = PageFetcher<int>((request) async {
+        final pageIndex = request.pageIndex;
+        if (pageIndex != 2) return [pageIndex * 1000 + 1];
+        pageTwoCalls++;
+        if (pageTwoCalls == 1) {
+          await hold.future;
+
+          return const [2001];
+        }
+
+        return const [2002];
+      });
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: fetchPage,
+          controller: controller,
+          endPolicy: const FixedPageCountPolicy(pageCount: 3),
+          // No refresh: passed, so this runs the default PullToRefresh with its default
+          // ResetToFirstPage reload, the pairing most consumers never change.
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 12);
+
+      // Premise: pages 0 and 1 are in and page 2 is held.
+      check(pageTwoCalls).equals(1);
+
+      await controller.refresh();
+      await drain(tester, frames: 16);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+
+      // ResetToFirstPage throws the loaded pages away and starts again, so the page held from before
+      // the refresh has nothing to attach to. Its body never shows, and page 2's fresh one does.
+      check(find.text('item 2001').evaluate()).length.equals(0);
+      check(find.text('item 2002').evaluate()).length.equals(1);
+      check(find.text('item 1').evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('a held page does not land on top of a depth-reload commit', (tester) async {
       final hold = Completer<void>();
       final controller = ListSmithController();
