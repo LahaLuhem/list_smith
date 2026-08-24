@@ -2,10 +2,10 @@ name: Benchmark gate self-test
 
 # Measures the regression gate's FALSE-POSITIVE rate on a real runner (issue #43).
 #
-# Builds ONE commit and compares it against ITSELF, in the same candidate-then-baseline order the
-# real gate uses. Both sides are the same binaries, so every metric the gate flags here is noise by
-# definition. Run it before and after a change to the gate and compare the trip counts; each
-# dispatch is 5 independent runs over ~13 metrics, so re-dispatch to double the sample.
+# Builds ONE commit and measures it against ITSELF through `ab`, the gate's own path, so this
+# tracks the gate rather than drifting from it. Both sides are the same binaries, so anything
+# flagged here is noise by definition. Run it before and after a change to the gate and compare;
+# each dispatch is 5 independent runs over ~13 metrics, so re-dispatch to grow the sample.
 #
 # Manual only: it is a measurement, not a check, and it never fails on a trip (the trip is the
 # datum). Deliberately not on `pull_request` — it would double an already expensive job.
@@ -50,14 +50,18 @@ jobs:
           python-version-file: benchmark/python/.python-version
           update-environment: true
 
-      # One build, two runs of those same binaries, back to back. Any difference between the two is
-      # the runner, never the code.
-      - name: Run the same commit twice
+      # One build, measured against itself through `ab` (the gate's own path): the two sides are the
+      # same binaries alternating, so any difference between them is the runner, never the code.
+      - name: Measure the same commit against itself
         working-directory: benchmark/python
         run: |
           python3 run.py build
-          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/sideA"
-          python3 run.py run --skip-scenarios --out "$RUNNER_TEMP/sideB"
+          python3 run.py ab \
+            --candidate-build ../build \
+            --baseline-build ../build \
+            --candidate-out "$RUNNER_TEMP/sideA" \
+            --baseline-out "$RUNNER_TEMP/sideB" \
+            --scratch "$RUNNER_TEMP/ab"
 
       # The gate's own verdict, captured rather than enforced.
       - name: Gate verdict and timing separation
