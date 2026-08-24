@@ -106,6 +106,51 @@ void main() {
       check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
     });
 
+    scenarioWidgets('a reload in search mode reads the search fetcher for its signal', (
+      tester,
+    ) async {
+      final searchAttempts = <int, int>{};
+      final searchCursors = <int, Object?>{};
+      final searchFetchPage = SearchPageFetcher<int>.withSignal((request) async {
+        final pageIndex = request.pageIndex;
+        final attempt = searchAttempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
+        searchCursors[pageIndex] = request.previousSignal;
+
+        return ([pageIndex * 1000 + attempt], 'scursor$pageIndex');
+      });
+      final controller = ListSmithController();
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          // A plain index-based normal fetcher, so only the search side reports a signal. If the
+          // reload asked the normal fetcher instead, it would take the parallel path, not this one.
+          fetchPage: PageFetcher((request) async => [request.pageIndex]),
+          search: AsyncSearch(fetchPage: searchFetchPage),
+          query: 'q',
+          searchDebounce: const Duration(milliseconds: 20),
+          // Not a signal-requiring policy: that one asserts BOTH fetchers report a signal, which
+          // would destroy the asymmetry this scenario turns on.
+          endPolicy: const FixedPageCountPolicy(pageCount: 2),
+          controller: controller,
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await settle(tester);
+      check(searchAttempts).deepEquals({0: 1, 1: 1});
+
+      await controller.refresh();
+      await drain(tester, frames: 16);
+
+      // In search mode the reload asks the search fetcher whether it is signal-based, so this runs
+      // sequentially and threads the search cursor, despite concurrency: null asking for parallel.
+      check(searchAttempts).deepEquals({0: 2, 1: 2});
+      check(searchCursors[1]).equals('scursor0');
+      check(find.text('item 2').evaluate()).length.equals(1);
+      check(find.text('item 1002').evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('a withSignal source commits the whole chain when every page succeeds', (
       tester,
     ) async {
