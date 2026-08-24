@@ -5,6 +5,7 @@
 ### Changed
 - Raise the SDK floor to Dart 3.13 / Flutter 3.47
 - \[#45\] Tell the fetcher why it was called: a FetchTrigger on a PageRequest
+- \[#37\] Grouping: one header for a group that straddles a page boundary, in release too
 
 ## [0.1.1] - 2026-07-20
 ### Added
