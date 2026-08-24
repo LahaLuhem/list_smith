@@ -2,6 +2,8 @@ part of '../reload.dart';
 
 /// Discards every loaded page and reloads only the first, the underlying pager's own refresh and the
 /// default. A pull returns the list to the top with fresh data.
+///
+/// A page still loading when the pull happens is dropped, so it cannot land on the fresh list.
 final class ResetToFirstPage extends Reload {
   /// Creates the reset-to-first-page reload (the default).
   const new();

@@ -15,6 +15,7 @@
 - [Upgrading from 0.1.x](#upgrading-from-01x)
 - [A quick taste](#a-quick-taste)
 - [Two kinds of list](#two-kinds-of-list)
+- [When a response arrives late](#when-a-response-arrives-late)
 - [Pagination](#pagination)
     * [Knowing why a page was fetched](#knowing-why-a-page-was-fetched)
     * [Deciding where the data ends](#deciding-where-the-data-ends)
@@ -118,6 +119,23 @@ There are two constructors, and which one you reach for comes down to where your
 | `ListSmith.sync`  | a list you already hold in memory       | client-side search, nothing to paginate                |
 
 Each takes only the parameters that make sense for it, so nothing you pass is ever quietly ignored.
+
+## When a response arrives late
+
+Lists race. The user types while an old query's page is still loading, or pulls to refresh while a
+page is in the air. list_smith settles those, and each guarantee below has a test behind it.
+
+**A query change drops the pages still in flight.** The old query's pending pages are discarded, not
+appended. Cursors too, so the next page starts from the new query's cursor and not one an abandoned
+request returned. Otherwise hits for a query you deleted turn up under the ones you asked for.
+
+**Group headers come from the whole loaded list, not per page.** A group spanning a page boundary
+gets one header, not two, and is not split. For out-of-order pages see [Grouping](#grouping).
+
+**A refresh drops the pages still in flight**, on both reload strategies. A page requested before the
+pull cannot land after it and duplicate rows or leave a hole. It is asked again, so you keep what the
+refresh committed. Same when the feed returns after a search, see
+[What happens to the feed while you search?](#what-happens-to-the-feed-while-you-search).
 
 ## Pagination
 
