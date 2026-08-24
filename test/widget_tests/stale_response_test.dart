@@ -171,6 +171,52 @@ void main() {
       check(find.text('item 3').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('a KeepCache restore puts the normal cursor back, not the search one', (
+      tester,
+    ) async {
+      final blocked = Completer<void>();
+      final normalCursors = <int, List<Object?>>{};
+      final fetchPage = PageFetcher<int>.withSignal((request) async {
+        final pageIndex = request.pageIndex;
+        normalCursors.putIfAbsent(pageIndex, () => []).add(request.previousSignal);
+        // Page 2 never answers, so pagination parks there and the list keeps wanting it.
+        if (pageIndex == 2) await blocked.future;
+
+        return ([pageIndex], 'ncursor$pageIndex');
+      });
+      final searchFetchPage = SearchPageFetcher<int>.withSignal(
+        (request) async => ([99], 'scursor${request.pageIndex}'),
+      );
+
+      Widget build(String query) => ListSmith.async(
+        fetchPage: fetchPage,
+        search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
+        query: query,
+        searchDebounce: const Duration(milliseconds: 20),
+        endPolicy: const StopOnNullSignalPolicy(),
+        refresh: const NoRefresh(),
+        itemBuilder: (_, item, _) => Text('item $item'),
+      );
+
+      await pumpListSmith(tester, build(''));
+      await settle(tester);
+
+      // Premise: pages 0 and 1 are in and page 2 is parked, asked once with page 1's cursor.
+      check(normalCursors[2]).isNotNull().deepEquals(const ['ncursor1']);
+
+      await pumpListSmith(tester, build('q'));
+      await settle(tester);
+      await pumpListSmith(tester, build(''));
+      await settle(tester);
+      await drain(tester, frames: 16);
+
+      // The restore brings back the pages and the cursor that goes with them. Page 2 is asked again
+      // from the same place, so the feed does not resume from the search's cursor or from scratch.
+      check(normalCursors[2]).isNotNull().deepEquals(const ['ncursor1', 'ncursor1']);
+      check(find.text('item 0').evaluate()).length.equals(1);
+      check(find.text('item 99').evaluate()).length.equals(0);
+    });
+
     scenarioWidgets('a KeepCache snapshot taken mid-fetch does not restore a spinner', (
       tester,
     ) async {
