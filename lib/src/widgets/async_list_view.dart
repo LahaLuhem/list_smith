@@ -346,15 +346,29 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         // No fetch here, so no trigger to latch: the next one is whatever the user does next.
         _generation++;
         _lastFailedPageIndex = null;
-        _pager.value = snapshot.state;
+        _replacePagingState(snapshot.state);
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
       case (.snapshotThenRefresh, _):
-        _normalSnapshot = (state: _pager.value, signal: _lastPageSignal);
+        // A snapshot means settled state. The re-fetch after a restore overwrites both flags
+        // anyway, so this is about intent, not behaviour.
+        _normalSnapshot = (
+          state: _pager.value.copyWith(isLoading: false, error: null),
+          signal: _lastPageSignal,
+        );
         _resetPaging(.queryChanged);
       case (.refresh, _) || (.restoreNormal, null):
         _resetPaging(.queryChanged);
     }
+  }
+
+  /// Swaps the whole paging state and drops any fetch still in flight.
+  ///
+  /// ISP only ignores a landed fetch when its token moved, and a bare `value =` leaves it alone.
+  /// Every direct write goes through here so the next one cannot forget.
+  void _replacePagingState(PagingState<int, T> next) {
+    _pager.cancel();
+    _pager.value = next;
   }
 
   /// Restarts the stream: invalidates in-flight writes, latches [nextTrigger] for the re-fetch this
@@ -391,10 +405,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final keys = [for (var index = 0; index < pages.length; index++) index];
     final probe = PagingState<int, T>(pages: pages, keys: keys);
 
-    _pager.value = PagingState<int, T>(
-      pages: pages,
-      keys: keys,
-      hasNextPage: _nextPageKey(probe) != null,
+    _replacePagingState(
+      PagingState<int, T>(pages: pages, keys: keys, hasNextPage: _nextPageKey(probe) != null),
     );
   }
 

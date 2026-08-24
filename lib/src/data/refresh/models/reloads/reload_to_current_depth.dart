@@ -11,6 +11,9 @@ part of '../reload.dart';
 /// from `k` alone). A `PageFetcher.withSignal` source threads a per-page signal, so its reload runs
 /// sequentially and atomically regardless of these settings: a broken cursor chain can't be partially
 /// committed. It still keeps scroll depth, just without the tuning.
+///
+/// A page still loading when the pull happens is dropped and asked again, so pre-refresh data can
+/// never land on top of the refreshed pages.
 final class ReloadToCurrentDepth extends Reload {
   /// The most page-fetches to run at once: `1` (the default) sequential, `null` all together, `K` at
   /// most `K` in flight. Ignored for `withSignal` sources, which always reload sequentially.
