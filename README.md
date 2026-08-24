@@ -509,7 +509,22 @@ The two paths order their sections differently, and the difference matters:
   arrive in any order.
 - **`.async` groups in arrival order.** It can't reorder across pages, so your `fetchPage` (and the
   `AsyncSearch` fetcher) must return items *already grouped by key*, all of one group before the next.
-  A key that comes back after its section ended repeats the header; a debug-mode assert flags it.
+  A group that starts at the end of one page and carries on into the next still gets a single header,
+  not one per page.
+
+If a key does come back after its section ended, `orderPolicy` decides what happens. The default
+`RepairHeadersPolicy` draws each header once, so the stray items sit under the header their group
+already has, and a debug assert tells you the pages arrived out of order. Pass
+`FailOnUnorderedPolicy` instead to throw a `StateError`, in release as well as debug, when you would
+rather the list fail loudly than look wrong:
+
+```dart
+grouping: Grouping.by(
+  groupBy: (Contact contact) => contact.team,
+  headerBuilder: (context, team) => SectionHeader(team),
+  orderPolicy: const FailOnUnorderedPolicy(),
+),
+```
 
 Two things worth knowing:
 

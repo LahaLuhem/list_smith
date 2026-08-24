@@ -1,5 +1,7 @@
 import 'package:collection/collection.dart';
 
+import '../models/group_order_policy.dart';
+
 /// Reorders [items] so items sharing a group key (per [keyOf]) are contiguous, in the order each group
 /// first appears, keeping the order of items within a group.
 ///
@@ -10,19 +12,59 @@ import 'package:collection/collection.dart';
 List<T> bucketByGroup<T extends Object>(Iterable<T> items, Object Function(T item) keyOf) =>
     items.groupListsBy(keyOf).values.flattened.toList(growable: false);
 
-/// Whether [current] begins a new group: true for the first item (a null [previous]), or when
-/// [current]'s group key differs from [previous]'s (per [keyOf], compared with `==`).
+/// One flag per item: whether it draws its group's header.
 ///
-/// The per-item decision both render paths share to place a header above a group's first item. It
-/// assumes items are already contiguous by group, which [bucketByGroup] guarantees on the sync path
-/// and the consumer's fetcher must guarantee on the async path.
-bool isGroupStart<T extends Object>(T? previous, T current, Object Function(T item) keyOf) =>
-    previous == null || keyOf(previous) != keyOf(current);
+/// [policy] gets first look and can reject out-of-order items. Whatever it lets through goes to
+/// [headerFlagsByFirstSighting].
+List<bool> resolveHeaderFlags<T extends Object>(
+  List<T> items,
+  Object Function(T item) keyOf,
+  GroupOrderPolicy policy,
+) {
+  switch (policy) {
+    case RepairHeadersPolicy():
+      assert(
+        groupsAreContiguous(items, keyOf),
+        'Grouping on an async list needs each page ordered by group key. A group key came back '
+        'after its section ended, so its later items will render without a header.',
+      );
+    case FailOnUnorderedPolicy():
+      if (!groupsAreContiguous(items, keyOf)) {
+        throw StateError(
+          'Grouping on an async list needs each page ordered by group key. A group key came back '
+          'after its section ended, and FailOnUnorderedPolicy turns that into this error.',
+        );
+      }
+  }
+
+  return headerFlagsByFirstSighting(items, keyOf);
+}
+
+/// True the first time a key shows up, false after, so a split group never draws two headers.
+///
+/// Split out because the default policy asserts before reaching it, so a debug test can only get
+/// here by calling directly. Checks `seen` only where the key changes, since items mid-run cannot
+/// open a group.
+List<bool> headerFlagsByFirstSighting<T extends Object>(
+  List<T> items,
+  Object Function(T item) keyOf,
+) {
+  final seen = <Object>{};
+  Object? runKey;
+
+  return List<bool>.generate(items.length, (index) {
+    final key = keyOf(items[index]);
+    if (key == runKey) return false;
+    runKey = key;
+
+    return seen.add(key);
+  }, growable: false);
+}
 
 /// Whether every group in [items] is contiguous: each group key (per [keyOf], compared with `==`)
 /// occupies a single run, never recurring once a different key has intervened.
 ///
-/// A debug-time check for the async path, which cannot reorder items across pages and so relies on
+/// The order check for the async path, which cannot reorder items across pages and so relies on
 /// the fetcher returning them already grouped by key. The sync path never needs it: [bucketByGroup]
 /// makes contiguity hold by construction. Splits the keys into runs at each change, then checks each
 /// run opens a key not seen in an earlier run.

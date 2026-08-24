@@ -9,6 +9,7 @@ import '/src/widgets/grouped_item.dart';
 import '../typedefs/group_header_builder.dart';
 import '../typedefs/group_key_of.dart';
 import '../utils/grouping_resolver.dart';
+import 'group_order_policy.dart';
 
 part 'groupings/keyed_grouping.dart';
 part 'groupings/no_grouping.dart';
@@ -55,13 +56,15 @@ sealed class Grouping<T extends Object> {
   /// Ordering differs by path. A sync list reorders its (filtered) items so every group is contiguous,
   /// in the order each group first appears, keeping item order within a group, so it need not be
   /// pre-sorted. An async list cannot reorder across pages, so it groups items in the order the fetcher
-  /// returns them: those items must already arrive grouped by key (all of one group before the next),
-  /// or a header repeats wherever a group's items are split apart.
+  /// returns them, so those items should already arrive grouped by key. [orderPolicy] picks what
+  /// happens when they do not. Either way a group split across a page boundary gets one header.
   static Grouping<T> by<T extends Object, K extends Object>({
     required GroupKeyOf<T, K> groupBy,
     required GroupHeaderBuilder<K> headerBuilder,
+    GroupOrderPolicy orderPolicy = const RepairHeadersPolicy(),
   }) => KeyedGrouping<T>._(
     groupOf: groupBy,
     headerFor: (context, key) => headerBuilder(context, key as K),
+    orderPolicy: orderPolicy,
   );
 }
