@@ -4,14 +4,20 @@ Pure, deterministic math — the highest-value regression target in the analyzer
 `group_samples`, and `compute_compare_rows`, including the pivot-aware grouping that splits
 multi-size scenarios (`list_size` / `page_count`) so a regression at one size is not masked by
 pooling, and the tie guard (older scipy raises, newer returns nan; both must land on p=1.0).
+
+`TestPivotCoverage` is the structural half: it keeps `MULTI_RECORD_SCENARIOS`, `_PIVOT_KEYS` and the
+Dart sources from drifting apart the way issue #51 found them.
 """
 
 from __future__ import annotations
 
 import math
+import re
+from pathlib import Path
 
 import pytest
 
+from list_smith_bench.config import MICRO_DIR, MULTI_RECORD_SCENARIOS, SCENARIOS_DIR
 from list_smith_bench.data.dtos.result_record import ResultRecord
 from list_smith_bench.data.utils.stats import (
     compute_compare_rows,
@@ -31,6 +37,30 @@ def _record(
 ) -> ResultRecord:
     """A minimal result record: scenario + raw samples, plus an optional summary (for pivots)."""
     return {"scenario": scenario, "iteration": 0, "samples": samples, "summary": summary or {}}
+
+
+# Every multi-record scenario and the summary key it pivots on. Locked three ways by
+# `TestPivotCoverage`: to `MULTI_RECORD_SCENARIOS`, to `_PIVOT_KEYS` (via a real pivoted label), and
+# to the Dart source that emits it.
+_SCENARIO_PIVOTS: dict[str, str] = {
+    "sync_search_scaling": "list_size",
+    "bucket_by_group_scaling": "list_size",
+    "dedup_scaling": "item_count",
+    "wrapping_overhead": "page_count",
+    "slow_observer": "observer_delay_millis",
+}
+
+
+def _dart_sources_declaring(scenario: str) -> list[Path]:
+    """Benchmark sources naming `scenario` as the scenario they emit.
+
+    Micros pass `scenario: 'x'` to `ResultWriter.open`; the UI scenarios write `'scenario': 'x'`
+    into the record map, so one pattern covers both.
+    """
+    declaration = re.compile(rf"scenario['\"]?\s*:\s*'{re.escape(scenario)}'")
+    sources = sorted(MICRO_DIR.glob("*.dart")) + sorted(SCENARIOS_DIR.glob("*.dart"))
+
+    return [path for path in sources if declaration.search(path.read_text())]
 
 
 class TestMedian:
@@ -164,6 +194,35 @@ class TestPivotAwareGrouping:
         current = [_record("isp_scroll", {"frame_build_micros": [400.0, 410.0, 420.0]})]
         rows = compute_compare_rows(baseline, current)
         assert [row.scenario for row in rows] == ["isp_scroll"]
+
+
+class TestPivotCoverage:
+    """Every multi-record scenario must pivot, from the Dart summary key through to the label.
+
+    Issue #51: `dedup_scaling` sat in `MULTI_RECORD_SCENARIOS` emitting a key `_PIVOT_KEYS` had
+    never heard of, so its three size regimes pooled into one Mann-Whitney group.
+    """
+
+    def test_map_matches_the_configured_multi_record_scenarios(self) -> None:
+        # Adding a micro to MULTI_RECORD_SCENARIOS without declaring its pivot fails here, which
+        # then forces the key into _PIVOT_KEYS via the label test below.
+        assert set(_SCENARIO_PIVOTS) == set(MULTI_RECORD_SCENARIOS)
+
+    @pytest.mark.parametrize(("scenario", "pivot_key"), sorted(_SCENARIO_PIVOTS.items()))
+    def test_scenario_produces_a_pivoted_label(self, scenario: str, pivot_key: str) -> None:
+        records = [_record(scenario, {"m": [1.0, 2.0, 3.0]}, {pivot_key: 1000})]
+        rows = compute_compare_rows(records, records)
+
+        assert [row.scenario for row in rows] == [f"{scenario}[{pivot_key}=1000]"]
+
+    @pytest.mark.parametrize(("scenario", "pivot_key"), sorted(_SCENARIO_PIVOTS.items()))
+    def test_dart_source_emits_the_declared_pivot_key(self, scenario: str, pivot_key: str) -> None:
+        # The map above could itself be wrong; this ties it to the data the benchmark really emits.
+        sources = _dart_sources_declaring(scenario)
+        assert len(sources) == 1, f"expected one Dart source declaring {scenario!r}, got {sources}"
+        assert re.search(rf"'{re.escape(pivot_key)}'\s*:", sources[0].read_text()), (
+            f"{sources[0].name} emits scenario {scenario!r} but never a '{pivot_key}' summary key"
+        )
 
 
 class TestRegressions:

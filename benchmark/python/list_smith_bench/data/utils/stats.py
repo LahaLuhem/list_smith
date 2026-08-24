@@ -105,7 +105,14 @@ def records_per_scenario(records: list[ResultRecord]) -> int:
 # Summary keys whose value splits a scenario into independent measurement regimes. The compare
 # groups on them so a regression at one size / page-count / observer-delay is not masked by pooling
 # a scenario's samples into one multi-modal distribution (this suite is a regression tripwire).
-_PIVOT_KEYS: Final[tuple[str, ...]] = ("list_size", "page_count", "observer_delay_millis")
+# `item_count` is dedup_scaling's size pivot under a different name; `TestPivotCoverage` locks this
+# tuple to MULTI_RECORD_SCENARIOS and to what the Dart sources actually emit (issue #51).
+_PIVOT_KEYS: Final[tuple[str, ...]] = (
+    "list_size",
+    "item_count",
+    "page_count",
+    "observer_delay_millis",
+)
 
 
 def _pivoted_scenario(record: ResultRecord) -> str:
