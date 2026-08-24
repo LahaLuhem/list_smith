@@ -1,5 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
+import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:list_smith/src/data/source/list_source.dart';
 
@@ -87,6 +88,24 @@ void main() {
         check(const NoRefresh().toString()).equals('NoRefresh()');
       });
 
+  final reloads = BddFeature('Reload string form');
+
+  Bdd(reloads)
+      .scenario('each reload case names itself in toString')
+      .given('a ResetToFirstPage and a ReloadToCurrentDepth (default and uncapped)')
+      .when('each is converted to a string')
+      .then('the string is the compact case form, and the depth reload names both knobs')
+      .run((_) {
+        check(const ResetToFirstPage().toString()).equals('ResetToFirstPage()');
+        check(const ReloadToCurrentDepth().toString())
+          ..contains('ReloadToCurrentDepth')
+          ..contains('concurrency: 1')
+          ..contains('commitSucceeded');
+        check(const ReloadToCurrentDepth(concurrency: null, onError: .allOrNothing).toString())
+          ..contains('concurrency: null')
+          ..contains('allOrNothing');
+      });
+
   final searches = BddFeature('Search string form');
 
   Bdd(searches)
@@ -98,6 +117,35 @@ void main() {
         check(const NoSearch().toString()).equals('NoSearch()');
         check(AsyncSearch<int>(fetchPage: SearchPageFetcher((_) async => const <int>[])).toString())
             .equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
+      });
+
+  final groupings = BddFeature('Grouping string form');
+
+  Bdd(groupings)
+      .scenario('each grouping case names itself in toString')
+      .given('a NoGrouping and a Grouping.by')
+      .when('each is converted to a string')
+      .then('the string is the compact case form, and the keyed one names its order policy')
+      .run((_) {
+        check(const NoGrouping<int>().toString()).equals('NoGrouping()');
+        check(
+          Grouping.by<int, int>(
+            groupBy: (item) => item,
+            headerBuilder: (_, _) => const SizedBox(),
+          ).toString(),
+        ).equals('KeyedGrouping(orderPolicy: RepairHeadersPolicy())');
+      });
+
+  final groupOrderPolicies = BddFeature('GroupOrderPolicy string form');
+
+  Bdd(groupOrderPolicies)
+      .scenario('each group-order policy names itself in toString')
+      .given('a RepairHeadersPolicy and a FailOnUnorderedPolicy')
+      .when('each is converted to a string')
+      .then('the string is the compact case form')
+      .run((_) {
+        check(const RepairHeadersPolicy().toString()).equals('RepairHeadersPolicy()');
+        check(const FailOnUnorderedPolicy().toString()).equals('FailOnUnorderedPolicy()');
       });
 
   final emptyPageBehaviours = BddFeature('EmptyPageBehaviour string form');
