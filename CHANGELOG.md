@@ -7,6 +7,9 @@
 - \[#45\] Tell the fetcher why it was called: a FetchTrigger on a PageRequest
 - \[#37\] Grouping: one header for a group that straddles a page boundary, in release too
 
+### Fixed
+- \[#35\] Drop the in-flight fetch when the paging state is swapped wholesale
+
 ## [0.1.1] - 2026-07-20
 ### Added
 - \[#28\] Add a depth-preserving pull-to-refresh strategy (ReloadToCurrentDepth)
