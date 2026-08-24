@@ -1,21 +1,20 @@
 import 'package:flutter/widgets.dart';
 
-import '/src/data/grouping/utils/grouping_resolver.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 
 /// Renders one list item, prefixed with its group's header when the item begins a new group.
 ///
 /// Shared by both render paths so header placement lives in one spot. Built only where grouping is
-/// active, and only where a header is wanted: a group's header is stacked before its first item along
-/// the list's [scrollDirection] (above it, for a vertical list). [previous] is the item before [item]
-/// in display order, or null at the start, and drives the [isGroupStart] check. Takes the group-key
-/// extractor ([groupOf]) and header builder ([headerFor]) directly, rather than a whole `Grouping`, so
-/// this presentation widget stays independent of the grouping model.
+/// active: a group's header is stacked before its first item along the list's [scrollDirection]
+/// (above it, for a vertical list). `resolveHeaderFlags` decides that up front and passes it in as
+/// [showHeader]. Takes the group-key extractor ([groupOf]) and header builder ([headerFor])
+/// directly, rather than a whole `Grouping`, so this presentation widget stays independent of the
+/// grouping model.
 class GroupedItem<T extends Object> extends StatelessWidget {
   /// Builds the item itself; the header is prefixed around its widget.
   final ItemBuilder<T> itemBuilder;
 
-  /// Extracts an item's group key (erased to `Object`), for the [isGroupStart] look-back.
+  /// Extracts an item's group key (erased to `Object`), to label the header.
   final Object Function(T item) groupOf;
 
   /// Builds a group's header from its key (erased to `Object`).
@@ -24,8 +23,8 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   /// The list's scroll axis, so the header stacks before the item along it.
   final Axis scrollDirection;
 
-  /// The item before [item] in display order, or null at the start of the list.
-  final T? previous;
+  /// Whether this item opens its group, so it draws the header.
+  final bool showHeader;
 
   /// The item to render.
   final T item;
@@ -39,7 +38,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
     required this.groupOf,
     required this.headerFor,
     required this.scrollDirection,
-    required this.previous,
+    required this.showHeader,
     required this.item,
     required this.index,
     super.key,
@@ -48,7 +47,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemWidget = itemBuilder(context, item, index);
-    if (!isGroupStart(previous, item, groupOf)) return itemWidget;
+    if (!showHeader) return itemWidget;
 
     return Flex(
       direction: scrollDirection,

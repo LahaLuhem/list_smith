@@ -1,5 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
+import 'package:list_smith/src/data/grouping/models/group_order_policy.dart';
 import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
 
 void main() {
@@ -33,29 +34,55 @@ void main() {
         check(bucketed).deepEquals(ctx.example.val(bucketedKey) as List<int>);
       });
 
-  const previousKey = 'previous';
-  const currentKey = 'current';
-  const startKey = 'start';
+  const flagItemsKey = 'flagItems';
+  const flagsKey = 'flags';
 
   Bdd(grouping)
-      .scenario('marks a group start at the first item and wherever the key changes')
+      .scenario('flags the first sighting of each group key, and only that one')
       .given('a tens-digit group key')
-      .when('the previous item is <$previousKey> and the current is <$currentKey>')
-      .then('isGroupStart is <$startKey>')
-      // No previous item: the first item always starts a group.
-      .example(val(previousKey, null), val(currentKey, 10), val(startKey, true))
-      // Same key as the previous item: not a start.
-      .example(val(previousKey, 10), val(currentKey, 11), val(startKey, false))
-      // Key changed from the previous item: a start.
-      .example(val(previousKey, 11), val(currentKey, 20), val(startKey, true))
+      .when('it flags headers for <$flagItemsKey>')
+      .then('the flags are <$flagsKey>')
+      // Empty in, empty out.
+      .example(val(flagItemsKey, const <int>[]), val(flagsKey, const <bool>[]))
+      // One header per group, on the item that opens it.
+      .example(
+        val(flagItemsKey, const [10, 11, 20, 30]),
+        val(flagsKey, const [true, false, true, true]),
+      )
+      // A key coming back is not a second header. That is the repair.
+      .example(val(flagItemsKey, const [10, 20, 11]), val(flagsKey, const [true, true, false]))
       .run((ctx) {
-        final started = isGroupStart(
-          ctx.example.val(previousKey) as int?,
-          ctx.example.val(currentKey) as int,
+        final flags = headerFlagsByFirstSighting(
+          ctx.example.val(flagItemsKey) as List<int>,
           decade,
         );
 
-        check(started).equals(ctx.example.val(startKey) as bool);
+        check(flags).deepEquals(ctx.example.val(flagsKey) as List<bool>);
+      });
+
+  Bdd(grouping)
+      .scenario('the default policy leaves properly grouped items alone')
+      .given('a tens-digit group key and RepairHeadersPolicy')
+      .when('it resolves headers for contiguous items')
+      .then('every group opener is flagged')
+      .run((_) {
+        final flags = resolveHeaderFlags(const [10, 11, 20], decade, const RepairHeadersPolicy());
+
+        check(flags).deepEquals(const [true, false, true]);
+      });
+
+  Bdd(grouping)
+      .scenario('FailOnUnorderedPolicy throws on out-of-order items, in release too')
+      .given('a tens-digit group key and FailOnUnorderedPolicy')
+      .when('a group key comes back after another one')
+      .then('it throws a StateError instead of drawing anything')
+      .run((_) {
+        check(() => resolveHeaderFlags(const [10, 20, 11], decade, const FailOnUnorderedPolicy()))
+            .throws<StateError>();
+
+        // Properly grouped items: no throw, same flags as the default.
+        check(resolveHeaderFlags(const [10, 11, 20], decade, const FailOnUnorderedPolicy()))
+            .deepEquals(const [true, false, true]);
       });
 
   const contiguousItemsKey = 'contiguousItems';

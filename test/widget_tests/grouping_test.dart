@@ -8,8 +8,12 @@ import '../support/support.dart';
 typedef _Item = ({String group, String label});
 
 void main() {
-  Grouping<_Item> byGroup() =>
-      Grouping.by(groupBy: (item) => item.group, headerBuilder: (_, key) => Text('section $key'));
+  Grouping<_Item> byGroup({GroupOrderPolicy orderPolicy = const RepairHeadersPolicy()}) =>
+      Grouping.by(
+        groupBy: (item) => item.group,
+        headerBuilder: (_, key) => Text('section $key'),
+        orderPolicy: orderPolicy,
+      );
 
   feature('ListSmith.sync grouping', () {
     scenarioWidgets('buckets unsorted items into sections, one header per group', (tester) async {
@@ -79,8 +83,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // B opens at the end of page 0 and continues into page 1. Headers are resolved over every
-      // loaded page, so B gets one header; a page-local fold would render two and split the group.
+      // B opens at the end of page 0 and runs into page 1. Headers come from every loaded page, so
+      // B gets one. A page-local fold would draw two.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -104,8 +108,8 @@ void main() {
       );
       await drain(tester, frames: 16);
 
-      // Page 1 is entirely B, so the look-back has to reach back past a whole page. A two-page case
-      // cannot tell "flattens every page" from "flattens the last two"; this can.
+      // Page 1 is all B, so this reaches back past a whole page. A two-page case cannot tell
+      // 'every page' from 'the last two'.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -130,8 +134,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // De-dup runs before the view sees the state, so the header look-back reads the de-duplicated
-      // list. The repeated b1 collapses and B still opens exactly once.
+      // De-dup runs before the view sees the state, so headers read the de-duped list. b1 collapses
+      // and B still opens once.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('b1').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
@@ -157,9 +161,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // Page 1 reaches back into group A, so the raw flattening reads A, A, B, A, B, B and breaks
-      // the contiguity the async path requires. De-dup collapses the overlap first, so grouping
-      // never sees the break: pagination's itemId is load-bearing for grouping here.
+      // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the
+      // overlap first, so grouping never sees it. itemId is load-bearing for grouping here.
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('a2').evaluate()).length.equals(1);
@@ -183,9 +186,26 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // The same overlap without itemId: nothing collapses, group A reappears after B opened, and
-      // the debug order assert fires. This is the other half of the pairing above.
+      // Same overlap, no itemId. Nothing collapses, A comes back after B opened, assert fires.
       check(tester.takeException()).isA<AssertionError>();
+    });
+
+    scenarioWidgets('FailOnUnorderedPolicy throws instead of asserting', (tester) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: pagedFetcher(const [
+            [(group: 'A', label: 'a1'), (group: 'B', label: 'b1'), (group: 'A', label: 'a2')],
+          ]),
+          refresh: const NoRefresh(),
+          grouping: byGroup(orderPolicy: const FailOnUnorderedPolicy()),
+          itemBuilder: (_, item, _) => Text(item.label),
+        ),
+      );
+      await drain(tester);
+
+      // Default only asserts, so release would let this slide. This is the opt-in to fail loud.
+      check(tester.takeException()).isA<StateError>();
     });
 
     scenarioWidgets('asserts when a page is not ordered by group key', (tester) async {
