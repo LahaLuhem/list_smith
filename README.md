@@ -30,6 +30,9 @@
         + [What happens to the feed while you search?](#what-happens-to-the-feed-while-you-search)
     * [You keep the search field](#you-keep-the-search-field)
 - [Grouping](#grouping)
+    * [How each path orders its sections](#how-each-path-orders-its-sections)
+    * [When a group arrives out of order](#when-a-group-arrives-out-of-order)
+    * [Typing the key and caching the grouping](#typing-the-key-and-caching-the-grouping)
 - [Make it look like your app](#make-it-look-like-your-app)
 - [Watching what it does](#watching-what-it-does)
 - [Scroll and layout](#scroll-and-layout)
@@ -508,6 +511,8 @@ ListSmith.sync(
 Grouping runs over whatever is *visible*, so it composes with search: the sections re-form over the
 matches as you type.
 
+### How each path orders its sections
+
 The two paths order their sections differently, and the difference matters:
 
 - **`.sync` buckets for you.** It holds the whole list, so it gathers each group into one contiguous
@@ -517,6 +522,8 @@ The two paths order their sections differently, and the difference matters:
   `AsyncSearch` fetcher) must return items *already grouped by key*, all of one group before the next.
   A group that starts at the end of one page and carries on into the next still gets a single header,
   not one per page.
+
+### When a group arrives out of order
 
 If a key does come back after its section ended, `orderPolicy` decides what happens. The default
 `RepairHeadersPolicy` draws each header once, so the stray items sit under the header their group
@@ -531,6 +538,8 @@ grouping: Grouping.by(
   orderPolicy: const FailOnUnorderedPolicy(),
 ),
 ```
+
+### Typing the key and caching the grouping
 
 Two things worth knowing:
 

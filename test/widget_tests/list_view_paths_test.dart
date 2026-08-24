@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +39,56 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
       // Separators fall between the items (and before the end-of-list footer).
       check(find.text('sep').evaluate()).length.isGreaterThan(1);
+    });
+
+    scenarioWidgets('a custom refreshBuilder replaces the neutral pull indicator', (tester) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: pagedFetcher(const [
+            [1, 2, 3],
+          ]),
+          refresh: PullToRefresh(
+            refreshBuilder: (context, child, state) =>
+                Stack(children: [child, Text('pull ${state.phase.name}')]),
+          ),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+
+      // The consumer's builder gets the child and the refresh state, and draws instead of ours.
+      check(find.textContaining('pull ').evaluate()).length.equals(1);
+      check(find.text('item 1').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
+      final hold = Completer<List<int>>();
+      Widget build(Color colour) => DefaultTextStyle(
+        style: TextStyle(color: colour),
+        child: ListSmith.async(
+          fetchPage: PageFetcher(
+            (request) => request.pageIndex == 0 ? hold.future : Future.value(const <int>[]),
+          ),
+          refresh: const NoRefresh(),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+
+      // Held on the first page, so the neutral spinner is what is on screen.
+      await pumpListSmith(tester, build(const Color(0xFFFF0000)));
+      await drain(tester);
+      check(find.byType(CustomPaint).evaluate()).isNotEmpty();
+
+      // Re-pump under a different ambient colour: the arc painter has to notice and repaint.
+      await pumpListSmith(tester, build(const Color(0xFF0000FF)));
+      await drain(tester);
+      check(find.byType(CustomPaint).evaluate()).isNotEmpty();
+
+      hold.complete(const [1]);
+      await tester.idle();
+      await drain(tester);
+      check(find.text('item 1').evaluate()).length.equals(1);
     });
   });
 

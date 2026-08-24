@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +48,38 @@ void main() {
       check(fetcher.requested.take(3)).deepEquals(const [0, 1, 2]);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 2').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('a custom first-page loading surface covers the advance', (tester) async {
+      final hold = Completer<List<int>>();
+      final fetchPage = PageFetcher<int>((request) {
+        if (request.pageIndex == 0) return Future.value(const <int>[]);
+
+        return request.pageIndex == 1 ? hold.future : Future.value(const <int>[]);
+      });
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: fetchPage,
+          endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
+          onEmptyPage: const AdvanceToFirstNonEmpty(),
+          refresh: const NoRefresh(),
+          surfaces: AsyncListSurfaces(firstPageLoadingBuilder: (_) => const Text('my loader')),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 12);
+
+      // Page 0 came back empty and the behaviour is still paging on, so the loading slot is showing
+      // and the consumer's override is what gets drawn there, not the neutral default.
+      check(find.text('my loader').evaluate()).length.equals(1);
+
+      hold.complete(const [1, 2]);
+      await tester.idle();
+      await drain(tester, frames: 12);
+      check(find.text('my loader').evaluate()).length.equals(0);
+      check(find.text('item 1').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('the default (ShowEmptySurface) stops on the first empty page', (tester) async {
