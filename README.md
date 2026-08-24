@@ -323,6 +323,8 @@ Two caveats:
   a per-page signal, so page `k` needs page `k-1`: the reload walks in order, and any failure keeps
   the old list whole (a half-rewritten chain can't be committed). `concurrency` and `onError` are
   ignored there, but scroll depth is still kept.
+- **A page still loading when the pull happens is dropped and asked again.** Its answer was aimed at
+  pre-refresh data. Costs one extra request for that page.
 
 Retry stays in your fetcher, not here: wrap `fetchPage` with a package like
 [retry](https://pub.dev/packages/retry) so a transient blip is handled before the reload sees it:
@@ -439,6 +441,10 @@ looking at? Another policy:
 ```dart
 search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
 ```
+
+One caveat on "no refetch": a page still loading when the search started is dropped and asked again,
+since its answer was aimed at the feed as it stood before. Same rule on a pull to refresh, see
+[What a pull reloads](#what-a-pull-reloads).
 
 ### You keep the search field
 
