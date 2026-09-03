@@ -1,1 +1,8 @@
 #include "Generated.xcconfig"
+
+// Committed defaults: lowercase bundle id, no team, which is all the Simulator needs (no signing).
+// To run on a physical device, override both in an untracked LocalSigning.xcconfig.
+PRODUCT_BUNDLE_IDENTIFIER = com.lahaluhem.example.listSmithExample
+DEVELOPMENT_TEAM =
+
+#include? "LocalSigning.xcconfig"
