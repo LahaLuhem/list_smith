@@ -38,12 +38,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-flutter
-      # Published 5.0.5 caps `analyzer` below the 14.1.0 that Dart 3.13 syntax needs to parse. Until
-      # Workiva/dependency_validator#181 releases, run its branch; merging deletes it and fails here
-      - run: |
-          dart pub global activate --source git \
-            https://github.com/Workiva/dependency_validator \
-            --git-ref dependabot/pub/major-0f75c2771b
+      - run: dart pub global activate dependency_validator
       - run: dart pub global run dependency_validator
 
   test:

@@ -38,11 +38,7 @@ jobs:
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: example
-      # Same git-branch activation as package.yml; see the note there.
-      - run: |
-          dart pub global activate --source git \
-            https://github.com/Workiva/dependency_validator \
-            --git-ref dependabot/pub/major-0f75c2771b
+      - run: dart pub global activate dependency_validator
       - run: dart pub global run dependency_validator
 
   # main's required check; the job id IS the context, so no `name:` and no rename.
