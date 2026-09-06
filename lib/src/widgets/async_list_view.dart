@@ -102,8 +102,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   State<AsyncListView<T>> createState() => _AsyncListViewState<T>();
 }
 
-class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
-    implements ReloadContext<T> {
+class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
 
@@ -190,7 +189,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   }
 
   /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchPage]
-  /// threads it forward, a reload threads its own and commits via [commit].
+  /// threads it forward, a reload threads its own and commits via [_commit].
   ///
   /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
   /// error still fires `onError`: the request did fail, whoever was waiting.
@@ -361,25 +360,18 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _pager.refresh();
   }
 
-  // --- ReloadContext<T>: the capability a Reload runs through on pull-to-refresh. ---
+  // --- The engine side of a reload, reached through a [_ReloadRun]. ---
 
-  @override
-  List<List<T>> get loadedPages => _pager.value.pages ?? [];
-
-  @override
-  bool get isSignalBased => switch (widget.source.search) {
+  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential,
+  /// atomic reload.
+  bool get _isSignalBased => switch (widget.source.search) {
     final AsyncSearch<T> s when _isSearchQuery(_debouncer.committedQuery) =>
       s.fetchPage.reportsSignal,
     AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.reportsSignal,
   };
 
-  // Every fetch through this seam is part of a reload, so no Reload needs to report the trigger.
-  @override
-  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) =>
-      _fetchPageRaw(index, previousSignal, .refresh);
-
-  @override
-  void commit(List<List<T>> pages, {Object? lastSignal}) {
+  /// Replaces the loaded pages with [pages] atomically, recording [lastSignal] as the new end signal.
+  void _commit(List<List<T>> pages, {Object? lastSignal}) {
     _generation++;
     _lastPageSignal = lastSignal;
     final keys = [for (var index = 0; index < pages.length; index++) index];
@@ -389,9 +381,6 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       PagingState<int, T>(pages: pages, keys: keys, hasNextPage: _nextPageKey(probe) != null),
     );
   }
-
-  @override
-  void reset() => _resetPaging(.refresh);
 
   @override
   Widget build(BuildContext context) {
@@ -448,10 +437,41 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// is still refreshable from code, so it falls back to the pager's own reset.
   Future<void> _runRefresh() {
     widget.observer?.onRefresh();
+    final run = _ReloadRun(this, .refresh);
 
     return switch (widget.source.refresh) {
-      PullToRefresh(:final reload) => reload.run(this),
-      NoRefresh() => const ResetToFirstPage().run(this),
+      PullToRefresh(:final reload) => reload.run(run),
+      NoRefresh() => const ResetToFirstPage().run(run),
     };
   }
+}
+
+/// One reload's handle onto the engine, the [ReloadContext] a [Reload] runs through.
+///
+/// One per run rather than the State itself, so a reload carries its own facts instead of reading
+/// them off a State that every stream shares.
+final class _ReloadRun<T extends Object> implements ReloadContext<T> {
+  final _AsyncListViewState<T> _engine;
+
+  /// What every page fetched through this run reports.
+  final FetchTrigger trigger;
+
+  new(this._engine, this.trigger);
+
+  @override
+  List<List<T>> get loadedPages => _engine._pager.value.pages ?? [];
+
+  @override
+  bool get isSignalBased => _engine._isSignalBased;
+
+  @override
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) =>
+      _engine._fetchPageRaw(index, previousSignal, trigger);
+
+  @override
+  void commit(List<List<T>> pages, {Object? lastSignal}) =>
+      _engine._commit(pages, lastSignal: lastSignal);
+
+  @override
+  void reset() => _engine._resetPaging(trigger);
 }
