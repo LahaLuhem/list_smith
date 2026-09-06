@@ -115,8 +115,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   /// on refresh and snapshots with [_normalSnapshot] across a search toggle.
   Object? _lastPageSignal;
 
-  /// Bumped by every path that invalidates in-flight work. ISP's own token drops a superseded page's
-  /// items, but the post-await writes below are ours, so they need their own check.
+  /// Bumped by everything that makes in-flight work stale: a reset, a query change, a commit,
+  /// dispose. ISP's token covers its own fetch, the post-await writes here compare against this.
   var _generation = 0;
 
   /// The trigger the next paging-controller fetch reports, latched by a reset because the re-fetch it
@@ -135,9 +135,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
-  /// The refresh currently running, so a second trigger joins it instead of starting a rival reload
-  /// (the gesture can't double-fire, but a [ListSmithController] can). Null when none is in flight.
-  Future<void>? _refreshInFlight;
+  /// The reload running now. A second trigger joins it rather than starting a rival, unless the
+  /// list moved on under it. Null when none is in flight.
+  _ReloadRun<T>? _running;
 
   @override
   void initState() {
@@ -162,6 +162,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
   @override
   void dispose() {
+    _generation++; // a reload outliving the list must not write into it
     widget.controller?.detach();
     _debouncer.dispose();
     _pager.dispose();
@@ -429,34 +430,56 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     };
   }
 
-  /// The one refresh entry point, gesture or programmatic: a [ListSmithController] attaches this.
-  Future<void> _onRefresh() =>
-      _refreshInFlight ??= _runRefresh().whenComplete(() => _refreshInFlight = null);
+  /// The one refresh entry point, gesture or code. Joins the reload already running, unless the
+  /// list moved on under it, in which case a fresh one starts.
+  Future<void> _onRefresh() {
+    final running = _running;
+    if (running != null && !running.isStale) return running.done;
 
-  /// Announces the refresh, then runs the configured [Reload]. A `NoRefresh` list has no gesture but
-  /// is still refreshable from code, so it falls back to the pager's own reset.
-  Future<void> _runRefresh() {
-    widget.observer?.onRefresh();
     final run = _ReloadRun(this, .refresh);
+    _running = run;
+    widget.observer?.onRefresh();
+    unawaited(
+      _configuredReload.run(run).whenComplete(() {
+        if (identical(_running, run)) _running = null;
+        run.finish();
+      }),
+    );
 
-    return switch (widget.source.refresh) {
-      PullToRefresh(:final reload) => reload.run(run),
-      NoRefresh() => const ResetToFirstPage().run(run),
-    };
+    return run.done;
   }
+
+  /// The pull's [Reload]. A `NoRefresh` list has no gesture but is still refreshable from code, so
+  /// it falls back to the pager's own reset.
+  Reload get _configuredReload => switch (widget.source.refresh) {
+    PullToRefresh(:final reload) => reload,
+    NoRefresh() => const ResetToFirstPage(),
+  };
 }
 
 /// One reload's handle onto the engine, the [ReloadContext] a [Reload] runs through.
 ///
-/// One per run rather than the State itself, so a reload carries its own facts instead of reading
-/// them off a State that every stream shares.
+/// One per run rather than the State itself, so a reload knows its own facts: the trigger its pages
+/// report, and whether the list moved on since it began.
 final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   final _AsyncListViewState<T> _engine;
 
   /// What every page fetched through this run reports.
   final FetchTrigger trigger;
 
-  new(this._engine, this.trigger);
+  final _done = Completer<void>();
+
+  /// The generation this run belongs to. Its own writes move it along, so only another writer can
+  /// make it stale.
+  int _epoch;
+
+  new(this._engine, this.trigger) : _epoch = _engine._generation;
+
+  /// Completes once the reload finishes, committed or not, after the engine has let go of the run.
+  Future<void> get done => _done.future;
+
+  @override
+  bool get isStale => _engine._generation != _epoch;
 
   @override
   List<List<T>> get loadedPages => _engine._pager.value.pages ?? [];
@@ -469,9 +492,18 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
       _engine._fetchPageRaw(index, previousSignal, trigger);
 
   @override
-  void commit(List<List<T>> pages, {Object? lastSignal}) =>
-      _engine._commit(pages, lastSignal: lastSignal);
+  void commit(List<List<T>> pages, {Object? lastSignal}) {
+    if (isStale) return;
+    _engine._commit(pages, lastSignal: lastSignal);
+    _epoch = _engine._generation;
+  }
 
   @override
-  void reset() => _engine._resetPaging(trigger);
+  void reset() {
+    _engine._resetPaging(trigger);
+    _epoch = _engine._generation;
+  }
+
+  /// Marks the run finished. The engine calls it once it has let go of the run.
+  void finish() => _done.complete();
 }

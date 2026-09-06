@@ -40,6 +40,7 @@ final class ReloadToCurrentDepth extends Reload {
 
     try {
       for (var index = 0; index < depth; index++) {
+        if (context.isStale) return;
         final (items, pageSignal) = await context.fetch(index, signal);
         fresh.add(items);
         signal = pageSignal;
@@ -63,6 +64,7 @@ final class ReloadToCurrentDepth extends Reload {
 
     Future<void> fetchInto(int index) async {
       if (atomic && failed) return; // fail-fast: skip once a page has failed
+      if (context.isStale) return;
 
       try {
         final (items, _) = await context.fetch(index, null);

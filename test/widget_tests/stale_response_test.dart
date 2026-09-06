@@ -397,8 +397,283 @@ void main() {
       // The restore bumped the generation, so the abandoned search page announces nothing.
       check(observer.events.where((event) => event.contains('search: true'))).isEmpty();
     });
+
+    scenarioWidgets('a depth reload does not commit over a list that moved on under it', (
+      tester,
+    ) async {
+      final hold = Completer<void>();
+      final source = _stampedSource(holdFor: (_, attempt) => attempt == 2 ? hold.future : null);
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      // Premise: the query change restarted the stream and it loaded, while the reload still hangs.
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+    });
+
+    scenarioWidgets("a superseded depth reload leaves the new stream's first page alone", (
+      tester,
+    ) async {
+      final holdReload = Completer<void>();
+      final holdFirstPage = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (pageIndex, attempt) => switch ((pageIndex, attempt)) {
+          (_, 2) => holdReload.future,
+          (0, 3) => holdFirstPage.future,
+          _ => null,
+        },
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      // Premise: the list is cleared and the new stream's page 0 is out there, held.
+      check(_shown(tester)).isEmpty();
+
+      // The reload lands first. Its commit used to cancel that page 0, leaving stale rows for good.
+      holdReload.complete();
+      await tester.idle();
+      await drain(tester);
+      holdFirstPage.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+    });
+
+    scenarioWidgets('a depth reload of the search does not commit over a restored feed', (
+      tester,
+    ) async {
+      // Under KeepCache the search's first load is attempt 2, so the reload is attempt 3.
+      final hold = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (_, attempt) => attempt == 3 ? hold.future : null,
+        cachePolicy: const KeepCachePolicy(),
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      check(_shown(tester)).deepEquals([2, 1002, 2002]);
+
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      // Premise: leaving search put the feed back while the search reload still hangs.
+      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+
+      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+    });
+
+    scenarioWidgets('a refresh that meets a superseded reload starts its own', (tester) async {
+      final hold = Completer<void>();
+      final source = _stampedSource(holdFor: (_, attempt) => attempt == 2 ? hold.future : null);
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      final first = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+
+      final before = source.log.length;
+      final second = controller.refresh();
+      await drain(tester, frames: 12);
+      // A live reload would have been joined. A stale one is not worth joining: nothing it does lands.
+      check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await (first, second).wait;
+
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
+    });
+
+    scenarioWidgets('a superseded reload stops asking for the pages it had left', (tester) async {
+      final hold = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (pageIndex, attempt) => (pageIndex, attempt) == (0, 2) ? hold.future : null,
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(
+        tester,
+        source,
+        controller: controller,
+        reload: const ReloadToCurrentDepth(),
+      );
+      await drain(tester, frames: 12);
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(
+        tester,
+        source,
+        controller: controller,
+        reload: const ReloadToCurrentDepth(),
+        query: 'x',
+      );
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+
+      // Page 0 was in flight when the list moved on. Pages 1 and 2 were never asked for.
+      check(source.log.where((entry) => entry.endsWith(':refresh')).toList())
+          .deepEquals(['0#2:refresh']);
+      check(_shown(tester)).deepEquals([3, 1002, 2002]);
+    });
+
+    scenarioWidgets('a superseded withSignal reload stops asking too', (tester) async {
+      // A signal source reloads in order through its own loop, so that loop needs the same check.
+      final hold = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (pageIndex, attempt) => (pageIndex, attempt) == (0, 2) ? hold.future : null,
+        signal: true,
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+
+      check(source.log.where((entry) => entry.endsWith(':refresh')).toList())
+          .deepEquals(['0#2:refresh']);
+      check(_shown(tester)).deepEquals([3, 1002, 2002]);
+    });
+
+    scenarioWidgets('a depth reload finishing after the list is gone stays silent', (tester) async {
+      final hold = Completer<void>();
+      final source = _stampedSource(holdFor: (_, attempt) => attempt == 2 ? hold.future : null);
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      final refresh = controller.refresh();
+      await drain(tester);
+
+      await pumpListSmith(tester, const SizedBox.shrink());
+      hold.complete();
+      await tester.idle();
+      await drain(tester);
+      await refresh;
+
+      check(tester.takeException()).isNull();
+    });
   });
 }
+
+typedef _HoldFor = Future<void>? Function(int pageIndex, int attempt);
+
+typedef _StampedSource = ({
+  PageFetcher<int> fetchPage,
+  AsyncSearch<int> search,
+  Map<int, int> attempts,
+  List<String> log,
+});
+
+/// Stamps each page `page * 1000 + attempt`, so a re-fetched page is told from its first load, and
+/// blocks the fetches [holdFor] picks. The feed and the search share the counter, so a query change
+/// restarts the stream with the next stamp: the stand-in for anything that moves the list on under
+/// a reload. `log` records every request as `page#attempt:trigger`. [signal] makes the feed a
+/// `withSignal` source (always a null signal), which reloads through the in-order path.
+_StampedSource _stampedSource({
+  required _HoldFor holdFor,
+  SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
+  bool signal = false,
+}) {
+  final attempts = <int, int>{};
+  final log = <String>[];
+  Future<List<int>> fetch(PageRequest request) async {
+    final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
+    log.add('${request.pageIndex}#$attempt:${request.trigger.name}');
+    final hold = holdFor(request.pageIndex, attempt);
+    if (hold != null) await hold;
+
+    return [request.pageIndex * 1000 + attempt];
+  }
+
+  return (
+    fetchPage: signal
+        ? PageFetcher.withSignal((request) async => (await fetch(request), null))
+        : PageFetcher(fetch),
+    search: AsyncSearch(fetchPage: SearchPageFetcher(fetch), cachePolicy: cachePolicy),
+    attempts: attempts,
+    log: log,
+  );
+}
+
+/// Pumps a three-page list over [source], with the pull's [reload] and a 20ms search debounce.
+Future<void> _pumpStamped(
+  WidgetTester tester,
+  _StampedSource source, {
+  required ListSmithController controller,
+  Reload reload = const ReloadToCurrentDepth(concurrency: null),
+  String query = '',
+}) => pumpListSmith(
+  tester,
+  ListSmith.async(
+    fetchPage: source.fetchPage,
+    endPolicy: const FixedPageCountPolicy(pageCount: 3),
+    refresh: PullToRefresh(reload: reload),
+    search: source.search,
+    controller: controller,
+    query: query,
+    searchDebounce: const Duration(milliseconds: 20),
+    itemBuilder: (_, item, _) => Text('item $item'),
+  ),
+);
+
+/// The stamps on screen, in order.
+List<int> _shown(WidgetTester tester) => tester
+    .widgetList<Text>(find.byType(Text))
+    .map((text) => text.data ?? '')
+    .where((data) => data.startsWith('item '))
+    .map((data) => int.parse(data.split(' ').last))
+    .toList();
 
 /// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher
 /// is never reached (the query is always non-empty), and refresh is off so only the query drives

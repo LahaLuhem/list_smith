@@ -17,6 +17,10 @@ abstract interface class ReloadContext<T extends Object> {
   /// the strategy's concurrency and error settings say.
   bool get isSignalBased;
 
+  /// Whether the list moved on since this reload began: a reset, a query change, or the list is
+  /// gone. A stale reload's [commit] is dropped, so stop fetching once this is true.
+  bool get isStale;
+
   /// Fetches page [index] given the [previousSignal] from the page before it (null for index sources
   /// and the first page), returning the page's items and its own signal. Throws if the fetch fails.
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal);
