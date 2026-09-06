@@ -6,14 +6,13 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Cache routing demo: a repository-with-a-cache in front of `ListSmith.async`, routed on
-/// `PageRequest.trigger`.
+/// Backs the Cache routing demo: a repository-with-a-cache routed on `PageRequest.trigger`.
 ///
 /// The cache lives here rather than in [DemoRepository], which every other demo shares and none of
-/// them should start caching. Items are re-stamped with the fetch number that produced them, so a
-/// served-from-cache page is visibly the same page and a bypassed one is visibly new.
+/// them should start caching. Items carry the fetch number that produced them, so a cached page is
+/// visibly the same one and a bypassed page is visibly new.
 final class CacheRoutingViewModel extends ViewModel {
-  /// Cap on the log so it can't grow without bound; the newest lines are kept.
+  /// Cap on the log so it can't grow without bound. The newest lines are kept.
   static const _maxLoggedFetches = 50;
 
   final _repository = DemoRepository(latency: const Duration(milliseconds: 400));

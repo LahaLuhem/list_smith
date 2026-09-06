@@ -1,10 +1,9 @@
 /// Scenario: pull-to-refresh on a list_smith async list (custom_refresh_indicator under the hood).
 ///
-/// Captures per-frame build/raster timing across full refresh cycles (drag past the arm threshold,
-/// release, run onRefresh, settle back), so the cost of CRI's animation plus list_smith's refresh
-/// wiring shows up as real frames. Unlike the scroll pair there is no bare control: pull-to-refresh is
-/// the CRI feature itself, so this stands alone as the per-frame cost of a refresh cycle (an
-/// upstream-CRI regression tripwire and a build-vs-buy signal on hand-rolling the indicator).
+/// Per-frame build and raster timing across full cycles: drag past the arm threshold, release, run
+/// onRefresh, settle back. No bare control here, unlike the scroll pair, because pull-to-refresh is
+/// the CRI feature itself. So it stands alone as the cost of one refresh cycle, doubling as an
+/// upstream-CRI tripwire and a build-vs-buy signal on hand-rolling the indicator.
 library;
 
 import 'package:flutter/widgets.dart';

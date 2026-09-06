@@ -23,7 +23,7 @@ def discover_sources() -> Iterable[Path]:
 
 
 def discover_scenarios() -> Iterable[Path]:
-    """Yield every UI scenario entry-point (integration_test/*.dart; support/ excluded)."""
+    """Yield every UI scenario entry-point in integration_test/, excluding support/."""
     if SCENARIOS_DIR.exists():
         yield from sorted(SCENARIOS_DIR.glob("*.dart"))
 

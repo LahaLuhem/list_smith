@@ -6,9 +6,9 @@ import 'neutral_progress_indicator.dart';
 
 /// The neutral default pull-to-refresh indicator.
 ///
-/// Reveals a [NeutralProgressIndicator] from the top of the list as the pull progresses
-/// (keyed to [ListSmithRefreshState.value]) and keeps it spinning while a refresh runs.
-/// Imposes no design system. Consumers override the refresh builder to replace it.
+/// Reveals a [NeutralProgressIndicator] from the top of the list as the pull progresses (keyed to
+/// [ListSmithRefreshState.value]) and keeps it spinning while a refresh runs. Override
+/// `refreshBuilder` to replace it.
 class NeutralRefreshIndicator extends StatelessWidget {
   static const double _revealExtent = 64;
 

@@ -4,9 +4,9 @@ import '/src/utils/neutral_theme.dart';
 
 /// A neutral, widgets-layer "retry" control for list_smith's error surfaces.
 ///
-/// The widgets layer ships no button (buttons live in Material and Cupertino), so this hand-rolls a tappable,
-/// outlined control that inherits the ambient foreground colour via [neutralForegroundOf].
-/// Kept internal: consumers restyle by overriding the error builder wholesale, not this button.
+/// The widgets layer ships no button, so this hand-rolls a tappable outlined control that inherits
+/// the ambient foreground colour via [neutralForegroundOf]. Internal: restyling means overriding
+/// the error builder wholesale, not this.
 class NeutralRetryButton extends StatelessWidget {
   static const _padding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
   static const _radius = BorderRadius.all(.circular(8));

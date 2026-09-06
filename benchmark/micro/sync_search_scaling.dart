@@ -1,11 +1,10 @@
 /// Micro-benchmark: [resolveSyncSearch] cost as the in-memory list grows.
 ///
-/// This is choke point #2 from the benchmarking plan: `SyncListView` re-runs `resolveSyncSearch`
-/// (an `items.where(predicate).toList()`, O(n) times the predicate cost) synchronously on every
-/// committed query. Measuring it AOT across a range of list sizes puts a trustworthy microseconds
-/// figure on where a big in-memory list crosses the frame budget. The predicate is a naive
-/// case-insensitive `contains` (a `toLowerCase()` allocation per item), representative of what a
-/// consumer typically writes.
+/// `SyncListView` re-runs `resolveSyncSearch` synchronously on every committed query, an
+/// `items.where(predicate).toList()` costing O(n) times the predicate. Measuring it AOT across a
+/// range of sizes puts a trustworthy microseconds figure on where a big in-memory list crosses the
+/// frame budget. The predicate is a naive case-insensitive `contains`, one `toLowerCase()`
+/// allocation per item, which is what a consumer typically writes.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -14,7 +13,7 @@ import 'package:list_smith/src/data/search/utils/sync_search_resolver.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-/// In-memory list sizes the resolver is measured against; the pivot for the scaling curve.
+/// In-memory list sizes the resolver is measured against. The pivot for the scaling curve.
 const _listSizes = <int>[1000, 10000, 100000];
 
 final class _SyncSearchScaling extends BenchmarkBase {

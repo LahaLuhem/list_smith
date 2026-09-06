@@ -1,43 +1,36 @@
 /// @docImport '/src/data/refresh/models/refresh.dart';
-/// @docImport '/src/widgets/list_smith.dart';
 library;
 
 import 'package:flutter/widgets.dart';
 
 import '../typedefs/error_builder.dart';
 
-/// Groups the overridable surfaces that only an async list has, so [ListSmith.async]'s behavioural
-/// parameters aren't buried among a run of optional builders.
+/// The overridable surfaces only an async list has: page loading, page errors, the end-of-list
+/// footer.
 ///
-/// Every field is null by default, meaning "use list_smith's neutral widgets-layer default"; set one
-/// to replace that surface. The surfaces gathered here exist only on the async path (page loading,
-/// page errors, and the end-of-list footer). The pull-to-refresh indicator lives on [PullToRefresh],
-/// alongside the toggle that enables it. Surfaces every list has, such as the empty-state builder,
-/// stay directly on the constructor so they read the same whether the list was built with `.async` or
-/// `.sync`.
-///
-/// Build one once and reuse it across every list to share a house style.
+/// Every unset field keeps list_smith's own neutral surface. Build one and reuse it across lists for
+/// a house style. The pull indicator isn't here, it sits on [PullToRefresh] next to the toggle that
+/// turns it on, and surfaces every list has (the empty state) stay on the constructor.
 @immutable
 class AsyncListSurfaces {
-  /// Builds the first-page loading surface; null uses the neutral default.
+  /// Builds the first-page loading surface. Null uses the neutral default.
   final WidgetBuilder? firstPageLoadingBuilder;
 
-  /// Builds the loading footer shown while a further page loads; null uses the neutral default.
+  /// Builds the loading footer shown while a further page loads. Null uses the neutral default.
   final WidgetBuilder? newPageLoadingBuilder;
 
-  /// Builds the first-page error surface, carrying the error and a retry callback; null uses the
+  /// Builds the first-page error surface, carrying the error and a retry callback. Null uses the
   /// neutral default.
   final ErrorBuilder? firstPageErrorBuilder;
 
-  /// Builds the new-page error footer, carrying the error and a retry callback; null uses the
+  /// Builds the new-page error footer, carrying the error and a retry callback. Null uses the
   /// neutral default.
   final ErrorBuilder? newPageErrorBuilder;
 
-  /// Builds the footer shown once every page has loaded; null uses the neutral default.
+  /// Builds the footer shown once every page has loaded. Null uses the neutral default.
   final WidgetBuilder? noMoreItemsBuilder;
 
-  /// Groups the async-only override surfaces; every field defaults to the neutral widgets-layer
-  /// surface it replaces.
+  /// Creates a surface set. Every unset field keeps list_smith's neutral default.
   const new({
     this.firstPageLoadingBuilder,
     this.newPageLoadingBuilder,

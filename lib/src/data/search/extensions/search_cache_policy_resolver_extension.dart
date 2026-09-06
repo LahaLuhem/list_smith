@@ -3,14 +3,13 @@ import '../models/search_cache_policy.dart';
 
 /// Maps a [SearchCachePolicy] and a mode transition to the [CacheAction] the search view runs.
 ///
-/// Kept as an unexported extension in its own file so the policy stays pure data while the "what to
-/// do on a transition" decision is a small, controller-free unit that can be unit-tested directly
-/// (the same split as `PaginationEndPolicy.hasReachedEnd`).
+/// Unexported, in its own file, so the policy stays pure data and the decision stays a small
+/// controller-free unit that unit-tests directly.
 extension SearchCachePolicyResolverExtension on SearchCachePolicy {
   /// The action for a transition from [wasSearching] to [isSearching] under this policy.
   ///
-  /// Replace always reloads clean. Keep snapshots the normal list when entering search and restores
-  /// it when leaving; a search-to-search change (both searching) reloads clean.
+  /// Replace always reloads clean. Keep snapshots the normal list on the way in and restores it on
+  /// the way out. A search-to-search change reloads clean either way.
   CacheAction actionFor({required bool wasSearching, required bool isSearching}) => switch (this) {
     ReplaceCachePolicy() => .refresh,
     KeepCachePolicy() when !wasSearching && isSearching => .snapshotThenRefresh,

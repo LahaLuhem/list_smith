@@ -5,10 +5,9 @@ import 'package:list_smith/list_smith.dart';
 /// A [ListSmithObserver] that synchronously blocks for [delay] on every callback, simulating a slow
 /// logger or analytics flush a consumer might wire into the observer seam.
 ///
-/// list_smith fires observer callbacks synchronously on its own fetch / refresh / query-commit paths,
-/// so a slow observer stalls list_smith's own work and blocks the UI isolate. The block is a genuine
-/// [sleep] (`dart:io`), pausing the event loop exactly as a slow synchronous callback would. Mirrors
-/// `better_internet_connectivity_checker`'s `SlowObserver`.
+/// Callbacks fire synchronously on list_smith's own fetch, refresh and query-commit paths, so a
+/// slow observer stalls its work and blocks the UI isolate. A genuine `dart:io` [sleep], pausing
+/// the event loop exactly as a slow synchronous callback would. Mirrors BICC's `SlowObserver`.
 final class SlowListSmithObserver extends ListSmithObserver {
   new({this.delay = const Duration(milliseconds: 50)});
 

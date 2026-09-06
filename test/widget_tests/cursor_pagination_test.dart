@@ -22,7 +22,7 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // All three cursor-chained pages loaded; each fetch received the prior page's cursor, and the
+      // All three cursor-chained pages loaded. Each fetch received the prior page's cursor, and the
       // null cursor on the last page ended pagination without a trailing fetch.
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 9').evaluate()).length.equals(1);
@@ -90,8 +90,8 @@ void main() {
 }
 
 /// A fake cursor-paged backend: three pages chained by opaque string cursors, then a `null` cursor
-/// that ends it. It dispatches on the request's `previousSignal`, not its page index, so it proves the
-/// cursor drives the fetch; [received] records each cursor the fetcher saw.
+/// that ends it. It dispatches on the request's `previousSignal`, not its page index, so it proves
+/// the cursor drives the fetch. [received] records each cursor the fetcher saw.
 PageFetcher<int> _cursorFetcher(List<Object?> received) =>
     PageFetcher<int>.withSignal((request) async {
       received.add(request.previousSignal);

@@ -21,7 +21,7 @@ void main() {
     ]);
 
     // A mid-stream page that is ENTIRELY page 0's ids (fresh objects), followed by a genuinely new
-    // page. De-dup collapses page 1 to nothing for display; the end policy must still see that the
+    // page. De-dup collapses page 1 to nothing for display. The end policy must still see that the
     // backend returned a full page there, or it reads the empty result as end-of-data and never
     // fetches page 2. Page 3 is empty, the real end.
     final allDuplicateMidStreamPages = pagedFetcher([
@@ -43,7 +43,7 @@ void main() {
       await _pumpPagedList(tester, fetchPage: overlappingPages, itemId: (item) => item.id);
       await drain(tester, frames: 8);
 
-      // Ids 3 and 4 are returned by BOTH page 0 and page 1; the key collapses each to one.
+      // Ids 3 and 4 are returned by BOTH page 0 and page 1. The key collapses each to one.
       check(find.text('item 3').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).length.equals(1);
       // Non-overlapping ids are unaffected controls.

@@ -1,8 +1,8 @@
 /// Scenario: scrolling a bare `ListView.builder` (the attribution control).
 ///
-/// The same item widget and scroll as `isp_scroll`, but over a plain `ListView.builder` with no
-/// list_smith and no ISP. The frame-cost delta from `isp_scroll` is what list_smith-over-ISP adds on
-/// top of a plain list (ISP's load-more plus list_smith's wrapping).
+/// The same item widget and scroll as `isp_scroll`, over a plain `ListView.builder` with no
+/// list_smith and no ISP. The frame-cost delta from `isp_scroll` is what the wrapper adds on top of
+/// a plain list.
 library;
 
 import 'package:flutter/widgets.dart';

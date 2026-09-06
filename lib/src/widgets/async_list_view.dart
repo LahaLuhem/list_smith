@@ -33,14 +33,13 @@ import 'defaults/neutral_loading_indicator.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 
-/// The async engine behind [ListSmith.async]: owns the paging controller lifecycle, wires
-/// pull-to-refresh, and (when the source supports search) drives a two-view normal ↔ search mode on
-/// the one controller.
+/// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
+/// runs feed and search as two views on that one controller.
 ///
-/// Unexported. [ListSmith] builds one of these for an [AsyncSource]. The fetch closure reads the
-/// debounced committed query: empty means normal mode ([AsyncSource.fetchPage]), non-empty means
-/// search mode (the [AsyncSearch] fetcher). A committed-query change runs that search's cache policy
-/// against the controller. Defaults are resolved by [ListSmith.async]; this widget re-declares none.
+/// Unexported, built by [ListSmith] for an [AsyncSource]. The fetch closure reads the debounced
+/// committed query: empty runs [AsyncSource.fetchPage], non-empty runs the [AsyncSearch] fetcher, and
+/// a change of committed query runs that search's cache policy against the controller. Every default
+/// is already resolved by [ListSmith.async].
 class AsyncListView<T extends Object> extends StatefulWidget {
   /// The async, paginated source: its fetchers, end policy, and search cache policy.
   final AsyncSource<T> source;
@@ -48,25 +47,25 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   /// Builds the widget for each item.
   final ItemBuilder<T> itemBuilder;
 
-  /// Splits the visible items into sections; [NoGrouping] (the default) renders a flat list.
+  /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   final Grouping<T> grouping;
 
-  /// Builds the separator between items; null for no separators.
+  /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// The current search query; empty drives normal mode, non-empty drives search mode.
+  /// The current search query. Empty runs the feed, non-empty runs search.
   final String query;
 
-  /// Minimum trimmed query length before a search runs; below it the query counts as empty.
+  /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
   final int minSearchLength;
 
-  /// How long to wait after [query] changes before it takes effect; [Duration.zero] is immediate.
+  /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate.
   final Duration searchDebounce;
 
-  /// Builds the surface shown when the source yields no items; null uses the neutral default.
+  /// Builds the surface shown when the source yields no items. Null uses the neutral default.
   final WidgetBuilder? emptyBuilder;
 
-  /// Builds the surface shown when a search matches nothing; null uses the neutral default.
+  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
   final NoResultsBuilder? noResultsBuilder;
 
   /// The async-only override surfaces (page loading and error, end-of-list footer, refresh indicator).
@@ -75,10 +74,10 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
-  /// Optional lifecycle observer for logging or telemetry; null is silent.
+  /// Lifecycle observer for logging or telemetry. Null is silent.
   final ListSmithObserver? observer;
 
-  /// Optional handle the consumer refreshes this list through; null leaves refresh gesture-only.
+  /// Handle the consumer refreshes this list through. Null leaves refresh gesture-only.
   final ListSmithController? controller;
 
   /// Creates the async paged list around an [AsyncSource].
@@ -112,10 +111,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// [KeepCachePolicy].
   ({PagingState<int, T> state, Object? signal})? _normalSnapshot;
 
-  /// The end signal from the current stream's most recent fetch, fed to the end policy via
-  /// [EndContext.lastPageSignal]. Owned here because it is not derivable from the paging state: it
-  /// resets on refresh and snapshots with [_normalSnapshot] across a search toggle, so a signal-based
-  /// policy stays correct in either mode. Null until a signal-reporting fetcher sets it.
+  /// The current stream's most recent end signal, fed to the end policy via
+  /// [EndContext.lastPageSignal]. Not derivable from the paging state, so it lives here: it resets
+  /// on refresh and snapshots with [_normalSnapshot] across a search toggle.
   Object? _lastPageSignal;
 
   /// Bumped by every path that invalidates in-flight work. ISP's own token drops a superseded page's
@@ -130,11 +128,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// from paging state: ISP clears `error` before re-invoking the fetch.
   int? _lastFailedPageIndex;
 
-  /// Memo for [_dedupedForDisplay]: the last raw state seen paired with the view derived from it, or
-  /// null before the first de-dup. Keyed on paging-state identity; the controller hands out the same
-  /// [PagingState] instance until the data changes, so a rebuild that leaves it untouched (an ancestor
-  /// rebuild, e.g. a keystroke before the search debounce commits) reuses the view instead of
-  /// re-running the O(loaded) pass. Kept as one cell so the pair can't drift out of sync.
+  /// Memo for [_dedupedForDisplay], keyed on paging-state identity: the controller hands out the
+  /// same [PagingState] until the data changes, so a rebuild that leaves it alone reuses the view
+  /// instead of re-running the O(loaded) pass. One cell, so the pair can't drift.
   ({PagingState<int, T> raw, PagingState<int, T> display})? _displayMemo;
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
@@ -193,8 +189,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return items;
   }
 
-  /// Fetches one page in the current mode (normal or search), leaving [_lastPageSignal] to the caller:
-  /// [_fetchPage] threads it forward, a reload threads its own and commits via [commit].
+  /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchPage]
+  /// threads it forward, a reload threads its own and commits via [commit].
   ///
   /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
   /// error still fires `onError`: the request did fail, whoever was waiting.
@@ -244,10 +240,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     }
   }
 
-  /// The next 0-based page key for [state], or `null` once the end policy reports the end.
-  ///
-  /// Keys are the page count so far, so they stay 0-based and sequential. The end decision is the
-  /// injected [AsyncSource.endPolicy] applied to an [EndContext] rebuilt from the pages loaded so far.
+  /// The next 0-based page key for [state], or `null` once [AsyncSource.endPolicy] reports the end.
+  /// Keys are the page count so far, so they stay sequential.
   int? _nextPageKey(PagingState<int, T> state) {
     final pages = state.pages;
     if (pages == null || pages.isEmpty) return 0;
@@ -261,21 +255,13 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return widget.source.endPolicy.hasReachedEnd(context) ? null : pages.length;
   }
 
-  /// A display-only copy of [state] with items whose [AsyncSource.itemId] key already appeared earlier
-  /// dropped, so overlapping pages don't render an item twice. A null `itemId` disables it (the pager
-  /// itself never de-duplicates).
+  /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already
+  /// appeared, so overlapping pages don't render a row twice. Null `itemId` returns [state] as-is.
   ///
-  /// De-dup is a display concern and stays off the controller's own pages: those stay raw, so
-  /// [_nextPageKey] feeds the end policy what the backend actually returned and a fully-duplicate page
-  /// is not mistaken for an empty end-of-data one. ISP's `PagingState.filterItems` is built for
-  /// exactly this ("use the returned value as computed state only"): it walks the pages in flattened
-  /// order, so the `seen` set threads across them and the predicate keeps only each key's first
-  /// sighting. We lean on that ordered pass rather than hand-rolling the fold; swap it for an explicit
-  /// one if the rule ever outgrows a per-item predicate.
-  ///
-  /// The pass is O(loaded items) and runs on each state change, so it is memoised on state identity
-  /// ([_displayMemo]): a rebuild that doesn't touch the state reuses the last view for free. Only
-  /// opt-in (a non-null `itemId`) pays anything; without it this returns the state untouched.
+  /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend
+  /// actually returned and a fully-duplicate page is not read as end-of-data. `filterItems` walks
+  /// the pages flattened, so `seen` threads across them. O(loaded) per state change, memoised on
+  /// state identity in [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
   PagingState<int, T> _dedupedForDisplay(PagingState<int, T> state) {
     final itemId = widget.source.itemId;
     if (itemId == null) return state;
@@ -290,14 +276,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return displayState;
   }
 
-  /// Pages the controller past an empty page itself when [EmptyPageBehaviour.shouldAdvance] says so.
+  /// Pages the controller past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since
+  /// the pager parks there with nothing on screen to scroll.
   ///
-  /// The pager parks on an empty page (nothing on screen to scroll, so its scroll-driven fetch never fires),
-  /// so list_smith requests the next page until the behaviour stops asking
-  /// (a page has items, the end policy stops, or the cap is hit). Runs on every controller change.
-  /// Deferred to a microtask so it never re-enters the controller's own notification, and re-checked
-  /// on arrival because the state can move between scheduling and running. The controller ignores a
-  /// fetch while one is in flight or the list has ended, so the guard here only spares needless microtasks.
+  /// Runs on every controller change, deferred to a microtask so it never re-enters the controller's
+  /// own notification, and re-checked on arrival because the state can move in between.
   void _maybeAdvancePastEmptyPage() {
     if (!_shouldAdvancePastEmpty(_pager.value)) return;
 
@@ -306,11 +289,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     });
   }
 
-  /// Gathers the [EmptyPageContext] from [state] and defers the decision to
-  /// [EmptyPageBehaviour.shouldAdvance]. Emptiness is read off the de-duplicated view (what the user
-  /// sees), more-available off the raw pages via the end policy ([_nextPageKey]), each matching how it
-  /// is judged elsewhere. Gates both the auto-fetch and the loading surface shown meanwhile, so the two
-  /// never disagree.
+  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide. Emptiness
+  /// comes off the de-duplicated view (what the user sees), more-available off the raw pages. Gates
+  /// both the auto-fetch and the loading surface meanwhile, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<int, T> state) =>
       widget.source.onEmptyPage.shouldAdvance(
         EmptyPageContext(
@@ -362,10 +343,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     }
   }
 
-  /// Swaps the whole paging state and drops any fetch still in flight.
-  ///
-  /// ISP only ignores a landed fetch when its token moved, and a bare `value =` leaves it alone.
-  /// Every direct write goes through here so the next one cannot forget.
+  /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't
+  /// move the pager's token, so a landed fetch would still apply. Every direct write comes through
+  /// here.
   void _replacePagingState(PagingState<int, T> next) {
     _pager.cancel();
     _pager.value = next;
@@ -422,7 +402,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
         builder: (context, isSearchMode, _) {
-          // AdvanceToFirstNonEmpty pages past an empty page itself; show the loading surface while
+          // AdvanceToFirstNonEmpty pages past an empty page itself, so show the loading surface while
           // it does, so the empty surface is reserved for the true end (or the maxPages give-up).
           if (_shouldAdvancePastEmpty(state)) {
             return surfaces.firstPageLoadingBuilder?.call(context) ??

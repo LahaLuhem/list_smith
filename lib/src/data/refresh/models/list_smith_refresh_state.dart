@@ -4,9 +4,8 @@ import '../enums/list_smith_refresh_phase.dart';
 
 /// The state of list_smith's pull-to-refresh at build time, handed to a [RefreshBuilder].
 ///
-/// A neutral wrapper over the refresh mechanism list_smith drives internally: it exposes only the
-/// [phase] and drag [value] a custom indicator needs, so that mechanism (currently custom_refresh_indicator)
-/// stays swappable without a breaking change to consumers.
+/// Only the [phase] and drag [value] a custom indicator needs, so the mechanism underneath stays
+/// swappable without a breaking change.
 @immutable
 class ListSmithRefreshState {
   /// The current phase of the pull-to-refresh gesture.
@@ -33,9 +32,8 @@ class ListSmithRefreshState {
 
 /// Draws a custom pull-to-refresh indicator around the scrollable `child`, using `state`.
 ///
-/// Returns a widget that composes the indicator with `child`. `state` carries the phase and drag progress.
-/// The underlying controller is never exposed, so a custom indicator reacts to the pull without
-/// reaching into list_smith's internals.
+/// Returns a widget composing the indicator with `child`. The controller underneath is never
+/// exposed.
 typedef RefreshBuilder = Widget Function(
   BuildContext context,
   Widget child,

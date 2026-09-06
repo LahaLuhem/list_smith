@@ -3,19 +3,18 @@ library;
 
 import 'package:meta/meta.dart';
 
-/// The capability handle a [Reload] works through, the `BuildContext` analogue for a reload.
+/// The handle a [Reload] works through, the `BuildContext` analogue for a reload.
 ///
-/// The async engine implements this and hands it to [Reload.run]; a reload reads the current depth,
-/// fetches pages, and commits or resets through it, never touching the paging controller itself.
-/// Internal: the [Reload] hierarchy is sealed, so only list_smith's own reloads ever consume it.
+/// The engine implements it and hands it to [Reload.run], so a reload reads depth, fetches, and
+/// commits or resets without touching the paging controller. Internal, since [Reload] is sealed.
 @internal
 abstract interface class ReloadContext<T extends Object> {
-  /// The pages currently loaded, in order. Its length is the depth to reload to; a best-effort reload
-  /// reuses an entry when that page's re-fetch fails.
+  /// The pages currently loaded, in order. Its length is the depth to reload to, and a best-effort
+  /// reload reuses an entry whose re-fetch failed.
   List<List<T>> get loadedPages;
 
-  /// Whether the source threads a per-page signal (built with `withSignal`), which forces a sequential,
-  /// atomic reload regardless of the strategy's concurrency and error settings.
+  /// Whether the source threads a per-page signal, which forces a sequential, atomic reload whatever
+  /// the strategy's concurrency and error settings say.
   bool get isSignalBased;
 
   /// Fetches page [index] given the [previousSignal] from the page before it (null for index sources

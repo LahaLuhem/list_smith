@@ -8,9 +8,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'basic_feed_view_model.dart';
 
-/// The bread-and-butter demo: a paginated, pull-to-refresh list built with
-/// `ListSmith.async` and its neutral default surfaces (loading, empty,
-/// end-of-list, error). Pull down to reset; scroll to load more.
+/// `ListSmith.async` with nothing but a fetcher and an item builder, so every surface is a neutral
+/// default.
 class BasicFeedView extends StatelessWidget {
   const new({super.key});
 

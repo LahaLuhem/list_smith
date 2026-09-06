@@ -59,7 +59,7 @@ def _run_micros(
     """Run each compiled micro exe with `--iterations N`, returning the captured records."""
     exes = sorted(BUILD_DIR.glob("*"))
     if not exes:
-        print("no compiled micros found — run `build` first", file=sys.stderr)
+        print("no compiled micros found. Run `build` first", file=sys.stderr)
         return []
 
     records: list[ResultRecord] = []

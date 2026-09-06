@@ -6,17 +6,14 @@ import 'search_page_request.dart';
 
 /// Fetches one page of search results for an async list, given the [SearchPageRequest] describing it.
 ///
-/// Parallels [PageFetcher] but its request carries the committed [SearchPageRequest.query]; the
-/// returned `Iterable` is materialised once by list_smith at the boundary.
-///
-/// Build one with [SearchPageFetcher.new] for items only, or [SearchPageFetcher.withSignal] to also
-/// report an end signal for the end policy (see [EndContext.lastPageSignal]); with `withSignal` the
-/// signal reaches the next search fetch as [SearchPageRequest.previousSignal], so a cursor-driven
-/// search fetches the next page from the cursor the previous one returned.
+/// [PageFetcher] with the committed [SearchPageRequest.query] on the request, and the same two
+/// builders: [SearchPageFetcher.new] for items only, [SearchPageFetcher.withSignal] to also return
+/// an end signal. That signal is read by the end policy as [EndContext.lastPageSignal] and fed back
+/// as [SearchPageRequest.previousSignal], so a cursor-driven search works the same way.
 final class SearchPageFetcher<T extends Object> {
   final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch;
 
-  /// Whether this fetcher reports an end signal, i.e. it was built with [SearchPageFetcher.withSignal].
+  /// Whether this fetcher was built with [SearchPageFetcher.withSignal].
   final bool reportsSignal;
 
   /// Wraps a function returning one page of results for the request's query and page.
@@ -25,8 +22,7 @@ final class SearchPageFetcher<T extends Object> {
 
   const new _(this._fetch, {required this.reportsSignal});
 
-  /// Wraps a function returning results with a new end signal, surfaced as
-  /// [EndContext.lastPageSignal] and handed to the next fetch as [SearchPageRequest.previousSignal].
+  /// Wraps a function returning one page of results plus an end signal.
   factory withSignal(Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) fetch) =>
       SearchPageFetcher._(fetch, reportsSignal: true);
 

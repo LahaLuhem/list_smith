@@ -4,9 +4,8 @@ import 'package:list_smith/list_smith.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
-/// A custom pull-to-refresh indicator, overriding the neutral default. Reveals
-/// from the top keyed to [ListSmithRefreshState.value] (translating the list
-/// down), showing a directional arrow while pulling and a spinner while
+/// A custom pull-to-refresh indicator. Reveals from the top keyed to
+/// [ListSmithRefreshState.value], with a directional arrow while pulling and a spinner while
 /// refreshing.
 class CustomRefresh extends StatelessWidget {
   static const double _extent = 72;

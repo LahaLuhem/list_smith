@@ -1,14 +1,12 @@
 part 'policies/keep_cache_policy.dart';
 part 'policies/replace_cache_policy.dart';
 
-/// Decides how an async list's cached items carry across a normal ↔ search mode change.
+/// Decides how an async list's cached items carry across entering or leaving search.
 ///
-/// A sealed, injected policy; list_smith ships [ReplaceCachePolicy] as the default. Sealed so more
-/// strategies can be added later (for example a merge that dedupes by item identity) without a
-/// breaking change, and so the search view handles every case exhaustively. A change between two
-/// different searches always starts clean regardless of policy; the policy governs only the
-/// normal ↔ search boundary.
+/// [ReplaceCachePolicy] is the default. Only that boundary is governed, so a change between two
+/// different queries always starts clean. Sealed, so a later strategy (a merge that de-dupes by
+/// identity, say) can land without a breaking change.
 sealed class SearchCachePolicy {
-  /// Const base constructor for the sealed hierarchy.
+  /// Const base constructor.
   const new();
 }

@@ -1,6 +1,6 @@
 """Chart renderers.
 
-Module-level matplotlib/polars/seaborn imports are intentional — this module only makes sense with
+Module-level matplotlib/polars/seaborn imports are intentional, since this module only works with
 the analysis stack installed. Subcommands gate the call site with a `find_spec` check so the import
 error points users at `uv sync`. seaborn takes the polars frames directly (dataframe interchange
 protocol, since 0.13), converting to pandas internally, so there is no pandas import here.
@@ -29,7 +29,7 @@ from list_smith_bench.data.dtos.compare_row import CompareRow
 
 
 def set_default_theme() -> None:
-    """Apply the shared seaborn theme. Idempotent; the subcommand calls it once at start."""
+    """Apply the shared seaborn theme. Idempotent. The subcommand calls it once at start."""
     sns.set_theme(style="whitegrid", context="paper", palette=CHART_PALETTE)
 
 
@@ -198,7 +198,7 @@ def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
     The dashed 60 Hz budget line is the point of the chart: every bar sits far below it, so
     list_smith's per-frame build work is a small fraction of the 16.67 ms a frame gets. The table in
-    SUMMARY.md carries the exact figures; this is the at-a-glance headroom. Returns None on no data.
+    SUMMARY.md carries the exact figures. This is the at-a-glance headroom. Returns None on no data.
     """
     stat_labels = {
         "avg_frame_build_millis": "avg",

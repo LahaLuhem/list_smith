@@ -1,18 +1,15 @@
 /// Scenario: a slow synchronous observer delays list_smith rendering its own first page.
 ///
-/// The headline UI choke point (mirrors `better_internet_connectivity_checker`'s `slow_observer`).
-/// list_smith fires `onPageLoaded` *synchronously inside `_fetchPage`, before handing the page to
-/// ISP*, so a slow observer delays the list appearing, not just the consumer's side effect. This
-/// measures render latency: wall-clock from "the page's data is ready" to "the first item is in the
-/// widget tree", with a [SlowListSmithObserver] attached.
+/// The headline UI choke point, mirroring BICC's `slow_observer`. `onPageLoaded` fires
+/// synchronously inside `_fetchPage`, before the page reaches ISP, so a slow observer delays the
+/// list appearing, not just the consumer's side effect. Measured as render latency with a
+/// [SlowListSmithObserver] attached: wall-clock from the page's data being ready to the first item
+/// landing in the tree.
 ///
-/// Runs under a live `integration_test` binding (real frames, real clock) in profile mode, so the
-/// `sleep()` genuinely blocks the UI isolate and the [Stopwatch] measures real time. Metrics are
-/// directional for absolute UI cost but faithful here, since the observer's own `sleep` dominates.
-///
-/// Sweeps a range of observer delays (one record per delay) so the report can show render latency
-/// tracking the delay ~1:1: each added millisecond of synchronous observer work adds ~1 ms of render
-/// latency, on top of a fixed baseline render. `delay = 0` is that baseline (a near-no-op observer).
+/// Sweeps a range of delays, one record each, so the report can show latency tracking the delay
+/// ~1:1 on top of a fixed baseline render. `delay = 0` is that baseline. The live binding in
+/// profile mode is what makes the `sleep()` genuinely block the UI isolate, and the observer's own
+/// sleep dominates, so these numbers are faithful rather than merely directional.
 library;
 
 import 'dart:io';
@@ -31,7 +28,7 @@ const _outputPath = String.fromEnvironment('OUTPUT');
 const _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
 const _packageVersion = String.fromEnvironment('PKG_VERSION', defaultValue: 'unknown');
 
-// Observer delays swept per run; 0 is the no-observer-work baseline (the y-intercept of the line).
+// Observer delays swept per run. 0 is the no-observer-work baseline (the y-intercept of the line).
 const _observerDelaysMillis = <int>[0, 25, 50, 100];
 
 // Bound on the pump loop waiting for the first item, so a stalled fetch can't hang the run.

@@ -6,32 +6,27 @@ import 'page_request.dart';
 
 /// Fetches one page of items for an async list, given the [PageRequest] describing it.
 ///
-/// The returned `Iterable` is materialised exactly once by list_smith at the boundary, so a lazy
-/// `.map()` / `.where()` or a `Set` is fine without a trailing `.toList()`.
+/// The returned `Iterable` is materialised once at the boundary, so a lazy `.map()` / `.where()`
+/// needs no trailing `.toList()`. A misbehaving endpoint (a 404 past the last page, say) is yours to
+/// catch and return as an empty page.
 ///
-/// Build one with [PageFetcher.new] to return items only, leaving end-of-data to the injected
-/// [PaginationEndPolicy] (by default, the first empty page). Build one with [PageFetcher.withSignal]
-/// to also report an end signal the policy reads from [EndContext.lastPageSignal] (for example a
-/// `hasMore` flag or a next-cursor); that signal reaches the next page as
-/// [PageRequest.previousSignal], so a cursor source drives the next fetch from the cursor the previous
-/// page returned. Pair a cursor source with [StopOnNullSignalPolicy] to end once the cursor runs out.
-/// A misbehaving endpoint (for example a 404 past the last page) is the fetcher's job to catch and
-/// turn into an empty page.
+/// [PageFetcher.new] returns items only and leaves the end to [PaginationEndPolicy].
+/// [PageFetcher.withSignal] also returns a signal, read by the policy as
+/// [EndContext.lastPageSignal] and by the next fetch as [PageRequest.previousSignal]. That is the
+/// cursor channel, so pair it with [StopOnNullSignalPolicy].
 final class PageFetcher<T extends Object> {
   final Future<(Iterable<T>, Object?)> Function(PageRequest request) _fetch;
 
-  /// Whether this fetcher reports an end signal, i.e. it was built with [PageFetcher.withSignal].
+  /// Whether this fetcher was built with [PageFetcher.withSignal].
   final bool reportsSignal;
 
-  /// Wraps a function returning one page of items; end-of-data is left to the [PaginationEndPolicy].
+  /// Wraps a function returning one page of items, leaving the end to [PaginationEndPolicy].
   factory(Future<Iterable<T>> Function(PageRequest request) fetch) =>
       PageFetcher._((request) async => (await fetch(request), null), reportsSignal: false);
 
   const new _(this._fetch, {required this.reportsSignal});
 
-  /// Wraps a function returning one page of items with a new end signal (for example a `hasMore` flag
-  /// or a next-cursor), surfaced to the end policy as [EndContext.lastPageSignal] and handed to the
-  /// next fetch as [PageRequest.previousSignal].
+  /// Wraps a function returning one page plus an end signal: a `hasMore` flag, a next cursor.
   factory withSignal(Future<(Iterable<T>, Object?)> Function(PageRequest request) fetch) =>
       PageFetcher._(fetch, reportsSignal: true);
 

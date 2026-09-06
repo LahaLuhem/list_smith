@@ -2,8 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Pumps [child] (the ListSmith under test) wrapped in the minimal ancestors a widget test needs, a
-/// [Directionality] and a [MediaQuery], so no test re-declares that scaffold. Call it again with the
-/// same widget type to drive a rebuild that exercises `didUpdateWidget`.
+/// [Directionality] and a [MediaQuery], so no test re-declares that scaffold. Call it again with
+/// the same widget type to drive a rebuild that exercises `didUpdateWidget`.
 Future<void> pumpListSmith(WidgetTester tester, Widget child) => tester.pumpWidget(
   Directionality(
     textDirection: .ltr,
@@ -12,7 +12,8 @@ Future<void> pumpListSmith(WidgetTester tester, Widget child) => tester.pumpWidg
 );
 
 /// Pumps [frames] fixed frames so the first fetch, its result, and any page it triggers all settle.
-/// Never `pumpAndSettle`: list_smith's neutral spinner animates forever, so the tree never quiesces.
+/// Never `pumpAndSettle`: list_smith's neutral spinner animates forever, so the tree never
+/// quiesces.
 Future<void> drain(WidgetTester tester, {int frames = 5}) async {
   for (var frame = 0; frame < frames; frame++) {
     await tester.pump();

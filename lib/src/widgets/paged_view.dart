@@ -16,19 +16,19 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// (or the consumer's overrides) so no Material surface leaks through, and bridging the bare error
 /// slots to our [ErrorBuilder] contract.
 ///
-/// Internal: built by the shell inside a [PagingListener], where the paging [state] and its [fetchNextPage]
-/// callback are in scope.
+/// Internal, built inside a [PagingListener] where the paging [state] and its [fetchNextPage] are
+/// in scope.
 class PagedView<T extends Object> extends StatelessWidget {
   /// The current paging state, driving which surface renders.
   final PagingState<int, T> state;
 
-  /// Requests the next page; also used as the retry action on error surfaces.
+  /// Requests the next page. Doubles as the retry action on error surfaces.
   final VoidCallback fetchNextPage;
 
   /// Builds each item.
   final ItemBuilder<T> itemBuilder;
 
-  /// Splits the visible items into sections; [NoGrouping] (the default) renders a flat list.
+  /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   final Grouping<T> grouping;
 
   /// Scroll and layout configuration.
@@ -40,10 +40,10 @@ class PagedView<T extends Object> extends StatelessWidget {
   /// The committed query, handed to [noResultsBuilder] when [isSearchMode] and nothing matched.
   final String query;
 
-  /// Builds separators between items; null for none.
+  /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// Overrides for the neutral default surfaces; null falls back to the default.
+  /// Overrides for the neutral default surfaces. Null keeps the default.
   final WidgetBuilder? firstPageLoadingBuilder;
 
   /// See [firstPageLoadingBuilder].
@@ -114,10 +114,8 @@ class PagedView<T extends Object> extends StatelessWidget {
           );
   }
 
-  /// The item builder handed to ISP, produced by [Grouping.decorate]: [itemBuilder] unchanged when the
-  /// list is not grouped, otherwise one that prefixes each group's first item with its header. The
-  /// loaded pages are flattened for the group look-back (and the debug contiguity check) only when
-  /// grouping is active, since [Grouping.decorate] takes the flattened list as a lazy callback.
+  /// The item builder handed to ISP, from [Grouping.decorate]. The flatten for the group look-back
+  /// only happens when grouping is on, since [Grouping.decorate] takes it as a lazy callback.
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
     flatItems: () => state.pages?.expand((page) => page).toList(growable: false) ?? <T>[],
@@ -125,8 +123,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   );
 
   /// Fills every ISP delegate slot with the neutral defaults or the consumer's overrides. The error
-  /// slots read `state.error!`, non-null because ISP only builds an error indicator when an error is
-  /// present.
+  /// slots read `state.error!`, non-null because ISP only builds them when there is an error.
   PagedChildBuilderDelegate<T> _buildDelegate() => PagedChildBuilderDelegate<T>(
     itemBuilder: _effectiveItemBuilder(),
     firstPageProgressIndicatorBuilder: (context) =>

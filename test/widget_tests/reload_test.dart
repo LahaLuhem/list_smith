@@ -49,7 +49,8 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // All three loaded pages were fetched again, and page 0 now shows its fresh value (attempt 2).
+      // All three loaded pages were fetched again, and page 0 now shows its fresh value (attempt
+      // 2).
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
       check(find.text('item 2').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(0);
@@ -73,7 +74,8 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // Pages 0 and 2 reloaded (fresh attempt-2 values); page 1's fetch failed so its old value stays.
+      // Pages 0 and 2 reloaded (fresh attempt-2 values). Page 1's fetch failed so its old value
+      // stays.
       check(find.text('item 2').evaluate()).length.equals(1); // page 0 fresh
       check(find.text('item 1001').evaluate()).length.equals(1); // page 1 kept old
       check(find.text('item 2002').evaluate()).length.equals(1); // page 2 fresh
@@ -247,7 +249,7 @@ void main() {
         ListSmith.async(
           fetchPage: fetchPage,
           endPolicy: const StopOnNullSignalPolicy(),
-          // concurrency is ignored for a signal source; the reload is sequential regardless.
+          // concurrency is ignored for a signal source. The reload is sequential regardless.
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -257,8 +259,8 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // Sequential: it walked 0, hit the failure at 1, and never reached 2 (attempt still 1). Atomic:
-      // the old values all remain (the broken chain committed nothing).
+      // Sequential: it walked 0, hit the failure at 1, and never reached 2 (attempt still 1).
+      // Atomic: the old values all remain (the broken chain committed nothing).
       check(attempts).deepEquals({0: 2, 1: 2, 2: 1});
       check(find.text('item 1').evaluate()).length.equals(1); // page 0 old kept
       check(find.text('item 2').evaluate()).length.equals(0); // no fresh commit

@@ -5,9 +5,8 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 import '/app/theme_scope.dart';
 
-/// The shell every demo screen sits in: a [PlatformScaffold] with [title] and a
-/// brightness toggle in the app bar, so the neutral list surfaces can be seen in
-/// light and dark from any screen.
+/// The shell every demo sits in: a [PlatformScaffold] with [title] and an app-bar brightness
+/// toggle, so the neutral surfaces can be seen light and dark from any screen.
 class DemoScaffold extends StatelessWidget {
   final String title;
   final Widget body;

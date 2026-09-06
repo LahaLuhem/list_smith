@@ -10,9 +10,8 @@ import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'playground_view_model.dart';
 
-/// A live playground: tweak the list's config with knobs and watch the preview react. `pageSize`
-/// and the end policy are captured at construction, so the preview is keyed on them to force a fresh list.
-/// The rest update in place.
+/// Live-editable list config. `pageSize` and the end policy are captured at construction, so the
+/// preview is keyed on them to force a fresh list. The rest update in place.
 class PlaygroundView extends StatelessWidget {
   const new({super.key});
 

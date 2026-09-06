@@ -5,18 +5,18 @@ import '/src/data/refresh/enums/list_smith_refresh_phase.dart';
 import '/src/data/refresh/models/list_smith_refresh_state.dart';
 import 'defaults/neutral_refresh_indicator.dart';
 
-/// Wires list_smith's pull-to-refresh onto the custom_refresh_indicator package, keeping that dependency fully encapsulated.
+/// Wires list_smith's pull-to-refresh onto custom_refresh_indicator, keeping that dependency
+/// encapsulated.
 ///
-/// Wraps [child] in a [CustomRefreshIndicator], maps its [IndicatorController] onto our neutral
-/// [ListSmithRefreshState], and hands that to [refreshBuilder] (or the [NeutralRefreshIndicator] default when none is given).
-/// The controller type never leaks past this boundary, so the refresh mechanism stays swappable.
-/// Whether to enable pull-to-refresh at all is the shell's call: it omits this wrapper when refresh is off.
+/// Wraps [child] in a [CustomRefreshIndicator], maps its [IndicatorController] onto the neutral
+/// [ListSmithRefreshState], and hands that to [refreshBuilder] (or [NeutralRefreshIndicator]). The
+/// controller type never leaks past here, so the mechanism stays swappable. Whether refresh happens
+/// at all is the engine's call: it omits this wrapper when refresh is off.
 class RefreshBinding extends StatelessWidget {
   /// The scrollable subtree that the pull-to-refresh gesture drives.
   final Widget child;
 
-  /// Called when a pull crosses the threshold and is released, to run the refresh.
-  /// Completes when the refresh is done.
+  /// Called when a pull crosses the threshold and is released. Completes when the refresh is done.
   final Future<void> Function() onRefresh;
 
   /// Draws the indicator, or `null` to use the neutral default.

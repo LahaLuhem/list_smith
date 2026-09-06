@@ -1,11 +1,11 @@
 """`cmd_ab`: run two builds' micros interleaved, alternating sides every iteration.
 
-The gate's false positives come from run order, not statistics (issue #43): running one side's whole
-block then the other's lets anything that shifts mid-job land on one side only. Alternating means a
-shift hits both equally.
+The gate's false positives come from run order, not statistics: running one side's whole block then
+the other's lets anything that shifts mid-job land on one side only. Alternating means a shift hits
+both equally.
 
 Interleaving is per *iteration*, so the sides alternate processes. Per micro that is one process
-draw each instead of one per block, which is the granularity that matters: alternating whole micros
+draw each instead of one per block, which is the granularity that matters. Alternating whole micros
 would leave each side on a single draw and fix nothing.
 """
 
@@ -93,7 +93,7 @@ def cmd_ab(args: argparse.Namespace) -> int:
         wanted = set(args.scenarios)
         pairs = [pair for pair in pairs if pair[0] in wanted]
     if not pairs:
-        print("no micros present in BOTH builds — run `build` on each side first", file=sys.stderr)
+        print("no micros in BOTH builds. Run `build` on each side first", file=sys.stderr)
 
         return 1
 

@@ -1,7 +1,7 @@
-"""Metadata helpers — capture run context (git, package version, duration).
+"""Metadata helpers: capture run context (git, package version, duration).
 
-Read from the working environment (git, pubspec.yaml) or transform CLI inputs. Deterministic for a
-given environment.
+Read from the working environment (git, pubspec.yaml) or transformed from CLI inputs. Deterministic
+for a given environment.
 """
 
 from __future__ import annotations
@@ -44,11 +44,30 @@ def current_package_version() -> str:
     return "unknown"
 
 
+def _capture_date(records: list[ResultRecord]) -> str:
+    """The earliest `started_at` in [records] as a date, or today when none of them parses."""
+    stamps: list[datetime] = []
+    for record in records:
+        raw = record.get("started_at")
+        if not isinstance(raw, str):
+            continue
+        try:
+            stamps.append(datetime.fromisoformat(raw))
+        except ValueError:
+            continue
+
+    return (min(stamps) if stamps else datetime.now(UTC)).strftime("%Y-%m-%d")
+
+
 def summary_metadata(records: list[ResultRecord]) -> dict[str, str]:
-    """Header metadata pulled from the first record; all values stringified for f-strings."""
+    """Header metadata from the records, stringified for f-strings.
+
+    The date is when the data was captured, read off `started_at`, not when the report was
+    rendered. Re-rendering an old capture therefore reproduces it rather than restamping it.
+    """
     first = records[0] if records else {}
     return {
-        "date": datetime.now(UTC).strftime("%Y-%m-%d"),
+        "date": _capture_date(records),
         "git_sha": str(first.get("git_sha", "unknown")),
         "package_version": str(first.get("package_version", "unknown")),
         "sdk_version": str(first.get("sdk_version", "unknown")),
@@ -57,7 +76,7 @@ def summary_metadata(records: list[ResultRecord]) -> dict[str, str]:
 
 
 def parse_duration_overrides(raw: list[str] | None) -> dict[str, int]:
-    """Parse `--duration scenario=N` values to `{scenario: seconds}`; exit on bad input."""
+    """Parse `--duration scenario=N` values to `{scenario: seconds}`. Exit on bad input."""
     if not raw:
         return {}
     out: dict[str, int] = {}

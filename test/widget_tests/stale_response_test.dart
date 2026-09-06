@@ -303,8 +303,9 @@ void main() {
       await tester.idle();
       await drain(tester, frames: 12);
 
-      // ResetToFirstPage throws the loaded pages away and starts again, so the page held from before
-      // the refresh has nothing to attach to. Its body never shows, and page 2's fresh one does.
+      // ResetToFirstPage throws the loaded pages away and starts again, so the page held from
+      // before the refresh has nothing to attach to. Its body never shows, and page 2's fresh one
+      // does.
       check(find.text('item 2001').evaluate()).length.equals(0);
       check(find.text('item 2002').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(1);
@@ -399,8 +400,9 @@ void main() {
   });
 }
 
-/// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher is
-/// never reached (the query is always non-empty), and refresh is off so only the query drives resets.
+/// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher
+/// is never reached (the query is always non-empty), and refresh is off so only the query drives
+/// resets.
 Future<void> _pumpSearch(
   WidgetTester tester, {
   required SearchPageFetcher<int> searchFetchPage,

@@ -1,10 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-/// Groups the scroll and layout knobs for a list_smith list, so behavioural parameters don't share
-/// the constructor signature with the scrollable's own configuration.
+/// The scroll and layout knobs, gathered here so they don't crowd the behavioural parameters.
 ///
-/// A curated subset of [ScrollView] / [BoxScrollView] options; every field is optional and defaults
-/// to the framework's own default.
+/// A curated subset of [ScrollView] / [BoxScrollView], each field defaulting to the framework's own
+/// default.
 @immutable
 class ListScrollConfig {
   /// Padding around the list contents. Maps to [BoxScrollView.padding].
@@ -25,7 +24,7 @@ class ListScrollConfig {
   /// The viewport cache extent, in logical pixels (the scrollable's cache extent).
   final double? cacheExtent;
 
-  /// Creates a scroll/layout configuration; every field defaults to the framework's own default.
+  /// Creates a scroll/layout configuration. Each field defaults to the framework's own default.
   const new({
     this.padding,
     this.physics,

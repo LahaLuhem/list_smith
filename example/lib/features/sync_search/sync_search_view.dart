@@ -9,10 +9,7 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'sync_search_view_model.dart';
 
-/// Client-side search over an in-memory list with `ListSmith.sync`: instant filtering, no paging.
-/// Uses `SyncSearchPredicates.fields` to match either title or subtitle (the package's convenience
-/// for "any listed field contains the query"). Clear the query to see every item; search for
-/// something absent to see the no-results surface.
+/// `ListSmith.sync` with `SyncSearchPredicates.fields` over title and subtitle.
 class SyncSearchView extends StatelessWidget {
   const new({super.key});
 

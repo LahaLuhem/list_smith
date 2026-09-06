@@ -3,26 +3,21 @@ library;
 
 import '../typedefs/sync_search_predicate.dart';
 
-/// Ready-made [SyncSearchPredicate] builders for the common sync-search cases.
+/// Ready-made [SyncSearchPredicate] builders for the usual sync-search shapes, built from a list of
+/// field extractors.
 ///
-/// [ListSmith.sync] takes a raw [SyncSearchPredicate] so the consumer owns matching entirely (case,
-/// diacritics, fuzzy, and so on). Most lists want one of a few shapes though, so this namespace builds
-/// them from a list of field extractors: [fields] (contains), [prefix] (starts with), [exact] (equals),
-/// and [allTerms] (every whitespace-separated term must hit a field), plus [any] and [every] to combine
-/// predicates. Each field builder is case-insensitive and skips `null` fields; anything beyond them
-/// drops back to a hand-written `searchBy`.
+/// [fields] (contains), [prefix] (starts with), [exact] (equals), [allTerms] (every whitespace term
+/// must hit a field), plus [any] and [every] to combine them. All case-insensitive, all skipping
+/// `null` fields. Anything past them is a hand-written [ListSmith.sync] `searchBy`.
 ///
-/// Pin the item type on the list, `ListSmith<City>.sync(...)`, when it cannot be inferred: used inline,
-/// the list's element type and a builder's type parameter resolve together, and the un-annotated
-/// extractor closures would otherwise come out nullable. Naming it once on the list covers every
-/// builder passed.
+/// Pin the item type on the list, `ListSmith<City>.sync(...)`. Used inline, the list's element type
+/// and a builder's type parameter resolve together and the extractor closures come out nullable
+/// otherwise. Naming it once covers every builder.
 abstract final class SyncSearchPredicates {
   /// Keeps an item when any field from [extractors] *contains* the query, case-insensitively.
   ///
-  /// The shape nearly every sync list wants. Each extractor pulls one field off an item; a `null`
-  /// field is skipped (it never matches), so nullable fields need no `?? ''`. The query arrives trimmed
-  /// and past the min-length gate, so no field matches an empty query. Pass at least one extractor. For
-  /// case-sensitive, diacritic-folded, or fuzzy matching, write the [SyncSearchPredicate] directly.
+  /// The shape nearly every sync list wants. Each extractor pulls one field off an item, and a
+  /// `null` field never matches, so nullable fields need no `?? ''`. Pass at least one extractor.
   ///
   /// ```dart
   /// ListSmith<City>.sync(
@@ -37,16 +32,15 @@ abstract final class SyncSearchPredicates {
 
   /// Keeps an item when any field from [extractors] *starts with* the query, case-insensitively.
   ///
-  /// Like [fields], but prefix-anchored, for type-ahead and autocomplete. `null` fields are skipped;
-  /// pass at least one extractor.
+  /// Like [fields], but prefix-anchored, for type-ahead. Pass at least one extractor.
   static SyncSearchPredicate<T> prefix<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) => _anyField(extractors, (value, query) => value.startsWith(query));
 
   /// Keeps an item when any field from [extractors] *equals* the query, case-insensitively.
   ///
-  /// Like [fields], but a full-value match, for filtering by an exact value rather than
-  /// search-as-you-type. `null` fields are skipped; pass at least one extractor.
+  /// Like [fields], but a full-value match, for filtering rather than search-as-you-type. Pass at
+  /// least one extractor.
   static SyncSearchPredicate<T> exact<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) => _anyField(extractors, (value, query) => value == query);
@@ -54,9 +48,8 @@ abstract final class SyncSearchPredicates {
   /// Keeps an item when *every* whitespace-separated term in the query hits some field from
   /// [extractors] (each term a case-insensitive substring), the terms matching across any fields.
   ///
-  /// Handles multi-word queries: `'john smith'` matches an item whose fields hold `'Smith, John'`,
-  /// where [fields] (a single substring) would not. A single-term query behaves exactly like [fields].
-  /// `null` fields are skipped; pass at least one extractor.
+  /// For multi-word queries: `'john smith'` hits an item holding `'Smith, John'`, where [fields]
+  /// wouldn't. One term behaves exactly like [fields]. Pass at least one extractor.
   static SyncSearchPredicate<T> allTerms<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) {
@@ -77,8 +70,7 @@ abstract final class SyncSearchPredicates {
 
   /// A predicate that matches when *any* of [predicates] matches (logical OR).
   ///
-  /// Combines built or hand-written [SyncSearchPredicate]s, e.g. match by fields or a bespoke rule.
-  /// Each receives the same item and query. Pass at least one predicate.
+  /// Each gets the same item and query. Pass at least one.
   static SyncSearchPredicate<T> any<T extends Object>(Iterable<SyncSearchPredicate<T>> predicates) {
     final options = predicates.toList(growable: false);
     assert(options.isNotEmpty, 'Pass at least one predicate to combine.');
@@ -88,8 +80,7 @@ abstract final class SyncSearchPredicates {
 
   /// A predicate that matches only when *every* one of [predicates] matches (logical AND).
   ///
-  /// Combines built or hand-written [SyncSearchPredicate]s, all receiving the same item and query.
-  /// Pass at least one predicate.
+  /// Each gets the same item and query. Pass at least one.
   static SyncSearchPredicate<T> every<T extends Object>(
     Iterable<SyncSearchPredicate<T>> predicates,
   ) {
@@ -99,8 +90,7 @@ abstract final class SyncSearchPredicates {
     return (item, query) => requirements.every((predicate) => predicate(item, query));
   }
 
-  // Builds a field predicate: keeps an item when [test] holds for any extracted field against the
-  // query, both lower-cased. Shared by [fields], [prefix], and [exact].
+  // Keeps an item when `test` holds for any extracted field against the query, both lower-cased.
   static SyncSearchPredicate<T> _anyField<T extends Object>(
     Iterable<String? Function(T item)> extractors,
     bool Function(String value, String query) test,

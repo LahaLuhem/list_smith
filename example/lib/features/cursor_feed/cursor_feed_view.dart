@@ -8,9 +8,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'cursor_feed_view_model.dart';
 
-/// Cursor-driven pagination: each fetch is handed the cursor the previous page returned (null for the
-/// first page), and `StopOnNullSignalPolicy` ends the list when the source returns a null cursor.
-/// Built on `PageFetcher.withSignal`, whose end signal doubles as the driving cursor.
+/// `PageFetcher.withSignal` plus `StopOnNullSignalPolicy`, where the end signal doubles as the
+/// driving cursor.
 class CursorFeedView extends StatelessWidget {
   const new({super.key});
 

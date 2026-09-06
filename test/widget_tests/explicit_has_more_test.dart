@@ -46,7 +46,8 @@ void main() {
       );
       await drain(tester, frames: 8);
 
-      // Page 1 reported hasMore=false, so pagination ends there: the empty index 2 is never requested.
+      // Page 1 reported hasMore=false, so pagination ends there: the empty index 2 is never
+      // requested.
       check(find.text('item 6').evaluate()).length.equals(1);
       check(requested).deepEquals(const [0, 1]);
     });
@@ -94,7 +95,8 @@ void main() {
       );
       await settle(tester);
 
-      // Search page 0 reported hasMore=false via SearchPageFetcher.withSignal: results show, then end.
+      // Search page 0 reported hasMore=false via SearchPageFetcher.withSignal: results show, then
+      // end.
       check(find.text(item99Key).evaluate()).length.equals(1);
       check(find.text('No more items').evaluate()).length.equals(1);
     });

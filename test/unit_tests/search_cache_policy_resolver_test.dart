@@ -36,7 +36,8 @@ void main() {
         val(isKey, true),
         val(actionKey, CacheAction.refresh),
       )
-      // Keep snapshots on entering search, restores on leaving, and reloads a search-to-search change.
+      // Keep snapshots on entering search, restores on leaving, and reloads a search-to-search
+      // change.
       .example(
         val(policyKey, const KeepCachePolicy()),
         val(wasKey, false),

@@ -2,9 +2,8 @@ import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoThemeData;
 import 'package:flutter/widgets.dart' show Brightness, Color;
 import 'package:material_ui/material_ui.dart' show ColorScheme, ThemeData;
 
-/// Branded theming for the demo. One seed colour drives a Material 3 light/dark
-/// scheme and a matching Cupertino theme, so the app looks designed on both
-/// platforms and the appearance toggle has something to switch between.
+/// One seed colour drives a Material 3 light and dark scheme plus a matching Cupertino theme, so
+/// the appearance toggle has something to switch between on either platform.
 abstract final class ConstTheme {
   /// The brand seed. Everything else is derived from it.
   static const seedColor = Color(0xFF4F46E5);

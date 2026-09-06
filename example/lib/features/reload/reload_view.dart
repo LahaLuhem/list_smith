@@ -10,10 +10,8 @@ import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'reload_view_model.dart';
 
-/// Demonstrates the pull-to-refresh reload strategy. Scroll to load a few pages, then pull: with "Keep
-/// scroll depth" on, every loaded page is re-fetched in place (watch the "load #" stamp bump); off, the
-/// list resets to the first page. Inject a failure to see best-effort against all-or-nothing. The
-/// button drives the same reload through a `ListSmithController`, with no gesture.
+/// The `Reload` strategies on `PullToRefresh`, plus a `ListSmithController` driving the same reload
+/// with no gesture.
 class ReloadView extends StatelessWidget {
   const new({super.key});
 

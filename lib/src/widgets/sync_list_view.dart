@@ -17,12 +17,11 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and renders it with a plain widgets-layer `ListView`.
 ///
-/// Unexported. [ListSmith] builds one of these for a [SyncSource]. There is no paging controller or
-/// pull-to-refresh (an in-memory list has nothing to page or refresh); the only moving part is the
-/// query, which is trimmed, min-length-gated, and debounced before it filters. The source list is
-/// materialised once (redone only when the source's items change) and the filtered, optionally
-/// grouped result is held in a [ValueNotifier], so only the list subtree rebuilds when it changes.
-/// Defaults are resolved by [ListSmith.sync]; this widget re-declares none.
+/// Unexported, built by [ListSmith] for a [SyncSource]. No paging controller and no
+/// pull-to-refresh, since an in-memory list has nothing to page or refresh. The only moving part is
+/// the query: trimmed, gated, debounced, then filtered. The source list is materialised once (again
+/// only when the source's items change) and the filtered result lives in a [ValueNotifier], so only
+/// the list subtree rebuilds. Every default is already resolved by [ListSmith.sync].
 class SyncListView<T extends Object> extends StatefulWidget {
   /// The in-memory source: the items and the predicate that filters them.
   final SyncSource<T> source;
@@ -30,25 +29,25 @@ class SyncListView<T extends Object> extends StatefulWidget {
   /// The current search query, owned and passed in by the consumer.
   final String query;
 
-  /// Minimum trimmed query length before a search runs; below it the query counts as empty.
+  /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
   final int minSearchLength;
 
-  /// How long to wait after [query] changes before filtering; [Duration.zero] filters at once.
+  /// How long to wait after [query] changes before filtering. [Duration.zero] filters at once.
   final Duration searchDebounce;
 
   /// Builds the widget for each item.
   final ItemBuilder<T> itemBuilder;
 
-  /// Splits the visible items into sections; [NoGrouping] (the default) renders a flat list.
+  /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   final Grouping<T> grouping;
 
-  /// Builds the separator between items; null for no separators.
+  /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// Builds the surface shown when the source has no items; null uses the neutral default.
+  /// Builds the surface shown when the source has no items. Null uses the neutral default.
   final WidgetBuilder? emptyBuilder;
 
-  /// Builds the surface shown when a search matches nothing; null uses the neutral default.
+  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
   final NoResultsBuilder? noResultsBuilder;
 
   /// Scroll and layout configuration for the underlying scrollable.

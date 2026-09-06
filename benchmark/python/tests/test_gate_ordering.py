@@ -1,13 +1,13 @@
-"""Ordering sensitivity of the regression gate (issue #43).
+"""Ordering sensitivity of the regression gate.
 
 `test_stats.py` covers *whether* two sample sets differ. This file pins *which samples pair with
-which*, which is what the fixed candidate-then-baseline run order gets wrong: the sides are ranked
+which*, which is what a fixed candidate-then-baseline run order gets wrong: the sides are ranked
 against each other while the machine drifts underneath them, so drift over the job reads as a
 one-sided effect.
 
-Samples are synthetic but shaped like the real thing (about 1.1% CV, against 1.35% measured on
-`sync_search_scaling` at n=1000), so these stay deterministic and machine-independent while still
-running the real `compute_compare_rows` / `regressions`.
+Samples are synthetic but shaped like the real thing, about 1.1% CV against 1.35% measured on
+`sync_search_scaling` at n=1000, so these stay deterministic and machine-independent while still
+running the real `compute_compare_rows` and `regressions`.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ _BASE_MICROS = 380.0
 # Per-process level lottery. `wrapping_overhead[page_count=100]` is allocation-throughput bound, so
 # whatever the VM settles on at process start (new-space sizing, core assignment) fixes that
 # process's level for its whole life: flat within a block, disjoint between blocks. Measured live on
-# PR #50 at +22.3% between two byte-identical binaries; the first two entries reproduce that draw.
+# CI once reported +22.3% between two byte-identical binaries. The first two entries reproduce it.
 _PROCESS_LEVELS: tuple[float, ...] = (
     1.22,
     1.00,
@@ -167,7 +167,7 @@ class TestOnlyTheThresholdDecides:
 
 
 class TestPerProcessSteps:
-    """The shape CI actually produced (PR #50), as opposed to a smooth ramp.
+    """The shape CI actually produced, as opposed to a smooth ramp.
 
     Both sides compiled byte-identical binaries and the gate still reported +22.3%, with the two
     sides' sample distributions completely disjoint and each side flat internally.

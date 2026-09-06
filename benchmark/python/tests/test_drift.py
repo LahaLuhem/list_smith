@@ -1,8 +1,8 @@
 """Tests for `list_smith_bench.data.utils.drift`.
 
-`side_timing_separation` is the direct measurement of issue #43's cause: it reports how far apart in
-time the two sides were sampled, so a fixed-order run is distinguishable from an interleaved one
-without waiting to catch a flake in the act.
+`side_timing_separation` measures the gate's order sensitivity at its cause: how far apart in time
+the two sides were sampled, so a fixed-order run is distinguishable from an interleaved one without
+waiting to catch a flake in the act.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from list_smith_bench.data.utils.drift import side_timing_separation
 
 
 def _at(second: int, *, started_at: bool = True) -> ResultRecord:
-    """A record stamped `second` seconds into the job; `started_at=False` omits the stamp."""
+    """A record stamped `second` seconds into the job. `started_at=False` omits the stamp."""
     record: ResultRecord = {"scenario": "s", "iteration": 0, "samples": {}, "summary": {}}
     if started_at:
         record["started_at"] = f"2026-01-01T00:00:{second:02d}+00:00"

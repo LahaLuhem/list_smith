@@ -1,4 +1,4 @@
-"""Statistical helpers — pure math, no I/O.
+"""Statistical helpers: pure math, no I/O.
 
 `median` is hand-rolled (our sample sizes never justify numpy). `group_samples` flattens raw
 `samples` arrays across records. `records_per_scenario` picks a representative iteration count for
@@ -17,7 +17,7 @@ from list_smith_bench.data.dtos.result_record import ResultRecord
 
 
 def median(values: list[float]) -> float:
-    """Median of `values`; 0.0 for an empty list."""
+    """Median of `values`. 0.0 for an empty list."""
     sorted_vals = sorted(values)
     n = len(sorted_vals)
     if n == 0:
@@ -28,7 +28,7 @@ def median(values: list[float]) -> float:
 
 
 def _coefficient_of_variation(values: list[float]) -> float:
-    """Sample standard deviation as a percentage of the median; 0.0 when it cannot be computed."""
+    """Sample standard deviation as a percentage of the median. 0.0 when it cannot be computed."""
     if len(values) < 2:
         return 0.0
     centre = median(values)
@@ -43,8 +43,8 @@ def _coefficient_of_variation(values: list[float]) -> float:
 def pooled_spread_pct(baseline: list[float], current: list[float]) -> float:
     """The two sides' within-side variation, averaged: the noise a delta has to clear.
 
-    p and Cliff's delta both saturate once the sets separate, so neither can size a gap; this can.
-    Evidence in issue #43.
+    p and Cliff's delta both saturate once the sets separate, so neither can size a gap. This can.
+    Evidence is in the gate-ordering tests.
     """
     return (_coefficient_of_variation(baseline) + _coefficient_of_variation(current)) / 2.0
 
@@ -67,7 +67,7 @@ def p_value_floor(baseline_count: int, current_count: int) -> float:
 def group_samples(records: list[ResultRecord]) -> dict[tuple[str, str], list[float]]:
     """Flatten records into `{(scenario, metric): [all samples across iterations]}`.
 
-    Reads only the raw `samples` arrays, not the `summary` scalars — significance testing prefers
+    Reads only the raw `samples` arrays, not the `summary` scalars, since significance testing wants
     raw data for statistical power.
     """
     groups: dict[tuple[str, str], list[float]] = {}
@@ -105,8 +105,8 @@ def records_per_scenario(records: list[ResultRecord]) -> int:
 # Summary keys whose value splits a scenario into independent measurement regimes. The compare
 # groups on them so a regression at one size / page-count / observer-delay is not masked by pooling
 # a scenario's samples into one multi-modal distribution (this suite is a regression tripwire).
-# `item_count` is dedup_scaling's size pivot under a different name; `TestPivotCoverage` locks this
-# tuple to MULTI_RECORD_SCENARIOS and to what the Dart sources actually emit (issue #51).
+# `item_count` is dedup_scaling's size pivot under a different name. `TestPivotCoverage` locks this
+# tuple to MULTI_RECORD_SCENARIOS and to what the Dart sources actually emit.
 _PIVOT_KEYS: Final[tuple[str, ...]] = (
     "list_size",
     "item_count",
@@ -118,8 +118,9 @@ _PIVOT_KEYS: Final[tuple[str, ...]] = (
 def _pivoted_scenario(record: ResultRecord) -> str:
     """The record's scenario, suffixed with its pivot when it has one.
 
-    `sync_filter` at `list_size=100000` becomes `sync_filter[list_size=100000]`, keeping each size's
-    samples in their own Mann-Whitney group. Scenarios with no pivot (frame scenarios, the observer
+    `sync_search_scaling` at `list_size=100000` becomes
+    `sync_search_scaling[list_size=100000]`, keeping each size's samples in their own
+    Mann-Whitney group. Scenarios with no pivot (frame scenarios, the observer
     micro) are returned unchanged.
     """
     scenario = str(record.get("scenario", "?"))
@@ -146,7 +147,7 @@ def compute_compare_rows(
     For every key present in BOTH runs, compute the baseline + current medians, the delta % (or
     `math.inf` when the baseline median is 0), and a two-sided Mann-Whitney U p-value over the raw
     samples. Keys in only one run are skipped (no fair comparison). Mann-Whitney is undefined when
-    all samples are identical; that is coerced to `p = 1.0` so the row reads as "no difference".
+    all samples are identical. That is coerced to `p = 1.0` so the row reads as "no difference".
 
     scipy is imported inside the function so importing the dtos / config never pulls scipy in.
     """

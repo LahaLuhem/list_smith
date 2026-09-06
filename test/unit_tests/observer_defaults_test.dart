@@ -1,4 +1,4 @@
-// `_SilentObserver` is a private fixture; its name intentionally differs from the filename.
+// `_SilentObserver` is a private fixture. Its name intentionally differs from the filename.
 // ignore_for_file: prefer-match-file-name
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -48,7 +48,8 @@ void main() {
       });
 }
 
-/// A bare observer that overrides nothing, so each call runs [ListSmithObserver]'s no-op default body.
+/// A bare observer that overrides nothing, so each call runs [ListSmithObserver]'s no-op default
+/// body.
 final class _SilentObserver extends ListSmithObserver {
   const new();
 }

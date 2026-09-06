@@ -1,18 +1,14 @@
 /// Micro-benchmark: the async list's overlap de-dup cost as the loaded list grows.
 ///
-/// De-dup is opt-in (a non-null `itemId`); this measures what that opt-in costs when the pages do
-/// NOT actually overlap, the common case where de-dup is carried as insurance and collapses nothing.
-/// That is both the worst case for the pass (every item is retained, so allocation is maximal) and
-/// the "penalty when you don't have the problem" the cost is judged against.
+/// Measured over pages that do NOT overlap, the common case where `itemId` is carried as insurance
+/// and collapses nothing. That is both the worst case for the pass, every item being retained so
+/// allocation is maximal, and the penalty you pay for not having the problem.
 ///
-/// `_dedupedForDisplay` runs `PagingState.filterItems` per state change, i.e. it re-walks EVERY
-/// loaded page (`pages.map((page) => page.where(pred).toList()).toList()`) and then pays `copyWith`'s
-/// `List.unmodifiable` re-wrap, so the cost scales with the whole loaded list, not the incoming page.
-/// It is mirrored here in pure Dart because the real code is a widget method over an ISP
-/// `PagingState`, which can't AOT-compile as a plain exe (the `wrapping_overhead` micro mirrors
-/// `_nextPageKey` for the same reason). The headline is the absolute microseconds against a 16 ms
-/// frame budget. Keep this mirror in step with `_dedupedForDisplay` and ISP's `filterItems`/`copyWith`
-/// if either changes.
+/// The cost scales with the whole loaded list rather than the incoming page: `filterItems` re-walks
+/// every loaded page and `copyWith` re-wraps each one in `List.unmodifiable`. Mirrored in pure Dart
+/// here because the real code is a widget method over an ISP `PagingState`, which won't
+/// AOT-compile as a plain exe. Keep the mirror in step with `_dedupedForDisplay` if either side
+/// changes.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -20,7 +16,7 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-/// Loaded item counts the de-dup is measured against; the pivot for the scaling curve (matches
+/// Loaded item counts the de-dup is measured against. The pivot for the scaling curve (matches
 /// `sync_search_scaling`'s range so the curves are read side by side).
 const _itemCounts = [1000, 10000, 100000];
 const _itemsPerPage = 20;
@@ -47,7 +43,8 @@ final class _DedupScaling extends BenchmarkBase {
     final filtered = _pages
         .map((page) => page.where((item) => seen.add(_idOf(item))).toList())
         .toList();
-    // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys re-wrapped.
+    // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys
+    // re-wrapped.
     final wrappedPages = List<List<_Item>>.unmodifiable(filtered.map(List<_Item>.unmodifiable));
     List<int>.unmodifiable(_keys);
 

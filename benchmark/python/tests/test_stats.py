@@ -1,12 +1,12 @@
 """Tests for `list_smith_bench.data.utils.stats`.
 
-Pure, deterministic math — the highest-value regression target in the analyzer. Covers `median`,
+Pure, deterministic math, the highest-value regression target in the analyzer. Covers `median`,
 `group_samples`, and `compute_compare_rows`, including the pivot-aware grouping that splits
 multi-size scenarios (`list_size` / `page_count`) so a regression at one size is not masked by
-pooling, and the tie guard (older scipy raises, newer returns nan; both must land on p=1.0).
+pooling, and the tie guard (older scipy raises, newer returns nan. Both must land on p=1.0).
 
-`TestPivotCoverage` is the structural half: it keeps `MULTI_RECORD_SCENARIOS`, `_PIVOT_KEYS` and the
-Dart sources from drifting apart the way issue #51 found them.
+`TestPivotCoverage` is the structural half: it keeps `MULTI_RECORD_SCENARIOS`, `_PIVOT_KEYS` and
+the Dart sources from drifting apart, which they have done before.
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ _SCENARIO_PIVOTS: dict[str, str] = {
 def _dart_sources_declaring(scenario: str) -> list[Path]:
     """Benchmark sources naming `scenario` as the scenario they emit.
 
-    Micros pass `scenario: 'x'` to `ResultWriter.open`; the UI scenarios write `'scenario': 'x'`
+    Micros pass `scenario: 'x'` to `ResultWriter.open`. The UI scenarios write `'scenario': 'x'`
     into the record map, so one pattern covers both.
     """
     declaration = re.compile(rf"scenario['\"]?\s*:\s*'{re.escape(scenario)}'")
@@ -139,7 +139,7 @@ class TestComputeCompareRows:
         assert not row.delta_finite
 
     def test_constant_samples_coerced_to_p_one(self) -> None:
-        # All-identical input: newer scipy returns nan, older raises; both must land on p=1.0.
+        # All-identical input: newer scipy returns nan, older raises. Both must land on p=1.0.
         baseline = [_record("a", {"m": [5.0, 5.0, 5.0]})]
         current = [_record("a", {"m": [5.0, 5.0, 5.0]})]
         row = compute_compare_rows(baseline, current)[0]
@@ -149,7 +149,7 @@ class TestComputeCompareRows:
     def test_mannwhitneyu_value_error_coerced_to_p_one(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Force the old-scipy raise path; the guard must absorb it as "no difference", not blow up.
+        # Force the old-scipy raise path. The guard must absorb it as "no difference", not blow up.
         import scipy.stats
 
         def boom(*_args: object, **_kwargs: object) -> object:
@@ -217,7 +217,7 @@ class TestPivotCoverage:
 
     @pytest.mark.parametrize(("scenario", "pivot_key"), sorted(_SCENARIO_PIVOTS.items()))
     def test_dart_source_emits_the_declared_pivot_key(self, scenario: str, pivot_key: str) -> None:
-        # The map above could itself be wrong; this ties it to the data the benchmark really emits.
+        # The map above could itself be wrong. This ties it to the data the benchmark really emits.
         sources = _dart_sources_declaring(scenario)
         assert len(sources) == 1, f"expected one Dart source declaring {scenario!r}, got {sources}"
         assert re.search(rf"'{re.escape(pivot_key)}'\s*:", sources[0].read_text()), (
@@ -263,7 +263,7 @@ class TestRecordsPerScenario:
         assert records_per_scenario(records) == 2
 
     def test_multi_record_scenarios_ignored_when_a_scalar_exists(self) -> None:
-        # sync_search_scaling emits one record per size per iteration; that inflated count must not
+        # sync_search_scaling emits one record per size per iteration. That inflated count must not
         # win over a genuine single-record-per-iteration scenario.
         records = [
             _record("sync_search_scaling", {"m": [1.0]}, {"list_size": 1000}),
@@ -311,10 +311,10 @@ class TestPooledSpread:
 
 
 class TestPValueFloor:
-    """A row sitting at the floor separated completely; it says nothing about how big the gap is."""
+    """A row sitting at the floor separated completely. It says nothing about how big the gap is."""
 
     def test_floor_matches_the_gate_s_own_sample_size(self) -> None:
-        # Ten per side is DEFAULT_ITERATIONS with nothing trimmed; scipy goes asymptotic above 8.
+        # Ten per side is DEFAULT_ITERATIONS with nothing trimmed. Scipy goes asymptotic above 8.
         assert p_value_floor(10, 10) == pytest.approx(0.000183, abs=1e-5)
 
     def test_smaller_samples_cannot_reach_as_low(self) -> None:

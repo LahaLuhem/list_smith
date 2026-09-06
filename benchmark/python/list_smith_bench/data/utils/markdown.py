@@ -1,8 +1,8 @@
 """Markdown renderer for SUMMARY.md.
 
-The maintainer drops sections from this file into the package README, so the structure is one h2
-section per chart with a summary table above and the image embed below. `value_formatter` keeps both
-large (43,000 us) and small (390 us) figures readable in one column.
+Sections from this output get dropped into the package README, so the structure is one h2 per chart
+with a summary table above and the image embed below. `value_formatter` keeps both large (43,000
+us) and small (390 us) figures readable in one column.
 """
 
 from __future__ import annotations
@@ -21,8 +21,8 @@ from list_smith_bench.data.utils.meta import summary_metadata
 def value_formatter(units: str) -> Callable[[float | int | None], str]:
     """Return a unary fn formatting a numeric value for the requested units.
 
-    Precision tiers for "us"/freeform: >= 1000 rounds to integers with thousands separators; 1-1000
-    gets two decimals; sub-1 gets three.
+    Precision tiers for "us"/freeform: >= 1000 rounds to integers with thousands separators. 1-1000
+    gets two decimals. Sub-1 gets three.
     """
 
     def _format_number(value: float | int | None) -> str:
@@ -253,7 +253,7 @@ def render_summary_markdown(
     chart_paths: list[Path],
     records: list[ResultRecord],
 ) -> str:
-    """Render SUMMARY.md — per-chart sections with a table above each PNG."""
+    """Render SUMMARY.md: one section per chart, a table above each PNG."""
     metadata = summary_metadata(records)
     chart_names = {p.name for p in chart_paths}
 
@@ -262,17 +262,15 @@ def render_summary_markdown(
         f"Captured **{metadata['date']}** against `{metadata['package_version']}` at "
         f"`{metadata['git_sha']}` on Dart SDK {metadata['sdk_version']}. "
         f"N={metadata['iterations']} iterations.\n",
-        "> Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS "
-        "scheduler, thermal state). Your numbers WILL differ; capture your own local "
-        "baseline before measuring a code delta.\n",
+        "> Per-machine measurements, reflecting *this* machine's CPU, GPU, GC, OS scheduler and "
+        "thermal state. Yours WILL differ, so capture your own baseline before measuring a "
+        "delta.\n",
         "## Observer on the critical path: a slow observer blocks rendering\n",
-        "The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for a "
-        "set delay on each callback and measures render latency over a page load, swept across "
-        "several delays. list_smith invokes the observer *synchronously* on the page-load path, so "
-        "the block lands almost fully on the critical path: render latency tracks the delay ~1:1, "
-        "on top of a fixed baseline render (~18 ms here), so a 50 ms observer pushes it to ~68 ms. "
-        "Takeaway for consumers: keep observer callbacks cheap (logging, metrics); push heavy work "
-        "off the synchronous path.\n",
+        "The headline finding. list_smith invokes your observer *synchronously* on the page-load "
+        "path, so a slow callback lands almost fully on the critical path. `slow_observer` blocks "
+        "for a set delay on each callback and measures render latency across a sweep of delays: "
+        "latency tracks the delay ~1:1 on top of a fixed baseline render, so a 50 ms observer "
+        "pushes ~18 ms to ~68 ms. Keep observer callbacks cheap and do heavy work elsewhere.\n",
         render_latency_table(dataframe),
     ]
 
@@ -283,10 +281,9 @@ def render_summary_markdown(
         [
             "## Sync-search filter cost vs list size\n",
             "From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` "
-            "re-runs `resolveSyncSearch` (an `items.where(predicate).toList()`) synchronously "
-            "on every committed query; this measures that cost as the in-memory list grows, "
-            "with a naive case-insensitive `contains` predicate. Where the median crosses the "
-            "frame budget is the practical ceiling for sync search with this predicate.\n",
+            "re-runs `resolveSyncSearch` synchronously on every committed query, so this is that "
+            "cost as the in-memory list grows, under a naive case-insensitive `contains`. Where "
+            "the median crosses the frame budget is the practical ceiling for that predicate.\n",
             sync_search_scaling_table(dataframe),
         ]
     )
@@ -298,10 +295,9 @@ def render_summary_markdown(
         [
             "## Sync grouping (bucketing) cost vs list size\n",
             "From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync grouping "
-            "reorders the filtered items into contiguous sections via `bucketByGroup` "
-            "(`groupListsBy` + flatten) on every committed query; this measures that cost as the "
-            "list grows, over fully interleaved input (worst-case reordering). It stacks on the "
-            "search-filter cost above when a sync list both searches and groups.\n",
+            "reorders the filtered items into contiguous sections on every committed query, so "
+            "this is that cost as the list grows, over fully interleaved input for worst-case "
+            "reordering. It stacks on the search-filter cost above when a list does both.\n",
             bucket_by_group_scaling_table(dataframe),
         ]
     )
@@ -312,16 +308,14 @@ def render_summary_markdown(
     parts.extend(
         [
             "## Overlap de-dup cost vs loaded list size\n",
-            "From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, "
-            "the async list de-dups overlapping pages as a computed view over the paging "
-            "state (`_dedupedForDisplay` via `PagingState.filterItems`), re-walking every "
-            "loaded item on each state change so the stored pages stay raw and the end "
-            "policy can't mistake an all-duplicate page for the end (issue #2). This "
-            "measures the worst case: `itemId` set but no actual overlap, so nothing "
-            "collapses and every item is retained. It is opt-in and off the scroll path "
-            "(per page-load, not per frame), sub-millisecond for a few thousand loaded "
-            "items and climbing from there; past tens of thousands in one live list, "
-            "de-duplicate at the source instead.\n",
+            "From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the "
+            "async list de-dups overlapping pages as a computed view over the paging state, "
+            "re-walking every loaded item on each change so the stored pages stay raw and the end "
+            "policy can't read an all-duplicate page as the end. Measured at its worst case: "
+            "`itemId` set with no actual overlap, so nothing collapses and every item is "
+            "retained. Opt-in, and off the scroll path since it runs per page-load rather than "
+            "per frame. Sub-millisecond for a few thousand loaded items and climbing from there, "
+            "so past tens of thousands in one live list, de-duplicate at the source.\n",
             dedup_scaling_table(dataframe),
         ]
     )
@@ -333,9 +327,9 @@ def render_summary_markdown(
         [
             "## Wrapping overhead: list_smith on top of ISP\n",
             "Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer "
-            "callback (the null-check + virtual call list_smith makes in `_fetchPage`); "
-            "`wrapping_overhead` is the per-`getNextPageKey` cost (rebuild the page-item-counts + "
-            "run the end policy) as loaded pages grow. Both are dwarfed by any real fetch.\n",
+            "callback, the null-check plus virtual call made in `_fetchPage`. "
+            "`wrapping_overhead` is the per-`getNextPageKey` cost, rebuilding the page-item-counts "
+            "and running the end policy, as loaded pages grow. Any real fetch dwarfs both.\n",
             overhead_table(dataframe),
         ]
     )
@@ -343,11 +337,11 @@ def render_summary_markdown(
     parts.extend(
         [
             "## UI scroll/refresh: per-frame build cost\n",
-            "From the profile-mode `integration_test` scenarios (real frames on this machine). "
-            "`avg`/`worst`/`p99 build` are the UI-thread build cost per frame (where list_smith's "
-            "code runs); `missed` counts frames over the 16.67ms budget. `isp_scroll` vs "
-            "`bare_listview` (same items + scroll, no list_smith) is the attribution: the small "
-            "delta is what list_smith-over-ISP adds on top of a plain list.\n",
+            "From the profile-mode `integration_test` scenarios, real frames on this machine. "
+            "`avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is "
+            "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
+            "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
+            "attribution: that small delta is what the wrapper adds to a plain list.\n",
             frame_scenarios_table(dataframe),
         ]
     )
@@ -389,7 +383,7 @@ def render_compare_markdown(
     baseline_records: list[ResultRecord],
     current_records: list[ResultRecord],
 ) -> str:
-    """Render COMPARE.md — a forest chart plus the Mann-Whitney significance table.
+    """Render COMPARE.md: a forest chart plus the Mann-Whitney significance table.
 
     Same drop-into-README shape as SUMMARY.md, with both captures' metadata in the header so the
     reader can confirm the comparison is apples to apples (same machine, same SDK).
@@ -406,11 +400,11 @@ def render_compare_markdown(
         f"- **Current**: `{curr_meta['package_version']}` at `{curr_meta['git_sha']}` "
         f"(Dart SDK {curr_meta['sdk_version']}) captured {curr_meta['date']}, "
         f"N={curr_meta['iterations']} per scenario\n",
-        "> Per-machine measurement. Both sides must come from the same machine in the same "
-        "thermal/power state with no competing workload, or the delta is noise, not signal.\n",
+        "> Per-machine measurement. Both sides have to come from the same machine in the same "
+        "thermal and power state with no competing workload, or the delta is noise.\n",
         "## Forest: every comparable (scenario, metric) delta\n",
-        "Bars sorted by `|delta|` (largest at top). Multi-size scenarios are split per pivot "
-        "(`sync_filter[list_size=100000]`, ...) so a regression at one size is not masked by "
+        "Bars sorted by `|delta|`, largest at top. Multi-size scenarios split per pivot "
+        "(`sync_search_scaling[list_size=100000]`, ...) so a regression at one size is not masked "
         "pooling. Colour encodes direction and significance: red = significant regression "
         "(p < 0.05, current higher), green = significant improvement, gray = no significant "
         "difference.\n",

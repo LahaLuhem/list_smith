@@ -4,9 +4,8 @@ library;
 
 /// The facts an [EmptyPageBehaviour] sees when deciding whether to page past an empty page.
 ///
-/// list_smith rebuilds one of these after each page settles and hands it to
-/// [EmptyPageBehaviour.shouldAdvance]. Everything here is derived from the list's current state, so a
-/// behaviour stays a pure function of its input and needs no state of its own.
+/// Rebuilt after each page settles, all of it derived from current state, so a behaviour stays a
+/// pure function of its input.
 final class EmptyPageContext {
   /// Whether the list currently displays no items (measured after de-duplication).
   final bool isEmpty;

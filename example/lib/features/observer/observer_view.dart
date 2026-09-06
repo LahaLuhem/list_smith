@@ -10,9 +10,7 @@ import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/event_log_panel.dart';
 import 'observer_view_model.dart';
 
-/// `ListSmith.async` wired to a `ListSmithObserver`: every lifecycle event (page load, error, refresh,
-/// query-committed, mode change) streams into a live log below the list. Scroll to page, pull to
-/// refresh, search, or flip "Inject failures" to make each event fire.
+/// `ListSmith.async` wired to a `ListSmithObserver` whose events stream into an `EventLogPanel`.
 class ObserverView extends StatelessWidget {
   const new({super.key});
 

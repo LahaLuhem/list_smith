@@ -5,44 +5,37 @@ in this package. Claude-Code-specific guidance lives in [CLAUDE.md](CLAUDE.md).
 
 ## Project goal
 
-A developer-first Flutter package that wraps `ListView.builder` for real-world lists, doing
-three jobs properly:
+A developer-first Flutter package wrapping `ListView.builder` for real-world lists, doing three
+jobs properly: **pagination** and **pull-to-refresh** for an async source, and **search** for
+either kind. A sync source holds all its items, so it has nothing to page, and refreshing it means
+rebuilding the widget. Async search additionally needs a policy for how cached items interact with
+new results.
 
-1. **Pagination**, for an async data source (a sync source already has all its items, so there
-   is nothing to paginate).
-2. **Pull-to-refresh**, for an async data source (sync behaviour is usually handled by rebuilding
-   the widget when the source changes).
-3. **Search**, for both sync and async sources. The async case needs a policy governing how
-   already-cached items interact with new results from the async search source.
-
-`list_smith` is a ground-up replacement for an older search-list package: it keeps the
-good ideas, removes the "ghost params" (constructor parameters that silently do nothing on one
-path), fixes the known correctness bugs, and puts developer experience first. The name is a
-maker/craft metaphor, a sibling in spirit to the maintainer's `minted` package.
+Built as a ground-up replacement for an older search-list package. It keeps the good ideas, fixes
+the known correctness bugs, and removes the "ghost params": constructor parameters that silently do
+nothing on one path. The name is a craft metaphor, a sibling in spirit to `minted`.
 
 ## Stack
 
 - **The SDK floor lives in `pubspec.yaml`'s `environment:` block**, the channel in `.fvmrc`. Bump
   the floor only when a new stable language feature is actually consumed, and record why in
   `APPENDIX.md`.
-- **`flutter analyze`** for pedantic static analysis (or `dart analyze` for any pure-Dart
-  subset). `analysis_options.yaml` holds the posture: strict language modes plus a long `errors:`
-  block promoting many lints to errors. Pedantic mode is intentional, not negotiable.
+- **`flutter analyze`** for static analysis. `analysis_options.yaml` holds the posture: strict
+  language modes plus a long `errors:` block. The pedantry is intentional, not negotiable.
 - **The `dart format` gate runs Flutter's Dart**, not standalone Dart stable, which runs ahead of it
-  and formats differently. Keep formatter checks on the Flutter toolchain, so what CI rejects is what
-  a local `dart format .` fixes. Why: [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
+  and formats differently. What CI rejects has to be what a local `dart format .` fixes. Why:
+  [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
 - **`flutter_test`** for widget and unit tests.
-- **`dependency_validator`** guards the dependency set; `dart_dependency_validator.yaml` scopes
-  it to the published surface and skips the example. It runs as a global tool
-  (`dart pub global activate dependency_validator`), not a dev-dependency.
+- **`dependency_validator`** guards the dependency set, scoped by `dart_dependency_validator.yaml`
+  to the published surface. It runs as a global tool, not a dev-dependency.
 - **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
-  Docker image, not local installs, so only Docker (plus `jq`) is needed. The check set and image
-  tag live in one manifest, [`.github/lint-checks.json`](.github/lint-checks.json); `repo.yml`
-  fans a CI matrix out over it and `scripts/release.sh`'s preflight loops the same file, so the
-  two can't drift. **Adding a linter is one entry in that manifest**, no workflow or script edit.
-  Per-tool config lives in `.rumdl.toml` and `.yamllint.yaml`.
-- **Published to pub.dev.** `.pubignore` controls the tarball; `.editorconfig` is the source of
-  truth for text-file conventions (line width 100, LF, UTF-8).
+  Docker image, so the only local requirement is Docker plus `jq`. The check set and image tag live
+  in [`lint-checks.json`](.github/lint-checks.json), which `repo.yml` fans a CI matrix out of and
+  `scripts/release.sh` loops in its preflight, so the two can't drift. **Adding a linter is one
+  entry in that manifest**, no workflow or script edit. Per-tool config sits in `.rumdl.toml` and
+  `.yamllint.yaml`.
+- **Published to pub.dev.** `.pubignore` controls the tarball, `.editorconfig` is the source of
+  truth for text-file conventions (width 100, LF, UTF-8).
 
 ## Repo layout
 
@@ -70,40 +63,39 @@ list_smith/
 `lib/src/`.
 
 **Nested-app lockfiles are opt-in.** The root `.gitignore` ignores `pubspec.lock` broadly, the
-library follows the "don't commit your own lockfile" convention. A nested app that *should* commit
-its lockfile opts in with a `!pubspec.lock` negation in its **own** `.gitignore`, not by loosening
-the root pattern (a broad `/pubspec.lock` anchor would auto-commit every nested package). `example/`
-opts in this way: it pins the parent via `path: ../`, and [`scripts/release.sh`](scripts/release.sh)
-resyncs + commits `example/pubspec.lock` on each release so the pinned version tracks the bump. A
-future nested package (e.g. a `benchmark/` app) stays ignored until it adds its own negation.
+library following the "don't commit your own lockfile" convention. A nested app that *should* commit
+one opts in with a `!pubspec.lock` negation in its **own** `.gitignore`, never by loosening the root
+pattern, which would auto-commit every nested package. `example/` opts in this way: it pins the
+parent via `path: ../`, and [`scripts/release.sh`](scripts/release.sh) resyncs and commits
+`example/pubspec.lock` on each release so the pinned version tracks the bump. A future nested
+package stays ignored until it adds its own negation.
 
 ## Hard rules
 
 These are the general, architecture-independent rules.
 
-1. **The public API lives only in `lib/list_smith.dart`**, which re-exports from `lib/src/`.
-   Don't make users import `package:list_smith/src/…`; the `src/` subtree is private by
-   convention. Anything callers need goes through an explicit `export`.
+1. **The public API lives only in `lib/list_smith.dart`**, which re-exports from `lib/src/`. Never
+   make users import `package:list_smith/src/…`. That subtree is private by convention, and
+   anything callers need goes through an explicit `export`.
 2. **No `print()` in library code.** Diagnostic output is the caller's responsibility.
-   `avoid_print` is a warning in `analysis_options.yaml`.
-3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and `strict-raw-types`
-   are all on. If you reach for `dynamic` or an unconstrained `Object?`, stop and reconsider.
+   `avoid_print` is a warning.
+3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference` and `strict-raw-types` are
+   all on. Reaching for `dynamic` or a bare `Object?` is the signal to stop and reconsider.
 4. **Public symbols carry `///` dartdoc** explaining the *why* and the guarantee, not the
-   mechanical *what*. `public_member_api_docs` is on.
-5. **Semver, strictly.** Any change to a public signature, a deletion, or a behavioural change
-   of a documented contract is breaking. Surface the implication before the diff lands. `cider`
-   enforces the version-bump discipline.
+   mechanical *what*. A line or two, with anything longer going to `APPENDIX.md`.
+   `public_member_api_docs` is on.
+5. **Semver, strictly.** A public signature change, a deletion, or a behavioural change to a
+   documented contract is breaking. Surface the implication before the diff lands.
 6. **`repo-ok`, `package-ok`, `example-ok`, `conventions-ok`, `bench-analyzer-ok`, `bench-app-ok`
    are `main`'s required checks.** Each closes one PR workflow, and the job id *is* the context:
    renaming one, giving it a `name:`, dropping it, or path-filtering its workflow un-gates
    Dependabot automerge silently. Touch one, update the ruleset in the same pass:
    [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
-   headers are written by [`scripts/release.sh`](scripts/release.sh); the `## [Unreleased]`
-   buffer is appended to by
-   [`.github/workflows/changelog.yml`](.github/workflows/changelog.yml) from the merged PR title
-   (governed by its `sem-*` label). Same prohibition on the `version:` field and on running
-   `cider` by hand. The `cider:` block in `pubspec.yaml` is static config and is hand-editable.
+   headers are written by [`scripts/release.sh`](scripts/release.sh), and the `## [Unreleased]`
+   buffer is appended to by [`changelog.yml`](.github/workflows/changelog.yml) from the merged PR
+   title, governed by its `sem-*` label. Same prohibition on the `version:` field and on running
+   `cider` by hand. The `cider:` block in `pubspec.yaml` is static config, hand-editable.
 8. **Workflows write out the action defaults they rely on**, even when the default is already the
    value you want. Every `github-actions` bump automerges, majors included, and an action major is
    usually a default-flip that CI stays green through, since Actions warns on an unknown input
@@ -128,56 +120,44 @@ Enforced by [`.github/workflows/pr-conventions.yml`](.github/workflows/pr-conven
   | `sem-security`  | `security`   | Security-relevant fix                          |
   | `sem-skip`      | (skip)       | Internal-only change (CI, docs, tests, ...)    |
 
-  The PR title becomes the changelog line verbatim; phrase it as a release-note bullet.
-- **PR body must not be empty**, **no merge commits in the PR range** (rebase to integrate
-  `main`), **commit subjects <= 82 characters**.
+  The PR title becomes the changelog line verbatim, so phrase it as a release-note bullet.
+- **PR body must not be empty**, **no merge commits in the PR range** (rebase to integrate `main`),
+  **commit subjects <= 82 characters**.
 
-Cutting a release is one command: `scripts/release.sh [patch|minor|major]`. Full mechanics,
-preflight, and the pipeline-owned-files contract are in
-[`scripts/README.md`](scripts/README.md).
+Cutting a release is one command: `scripts/release.sh [patch|minor|major]`. Mechanics, preflight and
+the pipeline-owned-files contract are in [`scripts/README.md`](scripts/README.md).
 
 ## Style
 
-Full guide: [`CODESTYLE.md`](CODESTYLE.md). The lint posture is deliberately strict. Top rules
-to keep in working memory:
+Full guide: [`CODESTYLE.md`](CODESTYLE.md), and read it before writing code. The handful that catch
+people out most often:
 
-- Type-annotate every public symbol; `final` by default for fields and locals.
-- Nullability is explicit (no `as T` on a `T?`). Bind generic type parameters to
-  `<T extends Object>` by default.
-- 100-column line width (`formatter.page_width: 100` in `analysis_options.yaml`).
-- No magic numbers in `lib/` code; pull them to named `static const`s.
-- Public symbols carry `///` dartdoc explaining *why* and *what guarantee*.
-- Prefer Dart 3.10+ static dot shorthands (`.center`, `.all(16)`, `.start`, `.min`).
-- Prefer data-pipeline / `collection`-package methods (`groupListsBy`, `splitBetween`,
-  `whereIndexed`, `.expand`/`.map`/`.fold`) over hand-rolled loops for any transform or scan.
-- British spelling in prose and identifiers, except names fixed by the SDK (`toJson`,
-  `compareTo`, `hashCode`).
+- Bind generic type parameters to `<T extends Object>` by default, and never `as T` on a `T?`.
+- 100-column width, for every text file, not just Dart.
+- Static dot shorthands where the context type is known (`.center`, `.all(16)`, `.min`).
+- Data-pipeline and `collection`-package methods (`groupListsBy`, `splitBetween`, `whereIndexed`)
+  over hand-rolled loops for any transform or scan. Collection-`for` is for *building* a literal,
+  not for deriving one collection from another.
+- British spelling in prose and identifiers, except names the SDK fixes (`toJson`, `hashCode`).
+- No AI-tells in prose: no em-dashes, no spliced semicolons, no filler vocabulary.
 
 ## Guidelines for any AI agent
 
-- **Always ask before making technical choices.** When a task admits more than one reasonable
-  approach (an API shape, whether a symbol is public, whether to add a dependency, a widget's
-  parameter model), stop and ask: present the options with trade-offs, say which you'd pick and
-  why, then wait. Small choices compound.
-- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★` so the
-  user can scan and reply by echoing or overriding (e.g. "★ for 1-4, change 5 to B").
-- **Refactor first when a change needs a better shape.** Do the enabling, behaviour-preserving
-  refactor as its own step before building on top. Public-API breakage is semver-significant and
-  slow to walk back once published, so surface the refactor and get sign-off before anything that
-  touches the public API or adds a dependency.
-- **Document new user-facing features in the README** in the same change. Rationale and
-  trade-offs go in `APPENDIX.md`; the README is the user-facing entry point.
-- **Read `analysis_options.yaml` before writing code.** The lint posture is far stricter than the
-  Dart default; code that fails lint won't pass review.
-- **Surface semver implications loudly.** If a change touches anything re-exported from
-  `lib/list_smith.dart`, call out whether it's patch / minor / major before the diff lands.
-- **Prefer an existing package over a custom solution.** Before hand-rolling behaviour a mature
-  package already provides, look for one and wrap it. Vet the candidate first: pure Dart / Flutter
-  where possible, permissive licence, currently maintained. A trivial fixed algorithm belongs in
-  `lib/src/`, not a micro-dependency, so the dependency set stays honest.
-- **The user manages git state; some tracked files won't show in `git status`.** The user may
-  mark tracked files so their local edits are hidden from `git status` (typically
-  `git update-index --skip-worktree` / `--assume-unchanged`). They are tracked, not gitignored,
-  so a file you just edited can be genuinely changed on disk yet absent from `git status`. Don't
-  try to re-stage or "fix" it: the user handles staging and committing. Trust the file contents
-  you wrote, not `git status`, as the record of your change.
+- **Always ask before making technical choices.** Anything with more than one defensible answer
+  (an API shape, public vs `lib/src/`, a new dependency, a widget's parameter model) stops and
+  asks: options, trade-offs, the one you'd pick and why, then wait. Small choices compound. Mark
+  your recommendation `★` so the user can reply by echoing or overriding it.
+- **Refactor first when a change needs a better shape.** The enabling, behaviour-preserving
+  refactor is its own step, before the feature. Get sign-off first for anything touching the public
+  API or the dependency set, since both are slow to walk back once published.
+- **Surface semver implications loudly.** A change to anything re-exported from
+  `lib/list_smith.dart` gets called out as patch / minor / major before the diff lands.
+- **Document new user-facing features in the README** in the same change. Rationale goes in
+  `APPENDIX.md`.
+- **Prefer an existing package over a custom solution**, vetted for pure Dart where possible, a
+  permissive licence, and current maintenance. A trivial fixed algorithm belongs in `lib/src/`
+  rather than a micro-dependency, so the dependency set stays honest.
+- **The user manages git state, and some tracked files won't show in `git status`.** They may hide
+  local edits with `git update-index --skip-worktree` / `--assume-unchanged`. Those files are
+  tracked, not gitignored, so something you just edited can be genuinely changed on disk and absent
+  from `git status`. Don't re-stage or "fix" it. Trust what you wrote, not `git status`.

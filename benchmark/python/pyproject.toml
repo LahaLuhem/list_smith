@@ -1,5 +1,5 @@
 # Project metadata + dependencies for the benchmark orchestrator / analyzer. Managed by `uv`
-# (https://docs.astral.sh/uv/); ../README.md has the install + run workflow.
+# (https://docs.astral.sh/uv/). ../README.md has the install + run workflow.
 #
 # `uv.lock` is committed for reproducible runs: perf claims are only defensible if the analysis
 # stack is pinned.
@@ -13,17 +13,17 @@ requires-python = ">=3.13"
 dependencies = [
     "numpy>=2.5.2,<3.0",
     "scipy>=1.11,<2.0",
-    # polars (Rust-backed) for analysis; converts to pandas only at the seaborn boundary.
+    # polars (Rust-backed) for analysis. Converts to pandas only at the seaborn boundary.
     "polars>=1.43.2,<2.0",
     "matplotlib>=3.11.1,<4.0",
-    # seaborn gives publication-quality stats plots for ~zero boilerplate; pulls pandas transitively.
+    # seaborn gives publication-quality stats plots for ~zero boilerplate. Pulls pandas transitively.
     "seaborn>=0.13,<1.0",
-    # pyarrow backs polars.DataFrame.to_pandas() — the bridge to seaborn's pandas-only plotting API.
+    # pyarrow backs polars.DataFrame.to_pandas(), the bridge to seaborn's pandas-only plotting API.
     "pyarrow>=25.0.0,<26.0",
 ]
 
 [dependency-groups]
-# Maintainer-only: linter / formatter + test runner. ruff replaces black + flake8 + isort; pytest
+# Maintainer-only: linter / formatter + test runner. ruff replaces black + flake8 + isort. Pytest
 # runs the pure-math unit tests under tests/.
 dev = [
     "ruff>=0.16.2,<1.0",
@@ -36,14 +36,14 @@ line-length = 100
 target-version = "py313"
 
 [tool.pytest.ini_options]
-# Tests live under tests/; pytest auto-discovers test_*.py there.
+# Tests live under tests/. Pytest auto-discovers test_*.py there.
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 # The project is not pip-installed (run via `uv run python run.py`), so put its root on sys.path for
 # imports like `list_smith_bench.data.utils.stats`. "." is relative to this pyproject's dir.
 pythonpath = ["."]
 # -ra: short summary for everything except passes. --strict-markers: catch @pytest.mark typos.
-# --cov gates the analyzer's pure-logic core (stats.py); the fail-under threshold lives in CI
+# --cov gates the analyzer's pure-logic core (stats.py). The fail-under threshold lives in CI
 # (.github/workflows/bench-analyzer.yml) so local single-test runs aren't blocked by it.
 addopts = "-ra --strict-markers --cov=list_smith_bench.data.utils.stats --cov=list_smith_bench.data.utils.drift --cov-report=term-missing"
 

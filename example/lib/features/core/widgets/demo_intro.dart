@@ -1,8 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-/// A short heading + blurb at the top of a demo, explaining what the screen
-/// exercises. Colours inherit the ambient `DefaultTextStyle`, so it reads
-/// correctly under both the Material and Cupertino shells in light and dark.
+/// The heading and blurb at the top of a demo, and the place its user-facing explanation lives.
+/// Colours inherit the ambient `DefaultTextStyle`, so it reads under either shell, light or dark.
 class DemoIntro extends StatelessWidget {
   final String title;
   final String description;

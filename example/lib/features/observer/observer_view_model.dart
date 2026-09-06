@@ -6,11 +6,10 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Observer demo: a searchable `ListSmith.async` wired to a `ListSmithObserver` that records
-/// every lifecycle event into a live log, plus an inject-failure toggle so the error event can be
-/// exercised on demand.
+/// Backs the Observer demo: a searchable `ListSmith.async` whose observer records each lifecycle
+/// event into a live log, plus an inject-failure toggle so the error event can fire.
 final class ObserverViewModel extends ViewModel {
-  /// Cap on the log so it can't grow without bound; the newest events are kept.
+  /// Cap on the log so it can't grow without bound. The newest events are kept.
   static const _maxLoggedEvents = 50;
 
   final _repository = DemoRepository();
@@ -18,7 +17,7 @@ final class ObserverViewModel extends ViewModel {
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
   final _events = ListNotifier<String>();
 
-  /// The observer handed to `ListSmith.async`; records each event into [eventsListenable].
+  /// The observer handed to `ListSmith.async`. Records each event into [eventsListenable].
   late final observer = _EventLogObserver(_record);
 
   /// The live search query, driven by the search field.

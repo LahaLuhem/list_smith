@@ -1,12 +1,10 @@
 part of '../pagination_end_policy.dart';
 
-/// Ends pagination as soon as a page's fetcher reports there is no more data.
+/// Ends pagination as soon as a page's fetcher reports `hasMore: false`.
 ///
-/// Pairs with a signal-reporting fetcher (`PageFetcher.withSignal`, and `SearchPageFetcher.withSignal`
-/// when the list is searchable) whose signal is a `hasMore` bool: the list stops the moment a page
-/// reports `false`, so the trailing empty page a count-based policy fetches to discover the end is
-/// never requested. A backend that returns a next-cursor instead can end on a `null` cursor with
-/// [StopOnNullSignalPolicy]; this built-in covers the boolean case.
+/// Needs a `withSignal` fetcher whose signal is that bool. Stopping on the flag saves the trailing
+/// empty page a count-based policy has to fetch to find the end. For a next-cursor source reach for
+/// [StopOnNullSignalPolicy] instead.
 final class ExplicitHasMorePolicy extends PaginationEndPolicy {
   /// Creates a policy that ends when a page's fetcher reports `hasMore: false`.
   const new();

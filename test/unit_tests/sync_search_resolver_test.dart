@@ -37,7 +37,7 @@ void main() {
         val(searchingKey, false),
         val(visibleKey, items),
       )
-      // Active searches filter (trimming first); a miss yields an empty, no-results list.
+      // Active searches filter (trimming first). A miss yields an empty, no-results list.
       .example(
         val(queryKey, 'a'),
         val(minLengthKey, 0),

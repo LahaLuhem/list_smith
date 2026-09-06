@@ -1,13 +1,11 @@
 import '../typedefs/sync_search_predicate.dart';
 
-/// Applies a sync search over [items]: which items are visible for [query], and whether a search is
-/// actually active (so the caller can show the no-results surface instead of the plain list).
+/// Applies a sync search over [items]: what is visible for [query], and whether a search is active
+/// at all, so the caller can pick the no-results surface over the plain list.
 ///
-/// [query] is trimmed; when the trimmed query is empty or shorter than [minSearchLength] it counts
-/// as no search, so every item stays visible and `isSearching` is `false`. Kept widget-free and pure
-/// so the gating and filtering are unit-tested directly, without pumping a widget
-/// (as `PaginationEndPolicy.hasReachedEnd` is). The visible items are returned as a lazy view, so the
-/// caller materialises them once (directly, or by grouping them).
+/// [query] is trimmed. Empty, or shorter than [minSearchLength], counts as no search: everything
+/// stays visible and `isSearching` is `false`. Visible items come back lazy, for the caller to
+/// materialise once.
 ({Iterable<T> visibleItems, bool isSearching}) resolveSyncSearch<T extends Object>(
   List<T> items,
   SyncSearchPredicate<T> searchBy,

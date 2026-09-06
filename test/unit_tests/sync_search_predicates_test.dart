@@ -44,7 +44,7 @@ void main() {
         val(queryKey, 'xyz'),
         val(matchesKey, false),
       )
-      // A null field is skipped: it neither throws nor matches; other fields still count.
+      // A null field is skipped: it neither throws nor matches. Other fields still count.
       .example(
         val(nameKey, 'Paris'),
         val(countryKey, null),

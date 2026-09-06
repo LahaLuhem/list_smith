@@ -14,15 +14,13 @@ class ListSmithController {
   Future<void> Function()? _refresh;
   var _everAttached = false;
 
-  /// Reloads the list exactly as a pull would, running the configured [Reload] (or
-  /// [ResetToFirstPage] on a `NoRefresh` list) and reloading the current search while searching.
+  /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] on a
+  /// `NoRefresh` list) and reloading the current search while searching.
   ///
-  /// Completes when that reload does: [ResetToFirstPage] as soon as the list is cleared, not when
-  /// fresh data lands; [ReloadToCurrentDepth] once the re-fetch is in. A call made while a refresh
-  /// runs joins it rather than starting a second.
-  ///
-  /// Inert once the list is gone, so a refresh racing a navigation is harmless; calling it before
-  /// any list attached asserts, since that is a wiring mistake rather than a race.
+  /// Completes when that reload does: [ResetToFirstPage] as the list clears, not when fresh data
+  /// lands, [ReloadToCurrentDepth] once the re-fetch is in. A call during a running refresh joins
+  /// it. Inert once the list is gone, so racing a navigation is harmless. Calling it before any list
+  /// attached asserts, since that is wiring rather than a race.
   Future<void> refresh() {
     assert(
       _refresh != null || _everAttached,
@@ -32,7 +30,7 @@ class ListSmithController {
     return _refresh?.call() ?? Future<void>.syncValue(null);
   }
 
-  /// Binds this controller to the list that serves [refresh]; one controller drives one list.
+  /// Binds this controller to the list that serves [refresh]. One controller, one list.
   @internal
   void attach(Future<void> Function() onRefresh) {
     assert(

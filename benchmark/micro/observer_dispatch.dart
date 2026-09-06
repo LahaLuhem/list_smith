@@ -1,10 +1,10 @@
 /// Micro-benchmark: cost of one observer dispatch through list_smith's wrapping.
 ///
 /// list_smith calls `observer?.onPageLoaded(...)` synchronously in `_fetchPage`. This measures a
-/// no-op observer's dispatch (the null-check plus one virtual call to an empty override), putting a
-/// number on "the observer seam costs ~nothing when the override is cheap" (BICC's `observer_dispatch`
-/// analogue). A `null` observer is even cheaper (just the null-check), so this no-op case is the
-/// conservative figure.
+/// no-op observer's dispatch, the null-check plus one virtual call to an empty override, so it puts
+/// a number on the seam costing ~nothing when the override is cheap. A `null` observer is cheaper
+/// still, just the null-check, which makes this the conservative figure. BICC's
+/// `observer_dispatch` analogue.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -22,8 +22,8 @@ final class _ObserverDispatch extends BenchmarkBase {
   void run() => _observer?.onPageLoaded(0, 20, isSearchMode: false);
 }
 
-/// A minimal observer that counts page-load callbacks and does no other work; mirrors a steady-state
-/// consumer observer with no expensive side effect on the hot path.
+/// A minimal observer that counts page-load callbacks and does no other work. Mirrors a
+/// steady-state consumer observer with no expensive side effect on the hot path.
 final class _CountingObserver extends ListSmithObserver {
   new();
 

@@ -1,7 +1,7 @@
 """Tests for `list_smith_bench.subcommands.ab`'s pure scheduling.
 
-The interleaving order is the whole fix for issue #43, so it is pinned here rather than left to a
-read of the runner. Everything else in `ab` is subprocess plumbing.
+The interleaving order is the whole fix for the gate's order sensitivity, so it is pinned here
+rather than left to a read of the runner. Everything else in `ab` is subprocess plumbing.
 """
 
 from __future__ import annotations

@@ -25,12 +25,12 @@ from list_smith_bench.config import (
 from list_smith_bench.data.utils.io import discover_sources
 
 # Roots scanned to decide whether a compiled exe is stale. Conservative: any .dart change here
-# triggers a rebuild. Per-file dependency graphs aren't worth tracking; an over-rebuild is cheap.
+# triggers a rebuild. Per-file dependency graphs aren't worth tracking. An over-rebuild is cheap.
 _SOURCE_ROOTS: Final[list[Path]] = [LIB_DIR, MICRO_DIR, HARNESS_DIR]
 
 
 def _max_source_mtime() -> float:
-    """Latest mtime over every .dart file that could affect a compiled micro; 0.0 if none exist."""
+    """Latest mtime over every .dart file that could affect a compiled micro. 0.0 if none exist."""
     latest = 0.0
     for root in _SOURCE_ROOTS:
         if not root.is_dir():
@@ -52,7 +52,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     """AOT-compile every .dart under micro/ to BUILD_DIR via `dart compile exe`.
 
     Skips exes already fresh unless `--force`, or unless an input .dart is newer. AOT is required
-    for deterministic warmup characteristics; JIT introduces too much variance.
+    for deterministic warmup characteristics. JIT introduces too much variance.
     """
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -96,7 +96,7 @@ def cmd_build(args: argparse.Namespace) -> int:
 
 
 def _compile_one(src: Path, out: Path) -> bool:
-    """A single `dart compile exe` invocation; suppresses stdout, surfaces stderr on failure."""
+    """A single `dart compile exe` invocation. Suppresses stdout, surfaces stderr on failure."""
     result = subprocess.run(
         [*dart_command(), "compile", "exe", str(src), "-o", str(out)],
         cwd=PROJECT_ROOT,

@@ -31,9 +31,7 @@ void main() {
       await pumpExampleApp(tester);
 
       await tester.tap(find.text('Custom surfaces'));
-      // Drive the route transition, then assert the custom first-page loader is
-      // up before the fake fetch resolves; the spinner animates forever so we
-      // never pumpAndSettle.
+      // The spinner animates forever, so fixed pumps, never pumpAndSettle.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -46,7 +44,7 @@ void main() {
     });
 
     scenarioWidgets('playground pages past its empty first page to the data', (tester) async {
-      // The playground stacks its knob panel above the list; give it enough height for the list to
+      // The playground stacks its knob panel above the list, so give the list room to
       // render items under the knobs, but not so tall it over-fetches pages to fill the viewport.
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -55,8 +53,7 @@ void main() {
 
       await tester.tap(find.text('Playground'));
       await tester.pump();
-      // Page 0 is empty; with the default advance-past-empty, the list fetches page 0 then page 1,
-      // so give both fetches time to settle.
+      // Page 0 is empty, so advance-past-empty fetches page 0 then page 1. Give both time.
       for (var frame = 0; frame < 12; frame++) {
         await tester.pump(const Duration(milliseconds: 300));
       }
@@ -110,7 +107,7 @@ void main() {
     scenarioWidgets('observer logs a page-loaded event as the feed loads', (tester) async {
       await pumpExampleApp(tester);
 
-      // Observer sits near the bottom of the hub; scroll it into view before tapping.
+      // Observer sits near the bottom of the hub, so scroll it into view before tapping.
       await tester.scrollUntilVisible(find.text('Observer'), 100);
       await tester.tap(find.text('Observer'));
       await tester.pump();
@@ -137,7 +134,7 @@ void main() {
     scenarioWidgets(
       'cache routing serves the cold load from the network, then bypasses on a pull',
       (tester) async {
-        // Intro, knob, list, clear-cache row and log panel stack up; give the list room to render.
+        // Intro, knob, list, clear-cache row and log panel stack up, so give the list room.
         await tester.binding.setSurfaceSize(const Size(800, 1200));
         addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -172,11 +169,11 @@ void main() {
     scenarioWidgets('reload demo loads its stamped feed', (tester) async {
       await pumpExampleApp(tester);
 
-      // Reload sits at the bottom of the hub; scroll it into view before tapping.
+      // Reload sits at the bottom of the hub, so scroll it into view before tapping.
       await tester.scrollUntilVisible(find.text('Reload'), 100);
       await tester.tap(find.text('Reload'));
       await tester.pump();
-      // The feed fetches with a 500ms latency; pump enough for the first pages to settle.
+      // The feed fetches with a 500ms latency, so pump enough for the first pages to settle.
       for (var frame = 0; frame < 8; frame++) {
         await tester.pump(const Duration(milliseconds: 300));
       }

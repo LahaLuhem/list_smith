@@ -4,14 +4,12 @@ import '/src/data/presentation/typedefs/item_builder.dart';
 
 /// Renders one list item, prefixed with its group's header when the item begins a new group.
 ///
-/// Shared by both render paths so header placement lives in one spot. Built only where grouping is
-/// active: a group's header is stacked before its first item along the list's [scrollDirection]
-/// (above it, for a vertical list). `resolveHeaderFlags` decides that up front and passes it in as
-/// [showHeader]. Takes the group-key extractor ([groupOf]) and header builder ([headerFor])
-/// directly, rather than a whole `Grouping`, so this presentation widget stays independent of the
-/// grouping model.
+/// Shared by both render paths, so header placement lives in one spot. The header stacks before the
+/// group's first item along [scrollDirection], with `resolveHeaderFlags` deciding up front which
+/// item that is. Takes [groupOf] and [headerFor] directly rather than a whole `Grouping`, so this
+/// widget stays independent of the grouping model.
 class GroupedItem<T extends Object> extends StatelessWidget {
-  /// Builds the item itself; the header is prefixed around its widget.
+  /// Builds the item itself, with the header prefixed around its widget.
   final ItemBuilder<T> itemBuilder;
 
   /// Extracts an item's group key (erased to `Object`), to label the header.

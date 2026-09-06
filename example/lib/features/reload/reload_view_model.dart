@@ -4,20 +4,18 @@ import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
 
-/// Backs the Reload demo: a paginated feed whose items are stamped with a per-page fetch count, so a
-/// pull-to-refresh visibly re-stamps whatever it reloads. The reload strategy, its concurrency, and its
-/// error handling are live knobs, and a failure can be injected on the next reload to compare
-/// best-effort with all-or-nothing.
+/// Backs the Reload demo. Items are stamped with a per-page fetch count, so a pull visibly
+/// re-stamps whatever it reloaded.
 ///
-/// The three config knobs all feed the list's `PullToRefresh`, so they use `notifyListeners()` (the
-/// many-sites case); the failure toggle is read only inside [fetchPage], so it is a scoped
-/// `ValueNotifier` that rebuilds just its own switch. See `CODESTYLE.md`.
+/// The three config knobs all feed the list's `PullToRefresh`, so they take `notifyListeners()`.
+/// The failure toggle is read only inside [fetchPage], so it is a scoped `ValueNotifier` rebuilding
+/// just its own switch. See `CODESTYLE.md` *State management*.
 final class ReloadViewModel extends ViewModel {
   static const _dataPages = 6;
   static const _failPage = 1;
   static const _latency = Duration(milliseconds: 500);
 
-  /// Per-page fetch count, stamped onto each item so reloads are visible; not reactive state.
+  /// Per-page fetch count, stamped onto each item so reloads are visible. Not reactive state.
   final _attempts = <int, int>{};
   final _injectFailures = ValueNotifier(false);
   final _refreshing = ValueNotifier(false);
@@ -35,7 +33,7 @@ final class ReloadViewModel extends ViewModel {
 
   bool get atomic => _atomic;
 
-  /// Whether the next reload should fail one page (to exercise the error policy); read live by
+  /// Whether the next reload should fail one page, to exercise the error policy. Read live by
   /// [fetchPage].
   ValueListenable<bool> get injectFailures => _injectFailures;
 
@@ -91,9 +89,9 @@ final class ReloadViewModel extends ViewModel {
   // ignore: use_setters_to_change_properties
   void onInjectFailuresToggled({required bool value}) => _injectFailures.value = value;
 
-  /// Refreshes without a pull, holding the button busy until `refresh()` completes: that is once the
-  /// refetch lands under [ReloadToCurrentDepth], but only once the list clears under
-  /// [ResetToFirstPage], where the list's own first-page loader takes over.
+  /// Refreshes without a pull, holding the button busy until `refresh()` completes. That is when
+  /// the refetch lands under [ReloadToCurrentDepth], but only when the list clears under
+  /// [ResetToFirstPage], where its own first-page loader takes over.
   Future<void> onRefreshPressed() async {
     _refreshing.value = true;
 

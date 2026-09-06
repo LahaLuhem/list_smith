@@ -1,5 +1,4 @@
 /// @docImport '/src/data/presentation/models/async_list_surfaces.dart';
-/// @docImport '/src/data/refresh/models/refresh.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 /// @docImport 'pagination_end_policy.dart';
 library;
@@ -9,33 +8,18 @@ import 'empty_page_context.dart';
 part 'empty_page_behaviours/advance_to_first_non_empty.dart';
 part 'empty_page_behaviours/show_empty_surface.dart';
 
-/// What an async list does when a page settles with no items but [PaginationEndPolicy] reports that
-/// more pages remain.
+/// What an async list does when a page settles with no items but [PaginationEndPolicy] says more
+/// pages remain. Nothing on screen means nothing to scroll, so the pager's scroll-driven fetch
+/// never fires and the pages that do hold data stay out of reach.
 ///
-/// The underlying pager treats "zero items loaded" as its terminal empty state and shows the empty
-/// surface, even when the end policy would keep paginating. With nothing on screen there is nothing
-/// to scroll, so its scroll-driven fetch never fires and the list can't reach the pages that do hold
-/// data. This seam decides what happens in that gap.
-///
-/// A sealed, injected, defaulted seam like [Refresh]: the default is [ShowEmptySurface] (the pager's
-/// own behaviour, show the empty surface at once), switched to page-through by passing
-/// [AdvanceToFirstNonEmpty]. Applies to [ListSmith.async] only; a `.sync` list holds all its items up
-/// front and never paginates.
-///
-/// It only ever changes anything under an end policy that continues past an empty page, a raised
-/// [StopOnEmptyPagesPolicy.emptyRunBeforeEnd] or a signal policy like [StopOnNullSignalPolicy]. Under
-/// the default one-empty-page-ends policy an empty page *is* the end, so both behaviours show the empty
-/// surface. Because advancing is opt-in, such a policy needs [AdvanceToFirstNonEmpty] set here too, or
-/// the list shows the empty surface and stalls on the first empty page.
+/// [ShowEmptySurface] (the default) shows the empty surface right there. [AdvanceToFirstNonEmpty]
+/// pages through to the first page with items. It only bites under a policy that continues past an
+/// empty page, so it pairs with a raised [StopOnEmptyPagesPolicy.emptyRunBeforeEnd] or a signal
+/// policy. [ListSmith.async] only, since a `.sync` list never paginates.
 sealed class EmptyPageBehaviour {
-  /// Const base constructor for the sealed hierarchy.
+  /// Const base constructor.
   const new();
 
-  /// Whether the list should page past the current empty page, given [context].
-  ///
-  /// Called after each page settles. [ShowEmptySurface] always answers `false`; [AdvanceToFirstNonEmpty]
-  /// answers `true` while the list is empty, more pages remain, and its `maxPages` cap is not yet
-  /// reached. The orchestrator gathers the [EmptyPageContext] facts and acts on the answer, so the
-  /// decision stays here rather than in a type-switch upstream.
+  /// Whether the list should page past the current empty page. Called after each page settles.
   bool shouldAdvance(EmptyPageContext context);
 }

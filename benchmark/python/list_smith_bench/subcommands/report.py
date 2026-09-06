@@ -1,4 +1,4 @@
-"""`cmd_report` — render PNG charts + SUMMARY.md from one aggregated.json.
+"""`cmd_report`: render PNG charts and SUMMARY.md from one aggregated.json.
 
 Default output dir is `benchmark/reports/` (committed, inlined from the package README). `--out`
 overrides for ad-hoc snapshots.

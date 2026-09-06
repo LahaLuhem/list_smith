@@ -13,19 +13,17 @@ part 'reloads/reset_to_first_page.dart';
 
 /// What pull-to-refresh does to the pages already loaded.
 ///
-/// A sealed, injected, defaulted seam carried on `PullToRefresh`. The default [ResetToFirstPage]
-/// discards everything and reloads the first page (the underlying pager's behaviour);
-/// [ReloadToCurrentDepth] re-fetches every loaded page so the user keeps their scroll depth across a
-/// refresh.
+/// Carried on `PullToRefresh`. [ResetToFirstPage] (the default) discards everything and reloads page
+/// one. [ReloadToCurrentDepth] re-fetches every loaded page so scroll depth survives.
 ///
-/// Each variant carries its own logic in [run]; the async engine hands over a [ReloadContext] and calls
-/// it, never inspecting the concrete type (see the CODESTYLE "behaviour lives in the sealed type" rule).
+/// Each variant does its own work in [run], which the engine calls with a [ReloadContext] without
+/// ever inspecting the concrete type.
 sealed class Reload {
-  /// Const base constructor for the sealed hierarchy.
+  /// Const base constructor.
   const new();
 
-  /// Performs the reload through [context]. The async engine calls this on each pull-to-refresh;
-  /// consumers construct a variant but never call it, like building a `Widget` without calling `build`.
+  /// Performs the reload through [context]. The engine calls this, never the consumer, the same way
+  /// nobody calls `Widget.build` by hand.
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context);
 }

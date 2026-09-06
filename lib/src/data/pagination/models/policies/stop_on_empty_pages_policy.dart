@@ -2,13 +2,10 @@ part of '../pagination_end_policy.dart';
 
 /// Ends pagination after [emptyRunBeforeEnd] consecutive empty pages.
 ///
-/// The default (`1`) stops on the first empty page, which fits the common feed. Raise it for sources
-/// where an empty page is not the end: for example per-date calendar data, where a date with no entries
-/// can still be followed by dates that do have entries.
+/// The default `1` stops on the first empty page, which fits most feeds. Raise it where an empty
+/// page isn't the end, like a calendar paged by day.
 final class StopOnEmptyPagesPolicy extends PaginationEndPolicy {
-  /// The number of consecutive empty pages that marks the end of the data.
-  ///
-  /// Defaults to `1`: the first empty page ends pagination. Must be at least 1.
+  /// The number of consecutive empty pages that marks the end. Defaults to `1`, minimum `1`.
   final int emptyRunBeforeEnd;
 
   /// Creates a policy that ends after [emptyRunBeforeEnd] consecutive empty pages.

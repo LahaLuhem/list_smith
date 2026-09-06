@@ -4,12 +4,10 @@ library;
 
 import '../enums/fetch_trigger.dart';
 
-/// The inputs of one page fetch, handed to a [PageFetcher] as a single value.
-///
-/// One object rather than a positional argument list, so a later fetch-time fact arrives as a field
-/// instead of a signature change. Built by list_smith per fetch; a consumer only reads it.
+/// The inputs of one page fetch, handed to a [PageFetcher] as a single value. Built per fetch,
+/// read-only for a consumer.
 base class PageRequest {
-  /// The 0-based page to fetch; the first page is `0`.
+  /// The 0-based page to fetch, starting at `0`.
   final int pageIndex;
 
   /// How many items to request, the page size configured on the list.

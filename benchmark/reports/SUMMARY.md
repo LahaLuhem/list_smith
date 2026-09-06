@@ -2,11 +2,11 @@
 
 Captured **2026-07-18** against `0.0.1` at `63b7319` on Dart SDK 3.12.2. N=10 iterations.
 
-> Per-machine measurements. Numbers reflect *this* machine (CPU, GPU, GC, OS scheduler, thermal state). Your numbers WILL differ; capture your own local baseline before measuring a code delta.
+> Per-machine measurements, reflecting *this* machine's CPU, GPU, GC, OS scheduler and thermal state. Yours WILL differ, so capture your own baseline before measuring a delta.
 
 ## Observer on the critical path: a slow observer blocks rendering
 
-The headline finding. `slow_observer` (profile-mode) wires an observer that blocks for a set delay on each callback and measures render latency over a page load, swept across several delays. list_smith invokes the observer *synchronously* on the page-load path, so the block lands almost fully on the critical path: render latency tracks the delay ~1:1, on top of a fixed baseline render (~18 ms here), so a 50 ms observer pushes it to ~68 ms. Takeaway for consumers: keep observer callbacks cheap (logging, metrics); push heavy work off the synchronous path.
+The headline finding. list_smith invokes your observer *synchronously* on the page-load path, so a slow callback lands almost fully on the critical path. `slow_observer` blocks for a set delay on each callback and measures render latency across a sweep of delays: latency tracks the delay ~1:1 on top of a fixed baseline render, so a 50 ms observer pushes ~18 ms to ~68 ms. Keep observer callbacks cheap and do heavy work elsewhere.
 
 | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---:|---:|---:|---:|
@@ -20,7 +20,7 @@ The headline finding. `slow_observer` (profile-mode) wires an observer that bloc
 
 ## Sync-search filter cost vs list size
 
-From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` re-runs `resolveSyncSearch` (an `items.where(predicate).toList()`) synchronously on every committed query; this measures that cost as the in-memory list grows, with a naive case-insensitive `contains` predicate. Where the median crosses the frame budget is the practical ceiling for sync search with this predicate.
+From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` re-runs `resolveSyncSearch` synchronously on every committed query, so this is that cost as the in-memory list grows, under a naive case-insensitive `contains`. Where the median crosses the frame budget is the practical ceiling for that predicate.
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
@@ -33,7 +33,7 @@ From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` 
 
 ## Sync grouping (bucketing) cost vs list size
 
-From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync grouping reorders the filtered items into contiguous sections via `bucketByGroup` (`groupListsBy` + flatten) on every committed query; this measures that cost as the list grows, over fully interleaved input (worst-case reordering). It stacks on the search-filter cost above when a sync list both searches and groups.
+From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync grouping reorders the filtered items into contiguous sections on every committed query, so this is that cost as the list grows, over fully interleaved input for worst-case reordering. It stacks on the search-filter cost above when a list does both.
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
@@ -46,7 +46,7 @@ From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync groupi
 
 ## Overlap de-dup cost vs loaded list size
 
-From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the async list de-dups overlapping pages as a computed view over the paging state (`_dedupedForDisplay` via `PagingState.filterItems`), re-walking every loaded item on each state change so the stored pages stay raw and the end policy can't mistake an all-duplicate page for the end (issue #2). This measures the worst case: `itemId` set but no actual overlap, so nothing collapses and every item is retained. It is opt-in and off the scroll path (per page-load, not per frame), sub-millisecond for a few thousand loaded items and climbing from there; past tens of thousands in one live list, de-duplicate at the source instead.
+From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the async list de-dups overlapping pages as a computed view over the paging state, re-walking every loaded item on each change so the stored pages stay raw and the end policy can't read an all-duplicate page as the end. Measured at its worst case: `itemId` set with no actual overlap, so nothing collapses and every item is retained. Opt-in, and off the scroll path since it runs per page-load rather than per frame. Sub-millisecond for a few thousand loaded items and climbing from there, so past tens of thousands in one live list, de-duplicate at the source.
 
 | Loaded items | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
@@ -59,7 +59,7 @@ From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the
 
 ## Wrapping overhead: list_smith on top of ISP
 
-Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer callback (the null-check + virtual call list_smith makes in `_fetchPage`); `wrapping_overhead` is the per-`getNextPageKey` cost (rebuild the page-item-counts + run the end policy) as loaded pages grow. Both are dwarfed by any real fetch.
+Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer callback, the null-check plus virtual call made in `_fetchPage`. `wrapping_overhead` is the per-`getNextPageKey` cost, rebuilding the page-item-counts and running the end policy, as loaded pages grow. Any real fetch dwarfs both.
 
 | Micro | Metric | Median (us) |
 |---|---|---:|
@@ -70,7 +70,7 @@ Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer 
 
 ## UI scroll/refresh: per-frame build cost
 
-From the profile-mode `integration_test` scenarios (real frames on this machine). `avg`/`worst`/`p99 build` are the UI-thread build cost per frame (where list_smith's code runs); `missed` counts frames over the 16.67ms budget. `isp_scroll` vs `bare_listview` (same items + scroll, no list_smith) is the attribution: the small delta is what list_smith-over-ISP adds on top of a plain list.
+From the profile-mode `integration_test` scenarios, real frames on this machine. `avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. `isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the attribution: that small delta is what the wrapper adds to a plain list.
 
 | Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |
 |---|---:|---:|---:|---:|---:|

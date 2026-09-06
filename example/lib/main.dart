@@ -8,13 +8,12 @@ import 'features/core/views/home_view.dart';
 
 void main() => runApp(const ListSmithExampleApp());
 
-/// Showcase app for `list_smith`, built on the sibling packages' platform-adaptive
-/// stack so the neutral list surfaces can be seen dropping into a Material shell
-/// (Android) and a Cupertino shell (iOS) unchanged.
+/// Showcase app for `list_smith`, on the sibling packages' platform-adaptive stack, so the neutral
+/// surfaces can be seen dropping into a Material shell (Android) and a Cupertino one (iOS)
+/// unchanged. Platform follows the real device.
 ///
-/// Owns the app-wide theme mode and publishes it through [ThemeScope], so any
-/// screen can flip brightness live (see the app-bar control in `DemoScaffold`).
-/// Platform follows the real device.
+/// Owns the app-wide theme mode and publishes it through [ThemeScope], so any screen can flip
+/// brightness live.
 class ListSmithExampleApp extends StatefulWidget {
   const new({super.key});
 
@@ -50,7 +49,7 @@ class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
     ),
   );
 
-  /// Cupertino has no `themeMode`; map it to an explicit brightness, or `null`
+  /// Cupertino has no `themeMode`, so map it to an explicit brightness, or `null`
   /// to follow the device (the `system` case).
   Brightness? _cupertinoBrightness(ThemeMode mode) => switch (mode) {
     .system => null,

@@ -3,9 +3,8 @@ import 'package:material_ui/material_ui.dart' show ThemeMode;
 
 /// Exposes the app-wide [ThemeMode] notifier to descendants.
 ///
-/// The root app owns the `ValueNotifier<ThemeMode>`, rebuilds `PlatformApp` when
-/// it ticks, and publishes it here via the app's `builder`. Any screen reads it
-/// with [ThemeScope.of] and writes a new mode to flip the whole app's brightness.
+/// The root app owns the `ValueNotifier<ThemeMode>` and publishes it here through the app's
+/// `builder`. Any screen reads it with [ThemeScope.of] and writes a new mode to flip brightness.
 class ThemeScope extends InheritedNotifier<ValueNotifier<ThemeMode>> {
   const new({required super.notifier, required super.child, super.key});
 

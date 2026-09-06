@@ -13,8 +13,7 @@ import 'widgets/custom_error.dart';
 import 'widgets/custom_loading.dart';
 import 'widgets/custom_refresh.dart';
 
-/// Demonstrates replacing every neutral surface with a platform-adaptive one,
-/// and (via the failure toggle) the error + retry path.
+/// Every surface slot overridden with a platform-adaptive widget.
 class CustomSurfacesView extends StatelessWidget {
   const new({super.key});
 

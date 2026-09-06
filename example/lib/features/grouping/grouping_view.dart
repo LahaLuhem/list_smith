@@ -8,11 +8,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'grouping_view_model.dart';
 
-/// Groups an in-memory list into labelled sections with `ListSmith.sync` + `Grouping.by`.
-///
-/// The source assigns a category per row cyclically, so the raw list is fully interleaved; sync
-/// grouping buckets it into three contiguous sections. Typing narrows the list and the sections
-/// re-form over the matches.
+/// `ListSmith.sync` plus `Grouping.by`. The fixture cycles three categories per row, so the raw
+/// list is fully interleaved and sync bucketing has something to do.
 class GroupingView extends StatelessWidget {
   const new({super.key});
 

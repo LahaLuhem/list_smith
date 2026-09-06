@@ -8,7 +8,7 @@ import '../support/support.dart';
 void main() {
   feature('ListSmith.async ListSmithController', () {
     // Each page yields one item stamped `page * 1000 + attempt`, so a test can tell a refetched
-    // page from its first load; `attempts` records how many times each index was fetched.
+    // page from its first load. `attempts` records how many times each index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher() {
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>((request) async {
@@ -156,7 +156,7 @@ void main() {
       await controller.refresh();
       await drain(tester);
 
-      // The search stream reloaded; the normal fetcher was left alone.
+      // The search stream reloaded. The normal fetcher was left alone.
       check(searchAttempts).deepEquals({0: 2});
       check(normal.attempts).deepEquals({0: 1});
     });

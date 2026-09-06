@@ -23,84 +23,65 @@ import 'sync_list_view.dart';
 
 /// A developer-first list handling async pagination and pull-to-refresh, or sync in-memory search.
 ///
-/// Wraps `ListView.builder` and owns the scrollable and the pager, so consumers pass a data source,
-/// an [ItemBuilder], and config, never a `ListView` or the paging controller. Every visible surface
-/// has a neutral, widgets-layer default, so the list drops into a Material, Cupertino, or bespoke
-/// app without importing a look it never chose.
+/// Wraps `ListView.builder` and owns the scrollable and the pager, so you pass a data source, an
+/// [ItemBuilder], and config, never a `ListView` or a paging controller. Every visible surface has a
+/// neutral widgets-layer default, so the list drops into a Material, Cupertino, or bespoke app
+/// without dragging in a look you didn't choose.
 ///
-/// Build it with [ListSmith.async] (a paginated, pull-to-refresh list over a [PageFetcher], made
-/// searchable by also passing an [AsyncSearch]) or [ListSmith.sync] (an in-memory list searched
-/// by a [SyncSearchPredicate]). Internally it is a stateless dispatcher over a sealed [ListSource]:
-/// each named constructor builds one source case, and [build] routes that case to the engine for it,
-/// so no parameter meant for one mode is ever silently inert on another.
+/// [ListSmith.async] paginates over a [PageFetcher], and searches too when given an [AsyncSearch].
+/// [ListSmith.sync] filters an in-memory list with a [SyncSearchPredicate]. Each constructor builds
+/// one case of a sealed [ListSource] that [build] routes to its engine, so a parameter meant for one
+/// mode is never silently inert on the other.
 class ListSmith<T extends Object> extends StatelessWidget {
   final ListSource<T> _source;
 
   /// Builds the widget for each item.
   final ItemBuilder<T> itemBuilder;
 
-  /// Builds the separator between items; null for no separators.
+  /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// Builds the surface shown when the source yields no items; null uses the neutral default.
-  ///
-  /// Lives on the constructor rather than in [surfaces] because every list has an empty state, so it
-  /// reads the same whichever constructor built the list.
+  /// Builds the surface shown when the source yields no items. Null uses the neutral default. On the
+  /// constructor rather than in [surfaces] because every list has an empty state.
   final WidgetBuilder? emptyBuilder;
 
   /// The async-only override surfaces (page loading and error, end-of-list footer, refresh
   /// indicator).
   final AsyncListSurfaces surfaces;
 
-  /// Optional lifecycle observer for the async list (page loads, errors, refresh, search), for
-  /// logging or telemetry; null is silent. Async-only, like [surfaces]: `.sync` exposes no observer.
+  /// Lifecycle events for logging or telemetry. Null is silent. Async only, like [surfaces].
   final ListSmithObserver? observer;
 
-  /// Optional handle for refreshing the list from code; null leaves refresh gesture-only.
-  /// Async-only, like [observer]: an in-memory `.sync` list has nothing to reload.
+  /// Handle for refreshing the list from code. Null leaves refresh gesture-only. Async only.
   final ListSmithController? controller;
 
-  /// The current search query, owned and passed in by the consumer; trimmed and gated by
-  /// [minSearchLength]. Drives sync filtering, and async search when a search fetcher is provided.
+  /// The current search query, yours to own and pass in. Trimmed, then gated by [minSearchLength].
   final String query;
 
-  /// Minimum trimmed [query] length before a search runs; below it the query counts as empty.
+  /// Minimum trimmed [query] length before a search runs. Below it the query counts as empty.
   final int minSearchLength;
 
-  /// How long to wait after [query] changes before it takes effect; [Duration.zero] is immediate.
+  /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate.
   final Duration searchDebounce;
 
-  /// Builds the surface shown when a search matches nothing; null uses the neutral default.
+  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
   final NoResultsBuilder? noResultsBuilder;
 
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
-  /// Splits the list into sections; [NoGrouping] (the default) renders a flat list. On the sync path
-  /// the visible items are bucketed into contiguous groups; on the async path each page must already
-  /// arrive ordered by group key. See [Grouping.by].
+  /// Splits the list into sections. [NoGrouping] (the default) renders it flat. See [Grouping.by].
   final Grouping<T> grouping;
 
   /// Creates an async, paginated list driven by [fetchPage], optionally searchable via [search].
   ///
-  /// [fetchPage] receives a [PageRequest] and returns one page of items;
-  /// pagination ends per `endPolicy` (by default, the first empty page). When `endPolicy` continues
-  /// past empty pages (a raised `emptyRunBeforeEnd` or a signal policy), also pass [onEmptyPage] as
-  /// [AdvanceToFirstNonEmpty] so an empty page pages through to the first page with items instead of
-  /// stalling on the empty surface (e.g. a per-date calendar whose current day has no entries). Pass
-  /// [itemId] to de-duplicate
-  /// items across overlapping pages (e.g. an offset-based source whose data shifts between fetches);
-  /// without it, overlapping pages render the item once per page, as the underlying pager does no
-  /// de-duplication. Pass [search] as an [AsyncSearch] to opt into search: a non-empty [query] then
-  /// switches to a search view fetched by it, and its cache policy governs how the normal list carries
-  /// across that switch. [itemBuilder] renders each item; [surfaces] overrides the async-only neutral
-  /// defaults.
-  /// Pull-to-refresh is on by default; pass [NoRefresh] to [refresh] to switch it off, or a
-  /// [PullToRefresh] with a `refreshBuilder` to restyle its indicator.
-  /// [emptyBuilder], [noResultsBuilder], and [scroll] apply to every list. Pass [observer] to receive
-  /// lifecycle events (page loads, errors, refresh, search) for logging or telemetry, and
-  /// [controller] to refresh the list from code (a button, a tab re-tap) instead of only pulling.
-  /// [grouping] optionally shows the items in sections (see [Grouping.by]).
+  /// [fetchPage] gets a [PageRequest] and returns that page's items. Only it and [itemBuilder] are
+  /// required. The rest default to a 20-item page, pull-to-refresh on, pagination ending at the
+  /// first empty page, no search, no grouping, and list_smith's own neutral surfaces. Each optional
+  /// parameter's own type documents what it does.
+  ///
+  /// Two pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading
+  /// end policy needs `withSignal` fetchers on both the feed and the search.
   new async({
     required PageFetcher<T> fetchPage,
     required this.itemBuilder,
@@ -147,12 +128,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
 
   /// Creates a sync, in-memory searchable list over [items].
   ///
-  /// [searchBy] decides whether an item matches the current [query]; it is required because a sync
-  /// list is always about search (there is nothing to paginate or refresh over in-memory data). The
-  /// query is trimmed, gated by [minSearchLength], and debounced by [searchDebounce] (immediate by
-  /// default). [emptyBuilder] shows when [items] is empty and [noResultsBuilder] when a search
-  /// matches nothing; both fall back to neutral defaults. [grouping] optionally shows the items in
-  /// sections (see [Grouping.by]).
+  /// [searchBy] is required: there is nothing to paginate or refresh over in-memory data, so search
+  /// is the whole point. [searchDebounce] defaults to zero here, an in-memory filter being instant.
   new sync({
     required Iterable<T> items,
     required SyncSearchPredicate<T> searchBy,

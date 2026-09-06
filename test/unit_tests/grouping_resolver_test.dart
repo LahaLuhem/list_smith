@@ -23,7 +23,7 @@ void main() {
       .example(val(itemsKey, const <int>[]), val(bucketedKey, const <int>[]))
       // Already contiguous: order is untouched.
       .example(val(itemsKey, const [10, 11, 20]), val(bucketedKey, const [10, 11, 20]))
-      // Interleaved: regrouped; groups in first-appearance order, items stable within each.
+      // Interleaved: regrouped. Groups in first-appearance order, items stable within each.
       .example(
         val(itemsKey, const [10, 20, 11, 30, 21]),
         val(bucketedKey, const [10, 11, 20, 21, 30]),

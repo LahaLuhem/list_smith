@@ -1,10 +1,9 @@
 /// Micro-benchmark: [bucketByGroup] cost as the in-memory list grows.
 ///
-/// The sync grouping path reorders its (filtered) items into contiguous sections via `bucketByGroup`
-/// (a `groupListsBy` + flatten) synchronously on every committed query, before rendering. Measuring
-/// it AOT across a range of list sizes puts a trustworthy microseconds figure on where a big grouped
-/// list crosses the frame budget. The key extractor is a cheap modulo into a fixed number of groups,
-/// over fully interleaved input, so it exercises the real bucketing (every item reordered).
+/// The sync path buckets its filtered items into contiguous sections on every committed query,
+/// before rendering. Measuring it AOT across a range of sizes puts a trustworthy microseconds
+/// figure on where a big grouped list crosses the frame budget. The key extractor is a cheap modulo
+/// over fully interleaved input, so every item really is reordered.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -13,10 +12,10 @@ import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-/// In-memory list sizes the resolver is measured against; the pivot for the scaling curve.
+/// In-memory list sizes the resolver is measured against. The pivot for the scaling curve.
 const _listSizes = <int>[1000, 10000, 100000];
 
-/// The number of groups the key buckets into; a realistic small section count.
+/// The number of groups the key buckets into. A realistic small section count.
 const _groupCount = 8;
 
 final class _BucketByGroupScaling extends BenchmarkBase {

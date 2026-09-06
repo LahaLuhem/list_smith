@@ -1,9 +1,8 @@
 /// Scenario: scrolling a list_smith async list (ISP under the hood).
 ///
-/// Captures per-frame build/raster timing while flinging through many pages, so the cost of ISP's
-/// index-triggered load-more plus list_smith's wrapping shows up as real frames. Paired with
-/// `bare_listview` (the same item widget + scroll over a plain `ListView.builder`) for attribution:
-/// list_smith-over-ISP minus bare minus the ~0 micro overhead is ISP's own share.
+/// Per-frame build and raster timing while flinging through many pages, so ISP's index-triggered
+/// load-more plus list_smith's wrapping shows up as real frames. Paired with `bare_listview` for
+/// attribution: this minus bare, minus the ~0 micro overhead, is ISP's own share.
 library;
 
 import 'package:flutter/widgets.dart';

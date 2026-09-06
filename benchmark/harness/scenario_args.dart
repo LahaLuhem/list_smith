@@ -1,18 +1,18 @@
 /// Parsed CLI arguments for a benchmark micro (or pure-Dart scenario) entrypoint. Ported from the
 /// `better_internet_connectivity_checker` suite.
 ///
-/// Every entrypoint accepts a small standard flag set so the Python orchestrator can drive them
-/// uniformly: `--iterations N`, `--output PATH`, `--git-sha SHA`, `--package-version V`, and optional
-/// `--duration-seconds N` (micros ignore duration). Hand-parsed: the surface is too small to justify
-/// a `package:args` dependency.
+/// Every entrypoint takes the same flags so the Python orchestrator can drive them uniformly:
+/// `--iterations N`, `--output PATH`, `--git-sha SHA`, `--package-version V`, and optionally
+/// `--duration-seconds N`, which micros ignore. Hand-parsed, the surface being too small to
+/// justify a `package:args` dependency.
 library;
 
 import 'dart:io';
 
 /// The standard flag set every benchmark entrypoint parses from its argv.
 final class ScenarioArgs {
-  /// How many iterations to run in this one subprocess invocation; the entrypoint loops `0..N-1` and
-  /// emits one record per iteration, amortising process startup over N runs.
+  /// How many iterations to run in this one subprocess invocation. The entrypoint loops `0..N-1`
+  /// and emits one record per iteration, amortising process startup over N runs.
   final int iterations;
 
   /// Path the JSON result file is written to.
@@ -21,10 +21,11 @@ final class ScenarioArgs {
   /// The git HEAD SHA captured by the orchestrator, recorded in every record for traceability.
   final String gitSha;
 
-  /// The package version captured by the orchestrator from `pubspec.yaml`, recorded in every record.
+  /// The package version captured by the orchestrator from `pubspec.yaml`, recorded in every
+  /// record.
   final String packageVersion;
 
-  /// Wall-clock seconds a long-running scenario should run; micro-benchmarks ignore this.
+  /// Wall-clock seconds a long-running scenario should run. Micro-benchmarks ignore this.
   final int durationSeconds;
 
   const new _({
@@ -62,7 +63,7 @@ final class ScenarioArgs {
     );
   }
 
-  /// The Dart SDK version from [Platform.version]; a different SDK invalidates a captured baseline.
+  /// The Dart SDK version from [Platform.version]. A different SDK invalidates a captured baseline.
   static String get sdkVersion => Platform.version.split(' ').first;
 
   static String _required(Map<String, String> flags, String name) {

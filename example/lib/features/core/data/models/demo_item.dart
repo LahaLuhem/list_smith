@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart' show immutable;
 
-/// One row in the demo dataset. Deliberately tiny: a stable [id] plus two text fields the item
-/// builders render. [matches] is a single title-based rule used by the async search fetch and the
-/// grouping demo; the sync search demo instead uses `SyncSearchPredicates.fields` over both fields.
+/// One row in the demo dataset: a stable [id] plus two text fields the item builders render.
 @immutable
 class DemoItem {
   final int id;
@@ -11,9 +9,8 @@ class DemoItem {
 
   const new({required this.id, required this.title, required this.subtitle});
 
-  /// Whether this item matches [query] (case-insensitive substring of [title]). Used by the async
-  /// search fetch and the grouping demo. The sync search demo instead builds its predicate with
-  /// `SyncSearchPredicates.fields` over title and subtitle.
+  /// Whether [title] contains [query], case-insensitively. Used by the async search fetch and the
+  /// grouping demo. Sync search builds its own predicate over both fields instead.
   bool matches(String query) => title.toLowerCase().contains(query.toLowerCase());
 
   @override

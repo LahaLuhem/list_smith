@@ -1,4 +1,4 @@
-"""`cmd_compare` — pivot-aware Mann-Whitney diff of two runs + a forest chart + COMPARE.md.
+"""`cmd_compare`: pivot-aware Mann-Whitney diff of two runs, a forest chart, and COMPARE.md.
 
 Prints the significance table to stdout for interactive use, then (best-effort) writes a forest-plot
 PNG and COMPARE.md to the output dir. Chart rendering is best-effort: a missing analysis stack still
@@ -26,15 +26,15 @@ def cmd_compare(args: argparse.Namespace) -> int:
     """Diff two aggregated.json result sets with a pivot-aware Mann-Whitney U test.
 
     Writes to `<out>/` (default `benchmark/reports/`):
-      - compare_forest.png — % deltas, coloured by significance + direction
-      - COMPARE.md         — the forest embed + the significance table
+      - compare_forest.png: % deltas, coloured by significance and direction
+      - COMPARE.md:         the forest embed plus the significance table
     """
     try:
         # Imported here only so a missing-dep failure points at `uv sync` rather than a stack trace
         # deep inside stats.py.
         from scipy import stats as _scipy_stats  # noqa: F401
     except ImportError:
-        print("scipy required — run `uv sync` from benchmark/python/", file=sys.stderr)
+        print("scipy required. Run `uv sync` from benchmark/python/", file=sys.stderr)
         return 1
 
     baseline_records = load_aggregated(args.baseline)
@@ -42,19 +42,19 @@ def cmd_compare(args: argparse.Namespace) -> int:
     rows = compute_compare_rows(baseline_records, current_records)
     _print_compare_table(rows)
 
-    # The regression gate is the CI-facing verdict; compute it up front so every return path (even
+    # The regression gate is the CI-facing verdict. Compute it up front so every return path (even
     # the missing-charts one) honours it.
     exit_code = _regression_exit_code(rows, args)
 
     # The text table + verdict above are the deliverable, so a missing chart stack does not change
-    # the outcome — the user still gets the answer.
+    # the outcome, and the user still gets the answer.
     missing = [
         name
         for name in ("matplotlib", "polars", "seaborn", "pandas")
         if importlib.util.find_spec(name) is None
     ]
     if missing:
-        print(f"\nskipping charts — missing deps: {', '.join(missing)}", file=sys.stderr)
+        print(f"\nskipping charts, missing deps: {', '.join(missing)}", file=sys.stderr)
         print("  run `uv sync` from benchmark/python/", file=sys.stderr)
         return exit_code
 
@@ -86,7 +86,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def _regression_exit_code(rows: list[CompareRow], args: argparse.Namespace) -> int:
-    """0 normally; 1 when `--fail-on-regression` is set and a metric regressed past threshold."""
+    """0 normally. 1 when `--fail-on-regression` is set and a metric regressed past threshold."""
     if not getattr(args, "fail_on_regression", False):
         return 0
 

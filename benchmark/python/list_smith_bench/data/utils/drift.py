@@ -1,10 +1,9 @@
-"""Measures *when* each side of a comparison was sampled — the gate's actual failure mode.
+"""Measures *when* each side of a comparison was sampled, the gate's actual failure mode.
 
-The regression gate's false positives come from run order, not from the statistics (issue #43):
-under the fixed candidate-then-baseline order the two sides occupy different halves of the job, so
-any drift over the job (page cache warming, CPU frequency, a noisy neighbour) lands on one side.
-Every record already carries `started_at`, so that coupling is measurable directly rather than
-inferred from a flake caught in the act.
+The regression gate's false positives come from run order, not from the statistics: under a fixed
+candidate-then-baseline order the two sides occupy different halves of the job, so any drift over
+it (page cache warming, CPU frequency, a noisy neighbour) lands on one side. Every record carries
+`started_at`, so that coupling is measurable directly rather than inferred from a caught flake.
 """
 
 from __future__ import annotations
@@ -15,7 +14,7 @@ from list_smith_bench.data.dtos.result_record import ResultRecord
 
 
 def _timestamps(records: list[ResultRecord]) -> list[datetime]:
-    """Parseable `started_at` values of `records`; unparseable or missing ones are skipped."""
+    """Parseable `started_at` values of `records`. Unparseable or missing ones are skipped."""
     stamps: list[datetime] = []
     for record in records:
         raw = record.get("started_at")

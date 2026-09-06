@@ -10,9 +10,7 @@ import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/event_log_panel.dart';
 import 'cache_routing_view_model.dart';
 
-/// A caching repository in front of `ListSmith.async`, routed on `PageRequest.trigger`: a scroll is
-/// served from cache, a pull-to-refresh bypasses it. Each row shows the fetch that produced it, so
-/// turn the knob off and pull again to watch the same stale rows come back.
+/// A caching repository in front of `ListSmith.async`, routed on `PageRequest.trigger`.
 class CacheRoutingView extends StatelessWidget {
   const new({super.key});
 

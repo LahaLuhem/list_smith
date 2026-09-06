@@ -4,18 +4,16 @@ import '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.
 ///
-/// A ready-made sink for quick diagnostics: pass
-/// `ListSmith.async(observer: const LoggingListSmithObserver())` to watch a list's load, error,
-/// refresh, and search lifecycle in the console and Flutter DevTools' logging view (filter it by the
-/// `list_smith` source). It uses [developer.log] rather than `print`, so the package stays
-/// `avoid_print`-clean and a plain-Dart context still surfaces records on stdout. For a custom log
-/// name, structured records, or filtered telemetry, subclass [ListSmithObserver] directly instead.
+/// For quick diagnostics: pass `observer: const LoggingListSmithObserver()` and every event turns
+/// up in the console and DevTools' logging view, filterable by the `list_smith` source. Uses
+/// [developer.log] rather than `print`, so the package stays `avoid_print`-clean. Want a custom
+/// name, structured records, or filtered telemetry? Subclass [ListSmithObserver] instead.
 final class LoggingListSmithObserver extends ListSmithObserver {
-  /// The logger name applied to every record; filter DevTools by it to isolate list_smith's events.
+  /// The logger name on every record. Filter DevTools by it.
   static const _name = 'list_smith';
 
-  /// Severity forwarded to [developer.log] for [onError]; matches `package:logging`'s `Level.SEVERE`
-  /// so consumers piping through it see the record at the expected level.
+  /// Matches `package:logging`'s `Level.SEVERE`, so a consumer piping through it sees the level
+  /// they expect.
   static const _severeLevel = 900;
 
   /// Creates a [LoggingListSmithObserver].

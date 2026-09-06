@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Entry point for the `list_smith` benchmark suite.
 
-Thin argparse + dispatch shim; the subcommands live under `list_smith_bench/subcommands/`.
+Thin argparse + dispatch shim. The subcommands live under `list_smith_bench/subcommands/`.
 See ../README.md for the workflow and the measurement methodology.
 """
 

@@ -4,9 +4,8 @@ import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
-/// A platform-adaptive error surface carrying the error and a retry action.
-/// [compact] switches between the full-viewport first-page form and the
-/// new-page footer form.
+/// A platform-adaptive error surface carrying the error and a retry action. [compact] switches
+/// between the full-viewport first-page form and the new-page footer.
 class CustomError extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;

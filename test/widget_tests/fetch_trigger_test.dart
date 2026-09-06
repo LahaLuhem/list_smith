@@ -43,7 +43,7 @@ void main() {
       }
       await drain(tester, frames: 12);
 
-      // The reload's own page is refresh-driven; the pages it pages on to are not.
+      // The reload's own page is refresh-driven. The pages it pages on to are not.
       check(triggers.first).equals(.refresh);
       check(triggers.skip(1).toSet()).deepEquals(const {FetchTrigger.nextPage});
     });
@@ -261,15 +261,16 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // The list paged itself past the empty first page; that self-driven fetch is still a next page.
+      // The list paged itself past the empty first page. That self-driven fetch is still a next
+      // page.
       check(seen.first).equals((page: 0, trigger: FetchTrigger.initialLoad));
       check(seen[1]).equals((page: 1, trigger: FetchTrigger.nextPage));
     });
   });
 }
 
-/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of three
-/// items and then empty pages (the default end policy's end).
+/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of
+/// three items and then empty pages (the default end policy's end).
 PageFetcher<int> _recording(List<FetchTrigger> triggers, {required int pages}) => PageFetcher<int>((
   request,
 ) async {
