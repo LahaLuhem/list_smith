@@ -5,8 +5,8 @@ import 'package:meta/meta.dart';
 
 /// The handle a [Reload] works through, the `BuildContext` analogue for a reload.
 ///
-/// The engine implements it and hands it to [Reload.run], so a reload reads depth, fetches, and
-/// commits or resets without touching the paging controller. Internal, since [Reload] is sealed.
+/// The engine hands one to [Reload.run] per reload, so a reload reads depth, fetches, and commits
+/// or resets without touching the paging controller. Internal, since [Reload] is sealed.
 @internal
 abstract interface class ReloadContext<T extends Object> {
   /// The pages currently loaded, in order. Its length is the depth to reload to, and a best-effort
