@@ -1,3 +1,8 @@
+// A test-local observer double shares the file with the scenarios that drive it.
+// ignore_for_file: prefer-match-file-name
+
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -125,6 +130,72 @@ void main() {
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
     });
 
+    scenarioWidgets('a second refresh joins under the default reload too', (tester) async {
+      final fetcher = valuedFetcher();
+      final controller = ListSmithController();
+      final observer = RecordingListSmithObserver();
+
+      await pumpList(
+        tester,
+        fetchPage: fetcher.fetchPage,
+        controller: controller,
+        observer: observer,
+      );
+      await drain(tester);
+
+      // ResetToFirstPage resets the stream at once. The run's own reset must not read as "moved on".
+      await [controller.refresh(), controller.refresh()].wait;
+      await drain(tester);
+
+      check(observer.events.where((event) => event == 'refresh')).length.equals(1);
+      check(fetcher.attempts).deepEquals({0: 2});
+    });
+
+    scenarioWidgets('a refresh() re-entered from the refresh event joins the one starting', (
+      tester,
+    ) async {
+      final fetcher = valuedFetcher();
+      final controller = ListSmithController();
+      final observer = _ReentrantObserver(controller);
+
+      await pumpList(
+        tester,
+        fetchPage: fetcher.fetchPage,
+        controller: controller,
+        pageCount: 3,
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
+        observer: observer,
+      );
+      await drain(tester, frames: 12);
+
+      await controller.refresh();
+      await drain(tester);
+
+      check(observer.fired).equals(1);
+      check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
+    });
+
+    scenarioWidgets('a refresh() right after one finished runs its own', (tester) async {
+      final fetcher = valuedFetcher();
+      final controller = ListSmithController();
+
+      await pumpList(
+        tester,
+        fetchPage: fetcher.fetchPage,
+        controller: controller,
+        pageCount: 3,
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
+      );
+      await drain(tester, frames: 12);
+
+      // No frame between them: the second call runs in the first one's continuation.
+      await controller.refresh();
+      await controller.refresh();
+      await drain(tester);
+
+      check(fetcher.attempts).deepEquals({0: 3, 1: 3, 2: 3});
+    });
+
     scenarioWidgets('refresh() while searching reloads the search, not the normal list', (
       tester,
     ) async {
@@ -200,4 +271,18 @@ void main() {
       check(fetcher.attempts).deepEquals({0: 2});
     });
   });
+}
+
+/// Calls `refresh()` back from the refresh event, once, as a consumer chaining work off it might.
+final class _ReentrantObserver extends ListSmithObserver {
+  final ListSmithController controller;
+  var fired = 0;
+
+  new(this.controller);
+
+  @override
+  void onRefresh() {
+    fired++;
+    if (fired == 1) unawaited(controller.refresh());
+  }
 }
