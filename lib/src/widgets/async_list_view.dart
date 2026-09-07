@@ -382,7 +382,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void _commit(List<List<T>> pages, {Object? lastSignal}) {
     _generation++;
     _lastPageSignal = lastSignal;
-    final keys = [for (var index = 0; index < pages.length; index++) index];
+    final keys = List<int>.generate(pages.length, (index) => index, growable: false);
     final probe = PagingState<int, T>(pages: pages, keys: keys);
 
     _replacePagingState(

@@ -57,35 +57,34 @@ final class ReloadToCurrentDepth extends Reload {
     ReloadContext<T> context,
     List<List<T>> old,
   ) async {
-    final depth = old.length;
-    final fresh = List<List<T>?>.filled(depth, null);
     final isAtomic = onError == .allOrNothing;
     var didFail = false;
 
-    Future<void> fetchInto(int index) async {
-      if (isAtomic && didFail) return; // fail-fast: skip once a page has failed
-      if (context.isStale) return;
+    // Null marks a page that failed or was skipped. Under allOrNothing, one failure skips the rest.
+    Future<List<T>?> fetchOrNull(int index) async {
+      if ((isAtomic && didFail) || context.isStale) return null;
 
       try {
         final (items, _) = await context.fetch(index, null);
-        fresh[index] = items;
+
+        return items;
       } on Exception {
         didFail = true; // the observer already saw the error
+
+        return null;
       }
     }
 
-    final limit = concurrency;
-    if (limit == null) {
-      await List.generate(depth, fetchInto).wait;
-    } else {
-      final pool = Pool(limit);
-      await List.generate(depth, (index) => pool.withResource(() => fetchInto(index))).wait;
-      await pool.close();
-    }
-
+    // A pool as wide as the depth is "all at once", so a null concurrency needs no branch of its own.
+    final pool = Pool(concurrency ?? old.length);
+    final fresh = await Iterable.generate(
+      old.length,
+      (index) => pool.withResource(() => fetchOrNull(index)),
+    ).wait;
+    await pool.close();
     if (isAtomic && didFail) return; // keep the old pages untouched
 
-    context.commit([for (var index = 0; index < depth; index++) fresh[index] ?? old[index]]);
+    context.commit(fresh.mapIndexed((index, page) => page ?? old[index]).toList(growable: false));
   }
 
   @override
