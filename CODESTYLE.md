@@ -291,13 +291,12 @@ back door. Watching the list is the observer's job. Full rationale:
 **How:**
 
 - One verb per consumer intent, returning a `Future<void>` that completes when the work does.
-- Attach the engine's *existing* entry point, the closure the gesture already drives, so the handle
-  can't carry a second implementation that drifts.
+- The engine implements `ListSmithControllerHost` and attaches itself, so the gesture and the handle
+  run the same entry point and the handle can't carry a second implementation that drifts.
 - Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached no-ops rather
   than throwing. Assert only for what can only be wiring, meaning nothing ever attached.
-- Use a plain callback while there is one intent, and promote to an `@internal` capability
-  interface (the `ReloadContext` shape) once there are several. A one-method interface is ceremony
-  around a closure until a second method earns it.
+- A new intent is one method on the host and one forwarding verb on the handle, nothing else. The
+  host is `@internal`, the `ReloadContext` shape: consumers hold the handle, never the engine.
 
 ---
 
