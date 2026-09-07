@@ -49,10 +49,11 @@ final class CacheRoutingViewModel extends ViewModel {
   }
 
   // A refresh is the user asking for fresh data and a retry follows a failure, so neither should be
-  // answered from the cache. The rest are ordinary reads.
+  // answered from the cache. The rest are ordinary reads, an invalidated one included: the store
+  // changed, not the network.
   bool _bypassesCache(FetchTrigger trigger) => switch (trigger) {
     .refresh || .retry => true,
-    .initialLoad || .nextPage || .queryChanged => false,
+    .initialLoad || .nextPage || .queryChanged || .invalidated => false,
   };
 
   List<DemoItem> _stamped(List<DemoItem> page, {required int fetch}) => page

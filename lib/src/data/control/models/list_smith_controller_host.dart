@@ -11,4 +11,10 @@ import 'package:meta/meta.dart';
 abstract interface class ListSmithControllerHost {
   /// Reloads exactly as a pull would. The contract is [ListSmithController.refresh]'s.
   Future<void> refresh();
+
+  /// Re-reads every loaded page in place. The contract is [ListSmithController.invalidate]'s.
+  Future<void> invalidate();
+
+  /// Starts the list over from its first page. The contract is [ListSmithController.reset]'s.
+  Future<void> reset();
 }

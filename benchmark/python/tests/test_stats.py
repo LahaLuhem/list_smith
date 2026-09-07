@@ -46,6 +46,7 @@ _SCENARIO_PIVOTS: dict[str, str] = {
     "sync_search_scaling": "list_size",
     "bucket_by_group_scaling": "list_size",
     "dedup_scaling": "item_count",
+    "header_flags_scaling": "item_count",
     "wrapping_overhead": "page_count",
     "slow_observer": "observer_delay_millis",
 }

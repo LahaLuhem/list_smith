@@ -137,8 +137,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
-  /// The reload running now. A second trigger joins it rather than starting a rival, unless the
-  /// list moved on under it. Null when none is in flight.
+  /// The reload running now. A second call joins it rather than starting a rival, unless the list
+  /// moved on under it, and may book one more run after it. Null when none is in flight.
   _ReloadRun<T>? _running;
 
   @override
@@ -441,31 +441,57 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     };
   }
 
-  /// The one refresh entry point, gesture or controller. Joins the reload already running, unless
-  /// the list moved on under it, in which case a fresh one starts.
   @override
-  Future<void> refresh() {
-    final running = _running;
-    if (running != null && !running.isStale) return running.done;
+  Future<void> refresh() => _runReload(.refresh);
 
-    final run = _ReloadRun(this, .refresh);
+  @override
+  Future<void> invalidate() => _runReload(.invalidated);
+
+  /// Cuts in: the generation bump leaves whatever is running stale, so the next caller starts fresh.
+  @override
+  Future<void> reset() {
+    widget.observer?.onReload(.invalidated);
+    _resetPaging(.invalidated);
+
+    return Future<void>.syncValue(null);
+  }
+
+  /// The one reload entry point, gesture or controller. Joins the reload already running unless the
+  /// list moved on under it. Two refreshes coalesce. Any other pair runs once more afterwards,
+  /// `.refresh` winning, so a write landing on a page the run already read is not missed.
+  Future<void> _runReload(FetchTrigger trigger) {
+    final running = _running;
+    if (running != null && !running.isStale) {
+      if (running.trigger != .refresh || trigger != .refresh) {
+        running.rerun = running.rerun == .refresh ? .refresh : trigger;
+      }
+
+      return running.done;
+    }
+
+    final run = _ReloadRun(this, trigger);
     _running = run;
-    widget.observer?.onReload(.refresh);
+    widget.observer?.onReload(trigger);
     unawaited(
-      _configuredReload.run(run).whenComplete(() {
+      _reloadFor(trigger).run(run).whenComplete(() {
         if (identical(_running, run)) _running = null;
         run.finish();
+        final rerun = run.rerun;
+        if (rerun != null && !run.isStale) unawaited(_runReload(rerun));
       }),
     );
 
     return run.done;
   }
 
-  /// The pull's [Reload]. A `NoRefresh` list has no gesture but is still refreshable from code, so
-  /// it falls back to the pager's own reset.
-  Reload get _configuredReload => switch (widget.source.refresh) {
-    PullToRefresh(:final reload) => reload,
-    NoRefresh() => const ResetToFirstPage(),
+  /// A re-read keeps the user's place. A refresh does what the pull is configured to do, or the
+  /// pager's own reset on a `NoRefresh` list, which has no gesture but is still refreshable from code.
+  Reload _reloadFor(FetchTrigger trigger) => switch (trigger) {
+    .invalidated => const ReloadToCurrentDepth(),
+    _ => switch (widget.source.refresh) {
+      PullToRefresh(:final reload) => reload,
+      NoRefresh() => const ResetToFirstPage(),
+    },
   };
 }
 
@@ -484,6 +510,9 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   /// The generation this run belongs to. Its own writes move it along, so only another writer can
   /// make it stale.
   int _epoch;
+
+  /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
+  FetchTrigger? rerun;
 
   new(this._engine, this.trigger) : _epoch = _engine._generation;
 
