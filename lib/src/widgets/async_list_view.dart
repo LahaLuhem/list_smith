@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
+import '/src/data/control/models/list_smith_controller_host.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
@@ -102,7 +103,8 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   State<AsyncListView<T>> createState() => _AsyncListViewState<T>();
 }
 
-class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
+class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
+    implements ListSmithControllerHost {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
 
@@ -146,7 +148,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
     _pager.addListener(_maybeAdvancePastEmptyPage);
-    widget.controller?.attach(_onRefresh);
+    widget.controller?.attach(this);
   }
 
   @override
@@ -155,7 +157,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
 
     if (widget.controller != oldWidget.controller) {
       oldWidget.controller?.detach();
-      widget.controller?.attach(_onRefresh);
+      widget.controller?.attach(this);
     }
     if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
   }
@@ -423,16 +425,17 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>> {
     return switch (widget.source.refresh) {
       NoRefresh() => list,
       PullToRefresh(:final refreshBuilder) => RefreshBinding(
-        onRefresh: _onRefresh,
+        onRefresh: refresh,
         refreshBuilder: refreshBuilder,
         child: list,
       ),
     };
   }
 
-  /// The one refresh entry point, gesture or code. Joins the reload already running, unless the
-  /// list moved on under it, in which case a fresh one starts.
-  Future<void> _onRefresh() {
+  /// The one refresh entry point, gesture or controller. Joins the reload already running, unless
+  /// the list moved on under it, in which case a fresh one starts.
+  @override
+  Future<void> refresh() {
     final running = _running;
     if (running != null && !running.isStale) return running.done;
 

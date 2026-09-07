@@ -59,18 +59,18 @@ final class ReloadToCurrentDepth extends Reload {
   ) async {
     final depth = old.length;
     final fresh = List<List<T>?>.filled(depth, null);
-    final atomic = onError == .allOrNothing;
-    var failed = false;
+    final isAtomic = onError == .allOrNothing;
+    var didFail = false;
 
     Future<void> fetchInto(int index) async {
-      if (atomic && failed) return; // fail-fast: skip once a page has failed
+      if (isAtomic && didFail) return; // fail-fast: skip once a page has failed
       if (context.isStale) return;
 
       try {
         final (items, _) = await context.fetch(index, null);
         fresh[index] = items;
       } on Exception {
-        failed = true; // the observer already saw the error
+        didFail = true; // the observer already saw the error
       }
     }
 
@@ -83,7 +83,7 @@ final class ReloadToCurrentDepth extends Reload {
       await pool.close();
     }
 
-    if (atomic && failed) return; // keep the old pages untouched
+    if (isAtomic && didFail) return; // keep the old pages untouched
 
     context.commit([for (var index = 0; index < depth; index++) fresh[index] ?? old[index]]);
   }

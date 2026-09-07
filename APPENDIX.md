@@ -429,9 +429,9 @@ renames.
 - **Intents, not state.** No `isRefreshing`, count or `hasMore`. Notification is the observer's job
   ([#observer-seam](#observer-seam)), and a state-bearing handle re-exposes the pager by the back
   door.
-- **One refresh path.** The handle attaches the engine's own `_onRefresh`, the closure the gesture
-  drives, so the configured `Reload` and the search-mode behaviour are shared by construction rather
-  than by a second implementation that could drift.
+- **One refresh path.** The engine implements `ListSmithControllerHost` and attaches itself, so the
+  gesture and the handle run the same `refresh()`. The configured `Reload` and the search-mode
+  behaviour are shared by construction rather than by a second implementation that could drift.
 - **`NoRefresh` means no gesture, not no refresh**, so its previously-unreachable arm now runs
   `ResetToFirstPage`. A gesture-less list therefore can't pick a strategy. A per-call
   `refresh({Reload? using})`, or a `Reload` getter on the `Refresh` seam, is the build-upward path.
@@ -440,9 +440,9 @@ renames.
   [#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1) rejected. The button owns its progress.
 - **Coalesced**, since a button can double-fire where the gesture can't, the indicator having to be
   idle. Not a fix for the in-flight-fetch race.
-- **A callback, not a capability interface.** A one-method `abstract interface class` (the
-  `ReloadContext` shape) is ceremony around a closure while there is a single intent. It earns its
-  place once item mutations add more, and swapping to one then is internal.
+- **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the `ReloadContext`
+  shape. A closure was the right size while `refresh()` was the only intent. With more on the way,
+  each new one is a method on the host and a forwarding verb on the handle, and the swap was internal.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
   through a controller no list ever received is a wiring mistake.
 
