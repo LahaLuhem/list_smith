@@ -32,7 +32,7 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
       groupOf: groupOf,
       headerFor: headerFor,
       scrollDirection: axis,
-      showHeader: headerFlags[index],
+      drawsHeader: headerFlags[index],
       item: item,
       index: index,
     );

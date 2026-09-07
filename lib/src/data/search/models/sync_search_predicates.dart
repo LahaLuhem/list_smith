@@ -58,13 +58,13 @@ abstract final class SyncSearchPredicates {
 
     return (item, query) {
       final terms = query.toLowerCase().split(' ').where((term) => term.isNotEmpty);
-      final values = fieldExtractors
+      final fieldValues = fieldExtractors
           .map((extractField) => extractField(item))
           .nonNulls
           .map((value) => value.toLowerCase())
           .toList(growable: false);
 
-      return terms.every((term) => values.any((value) => value.contains(term)));
+      return terms.every((term) => fieldValues.any((value) => value.contains(term)));
     };
   }
 

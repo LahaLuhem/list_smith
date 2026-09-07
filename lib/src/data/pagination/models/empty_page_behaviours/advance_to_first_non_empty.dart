@@ -16,9 +16,11 @@ final class AdvanceToFirstNonEmpty extends EmptyPageBehaviour {
 
   @override
   bool shouldAdvance(EmptyPageContext context) {
-    final cap = maxPages;
+    final pageCap = maxPages;
 
-    return context.isEmpty && context.moreAvailable && (cap == null || context.pagesLoaded < cap);
+    return context.isEmpty &&
+        context.isMoreAvailable &&
+        (pageCap == null || context.pagesLoaded < pageCap);
   }
 
   @override

@@ -209,7 +209,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     try {
       final (items, signal) = switch (search) {
-        final AsyncSearch<T> s when isSearchMode => await s.fetchPage(
+        final AsyncSearch<T> asyncSearch when isSearchMode => await asyncSearch.fetchPage(
           SearchPageRequest(
             query: committedQuery,
             pageIndex: pageKey,
@@ -248,13 +248,13 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final pages = state.pages;
     if (pages == null || pages.isEmpty) return 0;
 
-    final context = EndContext(
+    final endContext = EndContext(
       pageItemCounts: pages.map((page) => page.length).toList(growable: false),
       pageSize: widget.source.pageSize,
       lastPageSignal: _lastPageSignal,
     );
 
-    return widget.source.endPolicy.hasReachedEnd(context) ? null : pages.length;
+    return widget.source.endPolicy.hasReachedEnd(endContext) ? null : pages.length;
   }
 
   /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already
@@ -268,11 +268,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final itemId = widget.source.itemId;
     if (itemId == null) return state;
 
-    final memo = _displayMemo;
-    if (memo != null && identical(state, memo.raw)) return memo.display;
+    final displayMemo = _displayMemo;
+    if (displayMemo != null && identical(state, displayMemo.raw)) return displayMemo.display;
 
-    final seen = <Object>{};
-    final displayState = state.filterItems((item) => seen.add(itemId(item)));
+    final seenIds = <Object>{};
+    final displayState = state.filterItems((item) => seenIds.add(itemId(item)));
     _displayMemo = (raw: state, display: displayState);
 
     return displayState;
@@ -298,7 +298,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       widget.source.onEmptyPage.shouldAdvance(
         EmptyPageContext(
           isEmpty: _dedupedForDisplay(state).items?.isEmpty ?? false,
-          moreAvailable: _nextPageKey(state) != null,
+          isMoreAvailable: _nextPageKey(state) != null,
           pagesLoaded: state.pages?.length ?? 0,
         ),
       );
@@ -307,8 +307,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final wasSearching = _searchModeNotifier.value;
     final isSearchMode = _isSearchQuery(committedQuery);
     final search = widget.source.search;
-    final action = switch (search) {
-      final AsyncSearch<T> s => s.cachePolicy.actionFor(
+    final cacheAction = switch (search) {
+      final AsyncSearch<T> asyncSearch => asyncSearch.cachePolicy.actionFor(
         wasSearching: wasSearching,
         isSearching: isSearchMode,
       ),
@@ -316,17 +316,17 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     };
 
     _searchModeNotifier.value = isSearchMode;
-    final reloaded = _applyCacheAction(action);
+    final didReload = _applyCacheAction(cacheAction);
 
     final observer = widget.observer;
     observer?.onQueryCommitted(committedQuery);
     if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
-    if (reloaded) observer?.onReload(.queryChanged);
+    if (didReload) observer?.onReload(.queryChanged);
   }
 
-  /// Applies [action] and says whether the stream restarted. A restore from snapshot fetches nothing.
-  bool _applyCacheAction(CacheAction action) {
-    switch ((action, _normalSnapshot)) {
+  /// Applies [cacheAction] and says whether the stream restarted. A restore from snapshot fetches nothing.
+  bool _applyCacheAction(CacheAction cacheAction) {
+    switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
         // No fetch here, so no trigger to latch: the next one is whatever the user does next.
         _generation++;
@@ -373,8 +373,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential,
   /// atomic reload.
   bool get _isSignalBased => switch (widget.source.search) {
-    final AsyncSearch<T> s when _isSearchQuery(_debouncer.committedQuery) =>
-      s.fetchPage.reportsSignal,
+    final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
+      asyncSearch.fetchPage.reportsSignal,
     AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.reportsSignal,
   };
 
@@ -382,11 +382,15 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   void _commit(List<List<T>> pages, {Object? lastSignal}) {
     _generation++;
     _lastPageSignal = lastSignal;
-    final keys = List<int>.generate(pages.length, (index) => index, growable: false);
-    final probe = PagingState<int, T>(pages: pages, keys: keys);
+    final pageKeys = List<int>.generate(pages.length, (index) => index, growable: false);
+    final probeState = PagingState<int, T>(pages: pages, keys: pageKeys);
 
     _replacePagingState(
-      PagingState<int, T>(pages: pages, keys: keys, hasNextPage: _nextPageKey(probe) != null),
+      PagingState<int, T>(
+        pages: pages,
+        keys: pageKeys,
+        hasNextPage: _nextPageKey(probeState) != null,
+      ),
     );
   }
 
@@ -394,7 +398,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   Widget build(BuildContext context) {
     final surfaces = widget.surfaces;
 
-    final list = PagingListener(
+    final pagedList = PagingListener(
       controller: _pager,
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
@@ -428,11 +432,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     );
 
     return switch (widget.source.refresh) {
-      NoRefresh() => list,
+      NoRefresh() => pagedList,
       PullToRefresh(:final refreshBuilder) => RefreshBinding(
         onRefresh: refresh,
         refreshBuilder: refreshBuilder,
-        child: list,
+        child: pagedList,
       ),
     };
   }

@@ -14,7 +14,7 @@ import 'list_smith_controller_host.dart';
 /// a [ListSmithObserver] instead. Holds no resources, so there is nothing to dispose.
 class ListSmithController {
   ListSmithControllerHost? _host;
-  var _everAttached = false;
+  var _wasEverAttached = false;
 
   /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] on a
   /// `NoRefresh` list) and reloading the current search while searching.
@@ -25,7 +25,7 @@ class ListSmithController {
   /// attached asserts, since that is wiring rather than a race.
   Future<void> refresh() {
     assert(
-      _host != null || _everAttached,
+      _host != null || _wasEverAttached,
       'Pass this ListSmithController to ListSmith.async before calling refresh().',
     );
 
@@ -37,7 +37,7 @@ class ListSmithController {
   void attach(ListSmithControllerHost host) {
     assert(_host == null, 'A ListSmithController drives one list; this one is already attached.');
     _host = host;
-    _everAttached = true;
+    _wasEverAttached = true;
   }
 
   /// Unbinds the list, leaving this controller inert. Called when that list is disposed.

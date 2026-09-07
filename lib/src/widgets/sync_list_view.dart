@@ -90,9 +90,9 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
   void didUpdateWidget(SyncListView<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final itemsChanged = !identical(widget.source.items, oldWidget.source.items);
-    if (itemsChanged) _items = widget.source.items.toList(growable: false);
-    if (itemsChanged || !identical(widget.grouping, oldWidget.grouping)) {
+    final didItemsChange = !identical(widget.source.items, oldWidget.source.items);
+    if (didItemsChange) _items = widget.source.items.toList(growable: false);
+    if (didItemsChange || !identical(widget.grouping, oldWidget.grouping)) {
       _resultNotifier.value = _resolve();
     }
 
@@ -108,7 +108,7 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
   }
 
   ({List<T> visibleItems, bool isSearching}) _resolve() {
-    final search = resolveSyncSearch(
+    final searchResult = resolveSyncSearch(
       _items,
       widget.source.searchBy,
       _debouncer.committedQuery,
@@ -116,8 +116,8 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
     );
 
     return (
-      visibleItems: widget.grouping.arrange(search.visibleItems),
-      isSearching: search.isSearching,
+      visibleItems: widget.grouping.arrange(searchResult.visibleItems),
+      isSearching: searchResult.isSearching,
     );
   }
 
