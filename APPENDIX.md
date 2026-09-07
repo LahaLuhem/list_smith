@@ -27,6 +27,7 @@ renames.
 - [A narrow controller: intents out, nothing back](#controller-handle)
 - [Fetchers take a request object, not an argument list](#page-request-object)
 - [Fetchers are told why they were called](#fetch-trigger)
+- [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind six aggregate checks](#dependabot-automerge)
 
@@ -516,6 +517,22 @@ renames.
   into whatever the user did next. It still drops the retry marker, or a failed search page could
   mark the restored list's next page as a retry. `commit()` needs neither: a reload commits exactly
   `depth` pages, so the next fetch is `depth` and can't collide with a lower failed index.
+
+---
+
+<a id="scan-loops"></a>
+## Per-item scans on the build path stay loops, and pack their flags
+
+- **Decision:** `headerFlagsByFirstSighting` and `groupsAreContiguous` are single-pass loops over
+  the lazy flatten of the loaded pages, and the flags come back as a `BoolList`.
+- **Why:** both run on every `PagedView` build. Against the loop, a chain on one stateful closure
+  costs about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per run.
+  The indexed `List.generate` form paid for its flatten and still lost.
+- **`BoolList`:** a bit per flag instead of a reference, so tens of times less memory and about 3x
+  faster reads, for about 20% more build time than a growable `List<bool>`. Never
+  `BoolList.of(iterable)` over a stateful chain: it reads `.length` and then `setAll`, so the chain
+  runs twice and every key reads as already seen.
+- **Tripwire:** the `header_flags_scaling` micro.
 
 ---
 

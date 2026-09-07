@@ -464,6 +464,11 @@ loop's clothes. Where `dart:core` has no matching method, reach for the `collect
 twice or an API genuinely needs a `List`, and then `.toList(growable: false)` says it won't be
 mutated.
 
+**A per-item scan on the build path gets measured before it becomes a chain.** An iterator per
+element, and a list per run with `splitBetween`, cost several times a single-pass loop
+([`APPENDIX.md#scan-loops`](APPENDIX.md#scan-loops)). There, the loop is the honest form.
+Page-granularity work stays a chain.
+
 <a id="idioms-async-wait"></a>
 ### `dart:async` `wait` extensions over static `Future.wait(...)`
 
