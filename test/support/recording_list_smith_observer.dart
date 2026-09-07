@@ -20,7 +20,7 @@ final class RecordingListSmithObserver extends ListSmithObserver {
   }
 
   @override
-  void onRefresh() => events.add('refresh');
+  void onReload(FetchTrigger trigger) => events.add('reload(${trigger.name})');
 
   @override
   void onQueryCommitted(String query) => events.add('queryCommitted($query)');

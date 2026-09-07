@@ -20,7 +20,7 @@ void main() {
           observer
             ..onPageLoaded(0, 3, isSearchMode: false)
             ..onError(Exception('x'), StackTrace.current)
-            ..onRefresh()
+            ..onReload(.refresh)
             ..onQueryCommitted('a')
             ..onSearchModeChanged(isSearchMode: true);
         }).returnsNormally();
@@ -39,7 +39,8 @@ void main() {
             ..onPageLoaded(0, 3, isSearchMode: false)
             ..onPageLoaded(1, 0, isSearchMode: true)
             ..onError(Exception('boom'), StackTrace.current)
-            ..onRefresh()
+            ..onReload(.refresh)
+            ..onReload(.queryChanged)
             ..onQueryCommitted('')
             ..onQueryCommitted('term')
             ..onSearchModeChanged(isSearchMode: true)

@@ -88,7 +88,7 @@ final class _EventLogObserver extends ListSmithObserver {
   void onError(Object error, StackTrace stackTrace) => _record('onError  $error');
 
   @override
-  void onRefresh() => _record('onRefresh');
+  void onReload(FetchTrigger trigger) => _record('onReload  ${trigger.name}');
 
   @override
   void onQueryCommitted(String query) =>
