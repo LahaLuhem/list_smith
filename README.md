@@ -549,10 +549,12 @@ ListSmith.async(
 )
 ```
 
-Override only what you care about, the rest cost nothing: `onPageLoaded`, `onError`, `onRefresh`,
-`onQueryCommitted`, `onSearchModeChanged`. In a hurry? `LoggingListSmithObserver()` pushes every
-event through `dart:developer`, so it lands in DevTools and stays `avoid_print`-clean. Overrides run
-synchronously while a page loads, so keep them light (see [Performance](#performance)).
+Override only what you care about, the rest cost nothing: `onPageLoaded`, `onError`, `onReload`,
+`onQueryCommitted`, `onSearchModeChanged`. `onReload` carries the trigger its pages will report and
+fires before the first of them is asked for, so anything you start there is under way by the time
+your fetcher runs. In a hurry? `LoggingListSmithObserver()` pushes every event through
+`dart:developer`, so it lands in DevTools and stays `avoid_print`-clean. Overrides run synchronously
+while a page loads, so keep them light (see [Performance](#performance)).
 
 > Observers are async-only. A `.sync` list has no fetch, refresh, or controller to observe, and you
 > already hold the query it filters on.

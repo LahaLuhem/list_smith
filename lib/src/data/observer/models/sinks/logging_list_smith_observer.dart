@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import '/src/data/pagination/enums/fetch_trigger.dart';
 import '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.
@@ -35,7 +36,8 @@ final class LoggingListSmithObserver extends ListSmithObserver {
   );
 
   @override
-  void onRefresh() => developer.log('refresh triggered', name: _name);
+  void onReload(FetchTrigger trigger) =>
+      developer.log('reload started: ${trigger.name}', name: _name);
 
   @override
   void onQueryCommitted(String query) =>

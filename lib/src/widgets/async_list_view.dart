@@ -316,14 +316,16 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     };
 
     _searchModeNotifier.value = isSearchMode;
-    _applyCacheAction(action);
+    final reloaded = _applyCacheAction(action);
 
     final observer = widget.observer;
     observer?.onQueryCommitted(committedQuery);
     if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
+    if (reloaded) observer?.onReload(.queryChanged);
   }
 
-  void _applyCacheAction(CacheAction action) {
+  /// Applies [action] and says whether the stream restarted. A restore from snapshot fetches nothing.
+  bool _applyCacheAction(CacheAction action) {
     switch ((action, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
         // No fetch here, so no trigger to latch: the next one is whatever the user does next.
@@ -332,17 +334,20 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         _replacePagingState(snapshot.state);
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
+
+        return false;
       case (.snapshotThenRefresh, _):
-        // A snapshot means settled state. The re-fetch after a restore overwrites both flags
-        // anyway, so this is about intent, not behaviour.
+        // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
         _normalSnapshot = (
           state: _pager.value.copyWith(isLoading: false, error: null),
           signal: _lastPageSignal,
         );
-        _resetPaging(.queryChanged);
       case (.refresh, _) || (.restoreNormal, null):
-        _resetPaging(.queryChanged);
+      // Nothing to keep. The reset below is the whole action.
     }
+    _resetPaging(.queryChanged);
+
+    return true;
   }
 
   /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't
@@ -441,7 +446,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     final run = _ReloadRun(this, .refresh);
     _running = run;
-    widget.observer?.onRefresh();
+    widget.observer?.onReload(.refresh);
     unawaited(
       _configuredReload.run(run).whenComplete(() {
         if (identical(_running, run)) _running = null;

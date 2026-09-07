@@ -126,7 +126,7 @@ void main() {
       await drain(tester);
 
       // One reload ran and one event fired: the second call rode the first.
-      check(observer.events.where((event) => event == 'refresh')).length.equals(1);
+      check(observer.events.where((event) => event == 'reload(refresh)')).length.equals(1);
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
     });
 
@@ -147,11 +147,11 @@ void main() {
       await [controller.refresh(), controller.refresh()].wait;
       await drain(tester);
 
-      check(observer.events.where((event) => event == 'refresh')).length.equals(1);
+      check(observer.events.where((event) => event == 'reload(refresh)')).length.equals(1);
       check(fetcher.attempts).deepEquals({0: 2});
     });
 
-    scenarioWidgets('a refresh() re-entered from the refresh event joins the one starting', (
+    scenarioWidgets('a refresh() re-entered from the reload event joins the one starting', (
       tester,
     ) async {
       final fetcher = valuedFetcher();
@@ -273,7 +273,7 @@ void main() {
   });
 }
 
-/// Calls `refresh()` back from the refresh event, once, as a consumer chaining work off it might.
+/// Calls `refresh()` back from the reload event, once, as a consumer chaining work off it might.
 final class _ReentrantObserver extends ListSmithObserver {
   final ListSmithController controller;
   var fired = 0;
@@ -281,7 +281,7 @@ final class _ReentrantObserver extends ListSmithObserver {
   new(this.controller);
 
   @override
-  void onRefresh() {
+  void onReload(FetchTrigger trigger) {
     fired++;
     if (fired == 1) unawaited(controller.refresh());
   }

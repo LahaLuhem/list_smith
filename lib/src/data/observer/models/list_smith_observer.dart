@@ -5,6 +5,8 @@
 /// @docImport 'sinks/logging_list_smith_observer.dart';
 library;
 
+import '/src/data/pagination/enums/fetch_trigger.dart';
+
 /// Lifecycle observer for a [ListSmith.async] list: an optional, injected sink for logging,
 /// telemetry, or analytics.
 ///
@@ -26,7 +28,7 @@ library;
 /// }
 /// ```
 ///
-/// Callbacks fire synchronously from the fetch, refresh, and query-commit paths, never during
+/// Callbacks fire synchronously from the fetch, reload, and query-commit paths, never during
 /// `build`, so heavy work in an override stalls that path. Keep them cheap. Async only:
 /// [ListSmith.sync] has no fetch, refresh, or controller to watch, and you already own its query.
 abstract base class ListSmithObserver {
@@ -44,8 +46,10 @@ abstract base class ListSmithObserver {
   /// swallowed, the list still shows its error surface.
   void onError(Object error, StackTrace stackTrace) {}
 
-  /// Called when a pull-to-refresh gesture triggers a reload, just before the list resets.
-  void onRefresh() {}
+  /// Called when a reload starts, before any page of it is asked for. [trigger] is what those pages
+  /// will report: `.refresh` for a pull or `refresh()`, `.queryChanged` for a committed query change.
+  /// Joining a reload already running fires nothing, and neither does a `KeepCachePolicy` restore.
+  void onReload(FetchTrigger trigger) {}
 
   /// Called when a new search [query] takes effect, after trimming, gating, and debounce.
   ///

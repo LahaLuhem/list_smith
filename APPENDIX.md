@@ -207,12 +207,16 @@ renames.
   modelled on `better_internet_connectivity_checker`'s `ConnectivityObserver`. An
   `abstract base class` with a no-op default per event, so a subclass overrides only what it wants.
   Five async events, plus a `LoggingListSmithObserver` that logs each via `dart:developer`.
-- **Discrete events only.** The seam fires from callbacks outside `build`: the page fetch, the
-  refresh gesture, the debounced-query commit. No-results, empty and end-reached are excluded on
+- **Discrete events only.** The seam fires from callbacks outside `build`: the page fetch, a
+  reload's start, the debounced-query commit. No-results, empty and end-reached are excluded on
   purpose, since they exist only as a function of paging and filter state *during* `build`, so
   firing there would re-fire on every rebuild and risk a `setState`-during-build. End-reached is
   worth revisiting, but needs a latched post-frame dispatch, more machinery than the discrete events
   carry.
+- **One reload event, carrying the reason.** `onReload(FetchTrigger)` replaced `onRefresh()` once a
+  second reload-shaped intent was on the way. One event per reload the engine starts, with the
+  trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too, so
+  the name does not lie by omission. A `KeepCache` restore fetches nothing and fires nothing.
 - **Async-only.** The observer earns its place by surfacing what the hidden controller keeps out of
   reach. A sync list has no controller, fetch or refresh, and the consumer owns the query it filters
   on, so an observer there would be the ghost Rule X
