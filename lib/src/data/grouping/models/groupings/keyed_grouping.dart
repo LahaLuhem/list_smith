@@ -22,7 +22,7 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
   @override
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required List<T> Function() flatItems,
+    required Iterable<T> Function() flatItems,
     required Axis axis,
   }) {
     final headerFlags = resolveHeaderFlags(flatItems(), groupOf, orderPolicy);

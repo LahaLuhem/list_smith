@@ -29,13 +29,13 @@ sealed class Grouping<T extends Object> {
 
   /// Wraps [itemBuilder] into the per-item builder for one build. Once per build, not per item.
   ///
-  /// [KeyedGrouping] prefixes each group's first item with its header along [axis], reading
-  /// [flatItems] once for the look-back. [NoGrouping] hands [itemBuilder] straight back and never
-  /// calls [flatItems], which is why that is a callback: the ungrouped path skips the flatten.
+  /// [KeyedGrouping] prefixes each group's first item with its header along [axis], walking
+  /// [flatItems] for the look-back. [NoGrouping] hands [itemBuilder] straight back and never calls
+  /// [flatItems], which is why that is a callback: the ungrouped path never flattens.
   @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required List<T> Function() flatItems,
+    required Iterable<T> Function() flatItems,
     required Axis axis,
   });
 

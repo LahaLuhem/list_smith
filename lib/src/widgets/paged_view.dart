@@ -114,11 +114,11 @@ class PagedView<T extends Object> extends StatelessWidget {
           );
   }
 
-  /// The item builder handed to ISP, from [Grouping.decorate]. The flatten for the group look-back
-  /// only happens when grouping is on, since [Grouping.decorate] takes it as a lazy callback.
+  /// The item builder handed to ISP, from [Grouping.decorate]. The group look-back walks the pages
+  /// lazily, and only when grouping is on, since [Grouping.decorate] takes it as a callback.
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
-    flatItems: () => state.pages?.expand((page) => page).toList(growable: false) ?? <T>[],
+    flatItems: () => state.pages?.expand((page) => page) ?? const Iterable.empty(),
     axis: scroll.scrollDirection,
   );
 
