@@ -46,13 +46,15 @@ DEFAULT_ITERATIONS: Final[int] = 10
 FALLBACK_DURATION: Final[int] = 10
 
 # Entrypoints that emit MORE THAN ONE record per run (one per pivot value): sync_search_scaling,
-# bucket_by_group_scaling, and dedup_scaling sweep list sizes, wrapping_overhead sweeps loaded-page
-# counts, slow_observer sweeps observer delays. Used when picking the "iterations per scenario"
-# figure for report headers, so their per-pivot fan-out doesn't inflate it.
+# bucket_by_group_scaling, header_flags_scaling, and dedup_scaling sweep list sizes,
+# wrapping_overhead sweeps loaded-page counts, slow_observer sweeps observer delays. Used when
+# picking the "iterations per scenario" figure for report headers, so their per-pivot fan-out
+# doesn't inflate it.
 MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
     {
         "sync_search_scaling",
         "bucket_by_group_scaling",
+        "header_flags_scaling",
         "dedup_scaling",
         "wrapping_overhead",
         "slow_observer",

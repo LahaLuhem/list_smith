@@ -14,7 +14,7 @@ List<T> bucketByGroup<T extends Object>(Iterable<T> items, Object Function(T ite
 ///
 /// [policy] gets first look and can reject out-of-order items. Whatever it lets through goes to
 /// [headerFlagsByFirstSighting]. Walks [items] once, twice while the order is being checked.
-List<bool> resolveHeaderFlags<T extends Object>(
+BoolList resolveHeaderFlags<T extends Object>(
   Iterable<T> items,
   Object Function(T item) keyOf,
   GroupOrderPolicy policy,
@@ -41,33 +41,38 @@ List<bool> resolveHeaderFlags<T extends Object>(
 /// True the first time a key shows up, false after, so a split group never draws two headers.
 ///
 /// Split out because the default policy asserts before reaching it, so a debug test only gets here
-/// by calling directly. Only a run's first item can open a group, so `seenKeys` is asked once per run.
-/// A list, because the item builder indexes into it.
-List<bool> headerFlagsByFirstSighting<T extends Object>(
+/// by calling directly. A loop on purpose: per item on every build, several times cheaper than the
+/// chain (`APPENDIX.md#scan-loops`). Packed, since the item builder reads it per row.
+BoolList headerFlagsByFirstSighting<T extends Object>(
   Iterable<T> items,
   Object Function(T item) keyOf,
 ) {
   final seenKeys = <Object>{};
+  final flags = BoolList.empty();
+  Object? runKey;
+  for (final item in items) {
+    final key = keyOf(item);
+    flags.add(key != runKey && seenKeys.add(key)); // only a run's first item can open a group
+    runKey = key;
+  }
 
-  return items
-      .map(keyOf)
-      .splitBetween((first, second) => first != second)
-      .expand((run) => run.mapIndexed((index, key) => index == 0 && seenKeys.add(key)))
-      .toList(growable: false);
+  return flags;
 }
 
 /// Whether every group in [items] is contiguous: each group key (per [keyOf], compared with `==`)
 /// occupies a single run, never recurring once a different key has intervened.
 ///
 /// The async path's order check, since it leans on the fetcher grouping for it. Sync never needs
-/// one, [bucketByGroup] makes contiguity hold by construction. Splits the keys into runs at each
-/// change, then checks each run opens a key no earlier run used, stopping at the first repeat.
+/// one, [bucketByGroup] makes contiguity hold by construction. A loop for the same reason as
+/// [headerFlagsByFirstSighting], and it stops at the first repeat.
 bool groupsAreContiguous<T extends Object>(Iterable<T> items, Object Function(T item) keyOf) {
   final seenKeys = <Object>{};
+  Object? runKey;
+  for (final item in items) {
+    final key = keyOf(item);
+    if (key != runKey && !seenKeys.add(key)) return false;
+    runKey = key;
+  }
 
-  return items
-      .map(keyOf)
-      .splitBetween((first, second) => first != second)
-      .map((run) => run.first)
-      .every(seenKeys.add);
+  return true;
 }
