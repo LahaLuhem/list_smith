@@ -49,11 +49,11 @@ class CustomSurfacesView extends StatelessWidget {
               ),
               surfaces: AsyncListSurfaces(
                 firstPageLoadingBuilder: (_) => const CustomLoading(),
-                newPageLoadingBuilder: (_) => const CustomLoading(compact: true),
+                newPageLoadingBuilder: (_) => const CustomLoading(isCompact: true),
                 firstPageErrorBuilder: (_, error, onRetry) =>
                     CustomError(error: error, onRetry: onRetry),
                 newPageErrorBuilder: (_, error, onRetry) =>
-                    CustomError(error: error, onRetry: onRetry, compact: true),
+                    CustomError(error: error, onRetry: onRetry, isCompact: true),
                 noMoreItemsBuilder: (_) => const CustomEnd(),
               ),
             ),

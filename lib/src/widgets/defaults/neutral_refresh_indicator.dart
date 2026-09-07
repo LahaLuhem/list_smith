@@ -24,7 +24,7 @@ class NeutralRefreshIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = clampDouble(state.value, 0, 1);
-    final revealed = progress * _revealExtent;
+    final revealedExtent = progress * _revealExtent;
 
     return Stack(
       children: [
@@ -38,7 +38,7 @@ class NeutralRefreshIndicator extends StatelessWidget {
             child: const Center(child: NeutralProgressIndicator()),
           ),
         ),
-        Transform.translate(offset: Offset(0, revealed), child: child),
+        Transform.translate(offset: Offset(0, revealedExtent), child: child),
       ],
     );
   }

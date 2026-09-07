@@ -11,11 +11,11 @@ final class EmptyPageContext {
   final bool isEmpty;
 
   /// Whether [PaginationEndPolicy] reports that another page remains to fetch.
-  final bool moreAvailable;
+  final bool isMoreAvailable;
 
   /// The number of pages fetched so far.
   final int pagesLoaded;
 
   /// Creates a context over the current empty-page state.
-  const new({required this.isEmpty, required this.moreAvailable, required this.pagesLoaded});
+  const new({required this.isEmpty, required this.isMoreAvailable, required this.pagesLoaded});
 }

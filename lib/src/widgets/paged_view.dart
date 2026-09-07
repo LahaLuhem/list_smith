@@ -129,14 +129,14 @@ class PagedView<T extends Object> extends StatelessWidget {
     firstPageProgressIndicatorBuilder: (context) =>
         firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
     newPageProgressIndicatorBuilder: (context) =>
-        newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(compact: true),
+        newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
     firstPageErrorIndicatorBuilder: (_) =>
         _ResolvedError(error: state.error!, onRetry: fetchNextPage, builder: firstPageErrorBuilder),
     newPageErrorIndicatorBuilder: (_) => _ResolvedError(
       error: state.error!,
       onRetry: fetchNextPage,
       builder: newPageErrorBuilder,
-      compact: true,
+      isCompact: true,
     ),
     noItemsFoundIndicatorBuilder: (context) => isSearchMode
         ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
@@ -152,9 +152,9 @@ class _ResolvedError extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;
   final ErrorBuilder? builder;
-  final bool compact;
+  final bool isCompact;
 
-  const new({required this.error, required this.onRetry, this.builder, this.compact = false});
+  const new({required this.error, required this.onRetry, this.builder, this.isCompact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +162,6 @@ class _ResolvedError extends StatelessWidget {
 
     return errorBuilder != null
         ? errorBuilder(context, error, onRetry)
-        : NeutralErrorIndicator(error: error, onRetry: onRetry, compact: compact);
+        : NeutralErrorIndicator(error: error, onRetry: onRetry, isCompact: isCompact);
   }
 }

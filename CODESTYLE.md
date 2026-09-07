@@ -90,6 +90,9 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   (`pageResult`, not `result`, `filteredItems`, not `filtered`). Callback parameters are exempt and
   stay single-word (`value`, `query`, `items`), since the call site already pins the type. Generic
   suffixes (`Data`, `Info`, `Result`) lose exactly the disambiguation the rule is for.
+- **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
+  `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
+  (`reverse` on `ListScrollConfig`), which keeps the framework's name.
 - **Unused closure parameters take the discard `_`, not a real name.** An identifier you never
   reference is noise, and `_` makes the unused-ness immediate.
 

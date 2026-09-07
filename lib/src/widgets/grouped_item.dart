@@ -22,7 +22,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   final Axis scrollDirection;
 
   /// Whether this item opens its group, so it draws the header.
-  final bool showHeader;
+  final bool drawsHeader;
 
   /// The item to render.
   final T item;
@@ -36,7 +36,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
     required this.groupOf,
     required this.headerFor,
     required this.scrollDirection,
-    required this.showHeader,
+    required this.drawsHeader,
     required this.item,
     required this.index,
     super.key,
@@ -45,7 +45,7 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final itemWidget = itemBuilder(context, item, index);
-    if (!showHeader) return itemWidget;
+    if (!drawsHeader) return itemWidget;
 
     return Flex(
       direction: scrollDirection,

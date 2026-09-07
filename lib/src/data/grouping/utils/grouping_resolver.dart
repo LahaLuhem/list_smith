@@ -48,15 +48,15 @@ BoolList headerFlagsByFirstSighting<T extends Object>(
   Object Function(T item) keyOf,
 ) {
   final seenKeys = <Object>{};
-  final flags = BoolList.empty();
+  final headerFlags = BoolList.empty();
   Object? runKey;
   for (final item in items) {
     final key = keyOf(item);
-    flags.add(key != runKey && seenKeys.add(key)); // only a run's first item can open a group
+    headerFlags.add(key != runKey && seenKeys.add(key)); // only a run's first item can open a group
     runKey = key;
   }
 
-  return flags;
+  return headerFlags;
 }
 
 /// Whether every group in [items] is contiguous: each group key (per [keyOf], compared with `==`)

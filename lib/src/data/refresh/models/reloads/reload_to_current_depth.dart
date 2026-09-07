@@ -25,37 +25,37 @@ final class ReloadToCurrentDepth extends Reload {
 
   @override
   Future<void> run<T extends Object>(ReloadContext<T> context) {
-    final old = context.loadedPages;
-    if (old.isEmpty) return Future.sync(context.reset);
+    final oldPages = context.loadedPages;
+    if (oldPages.isEmpty) return Future.sync(context.reset);
 
     return context.isSignalBased
-        ? _reloadSequential(context, old.length)
-        : _reloadParallel(context, old);
+        ? _reloadSequential(context, oldPages.length)
+        : _reloadParallel(context, oldPages);
   }
 
   /// Atomic, in-order reload for a `withSignal` source. Any failure keeps the old pages untouched.
   Future<void> _reloadSequential<T extends Object>(ReloadContext<T> context, int depth) async {
-    final fresh = <List<T>>[];
+    final freshPages = <List<T>>[];
     Object? signal;
 
     try {
       for (var index = 0; index < depth; index++) {
         if (context.isStale) return;
         final (items, pageSignal) = await context.fetch(index, signal);
-        fresh.add(items);
+        freshPages.add(items);
         signal = pageSignal;
       }
     } on Exception {
       return; // keep the old pages; the observer already saw the error
     }
 
-    context.commit(fresh, lastSignal: signal);
+    context.commit(freshPages, lastSignal: signal);
   }
 
   /// Concurrency-bounded reload for an index-based source, settled per [onError].
   Future<void> _reloadParallel<T extends Object>(
     ReloadContext<T> context,
-    List<List<T>> old,
+    List<List<T>> oldPages,
   ) async {
     final isAtomic = onError == .allOrNothing;
     var didFail = false;
@@ -76,15 +76,17 @@ final class ReloadToCurrentDepth extends Reload {
     }
 
     // A pool as wide as the depth is "all at once", so a null concurrency needs no branch of its own.
-    final pool = Pool(concurrency ?? old.length);
-    final fresh = await Iterable.generate(
-      old.length,
+    final pool = Pool(concurrency ?? oldPages.length);
+    final freshPages = await Iterable.generate(
+      oldPages.length,
       (index) => pool.withResource(() => fetchOrNull(index)),
     ).wait;
     await pool.close();
     if (isAtomic && didFail) return; // keep the old pages untouched
 
-    context.commit(fresh.mapIndexed((index, page) => page ?? old[index]).toList(growable: false));
+    context.commit(
+      freshPages.mapIndexed((index, page) => page ?? oldPages[index]).toList(growable: false),
+    );
   }
 
   @override

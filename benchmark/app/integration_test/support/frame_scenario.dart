@@ -78,8 +78,12 @@ Future<Map<String, dynamic>> captureFrames(
 }
 
 Map<String, dynamic> _summariseFrames(List<FrameTiming> timings) {
-  final buildMicros = timings.map((t) => t.buildDuration.inMicroseconds).toList(growable: false);
-  final rasterMicros = timings.map((t) => t.rasterDuration.inMicroseconds).toList(growable: false);
+  final buildMicros = timings
+      .map((timing) => timing.buildDuration.inMicroseconds)
+      .toList(growable: false);
+  final rasterMicros = timings
+      .map((timing) => timing.rasterDuration.inMicroseconds)
+      .toList(growable: false);
 
   return <String, dynamic>{
     'frame_count': timings.length,

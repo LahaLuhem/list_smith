@@ -1,15 +1,15 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A platform-adaptive loading surface, overriding the neutral default. [compact]
+/// A platform-adaptive loading surface, overriding the neutral default. [isCompact]
 /// switches between the full-viewport first-page form and the new-page footer.
 class CustomLoading extends StatelessWidget {
-  final bool compact;
+  final bool isCompact;
 
-  const new({this.compact = false, super.key});
+  const new({this.isCompact = false, super.key});
 
   @override
-  Widget build(BuildContext context) => compact
+  Widget build(BuildContext context) => isCompact
       ? const Padding(
           padding: .all(16),
           child: Row(

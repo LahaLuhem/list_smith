@@ -5,8 +5,12 @@ import 'package:list_smith/list_smith.dart';
 void main() {
   final behaviours = BddFeature('EmptyPageBehaviour.shouldAdvance');
 
-  EmptyPageContext ctx({bool isEmpty = true, bool moreAvailable = true, int pagesLoaded = 1}) =>
-      EmptyPageContext(isEmpty: isEmpty, moreAvailable: moreAvailable, pagesLoaded: pagesLoaded);
+  EmptyPageContext ctx({bool isEmpty = true, bool isMoreAvailable = true, int pagesLoaded = 1}) =>
+      EmptyPageContext(
+        isEmpty: isEmpty,
+        isMoreAvailable: isMoreAvailable,
+        pagesLoaded: pagesLoaded,
+      );
 
   Bdd(behaviours)
       .scenario('ShowEmptySurface never advances, even on an empty page with more pages')
@@ -41,7 +45,7 @@ void main() {
       .when('the end policy reports no more pages')
       .then('it does not advance')
       .run((_) {
-        check(const AdvanceToFirstNonEmpty().shouldAdvance(ctx(moreAvailable: false))).isFalse();
+        check(const AdvanceToFirstNonEmpty().shouldAdvance(ctx(isMoreAvailable: false))).isFalse();
       });
 
   Bdd(behaviours)
