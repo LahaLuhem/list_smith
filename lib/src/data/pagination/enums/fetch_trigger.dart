@@ -20,4 +20,9 @@ enum FetchTrigger {
 
   /// A reload from a committed query change, entering or leaving search included.
   queryChanged,
+
+  /// A re-read the consumer asked for through [ListSmithController.invalidate] or
+  /// [ListSmithController.reset], because what it handed the list changed locally. Read like a cold
+  /// page, not like a refresh.
+  invalidated,
 }

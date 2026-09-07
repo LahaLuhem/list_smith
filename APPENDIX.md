@@ -25,6 +25,7 @@ renames.
 - [Cursor-driven pagination: the signal, fed back](#cursor-driven-pagination)
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
 - [A narrow controller: intents out, nothing back](#controller-handle)
+- [Each reload is a run that knows its stream](#reload-run)
 - [Fetchers take a request object, not an argument list](#page-request-object)
 - [Fetchers are told why they were called](#fetch-trigger)
 - [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
@@ -425,9 +426,9 @@ renames.
 <a id="controller-handle"></a>
 ## A narrow controller: intents out, nothing back
 
-- **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying one intent,
-  `refresh()`. A bounded exception to the hidden pager, and the line held is that no
-  `PagingController`, `PagingState` or other ISP type is reachable through it.
+- **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying three intents:
+  `refresh()`, `invalidate()` and `reset()`. A bounded exception to the hidden pager, and the line
+  held is that no `PagingController`, `PagingState` or other ISP type is reachable through it.
 - **Only refresh was unreachable.** `scrollToTop` and `jumpTo(index)` were floated too, but a
   consumer can already scroll via `ListScrollConfig.controller`, so those are sugar where this is
   capability. Index-scrolling needs fixed extents, which puts it with the sliver and grid work.
@@ -450,6 +451,28 @@ renames.
   each new one is a method on the host and a forwarding verb on the handle, and the swap was internal.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
   through a controller no list ever received is a wiring mistake.
+
+---
+
+<a id="reload-run"></a>
+## Each reload is a run that knows its stream
+
+- **Decision:** a `Reload` runs through a per-run `_ReloadRun`, not the State. The run carries the
+  trigger its pages report and the generation it was born into, and `isStale` compares the two.
+- **Why:** the depth reload is the one long writer, and it bumped the generation without ever reading
+  it. A reset, a query change, a `KeepCache` restore or a dispose during its awaits was overwritten
+  by its late `commit()`. A stale run now drops its commit, skips its remaining fetches, and is never
+  joined.
+- **Own writes don't stale a run.** Its commit and its reset move the epoch along, so a double-tapped
+  refresh still coalesces under `ResetToFirstPage`.
+- **The join rule.** Two refreshes coalesce. Any other pair books one more run after the live one,
+  `.refresh` winning, because a write landing on a page the run already read would otherwise never
+  be re-read. A joiner's future completes with the run it joined. `reset()` never joins: it bumps the
+  generation and lets the next caller start fresh.
+- **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping to the top
+  is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull config to lean
+  on.
+- **Accepted edge:** the pull indicator spins through a superseded run until its fetches finish.
 
 ---
 

@@ -93,6 +93,55 @@ void main() {
       check(triggers.toSet()).deepEquals(const {FetchTrigger.refresh});
     });
 
+    scenarioWidgets('an invalidate() reports invalidated for every page it re-reads', (
+      tester,
+    ) async {
+      final triggers = <FetchTrigger>[];
+      final controller = ListSmithController();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: _recording(triggers, pages: 3),
+          controller: controller,
+          refresh: const NoRefresh(), // no pull config to lean on, the re-read keeps depth anyway
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 16);
+      final depth = triggers.length;
+      triggers.clear();
+
+      await controller.invalidate();
+      await drain(tester, frames: 16);
+
+      check(triggers.length).equals(depth);
+      check(triggers.toSet()).deepEquals(const {FetchTrigger.invalidated});
+    });
+
+    scenarioWidgets('after a reset(), page 0 reports invalidated and the pages after it nextPage', (
+      tester,
+    ) async {
+      final triggers = <FetchTrigger>[];
+      final controller = ListSmithController();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: _recording(triggers, pages: 3),
+          controller: controller,
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 16);
+      triggers.clear();
+
+      await controller.reset();
+      await drain(tester, frames: 16);
+
+      check(triggers.first).equals(.invalidated);
+      check(triggers.skip(1).toSet()).deepEquals(const {FetchTrigger.nextPage});
+    });
+
     scenarioWidgets('retrying a failed page reports retry', (tester) async {
       final triggers = <FetchTrigger>[];
       var calls = 0;

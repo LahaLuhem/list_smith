@@ -105,26 +105,32 @@ ListSmith.async(
 A caching repository usually wants to treat the reasons differently, since serving a pull-to-refresh
 out of the cache rather defeats the pull. `request.trigger` says which it was.
 
-| `FetchTrigger` | What happened                                                         |
-|----------------|-----------------------------------------------------------------------|
-| `initialLoad`  | the first page of a cold list                                         |
-| `nextPage`     | the user neared the end, so the next page was asked for               |
-| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                 |
-| `retry`        | this page's last attempt threw, and Retry was tapped                  |
-| `queryChanged` | a committed search query changed, entering or leaving search included |
+| `FetchTrigger` | What happened                                                               |
+|----------------|-----------------------------------------------------------------------------|
+| `initialLoad`  | the first page of a cold list                                               |
+| `nextPage`     | the user neared the end, so the next page was asked for                     |
+| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
+| `retry`        | this page's last attempt threw, and Retry was tapped                        |
+| `queryChanged` | a committed search query changed, entering or leaving search included       |
+| `invalidated`  | you called `invalidate()` or `reset()` on the controller: your data changed |
 
 ```dart
 fetchPage: PageFetcher((request) => repo.load(
   request.pageIndex,
   request.pageSize,
   forceRefresh: switch (request.trigger) {
-    FetchTrigger.refresh || FetchTrigger.retry => true,
-    FetchTrigger.initialLoad || FetchTrigger.nextPage || FetchTrigger.queryChanged => false,
+    .refresh || .retry => true,
+    .initialLoad ||
+    .nextPage ||
+    .queryChanged ||
+    .invalidated => false,
   },
 )),
 ```
 
-It reports the fact and stops there. Bypass, revalidate, or serve stale: your call.
+It reports the fact and stops there. Bypass, revalidate, or serve stale: your call. `invalidated`
+only ever fires because you called `invalidate()` or `reset()`, so a network-only source routes it
+like `initialLoad`.
 
 </details>
 
@@ -299,25 +305,37 @@ Three caveats:
 
 ### Refreshing from code
 
-A toolbar button, a re-tapped tab, a reload after the user posts something. Pass a
-`ListSmithController` and call `refresh()`.
+A toolbar button, a re-tapped tab, a re-read after a local write, a logout. Pass a
+`ListSmithController` and call the verb that says why.
 
 ```dart
 final controller = ListSmithController();
 
 ListSmith.async(fetchPage: PageFetcher(...), itemBuilder: ..., controller: controller)
 
-await controller.refresh();  // from a button, a tab listener, wherever
+await controller.refresh();     // fresh data wanted: exactly a pull
+await controller.invalidate();  // my data changed: re-read every loaded page, keep my place
+await controller.reset();       // start over from page one: logout, account switch, a filter
 ```
 
-It runs exactly what a pull runs, so your `PullToRefresh` config still applies, and an active search
-reloads the search rather than the feed. Under `NoRefresh` it still works: that switches off the
-*gesture*, not refreshing, and falls back to `ResetToFirstPage`.
+| Verb           | Runs                                                      | Pages report  | Meets a running reload                             |
+|----------------|-----------------------------------------------------------|---------------|----------------------------------------------------|
+| `refresh()`    | the pull's `Reload`, `ResetToFirstPage` under `NoRefresh` | `refresh`     | joins a refresh, otherwise runs once more after it |
+| `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does            | `invalidated` | joins it, then runs once more                      |
+| `reset()`      | `ResetToFirstPage`, always                                | `invalidated` | cuts in                                            |
 
-No indicator: that belongs to the pull, and your button owns its progress, hence the future.
+`refresh()` runs exactly what a pull runs, so your `PullToRefresh` config applies and an active
+search reloads the search rather than the feed. `invalidate()` keeps the user's place on purpose: a
+pull snapping to the top is a convention, a local write doing it is a bug. `reset()` keeps the
+query, so while searching the search restarts.
+
+No indicator: that belongs to the pull, and your button owns its progress, hence the futures.
 Awaiting follows the reload, so `ResetToFirstPage` completes as the list clears, not when fresh data
-lands, while `ReloadToCurrentDepth` waits for the refetch. A call made while a refresh runs joins it
-rather than starting a second.
+lands, while `ReloadToCurrentDepth` waits for the refetch. A call that joins a running reload
+completes with that reload, not with the run after it.
+
+`invalidate()` and `reset()` are no-ops before any list has attached, since a view-model often hears
+a store event before its view builds. `refresh()` there asserts: only wiring can cause it.
 
 Nothing to dispose, and async-only. To *watch* the list rather than drive it, use an
 [observer](#watching-what-it-does).

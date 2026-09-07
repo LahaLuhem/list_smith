@@ -144,6 +144,32 @@ void main() {
       check(observer.events.last).equals('searchModeChanged(false)');
     });
 
+    scenarioWidgets('onReload reports invalidated for invalidate() and reset(), once each', (
+      tester,
+    ) async {
+      final observer = RecordingListSmithObserver();
+      final controller = ListSmithController();
+      await _pumpObserved(
+        tester,
+        observer,
+        fetchPage: PageFetcher(
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
+        controller: controller,
+      );
+      await drain(tester);
+
+      await controller.invalidate();
+      await drain(tester);
+      await controller.reset();
+      await drain(tester);
+      // Two invalidates back to back: the second joins and books one rerun, so two events, not three.
+      await [controller.invalidate(), controller.invalidate()].wait;
+      await drain(tester);
+
+      check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(4);
+    });
+
     scenarioWidgets('onQueryCommitted and onSearchModeChanged fire on entering search', (
       tester,
     ) async {
