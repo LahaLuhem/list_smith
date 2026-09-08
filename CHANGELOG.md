@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Added
 - \[#23\] Add ListSmithController to refresh an async list from code (a button, a tab re-tap)
+- feat(control): invalidate() and reset() beside refresh()
 
 ### Changed
 - Raise the SDK floor to Dart 3.13 / Flutter 3.47
