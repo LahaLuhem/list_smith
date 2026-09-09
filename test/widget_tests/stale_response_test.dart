@@ -493,6 +493,31 @@ void main() {
       check(_shown(tester)).deepEquals([1, 1001, 2001]);
     });
 
+    scenarioWidgets('leaving search after a reset() reloads the feed from page 0', (tester) async {
+      final source = _stampedSource(holdFor: (_, _) => null, cachePolicy: const KeepCachePolicy());
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      check(_shown(tester)).deepEquals([2, 1002, 2002]);
+
+      await controller.reset();
+      await drain(tester, frames: 12);
+      // Premise: reset() restarted the search.
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      // The kept feed went with the reset, so coming back is a query change from page 0.
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
+      check(source.log).contains('0#4:queryChanged');
+    });
+
     scenarioWidgets('a refresh that meets a superseded reload starts its own', (tester) async {
       final hold = Completer<void>();
       final source = _stampedSource(holdFor: (_, attempt) => attempt == 2 ? hold.future : null);
