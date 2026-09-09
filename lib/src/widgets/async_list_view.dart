@@ -450,6 +450,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   @override
   Future<void> reset() {
     widget.observer?.onReload(.invalidated);
+    _normalSnapshot = null; // the kept feed starts over too: the restore falls through to page 0
     _resetPaging(.invalidated);
 
     return Future<void>.syncValue(null);

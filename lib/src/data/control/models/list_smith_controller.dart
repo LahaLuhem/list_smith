@@ -1,6 +1,7 @@
 /// @docImport '/src/data/observer/models/list_smith_observer.dart';
 /// @docImport '/src/data/pagination/enums/fetch_trigger.dart';
 /// @docImport '/src/data/refresh/models/reload.dart';
+/// @docImport '/src/data/search/models/search_cache_policy.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
@@ -45,7 +46,8 @@ class ListSmithController {
   /// account switch, a filter outside search. Page 0 reports [FetchTrigger.invalidated].
   ///
   /// Cuts in on a running reload rather than joining it. Keeps the query, so while searching the
-  /// search restarts. A no-op before any list attached.
+  /// search restarts, and a feed kept by [KeepCachePolicy] starts over once the query clears. A
+  /// no-op before any list attached.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
 
   /// Binds this controller to the list that serves its intents. One controller, one list.
