@@ -551,6 +551,33 @@ Dispose the notifier in `State.dispose`. Same reasoning the example applies to i
 fallback, for when genuinely many independent parts of one widget change at once and a single
 rebuild beats many builders.
 
+<a id="idioms-plain-conditionals"></a>
+### Plain `if`s over clever `switch` arms
+
+A `switch` earns its place dispatching on a sealed type or an enum. Don't reach for it to branch on
+a nullable value, and don't lean on object patterns (`Foo(:final bar?)`, `Foo(bar: null)`) to spell
+out conditions an `if` says directly.
+
+```dart
+// Prefer:
+if (snapshot == null) observer?.onReload(.queryChanged);
+final debt = snapshot?.debt;
+if (debt != null) unawaited(_runReload(debt));
+
+// Over:
+switch (snapshot) {
+  case null:
+    observer?.onReload(.queryChanged);
+  case _Snapshot(:final debt?):
+    unawaited(_runReload(debt));
+  case _Snapshot(debt: null):
+  // nothing to do
+}
+```
+
+**Why:** the reader has to decode destructuring to find two null checks, and the exhaustive-arms
+shape suggests a type dispatch that isn't there. It kills readability for no gain.
+
 ---
 
 <a id="dartdoc"></a>

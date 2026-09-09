@@ -113,7 +113,9 @@ void main() {
           .deepEquals(['queryCommitted(ab)', 'searchModeChanged(true)', 'reload(queryChanged)']);
     });
 
-    scenarioWidgets('a KeepCache restore fires no reload, it fetches nothing', (tester) async {
+    scenarioWidgets('a clean KeepCache restore fires no reload, it fetches nothing', (
+      tester,
+    ) async {
       final observer = RecordingListSmithObserver();
       // Both sources end after one page, so nothing keeps paging after the restore.
       final search = AsyncSearch(
@@ -142,6 +144,42 @@ void main() {
       // Entering search reloaded. Leaving it restored the snapshot, which is not a reload.
       check(observer.events.where((event) => event == 'reload(queryChanged)')).length.equals(1);
       check(observer.events.last).equals('searchModeChanged(false)');
+    });
+
+    scenarioWidgets('a KeepCache restore owing a refresh fires it, after the query facts', (
+      tester,
+    ) async {
+      final observer = RecordingListSmithObserver();
+      final controller = ListSmithController();
+      final search = AsyncSearch(
+        fetchPage: SearchPageFetcher(
+          (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
+        ),
+        cachePolicy: const KeepCachePolicy(),
+      );
+      Future<void> pump(String query) => _pumpObserved(
+        tester,
+        observer,
+        fetchPage: PageFetcher(
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
+        search: search,
+        query: query,
+        controller: controller,
+      );
+
+      await pump('');
+      await drain(tester);
+      await pump('ab');
+      await settle(tester);
+      await controller.refresh();
+      await drain(tester);
+      observer.events.clear();
+      await pump('');
+      await settle(tester);
+
+      check(observer.events.where((event) => !event.startsWith('pageLoaded')).toList())
+          .deepEquals(['queryCommitted()', 'searchModeChanged(false)', 'reload(refresh)']);
     });
 
     scenarioWidgets('onReload reports invalidated for invalidate() and reset(), once each', (
