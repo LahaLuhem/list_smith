@@ -460,10 +460,11 @@ void main() {
       check(_shown(tester)).deepEquals([3, 1003, 2003]);
     });
 
-    scenarioWidgets('a depth reload of the search does not commit over a restored feed', (
+    scenarioWidgets('leaving search under a hung search reload drops it and re-reads the feed', (
       tester,
     ) async {
-      // Under KeepCache the search's first load is attempt 2, so the reload is attempt 3.
+      // Under KeepCache the search's first load is attempt 2 and its reload attempt 3, so the feed's
+      // re-read on the way back is attempt 4.
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (_, attempt) => attempt == 3 ? hold.future : null,
@@ -482,15 +483,16 @@ void main() {
       await drain(tester);
       await _pumpStamped(tester, source, controller: controller);
       await settle(tester);
-      // Premise: leaving search put the feed back while the search reload still hangs.
-      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+      await drain(tester, frames: 12);
+      // Premise: leaving search paid the refresh to the feed while the search reload still hangs.
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
 
       hold.complete();
       await tester.idle();
       await drain(tester, frames: 12);
       await refresh;
 
-      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
     });
 
     scenarioWidgets('leaving search after a reset() reloads the feed from page 0', (tester) async {
@@ -516,6 +518,184 @@ void main() {
       // The kept feed went with the reset, so coming back is a query change from page 0.
       check(_shown(tester)).deepEquals([4, 1004, 2004]);
       check(source.log).contains('0#4:queryChanged');
+    });
+
+    scenarioOutlineWidgets(
+      'an ask made while searching is paid to the feed on the way back, as the ask it was',
+      examples: {
+        'refresh()': (
+          ask: (ListSmithController controller) => controller.refresh(),
+          trigger: 'refresh',
+          feed: [4, 1004, 2004],
+        ),
+        'invalidate()': (
+          ask: (ListSmithController controller) => controller.invalidate(),
+          trigger: 'invalidated',
+          feed: [4, 1004, 2004],
+        ),
+        'invalidate() then refresh(), and the refresh outranks': (
+          ask: (ListSmithController controller) async {
+            await controller.invalidate();
+            await controller.refresh();
+          },
+          trigger: 'refresh',
+          feed: [5, 1005, 2005],
+        ),
+      },
+      outline: (tester, example) async {
+        final source = _stampedSource(
+          holdFor: (_, _) => null,
+          cachePolicy: const KeepCachePolicy(),
+        );
+        final controller = ListSmithController();
+
+        await _pumpStamped(tester, source, controller: controller);
+        await drain(tester, frames: 12);
+        await _pumpStamped(tester, source, controller: controller, query: 'x');
+        await settle(tester);
+        await drain(tester, frames: 12);
+        await example.ask(controller);
+        await drain(tester, frames: 12);
+
+        final before = source.log.length;
+        await _pumpStamped(tester, source, controller: controller);
+        await settle(tester);
+        await drain(tester, frames: 12);
+
+        check(_shown(tester)).deepEquals(example.feed);
+        check(
+          source.log.skip(before).where((entry) => entry.endsWith(':${example.trigger}')).length,
+        ).equals(3);
+      },
+    );
+
+    scenarioWidgets('the debt is paid to depth even when the pull is configured to reset', (
+      tester,
+    ) async {
+      final source = _stampedSource(holdFor: (_, _) => null, cachePolicy: const KeepCachePolicy());
+      final controller = ListSmithController();
+      const reload = ResetToFirstPage();
+
+      await _pumpStamped(tester, source, controller: controller, reload: reload);
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller, reload: reload, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      await controller.refresh();
+      await drain(tester, frames: 12);
+
+      final before = source.log.length;
+      await _pumpStamped(tester, source, controller: controller, reload: reload);
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      // All three pages re-read as a refresh. Depth is what KeepCache keeps, whatever the pull does.
+      check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
+    });
+
+    scenarioWidgets('a paid debt is gone, so the next search round restores the feed for free', (
+      tester,
+    ) async {
+      final source = _stampedSource(holdFor: (_, _) => null, cachePolicy: const KeepCachePolicy());
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      await controller.refresh();
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      await drain(tester, frames: 12);
+      // Premise: the refresh was paid, attempt 4.
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
+
+      await _pumpStamped(tester, source, controller: controller, query: 'y');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      final before = source.log.length;
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
+      check(source.log.length).equals(before);
+    });
+
+    scenarioWidgets('a feed reload cut off by entering search is paid on the way back', (
+      tester,
+    ) async {
+      // The refresh's fetches are attempt 2. Search then takes attempt 3, the feed's re-read attempt 4.
+      final hold = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (_, attempt) => attempt == 2 ? hold.future : null,
+        cachePolicy: const KeepCachePolicy(),
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      final refresh = controller.refresh();
+      await drain(tester);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+      await refresh;
+      // Premise: the cut-off reload did not land on the search.
+      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      // The snapshot was born owing the reload it cut off, so the feed comes back re-read.
+      check(_shown(tester)).deepEquals([4, 1004, 2004]);
+      check(source.log.where((entry) => entry.endsWith('#4:refresh')).length).equals(3);
+    });
+
+    scenarioWidgets('a debt reload cut off by a new search is owed again', (tester) async {
+      // The first restore's re-read is sequential and hangs on p0#4, so the next search cuts it off.
+      final hold = Completer<void>();
+      final source = _stampedSource(
+        holdFor: (pageIndex, attempt) => (pageIndex, attempt) == (0, 4) ? hold.future : null,
+        cachePolicy: const KeepCachePolicy(),
+      );
+      final controller = ListSmithController();
+
+      await _pumpStamped(tester, source, controller: controller);
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller, query: 'x');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      await controller.refresh();
+      await drain(tester, frames: 12);
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      // Premise: the feed is back while its re-read hangs on the first page.
+      check(_shown(tester)).deepEquals([1, 1001, 2001]);
+
+      await _pumpStamped(tester, source, controller: controller, query: 'y');
+      await settle(tester);
+      await drain(tester, frames: 12);
+      hold.complete();
+      await tester.idle();
+      await drain(tester, frames: 12);
+
+      final before = source.log.length;
+      await _pumpStamped(tester, source, controller: controller);
+      await settle(tester);
+      await drain(tester, frames: 12);
+
+      // The second restore pays the refresh the first one never finished.
+      check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
+      check(_shown(tester)).not((it) => it.deepEquals([1, 1001, 2001]));
     });
 
     scenarioWidgets('a refresh that meets a superseded reload starts its own', (tester) async {

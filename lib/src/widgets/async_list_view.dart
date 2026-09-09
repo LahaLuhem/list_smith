@@ -315,38 +315,47 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     };
 
     _searchModeNotifier.value = isSearchMode;
-    final didReload = _applyCacheAction(cacheAction);
+    final restoredSnapshot = _applyCacheAction(cacheAction);
 
     final observer = widget.observer;
     observer?.onQueryCommitted(committedQuery);
     if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
-    if (didReload) observer?.onReload(.queryChanged);
+    if (restoredSnapshot == null) observer?.onReload(.queryChanged); // reset, not restored
+    // A debt is paid to depth whatever the pull does, after the query facts so events stay in order.
+    final debt = restoredSnapshot?.debt;
+    if (debt != null) unawaited(_runReload(debt, reload: const ReloadToCurrentDepth()));
   }
 
-  /// Applies [cacheAction] and says whether the stream restarted. A restore from snapshot fetches nothing.
-  bool _applyCacheAction(CacheAction cacheAction) {
+  /// Applies [cacheAction]. Hands back the snapshot it put back, or null when the stream restarted
+  /// instead. Paying that snapshot's debt is the caller's job, once the observer has heard.
+  _NormalSnapshot<T>? _applyCacheAction(CacheAction cacheAction) {
     switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
-        // No fetch here, so no trigger to latch: the next one is whatever the user does next.
+        // No pager fetch here, so nothing to latch. A debt reload carries its own trigger.
         _generation++;
         _lastFailedPageIndex = null;
         _replacePagingState(snapshot.state);
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
 
-        return false;
+        return snapshot;
       case (.snapshotThenRefresh, _):
         // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
+        final running = _running;
+        final strandedTrigger = running != null && !running.isStale
+            ? _stronger(running.rerun, running.trigger)
+            : null;
         _normalSnapshot = _NormalSnapshot(
           state: _pager.value.copyWith(isLoading: false, error: null),
           signal: _lastPageSignal,
+          debt: strandedTrigger, // the reset below strands a live run, so the feed inherits its ask
         );
       case (.refresh, _) || (.restoreNormal, null):
       // Nothing to keep. The reset below is the whole action.
     }
     _resetPaging(.queryChanged);
 
-    return true;
+    return null;
   }
 
   /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't
@@ -458,8 +467,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// The one reload entry point, gesture or controller. Joins the reload already running unless the
   /// list moved on under it. Two refreshes coalesce. Any other pair runs once more afterwards,
-  /// `.refresh` winning, so a write landing on a page the run already read is not missed.
-  Future<void> _runReload(FetchTrigger trigger) {
+  /// `.refresh` winning, so a write landing on a page the run already read is not missed. [reload]
+  /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
+  Future<void> _runReload(FetchTrigger trigger, {Reload? reload}) {
+    _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
     final running = _running;
     if (running != null && !running.isStale) {
       if (running.trigger != .refresh || trigger != .refresh) {
@@ -473,7 +484,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _running = run;
     widget.observer?.onReload(trigger);
     unawaited(
-      _reloadFor(trigger).run(run).whenComplete(() {
+      (reload ?? _reloadFor(trigger)).run(run).whenComplete(() {
         if (identical(_running, run)) _running = null;
         run.finish();
         final rerun = run.rerun;
@@ -556,7 +567,13 @@ final class _NormalSnapshot<T extends Object> {
   /// The stream's last end signal, restored with [state] so a signal policy reads its own.
   final Object? signal;
 
-  new({required this.state, required this.signal});
+  /// An ask made while the feed sat here, paid by a re-read once it is put back.
+  FetchTrigger? debt;
+
+  new({required this.state, required this.signal, this.debt});
+
+  /// Books [trigger] against the feed. A refresh is never downgraded to a re-read.
+  void owe(FetchTrigger trigger) => debt = _stronger(debt, trigger);
 }
 
 /// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
