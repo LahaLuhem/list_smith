@@ -108,9 +108,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
 
-  /// The normal-mode paging state (with its end signal) kept aside while searching, for
-  /// [KeepCachePolicy].
-  ({PagingState<int, T> state, Object? signal})? _normalSnapshot;
+  /// The normal-mode stream kept aside while searching, for [KeepCachePolicy].
+  _NormalSnapshot<T>? _normalSnapshot;
 
   /// The current stream's most recent end signal, fed to the end policy via
   /// [EndContext.lastPageSignal]. Not derivable from the paging state, so it lives here: it resets
@@ -338,7 +337,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         return false;
       case (.snapshotThenRefresh, _):
         // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
-        _normalSnapshot = (
+        _normalSnapshot = _NormalSnapshot(
           state: _pager.value.copyWith(isLoading: false, error: null),
           signal: _lastPageSignal,
         );
@@ -463,7 +462,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final running = _running;
     if (running != null && !running.isStale) {
       if (running.trigger != .refresh || trigger != .refresh) {
-        running.rerun = running.rerun == .refresh ? .refresh : trigger;
+        running.rerun = _stronger(running.rerun, trigger);
       }
 
       return running.done;
@@ -548,3 +547,17 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   /// Marks the run finished. The engine calls it once it has let go of the run.
   void finish() => _done.complete();
 }
+
+/// The normal-mode stream parked while searching, put back as it was when the query clears.
+final class _NormalSnapshot<T extends Object> {
+  final PagingState<int, T> state;
+
+  /// The stream's last end signal, restored with [state] so a signal policy reads its own.
+  final Object? signal;
+
+  new({required this.state, required this.signal});
+}
+
+/// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
+FetchTrigger _stronger(FetchTrigger? pending, FetchTrigger next) =>
+    pending == .refresh ? .refresh : next;
