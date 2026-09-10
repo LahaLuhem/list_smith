@@ -167,6 +167,12 @@ renames.
   / `restoreNormal`), unit-tested directly, and the view executes it against the controller. Keep
   snapshots `controller.value` on the way in and restores on the way out, an instant return with no
   refetch. Replace always refetches. A search-to-search change refetches under either.
+- **The kept feed carries a debt.** A pull, `refresh()` or `invalidate()` made while searching can't
+  reach the parked feed, so the snapshot books the ask (`.refresh` outranks `.invalidated`) and the
+  restore pays it: pages back as they were, then a `ReloadToCurrentDepth` over them reporting that
+  trigger. A snapshot taken under a live feed reload is born owing its ask, since the reset that
+  follows strands it. Lazy, so a search never left costs nothing. To depth whatever the pull says,
+  since depth is what the policy keeps. `reset()` drops the snapshot instead: page 0 is the verb.
 - **Reading the search case:** search mode is `query.isNotEmpty && source.supportsSearch`, and the
   closure pattern-matches the `AsyncSearch` case to reach its fetcher, so there is no nullable
   fetcher to bang. A query set without an `AsyncSearch` asserts in debug and degrades to normal
@@ -218,7 +224,8 @@ renames.
 - **One reload event, carrying the reason.** `onReload(FetchTrigger)` replaced `onRefresh()` once a
   second reload-shaped intent was on the way. One event per reload the engine starts, with the
   trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too, so
-  the name does not lie by omission. A `KeepCache` restore fetches nothing and fires nothing.
+  the name does not lie by omission. A `KeepCache` restore fires nothing unless it pays a debt
+  ([#async-two-view-search](#async-two-view-search)).
 - **Async-only.** The observer earns its place by surfacing what the hidden controller keeps out of
   reach. A sync list has no controller, fetch or refresh, and the consumer owns the query it filters
   on, so an observer there would be the ghost Rule X
@@ -473,6 +480,11 @@ renames.
   is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull config to lean
   on.
 - **Accepted edge:** the pull indicator spins through a superseded run until its fetches finish.
+- **Build upward: a run that owns its stream.** A run reads its mode off the debouncer at fetch time
+  and the parked feed has no epoch, so a feed reload cut off by entering search burns its fetches
+  and the restore re-reads the same pages. Correct, since the debt covers it, and safe, since every
+  mode change bumps the generation. A run that commits into the parked stream removes the waste.
+  Take it when a second parked stream, a reactive source or `reloadPage` arrives.
 
 ---
 

@@ -321,17 +321,16 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     observer?.onQueryCommitted(committedQuery);
     if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
     if (restoredSnapshot == null) observer?.onReload(.queryChanged); // reset, not restored
-    // A debt is paid to depth whatever the pull does, after the query facts so events stay in order.
+    // Paid after the query facts, so the observer's events stay in order.
     final debt = restoredSnapshot?.debt;
     if (debt != null) unawaited(_runReload(debt, reload: const ReloadToCurrentDepth()));
   }
 
-  /// Applies [cacheAction]. Hands back the snapshot it put back, or null when the stream restarted
-  /// instead. Paying that snapshot's debt is the caller's job, once the observer has heard.
+  /// Applies [cacheAction]. Hands back the snapshot it put back, or null when the stream restarted.
   _NormalSnapshot<T>? _applyCacheAction(CacheAction cacheAction) {
     switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
-        // No pager fetch here, so nothing to latch. A debt reload carries its own trigger.
+        // Nothing to latch: a debt reload carries its own trigger.
         _generation++;
         _lastFailedPageIndex = null;
         _replacePagingState(snapshot.state);

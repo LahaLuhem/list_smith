@@ -575,8 +575,8 @@ switch (snapshot) {
 }
 ```
 
-**Why:** the reader has to decode destructuring to find two null checks, and the exhaustive-arms
-shape suggests a type dispatch that isn't there. It kills readability for no gain.
+**Why:** two null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
+type dispatch that isn't there.
 
 ---
 
@@ -682,7 +682,8 @@ class-shaped to mock.
 
 - **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls and workflow stay in
   `.ai/AGENTS.md` and `.ai/CLAUDE.md`. The "why we do it this way" lives in
-  [`APPENDIX.md`](APPENDIX.md).
+  [`APPENDIX.md`](APPENDIX.md). Rationale bullets stay compact too: the decision and its why in a
+  few lines. Rejected alternatives belong in the issue, not here.
 - **Explicit `<a id="…">` anchors** sit above every APPENDIX and CODESTYLE heading. Link via the
   anchor, never the heading text. Anchor stability is load-bearing: renaming a heading keeps the
   existing anchor, or you grep the repo and update every caller in the same change.

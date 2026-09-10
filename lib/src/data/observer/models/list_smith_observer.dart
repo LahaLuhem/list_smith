@@ -48,8 +48,8 @@ abstract base class ListSmithObserver {
 
   /// Called when a reload starts, before any page of it is asked for. [trigger] is what those pages
   /// will report: `.refresh` for a pull or `refresh()`, `.queryChanged` for a committed query change.
-  /// Joining a reload already running fires nothing. Nor does a `KeepCachePolicy` restore, unless
-  /// the feed was asked to reload while searching, which the restore then does and reports.
+  /// Joining a reload already running fires nothing, nor does a `KeepCachePolicy` restore unless it
+  /// pays for a reload asked while searching.
   void onReload(FetchTrigger trigger) {}
 
   /// Called when a new search [query] takes effect, after trimming, gating, and debounce.
