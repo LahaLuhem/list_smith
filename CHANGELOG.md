@@ -1,11 +1,13 @@
 ## [Unreleased]
 ### Added
 - \[#23\] Add ListSmithController to refresh an async list from code (a button, a tab re-tap)
-- feat(control): invalidate() and reset() beside refresh()
+- \[#59\] ListSmithController gains invalidate(), which re-reads every loaded page in place, and reset(), which starts over from page one. Both report FetchTrigger.invalidated.
 
 ### Changed
-- Raise the SDK floor to Dart 3.13 / Flutter 3.47
-- \[#45\] Tell the fetcher why it was called: a FetchTrigger on a PageRequest
+- \[#45\] **BREAKING:** fetch closures take one PageRequest, or SearchPageRequest when searching, instead of positional arguments. The old arguments are the request fields under the same names: pageIndex, pageSize, previousSignal, plus query on a search. Watch your interpolations, "$pageIndex" becomes "${request.pageIndex}".
+- \[#59\] **BREAKING:** ListSmithObserver.onRefresh() is now onReload(FetchTrigger trigger), and it fires for every reload the engine starts, not just a pull. Rename your override.
+- \[#59\] **BREAKING:** EmptyPageContext.moreAvailable is now isMoreAvailable. Only a custom EmptyPageBehaviour reads it.
+- **BREAKING:** the SDK floor is now Dart 3.13 and Flutter 3.47, up from Dart 3.12 and Flutter 3.44.
 - \[#37\] Grouping: one header for a group that straddles a page boundary, in release too
 
 ### Fixed
