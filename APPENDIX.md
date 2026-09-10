@@ -630,6 +630,12 @@ checks rather than six.
   one `*-ok` job that `needs` its siblings, so six names are the contract and the jobs behind them
   are free to move. They inspect `needs.*.result` by hand because a skipped job passes a required
   check, which is what keeps `conventions-ok` green on bot PRs.
+- **`pr-conventions.yml` alone runs without a `concurrency` group.** Dependabot fires `opened`
+  plus a burst of `labeled` events on one SHA, and `cancel-in-progress` cancels the superseded
+  runs mid-flight. `conventions-ok` is `if: always()`, which Actions runs *even on a cancelled
+  run*, so it trips its own `cancelled` guard and pins the required check red on a SHA nothing
+  re-reports. `cancel-in-progress: false` is no middle ground, since Actions still cancels a
+  superseded *pending* run. Three jobs of bash per event is the cheaper trade.
 - **`bench-analyzer.yml` and `bench-app.yml` gave up their path filters to join them.** A filtered
   workflow never reports on a PR that misses its paths, so it cannot back a required check, and
   leaving the analyzer tests unrequired was worse: every `uv` bump touches `benchmark/python/**`, so

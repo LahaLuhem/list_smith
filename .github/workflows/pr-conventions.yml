@@ -9,9 +9,8 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches: [main]
 
-concurrency:
-  group: pr-${{ github.event.pull_request.number }}-conventions
-  cancel-in-progress: true
+# No `concurrency` group here, alone among the workflows: a run cancelled by one would
+# still report a red conventions-ok and pin the required check. APPENDIX.md#dependabot-automerge
 
 permissions:
   contents: read
