@@ -327,7 +327,8 @@ await controller.reset();       // start over from page one: logout, account swi
 `refresh()` runs exactly what a pull runs, so your `PullToRefresh` config applies and an active
 search reloads the search rather than the feed. `invalidate()` keeps the user's place on purpose: a
 pull snapping to the top is a convention, a local write doing it is a bug. `reset()` keeps the
-query, so while searching the search restarts.
+query, so while searching the search restarts. A feed kept by `KeepCachePolicy` catches up once you
+come back, see the search section below.
 
 No indicator: that belongs to the pull, and your button owns its progress, hence the futures.
 Awaiting follows the reload, so `ResetToFirstPage` completes as the list clears, not when fresh data
@@ -405,15 +406,19 @@ ListSmith.async(
 
 | Policy                           | Reach for it when                                                                            |
 |----------------------------------|----------------------------------------------------------------------------------------------|
-| `ReplaceCachePolicy` *(default)* | a clean reload each way is fine, or the feed should reflect changes made while searching.    |
+| `ReplaceCachePolicy` *(default)* | a clean reload each way is fine, or the feed should pick up changes it was never told about. |
 | `KeepCachePolicy`                | returning to the feed should be instant: its pages and scroll position are kept, no refetch. |
 
 ```dart
 search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
 ```
 
-One caveat on "no refetch": a page still loading when the search started is dropped and asked again,
-since its answer was aimed at the older feed.
+"No refetch" has three exceptions:
+
+- a page still loading when the search started is dropped and asked again
+- a pull, `refresh()` or `invalidate()` while searching re-reads the kept feed in place once you're
+  back, reporting that trigger
+- `reset()` while searching drops the kept feed too, so it comes back from page 0
 
 </details>
 
