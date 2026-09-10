@@ -10,6 +10,7 @@
 
 ### Fixed
 - \[#35\] Drop the in-flight fetch when the paging state is swapped wholesale
+- \[#60\] KeepCachePolicy: a refresh, invalidate() or reset() while searching now reaches the kept feed
 
 ## [0.1.1] - 2026-07-20
 ### Added
