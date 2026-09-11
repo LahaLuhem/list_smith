@@ -22,10 +22,8 @@ class ListSmithController {
   /// `NoRefresh` list) and reloading the current search while searching.
   ///
   /// Completes when that reload does: [ResetToFirstPage] as the list clears, not when fresh data
-  /// lands, [ReloadToCurrentDepth] once the re-fetch is in. A call during a running refresh joins
-  /// it, one during an [invalidate] runs once more after it. Inert once the list is gone, so racing
-  /// a navigation is harmless. Calling it before any list attached asserts, since that is wiring
-  /// rather than a race.
+  /// lands, [ReloadToCurrentDepth] once the re-fetch is in. Joins a running refresh, runs once more
+  /// after an [invalidate]. Inert once the list is gone, and asserts if no list ever attached.
   Future<void> refresh() {
     assert(
       _host != null || _wasEverAttached,

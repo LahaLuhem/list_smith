@@ -145,7 +145,7 @@ renames.
 - **Materialisation:** `SyncSource` keeps the consumer's raw iterable. `SyncListView` materialises
   it once and again only when the iterable identity changes, so an unchanged list is never re-copied
   or re-filtered per build.
-- **`scrollCacheExtent`, not `cacheExtent`:** Flutter 3.44 deprecated `ScrollView.cacheExtent`
+- **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent`
   (`double`) for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a
   public `double?`, and `SyncListView` wraps it via `ScrollCacheExtent.pixels(...)` from
   `package:flutter/rendering.dart`, the widgets layer's own foundation rather than a design system.
@@ -171,8 +171,7 @@ renames.
   reach the parked feed, so the snapshot books the ask (`.refresh` outranks `.invalidated`) and the
   restore pays it: pages back as they were, then a `ReloadToCurrentDepth` over them reporting that
   trigger. A snapshot taken under a live feed reload is born owing its ask, since the reset that
-  follows strands it. Lazy, so a search never left costs nothing. To depth whatever the pull says,
-  since depth is what the policy keeps. `reset()` drops the snapshot instead: page 0 is the verb.
+  follows strands it. `reset()` drops the snapshot instead, page 0 being the verb.
 - **Reading the search case:** search mode is `query.isNotEmpty && source.supportsSearch`, and the
   closure pattern-matches the `AsyncSearch` case to reach its fetcher, so there is no nullable
   fetcher to bang. A query set without an `AsyncSearch` asserts in debug and degrades to normal
@@ -223,8 +222,8 @@ renames.
   carry.
 - **One reload event, carrying the reason.** `onReload(FetchTrigger)` replaced `onRefresh()` once a
   second reload-shaped intent was on the way. One event per reload the engine starts, with the
-  trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too, so
-  the name does not lie by omission. A `KeepCache` restore fires nothing unless it pays a debt
+  trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too. A
+  `KeepCache` restore fires nothing unless it pays a debt
   ([#async-two-view-search](#async-two-view-search)).
 - **Async-only.** The observer earns its place by surfacing what the hidden controller keeps out of
   reach. A sync list has no controller, fetch or refresh, and the consumer owns the query it filters
@@ -455,7 +454,7 @@ renames.
   idle. Not a fix for the in-flight-fetch race.
 - **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the `ReloadContext`
   shape. A closure was the right size while `refresh()` was the only intent. With more on the way,
-  each new one is a method on the host and a forwarding verb on the handle, and the swap was internal.
+  each new one is a method on the host and a forwarding verb on the handle.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
   through a controller no list ever received is a wiring mistake.
 
@@ -480,11 +479,10 @@ renames.
   is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull config to lean
   on.
 - **Accepted edge:** the pull indicator spins through a superseded run until its fetches finish.
-- **Build upward: a run that owns its stream.** A run reads its mode off the debouncer at fetch time
-  and the parked feed has no epoch, so a feed reload cut off by entering search burns its fetches
-  and the restore re-reads the same pages. Correct, since the debt covers it, and safe, since every
-  mode change bumps the generation. A run that commits into the parked stream removes the waste.
-  Take it when a second parked stream, a reactive source or `reloadPage` arrives.
+- **Build upward: a run that owns its stream.** A feed reload cut off by entering search burns its
+  fetches and the restore re-reads the same pages. Correct and safe, just wasteful. A run that
+  commits into the parked stream fixes it, worth taking when a second parked stream, a reactive
+  source or `reloadPage` arrives.
 
 ---
 
@@ -630,12 +628,11 @@ checks rather than six.
   one `*-ok` job that `needs` its siblings, so six names are the contract and the jobs behind them
   are free to move. They inspect `needs.*.result` by hand because a skipped job passes a required
   check, which is what keeps `conventions-ok` green on bot PRs.
-- **`pr-conventions.yml` alone runs without a `concurrency` group.** Dependabot fires `opened`
-  plus a burst of `labeled` events on one SHA, and `cancel-in-progress` cancels the superseded
-  runs mid-flight. `conventions-ok` is `if: always()`, which Actions runs *even on a cancelled
-  run*, so it trips its own `cancelled` guard and pins the required check red on a SHA nothing
-  re-reports. `cancel-in-progress: false` is no middle ground, since Actions still cancels a
-  superseded *pending* run. Three jobs of bash per event is the cheaper trade.
+- **`pr-conventions.yml` alone runs without a `concurrency` group.** Dependabot fires a burst of
+  events on one SHA, and `conventions-ok` is `if: always()`, which Actions runs *even on a
+  cancelled run*. It then trips its own `cancelled` guard and pins the required check red on a SHA
+  nothing re-reports. `cancel-in-progress: false` is no middle ground, since a superseded *pending*
+  run is cancelled too. Three jobs of bash per event is the cheaper trade.
 - **`bench-analyzer.yml` and `bench-app.yml` gave up their path filters to join them.** A filtered
   workflow never reports on a PR that misses its paths, so it cannot back a required check, and
   leaving the analyzer tests unrequired was worse: every `uv` bump touches `benchmark/python/**`, so

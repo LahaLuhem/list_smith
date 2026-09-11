@@ -82,10 +82,6 @@ throws on desktop and web, which is why the example targets Android and iOS.
 
 ### Tests
 
-Widget tests use the local Gherkin helper in `test/support/bdd.dart` (`feature`,
-`scenarioWidgets`, `scenarioOutlineWidgets`) with `checks` for assertions. It has no finder API, so
-bridge a `flutter_test` finder by evaluating it:
-`check(find.text('...').evaluate()).length.equals(1)`. The neutral spinner animates forever, so
-drive fixed `pump()`s and never `pumpAndSettle`. That file is a byte-identical copy of the
-package's, since a local helper can't cross a package boundary, so edit both. Rationale in the
-package [`CODESTYLE.md`](../CODESTYLE.md#test-style).
+Widget tests use the local Gherkin helper in `test/support/bdd.dart` with `checks`, under the
+package's rules: [`CODESTYLE.md`](../CODESTYLE.md#test-style). That helper is a byte-identical copy
+of the package's, since a local one can't cross a package boundary, so edit both.

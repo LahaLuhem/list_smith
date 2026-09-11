@@ -307,10 +307,9 @@ back door. Watching the list is the observer's job. Full rationale:
 ## Idioms
 
 <a id="idioms-dot-shorthands"></a>
-### Static dot shorthands (Dart 3.10+)
+### Static dot shorthands
 
-Where the context type is known, drop the leading type name. The analyzer resolves the member from
-the parameter, return, or variable type. Not just the obvious enum case:
+Where the context type is known, drop the leading type name. Not just the obvious enum case:
 
 - Enum values in patterns and arg slots: `crossAxisAlignment: .start`, `mainAxisSize: .min`,
   `case .android => …`.
@@ -324,8 +323,7 @@ the parameter, return, or variable type. Not just the obvious enum case:
   const Foo({this.scrollDirection = .vertical});   // not Axis.vertical
   ```
 
-  Top-level and `static const` initialisers are the exception: with no explicit LHS type, Dart
-  infers from the RHS, so the prefix stays.
+  Top-level and `static const` initialisers are the exception, with no LHS type to infer from.
 
 Skip it where the context type isn't obvious without re-reading. Once a prefix leaves a file
 entirely, drop it from any `show` clause too.
@@ -350,8 +348,7 @@ Keep `<Type>` where inference would fall back to `dynamic`: empty literals with 
 <a id="idioms-flex-spacing"></a>
 ### `Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps
 
-Flutter's flex widgets take `spacing` (and `runSpacing` on `Wrap`), inserting a uniform gap between
-adjacent children. Use it instead of interleaving a `SizedBox` between every pair.
+Reach for `spacing` instead of interleaving a `SizedBox` between every pair.
 
 ```dart
 // Prefer:
@@ -384,9 +381,8 @@ enum LoadState {
 // Over: parallel kDefault… constants + a plain enum + per-arm lookups.
 ```
 
-The default then lives on the variant it describes, adding a variant forces the choice at compile
-time, and every switch arm reads the same expression. Don't force it: a discriminator-only enum
-whose values carry no config stays plain.
+Adding a variant then forces the choice at compile time. Don't force it: a discriminator-only
+enum whose values carry no config stays plain.
 
 <a id="idioms-navigator-maybeof"></a>
 ### `Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops
@@ -402,17 +398,15 @@ onPressed: (context) => Navigator.maybeOf(context)?.pop(true)
 onPressed: (context) => Navigator.of(context).pop(true)   // throws if no Navigator
 ```
 
-`Navigator.of` asserts in debug and throws in release when there's no `Navigator`. For a
-fire-and-forget pop the right behaviour is a silent no-op if the route is already gone, which is
-what `maybeOf` plus `?.pop(…)` gives you for free. Keep `Navigator.of` where you need `push`'s
-result and a missing Navigator is a bug you want loud. Not `Navigator.maybePop`, a different thing.
+A pop that finds no route should be a silent no-op, which `maybeOf` plus `?.pop(…)` gives you.
+Keep `Navigator.of` where you need `push`'s result and a missing Navigator is a bug you want loud.
+Not `Navigator.maybePop`, a different thing.
 
 <a id="idioms-collection-for"></a>
 ### Collection-`for` / collection-`if` over `Iterable.map(…).toList()`
 
-When *building* a literal collection, especially a widget `children:` list, a literal with embedded
-control flow reads as data. A `.map(…).toList()` reads as a pipeline that incidentally produces
-data. The literal form also drops the `<T>` the context already infers.
+When *building* a literal collection, a widget `children:` list above all, embedded control flow
+reads as data, where `.map(…).toList()` reads as a pipeline that happens to produce it.
 
 ```dart
 // Prefer:
@@ -475,18 +469,16 @@ Page-granularity work stays a chain.
 <a id="idioms-async-wait"></a>
 ### `dart:async` `wait` extensions over static `Future.wait(...)`
 
-The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…`FutureRecord9`)
-supersede the static call for everyday use. A fixed number of differently-typed futures takes the
-record form, so `(f1, f2).wait` returns `Future<(T1, T2)>` and destructures directly. A dynamic
-number of same-typed ones takes the iterable form, where errors arrive as a `ParallelWaitError`
-carrying the per-slot values and errors.
+A fixed number of differently-typed futures takes the record form, `(f1, f2).wait`, which
+destructures directly. A dynamic number of same-typed ones takes `futures.wait`. Either way a
+failure arrives as a `ParallelWaitError` carrying the per-slot values, which `Future.wait` loses.
 
 <a id="idioms-future-syncvalue"></a>
 ### `Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value
 
 For a completed `Future` around a value *already in hand*, or a synchronous side-effecting call you
 don't await, reach for `Future.syncValue(value)`. `Future.sync` is for a computation that *might*
-turn out async. `syncValue` says the value is already here, which reads truer at the call site.
+turn out async.
 
 ```dart
 // Prefer, refresh() is synchronous and returns nothing to await:
@@ -503,10 +495,9 @@ future rather than propagating out synchronously.
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
 Default to `List.unmodifiable(…)`, and the `Set`/`Map` equivalents, for exposing an immutable
-collection. The constructor *copies*, so you get snapshot semantics decoupled from what the caller
-passed in. The `…View` only *wraps*, so anyone still holding the underlying collection can mutate it
-and the view silently follows. `UnmodifiableListView` is for when you specifically want a
-read-through view of private mutable state.
+collection. It *copies*, so you get a snapshot. The `…View` only *wraps*, so whoever still holds
+the original can mutate what the view shows, which is the point when you want a read-through view
+of private mutable state and a bug otherwise.
 
 <a id="idioms-uri-construction"></a>
 ### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs
@@ -526,10 +517,8 @@ explicit, and parts leak `_private` symbols across files.
 ### `ValueNotifier` + `ValueListenableBuilder` over `setState`
 
 In a `StatefulWidget`, hold the changing value in a `ValueNotifier<T>` and wrap only the dependent
-subtree in a `ValueListenableBuilder`, rather than calling `setState`. `setState` re-runs the whole
-`State.build`. A `ValueListenableBuilder` rebuilds only its own builder, and the subtree it wraps is
-exactly the part that depends on the value, so the rebuild scope is visible at the call site instead
-of implied.
+subtree in a `ValueListenableBuilder`, rather than calling `setState`. `setState` re-runs all of
+`State.build`, so the rebuild scope stays implied instead of visible at the call site.
 
 ```dart
 // Prefer: only the wrapped subtree rebuilds on change, and which subtree is explicit.

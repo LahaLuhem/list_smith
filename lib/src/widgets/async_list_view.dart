@@ -136,8 +136,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
-  /// The reload running now. A second call joins it rather than starting a rival, unless the list
-  /// moved on under it, and may book one more run after it. Null when none is in flight.
+  /// The reload running now, null when none is in flight.
   _ReloadRun<T>? _running;
 
   @override
@@ -464,10 +463,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return Future<void>.syncValue(null);
   }
 
-  /// The one reload entry point, gesture or controller. Joins the reload already running unless the
-  /// list moved on under it. Two refreshes coalesce. Any other pair runs once more afterwards,
-  /// `.refresh` winning, so a write landing on a page the run already read is not missed. [reload]
-  /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
+  /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run.
+  /// [reload] overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
   Future<void> _runReload(FetchTrigger trigger, {Reload? reload}) {
     _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
     final running = _running;
@@ -494,8 +491,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return run.done;
   }
 
-  /// A re-read keeps the user's place. A refresh does what the pull is configured to do, or the
-  /// pager's own reset on a `NoRefresh` list, which has no gesture but is still refreshable from code.
+  /// A re-read keeps the user's place. A refresh does what the pull is configured to do, falling
+  /// back to the pager's own reset when there is no gesture to read it off.
   Reload _reloadFor(FetchTrigger trigger) => switch (trigger) {
     .invalidated => const ReloadToCurrentDepth(),
     _ => switch (widget.source.refresh) {
