@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.0.0] - 2026-09-11
 ### Added
 - \[#23\] Add ListSmithController to refresh an async list from code (a button, a tab re-tap)
 - \[#59\] ListSmithController gains invalidate(), which re-reads every loaded page in place, and reset(), which starts over from page one. Both report FetchTrigger.invalidated.
@@ -54,7 +54,7 @@
 - Opt-in `itemId` de-duplication for items repeated across overlapping pages.
 - Lifecycle observer `ListSmithObserver` (and `LoggingListSmithObserver`) for page-load, error, refresh, and search events.
 
-[Unreleased]: https://github.com/LahaLuhem/list_smith/compare/0.1.1...HEAD
+[1.0.0]: https://github.com/LahaLuhem/list_smith/compare/0.1.1...1.0.0
 [0.1.1]: https://github.com/LahaLuhem/list_smith/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/LahaLuhem/list_smith/compare/0.0.1...0.1.0
 [0.0.1]: https://github.com/LahaLuhem/list_smith/releases/tag/0.0.1
