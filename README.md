@@ -12,6 +12,7 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [Install](#install)
+- [Why list_smith?](#why-list_smith)
 - [A quick taste](#a-quick-taste)
 - [Two kinds of list](#two-kinds-of-list)
 - [Pagination](#pagination)
@@ -36,12 +37,7 @@
 **list_smith** wraps `ListView.builder` for the lists you actually ship: async pagination,
 pull-to-refresh, and search, sync or async. Hand it a data source, an item builder, and a bit of
 config. It owns the scrollable, the controller, and every fiddly loading, error and empty state in
-between.
-
-Two things set it apart. It stays **out of your way**: no `ScrollController`, no `PagingController`,
-no sign of the [infinite_scroll_pagination](https://pub.dev/packages/infinite_scroll_pagination) it
-hides. And it brings **no design system**, so every surface it draws is a plain `widgets`-layer
-default that drops into Material, Cupertino, or your own bespoke thing unchanged.
+between. No `ScrollController`, no `PagingController`, nothing to wire up.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/1-overview.webp" width="260" alt="list_smith in action: pagination, pull-to-refresh, search, and grouping">
@@ -59,6 +55,20 @@ default that drops into Material, Cupertino, or your own bespoke thing unchanged
 ```sh
 flutter pub add list_smith
 ```
+
+## Why list_smith?
+
+Plenty of packages page a list. Most build their own paging engine and ship Material widgets you
+then override. list_smith does neither.
+
+|                                    |                                                                                                                                                                                          |
+|------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Runs on a proven paging engine** | Paging runs on [infinite_scroll_pagination](https://pub.dev/packages/infinite_scroll_pagination), not a custom-made one. list_smith adds the seams around it and hides the controller.   |
+| **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
+| **One widget, not three**          | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
+| **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
+| **Swap behaviour, not widgets**    | Eight sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                     |
+| **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
 
