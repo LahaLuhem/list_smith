@@ -25,6 +25,7 @@
     * [You keep the search field](#you-keep-the-search-field)
 - [Grouping](#grouping)
 - [Make it look like your app](#make-it-look-like-your-app)
+    * [Show your own rows while it loads](#show-your-own-rows-while-it-loads)
 - [Watching what it does](#watching-what-it-does)
 - [Scroll and layout](#scroll-and-layout)
 - [Races and late answers](#races-and-late-answers)
@@ -560,6 +561,28 @@ The pull indicator is set separately, on `PullToRefresh`. The error builders get
 controller. Leave any slot out and its neutral default fills in.
 
 </details>
+
+### Show your own rows while it loads
+
+Nicer than a spinner: hand the loading slots the row you already build, with a stand-in item.
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher(...),
+  itemBuilder: (context, article, index) => ArticleTile(article),
+  surfaces: AsyncListSurfaces(
+    // Held in a field. Otherwise might cose unnecessary rebuilds
+    newPageLoadingBuilder: (_) => MyShimmer(child: ArticleTile(_placeholderArticle)),
+    // Sparse source? AdvanceToFirstNonEmpty sits on this slot for the whole scan.
+    firstPageLoadingBuilder: (_) => MyShimmer(
+      child: Column(children: List.filled(3, ArticleTile(_placeholderArticle)),
+    ),
+  ),
+)
+```
+
+The shading is yours, list_smith ships none. If the row needs something from the enclosing scope,
+hoist the builder to a local and call it from both slots.
 
 ## Watching what it does
 
