@@ -2,20 +2,28 @@ name: Benchmark gate self-test
 
 # Measures the regression gate's FALSE-POSITIVE rate on a real runner (issue #43).
 #
-# Builds ONE commit and measures it against ITSELF through `ab`, the gate's own path, so this
-# tracks the gate rather than drifting from it. Both sides are the same binaries, so anything
-# flagged here is noise by definition. Run it before and after a change to the gate and compare;
-# each dispatch is 5 independent runs over ~13 metrics, so re-dispatch to grow the sample.
+# Builds ONE commit and measures it against ITSELF through `ab`, the gate's own path, so this tracks
+# the gate rather than drifting from it. Both sides are the same binaries, so anything flagged here
+# is noise by definition. Re-dispatch to grow the sample.
 #
 # Manual only: it is a measurement, not a check, and it never fails on a trip (the trip is the
-# datum). Deliberately not on `pull_request` — it would double an already expensive job.
+# datum). Deliberately not on `pull_request`, which would double an already expensive job.
+#
+# `measure-millis` picks the gate's window on real hardware: dispatch at two values, then compare
+# the trip counts and the spread each reports.
 
 on:
   workflow_dispatch:
+    inputs:
+      measure-millis:
+        description: Per-measurement window in ms. Blank uses the gate's own default.
+        required: false
+        type: string
+        default: ''
 
 # `cancel-in-progress: false`, spelled out per hard rule 8 and against `benchmark.yml`'s `true`: a
 # run in flight here is a measurement, and cancelling one silently shrinks the sample it was
-# dispatched to collect. A second dispatch queues behind the first instead of killing it.
+# dispatched to collect.
 concurrency:
   group: bench-selftest-${{ github.ref }}
   cancel-in-progress: false
@@ -61,7 +69,10 @@ jobs:
             --baseline-build ../build \
             --candidate-out "$RUNNER_TEMP/sideA" \
             --baseline-out "$RUNNER_TEMP/sideB" \
-            --scratch "$RUNNER_TEMP/ab"
+            --scratch "$RUNNER_TEMP/ab" \
+            ${WINDOW:+--measure-millis "$WINDOW"}
+        env:
+          WINDOW: ${{ inputs.measure-millis }}
 
       # The gate's own verdict, captured rather than enforced.
       - name: Gate verdict and timing separation
@@ -98,12 +109,13 @@ jobs:
           if [ "$gate_exit" -eq 0 ]; then
             verdict='pass (no false positive)'
           else
-            verdict='**TRIPPED — false positive**'
+            verdict='**TRIPPED**, a false positive'
           fi
 
           {
             echo "### Self-comparison ${{ matrix.run }}"
             echo
+            echo "- window: \`${WINDOW:-gate default}\` ms"
             echo "- gate: $verdict"
             echo "- side timing separation: \`$separation\` of the job span"
             echo "  (0.5 = each side in its own half, 0.0 = fully interleaved)"
@@ -112,6 +124,8 @@ jobs:
             cat "$RUNNER_TEMP/compare.log"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          WINDOW: ${{ inputs.measure-millis }}
 
       - name: Upload self-test artifacts
         if: always()

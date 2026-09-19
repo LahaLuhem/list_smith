@@ -7,10 +7,9 @@ for a given environment.
 from __future__ import annotations
 
 import subprocess
-import sys
 from datetime import UTC, datetime
 
-from list_smith_bench.config import FALLBACK_DURATION, PROJECT_ROOT
+from list_smith_bench.config import PROJECT_ROOT
 from list_smith_bench.data.dtos.result_record import ResultRecord
 from list_smith_bench.data.utils.stats import records_per_scenario
 
@@ -73,35 +72,3 @@ def summary_metadata(records: list[ResultRecord]) -> dict[str, str]:
         "sdk_version": str(first.get("sdk_version", "unknown")),
         "iterations": str(records_per_scenario(records)),
     }
-
-
-def parse_duration_overrides(raw: list[str] | None) -> dict[str, int]:
-    """Parse `--duration scenario=N` values to `{scenario: seconds}`. Exit on bad input."""
-    if not raw:
-        return {}
-    out: dict[str, int] = {}
-    for entry in raw:
-        if "=" not in entry:
-            print(f"--duration expects scenario=N, got: {entry}", file=sys.stderr)
-            sys.exit(64)
-        scenario, value = entry.split("=", 1)
-        try:
-            out[scenario.strip()] = int(value)
-        except ValueError:
-            print(f"--duration value must be int, got: {value}", file=sys.stderr)
-            sys.exit(64)
-    return out
-
-
-def resolve_duration(
-    scenario: str,
-    *,
-    global_override: int | None,
-    per_scenario: dict[str, int],
-) -> int:
-    """Per-scenario duration: per-scenario > global > fallback. Micros ignore the value."""
-    if scenario in per_scenario:
-        return per_scenario[scenario]
-    if global_override is not None:
-        return global_override
-    return FALLBACK_DURATION

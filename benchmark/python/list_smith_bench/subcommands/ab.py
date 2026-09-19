@@ -51,7 +51,7 @@ def _paired_exes(candidate_build: Path, baseline_build: Path) -> list[tuple[str,
 
 
 def _run_once(
-    exe: Path, out_json: Path, iteration: int, meta: tuple[str, str]
+    exe: Path, out_json: Path, iteration: int, meta: tuple[str, str], measure_millis: int
 ) -> list[ResultRecord]:
     """Run `exe` for a single iteration, returning its records stamped with the real [iteration]."""
     git_sha, package_version = meta
@@ -66,8 +66,8 @@ def _run_once(
             git_sha,
             "--package-version",
             package_version,
-            "--duration-seconds",
-            "0",
+            "--measure-millis",
+            str(measure_millis),
         ],
         cwd=PROJECT_ROOT,
         check=False,
@@ -103,11 +103,16 @@ def cmd_ab(args: argparse.Namespace) -> int:
     collected: dict[str, list[ResultRecord]] = {CANDIDATE: [], BASELINE: []}
 
     for name, candidate_exe, baseline_exe in pairs:
-        print(f"\nab     {name}  ({args.iterations} iterations, sides alternating)")
+        print(
+            f"\nab     {name}  ({args.iterations} iterations, sides alternating, "
+            f"{args.measure_millis}ms window)"
+        )
         exes = {CANDIDATE: candidate_exe, BASELINE: baseline_exe}
         for iteration, side in interleaved_schedule(args.iterations):
             out_json = scratch / f"{name}-{side}-{iteration}.json"
-            collected[side].extend(_run_once(exes[side], out_json, iteration, meta))
+            collected[side].extend(
+                _run_once(exes[side], out_json, iteration, meta, args.measure_millis)
+            )
         for side in (CANDIDATE, BASELINE):
             print(f"  {side:<9} {len(collected[side])} record(s) so far")
 

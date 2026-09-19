@@ -65,14 +65,3 @@ final class ResultWriter {
     await _sink.close();
   }
 }
-
-/// Forces a young-generation GC by briefly allocating then dropping a large amount of pressure.
-///
-/// Imperfect, the VM may defer, but the canonical "clean slate before measuring" pattern. Call it right
-/// before opening a measurement window.
-void forceGc() {
-  // ~8 MB of unreachable garbage to provoke a young-gen collection, dropped immediately so the VM reclaims
-  // it before the next synchronous chunk. Exists only for its allocation side effect.
-  // ignore: unused_local_variable
-  final pressure = List<List<int>>.generate(64, (_) => List<int>.filled(16384, 0));
-}
