@@ -35,14 +35,13 @@ import 'paged_view.dart';
 import 'refresh_binding.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
-/// runs feed and search as two views on that one controller.
+/// runs feed and search as 2 views on that one controller.
 ///
-/// Unexported, built by [ListSmith] for an [AsyncSource]. The fetch closure reads the debounced
-/// committed query: empty runs [AsyncSource.fetchPage], non-empty runs the [AsyncSearch] fetcher, and
-/// a change of committed query runs that search's cache policy against the controller. Every default
-/// is already resolved by [ListSmith.async].
+/// Unexported. The fetch closure reads the debounced committed query: empty runs [AsyncSource.fetchPage],
+/// non-empty runs the [AsyncSearch] fetcher. A change of query runs that search's cache policy against
+/// the controller.
 class AsyncListView<T extends Object> extends StatefulWidget {
-  /// The async, paginated source: its fetchers, end policy, and search cache policy.
+  /// The fetchers, end policy and search cache policy.
   final AsyncSource<T> source;
 
   /// Builds the widget for each item.
@@ -69,19 +68,19 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
   final NoResultsBuilder? noResultsBuilder;
 
-  /// The async-only override surfaces (page loading and error, end-of-list footer, refresh indicator).
+  /// The async-only override surfaces: page loading and error, end-of-list footer.
   final AsyncListSurfaces surfaces;
 
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
-  /// Lifecycle observer for logging or telemetry. Null is silent.
+  /// Lifecycle events for logging or telemetry. Null is silent.
   final ListSmithObserver? observer;
 
-  /// Handle the consumer refreshes this list through. Null leaves refresh gesture-only.
+  /// Refreshes this list from code. Null leaves refresh gesture-only.
   final ListSmithController? controller;
 
-  /// Creates the async paged list around an [AsyncSource].
+  /// Creates it.
   const new({
     required this.source,
     required this.itemBuilder,
@@ -111,13 +110,12 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// The normal-mode stream kept aside while searching, for [KeepCachePolicy].
   _NormalSnapshot<T>? _normalSnapshot;
 
-  /// The current stream's most recent end signal, fed to the end policy via
-  /// [EndContext.lastPageSignal]. Not derivable from the paging state, so it lives here: it resets
-  /// on refresh and snapshots with [_normalSnapshot] across a search toggle.
+  /// The current stream's last end signal, fed to the end policy. Not derivable from the paging state,
+  /// so it lives here: resets on refresh, and rides [_normalSnapshot] across a search toggle.
   Object? _lastPageSignal;
 
-  /// Bumped by everything that makes in-flight work stale: a reset, a query change, a commit,
-  /// dispose. ISP's token covers its own fetch, the post-await writes here compare against this.
+  /// Bumped by everything that makes in-flight work stale: a reset, a query change, a commit, dispose.
+  /// ISP's token covers its own fetch, the post-await writes here compare against this.
   var _generation = 0;
 
   /// The trigger the next paging-controller fetch reports, latched by a reset because the re-fetch it
@@ -128,9 +126,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// from paging state: ISP clears `error` before re-invoking the fetch.
   int? _lastFailedPageIndex;
 
-  /// Memo for [_dedupedForDisplay], keyed on paging-state identity: the controller hands out the
-  /// same [PagingState] until the data changes, so a rebuild that leaves it alone reuses the view
-  /// instead of re-running the O(loaded) pass. One cell, so the pair can't drift.
+  /// Memo for [_dedupedForDisplay], keyed on paging-state identity, so a rebuild that changes no data
+  /// skips the O(loaded) pass. One cell, so the pair can't drift.
   ({PagingState<int, T> raw, PagingState<int, T> display})? _displayMemo;
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
@@ -189,11 +186,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return items;
   }
 
-  /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchPage]
-  /// threads it forward, a reload threads its own and commits via [_commit].
+  /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchPage] threads
+  /// it forward, a reload threads its own and commits via [_commit].
   ///
-  /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
-  /// error still fires `onError`: the request did fail, whoever was waiting.
+  /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An error
+  /// still fires `onError`: the request did fail, whoever was waiting.
   Future<(List<T>, Object?)> _fetchPageRaw(
     int pageKey,
     Object? previousSignal,
@@ -255,13 +252,12 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return widget.source.endPolicy.hasReachedEnd(endContext) ? null : pages.length;
   }
 
-  /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already
-  /// appeared, so overlapping pages don't render a row twice. Null `itemId` returns [state] as-is.
+  /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already showed
+  /// up, so overlapping pages don't render a row twice. Null `itemId` hands [state] straight back.
   ///
-  /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend
-  /// actually returned and a fully-duplicate page is not read as end-of-data. `filterItems` walks
-  /// the pages flattened, so `seen` threads across them. O(loaded) per state change, memoised on
-  /// state identity in [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
+  /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
+  /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per state change, memoised
+  /// in [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
   PagingState<int, T> _dedupedForDisplay(PagingState<int, T> state) {
     final itemId = widget.source.itemId;
     if (itemId == null) return state;
@@ -289,9 +285,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     });
   }
 
-  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide. Emptiness
-  /// comes off the de-duplicated view (what the user sees), more-available off the raw pages. Gates
-  /// both the auto-fetch and the loading surface meanwhile, so the two can't disagree.
+  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide. Emptiness comes
+  /// off the de-duplicated view, what the user sees, more-available off the raw pages. Gates both the
+  /// auto-fetch and the loading surface meanwhile, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<int, T> state) =>
       widget.source.onEmptyPage.shouldAdvance(
         EmptyPageContext(
@@ -356,9 +352,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return null;
   }
 
-  /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't
-  /// move the pager's token, so a landed fetch would still apply. Every direct write comes through
-  /// here.
+  /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't move
+  /// the pager's token, so a landed fetch would still apply. Every direct write comes through here.
   void _replacePagingState(PagingState<int, T> next) {
     _pager.cancel();
     _pager.value = next;
@@ -374,10 +369,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _pager.refresh();
   }
 
-  // --- The engine side of a reload, reached through a [_ReloadRun]. ---
+  // The engine side of a reload, reached through a [_ReloadRun].
 
-  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential,
-  /// atomic reload.
+  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential, atomic
+  /// reload.
   bool get _isSignalBased => switch (widget.source.search) {
     final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
       asyncSearch.fetchPage.reportsSignal,
@@ -409,8 +404,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       builder: (_, state, fetchNextPage) => ValueListenableBuilder(
         valueListenable: _searchModeNotifier,
         builder: (context, isSearchMode, _) {
-          // AdvanceToFirstNonEmpty pages past an empty page itself, so show the loading surface while
-          // it does, so the empty surface is reserved for the true end (or the maxPages give-up).
+          // AdvanceToFirstNonEmpty pages past an empty page itself, so show loading while it does and
+          // keep the empty surface for the true end (or the maxPages give-up).
           if (_shouldAdvancePastEmpty(state)) {
             return surfaces.firstPageLoadingBuilder?.call(context) ??
                 const NeutralLoadingIndicator();
@@ -463,8 +458,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return Future<void>.syncValue(null);
   }
 
-  /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run.
-  /// [reload] overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
+  /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run. [reload]
+  /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
   Future<void> _runReload(FetchTrigger trigger, {Reload? reload}) {
     _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
     final running = _running;
@@ -491,8 +486,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     return run.done;
   }
 
-  /// A re-read keeps the user's place. A refresh does what the pull is configured to do, falling
-  /// back to the pager's own reset when there is no gesture to read it off.
+  /// A re-read keeps the user's place. A refresh does what the pull is configured to do, falling back
+  /// to the pager's own reset when there is no gesture to read it off.
   Reload _reloadFor(FetchTrigger trigger) => switch (trigger) {
     .invalidated => const ReloadToCurrentDepth(),
     _ => switch (widget.source.refresh) {
@@ -514,8 +509,8 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
 
   final _done = Completer<void>();
 
-  /// The generation this run belongs to. Its own writes move it along, so only another writer can
-  /// make it stale.
+  /// The generation this run belongs to. Its own writes move it along, so only another writer can make
+  /// it stale.
   int _epoch;
 
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.

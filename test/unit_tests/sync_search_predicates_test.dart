@@ -30,7 +30,7 @@ void main() {
         val(queryKey, 'AR'),
         val(matchesKey, true),
       )
-      // Any field can match, not only the first.
+      // Any field can match, not only the 1st.
       .example(
         val(nameKey, 'Paris'),
         val(countryKey, 'France'),

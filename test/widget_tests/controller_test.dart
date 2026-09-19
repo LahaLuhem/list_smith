@@ -12,8 +12,8 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async ListSmithController', () {
-    // Each page yields one item stamped `page * 1000 + attempt`, so a test can tell a refetched
-    // page from its first load. `attempts` records how many times each index was fetched.
+    // Each page yields one item stamped `page * 1000 + attempt`, so a test can tell a refetched page
+    // from its 1st load. `attempts` records how many times each index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher() {
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>((request) async {
@@ -83,7 +83,7 @@ void main() {
       await controller.refresh();
       await drain(tester);
 
-      // Every loaded page was refetched, not just the first: this is the pull's own path.
+      // Every loaded page was refetched, not just the 1st: this is the pull's own path.
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
     });
 
@@ -125,7 +125,7 @@ void main() {
       await [controller.refresh(), controller.refresh()].wait;
       await drain(tester);
 
-      // One reload ran and one event fired: the second call rode the first.
+      // One reload ran and one event fired: the 2nd call rode the 1st.
       check(observer.events.where((event) => event == 'reload(refresh)')).length.equals(1);
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
     });
@@ -188,7 +188,7 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // No frame between them: the second call runs in the first one's continuation.
+      // No frame between them: the 2nd call runs in the 1st one's continuation.
       await controller.refresh();
       await controller.refresh();
       await drain(tester);
@@ -413,7 +413,7 @@ void main() {
       await drain(tester, frames: 12);
       await (first, second).wait;
 
-      // Three reloads started: the held one, the reset, and the invalidate that refused to join.
+      // 3 reloads started: the held one, the reset, and the invalidate that refused to join.
       check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(3);
       check(find.text('item 2').evaluate()).length.equals(0);
     });

@@ -3,9 +3,8 @@ import 'dart:io';
 
 /// Appends self-describing benchmark records to a JSON-array output file.
 ///
-/// One object per iteration, conforming to the schema in
-/// [`benchmark/README.md`](../README.md). One writer per scenario or micro invocation: [open], one
-/// [writeRecord] per iteration, then [close]. Ported and trimmed from the BICC suite.
+/// One object per iteration, matching the schema in [`benchmark/README.md`](../README.md). One writer
+/// per invocation: [open], one [writeRecord] per iteration, then [close].
 final class ResultWriter {
   final String _scenario;
   final String _sdkVersion;
@@ -16,10 +15,7 @@ final class ResultWriter {
 
   new _(this._scenario, this._sdkVersion, this._packageVersion, this._gitSha, this._sink);
 
-  /// Opens [outputPath] for writing and emits the JSON-array prefix `[`.
-  ///
-  /// Subsequent [writeRecord] calls append comma-separated records. [close] writes the closing `]`
-  /// and flushes. Creates the parent directory if it does not exist.
+  /// Opens [outputPath] and emits the JSON-array prefix `[`. Creates the parent directory if needed.
   static Future<ResultWriter> open({
     required String outputPath,
     required String scenario,
@@ -38,8 +34,8 @@ final class ResultWriter {
 
   /// Appends one record for iteration [iteration].
   ///
-  /// [samples] holds per-metric arrays of raw measurements (the analyzer prefers these for
-  /// significance testing). [summary] holds per-metric scalars the benchmark pre-computed.
+  /// [samples] holds per-metric arrays of raw measurements, which the analyzer prefers for significance
+  /// testing. [summary] holds per-metric scalars the benchmark pre-computed.
   void writeRecord({
     required int iteration,
     required Map<String, List<num>> samples,
@@ -61,7 +57,7 @@ final class ResultWriter {
     _firstRecord = false;
   }
 
-  /// Writes the closing `]`, flushes, and closes the underlying file sink.
+  /// Writes the closing `]`, flushes and closes the sink.
   Future<void> close() async {
     _sink.write('\n]\n');
 
@@ -72,11 +68,11 @@ final class ResultWriter {
 
 /// Forces a young-generation GC by briefly allocating then dropping a large amount of pressure.
 ///
-/// Imperfect (the VM may defer), but the canonical "clean slate before measuring" pattern. Call it
-/// immediately before opening a measurement window. Idempotent.
+/// Imperfect, the VM may defer, but the canonical "clean slate before measuring" pattern. Call it right
+/// before opening a measurement window.
 void forceGc() {
-  // ~8 MB of unreachable garbage to provoke a young-gen collection, dropped immediately so the VM
-  // reclaims it before the next synchronous chunk. Exists only for its allocation side effect.
+  // ~8 MB of unreachable garbage to provoke a young-gen collection, dropped immediately so the VM reclaims
+  // it before the next synchronous chunk. Exists only for its allocation side effect.
   // ignore: unused_local_variable
   final pressure = List<List<int>>.generate(64, (_) => List<int>.filled(16384, 0));
 }

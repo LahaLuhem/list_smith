@@ -5,8 +5,8 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 import '/app/theme_scope.dart';
 
-/// The shell every demo sits in: a [PlatformScaffold] with [title] and an app-bar brightness
-/// toggle, so the neutral surfaces can be seen light and dark from any screen.
+/// The shell every demo sits in: a [PlatformScaffold] with [title] and an app-bar brightness toggle,
+/// so the neutral surfaces can be seen light and dark from any screen.
 class DemoScaffold extends StatelessWidget {
   final String title;
   final Widget body;
@@ -43,8 +43,7 @@ class _BrightnessToggle extends StatelessWidget {
   }
 }
 
-// Brightness glyphs aren't in platform_icons, so these fall back to
-// platformValue (per the example's icon convention).
+// No brightness glyphs in platform_icons, so fall back to platformValue.
 IconData _brightnessIcon(ThemeMode mode) => switch (mode) {
   .system => platformValue(
     material: Icons.brightness_auto,

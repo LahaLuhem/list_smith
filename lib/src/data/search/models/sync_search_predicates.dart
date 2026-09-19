@@ -3,21 +3,20 @@ library;
 
 import '../typedefs/sync_search_predicate.dart';
 
-/// Ready-made [SyncSearchPredicate] builders for the usual sync-search shapes, built from a list of
-/// field extractors.
+/// Ready-made [SyncSearchPredicate] builders for the usual shapes, built from field extractors.
 ///
-/// [fields] (contains), [prefix] (starts with), [exact] (equals), [allTerms] (every whitespace term
-/// must hit a field), plus [any] and [every] to combine them. All case-insensitive, all skipping
-/// `null` fields. Anything past them is a hand-written [ListSmith.sync] `searchBy`.
+/// [fields] (contains), [prefix] (starts with), [exact] (equals), [allTerms] (every word has to hit
+/// some field), plus [any] and [every] to combine them. All case-insensitive, all skipping `null` fields,
+/// all needing at least 1 extractor. Anything past these is a hand-written [ListSmith.sync] `searchBy`.
 ///
-/// Pin the item type on the list, `ListSmith<City>.sync(...)`. Used inline, the list's element type
-/// and a builder's type parameter resolve together and the extractor closures come out nullable
-/// otherwise. Naming it once covers every builder.
+/// Pin the item type on the list, `ListSmith<City>.sync(...)`. Inline, the list's element type and a
+/// builder's type parameter resolve together and the extractor closures come out nullable. Naming it
+/// once covers every builder.
 abstract final class SyncSearchPredicates {
   /// Keeps an item when any field from [extractors] *contains* the query, case-insensitively.
   ///
-  /// The shape nearly every sync list wants. Each extractor pulls one field off an item, and a
-  /// `null` field never matches, so nullable fields need no `?? ''`. Pass at least one extractor.
+  /// What nearly every sync list wants. A `null` field never matches, so nullable fields need no `??
+  /// ''`.
   ///
   /// ```dart
   /// ListSmith<City>.sync(
@@ -30,26 +29,21 @@ abstract final class SyncSearchPredicates {
     Iterable<String? Function(T item)> extractors,
   ) => _anyField(extractors, (value, query) => value.contains(query));
 
-  /// Keeps an item when any field from [extractors] *starts with* the query, case-insensitively.
-  ///
-  /// Like [fields], but prefix-anchored, for type-ahead. Pass at least one extractor.
+  /// Like [fields], but anchored to the start of the field, for type-ahead.
   static SyncSearchPredicate<T> prefix<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) => _anyField(extractors, (value, query) => value.startsWith(query));
 
-  /// Keeps an item when any field from [extractors] *equals* the query, case-insensitively.
-  ///
-  /// Like [fields], but a full-value match, for filtering rather than search-as-you-type. Pass at
-  /// least one extractor.
+  /// Like [fields], but a whole-value match, for filtering rather than search-as-you-type.
   static SyncSearchPredicate<T> exact<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) => _anyField(extractors, (value, query) => value == query);
 
-  /// Keeps an item when *every* whitespace-separated term in the query hits some field from
-  /// [extractors] (each term a case-insensitive substring), the terms matching across any fields.
+  /// Keeps an item when *every* word in the query hits some field from [extractors]. Words can match
+  /// across different fields.
   ///
-  /// For multi-word queries: `'john smith'` hits an item holding `'Smith, John'`, where [fields]
-  /// wouldn't. One term behaves exactly like [fields]. Pass at least one extractor.
+  /// For multi-word queries: `'john smith'` hits an item holding `'Smith, John'`, where [fields] wouldn't.
+  /// One word behaves exactly like [fields].
   static SyncSearchPredicate<T> allTerms<T extends Object>(
     Iterable<String? Function(T item)> extractors,
   ) {
@@ -68,9 +62,7 @@ abstract final class SyncSearchPredicates {
     };
   }
 
-  /// A predicate that matches when *any* of [predicates] matches (logical OR).
-  ///
-  /// Each gets the same item and query. Pass at least one.
+  /// Matches when *any* of [predicates] matches. Each gets the same item and query.
   static SyncSearchPredicate<T> any<T extends Object>(Iterable<SyncSearchPredicate<T>> predicates) {
     final options = predicates.toList(growable: false);
     assert(options.isNotEmpty, 'Pass at least one predicate to combine.');
@@ -78,9 +70,7 @@ abstract final class SyncSearchPredicates {
     return (item, query) => options.any((predicate) => predicate(item, query));
   }
 
-  /// A predicate that matches only when *every* one of [predicates] matches (logical AND).
-  ///
-  /// Each gets the same item and query. Pass at least one.
+  /// Matches only when *every* one of [predicates] matches. Each gets the same item and query.
   static SyncSearchPredicate<T> every<T extends Object>(
     Iterable<SyncSearchPredicate<T>> predicates,
   ) {

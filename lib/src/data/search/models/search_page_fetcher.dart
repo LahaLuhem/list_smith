@@ -4,16 +4,16 @@ library;
 
 import 'search_page_request.dart';
 
-/// Fetches one page of search results for an async list, given the [SearchPageRequest] describing it.
+/// Fetches one page of search results, from the [SearchPageRequest] describing it.
 ///
-/// [PageFetcher] with the committed [SearchPageRequest.query] on the request, and the same two
-/// builders: [SearchPageFetcher.new] for items only, [SearchPageFetcher.withSignal] to also return
-/// an end signal. That signal is read by the end policy as [EndContext.lastPageSignal] and fed back
-/// as [SearchPageRequest.previousSignal], so a cursor-driven search works the same way.
+/// [PageFetcher] with the committed query on the request, and the same 2 builders: [SearchPageFetcher.new]
+/// for items only, [SearchPageFetcher.withSignal] to return an end signal too. The end policy reads
+/// that signal as [EndContext.lastPageSignal] and the next fetch gets it as [SearchPageRequest.previousSignal],
+/// so a cursor-driven search works the same way.
 final class SearchPageFetcher<T extends Object> {
   final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch;
 
-  /// Whether this fetcher was built with [SearchPageFetcher.withSignal].
+  /// Whether this fetcher came from [SearchPageFetcher.withSignal].
   final bool reportsSignal;
 
   /// Wraps a function returning one page of results for the request's query and page.

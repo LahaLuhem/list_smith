@@ -2,8 +2,7 @@ import '../data/models/demo_item.dart';
 
 /// A fake async data source backing every demo.
 ///
-/// Holds a fixed in-memory dataset and serves it a page at a time behind a simulated [latency], so
-/// the demos exercise the real loading, empty and end-of-list paths. [totalItems] is deliberately
+/// Serves a fixed in-memory dataset a page at a time behind a simulated [latency]. [totalItems] is deliberately
 /// not a round multiple of a typical page size, so the final page is partial.
 class DemoRepository {
   /// Simulated per-page network delay.
@@ -27,8 +26,8 @@ class DemoRepository {
   /// The full dataset, for the sync (in-memory) search demo.
   List<DemoItem> get items => _items;
 
-  /// Returns the [pageIndex]th page (0-based) of at most [pageSize] items, after [latency]. An
-  /// out-of-range page returns empty, which the default end-policy reads as the end of the data.
+  /// The [pageIndex]th page (0-based) of at most [pageSize] items. An out-of-range page comes back empty,
+  /// which the default end policy reads as the end.
   Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
@@ -40,8 +39,7 @@ class DemoRepository {
     return _items.sublist(start, end > _items.length ? _items.length : end);
   }
 
-  /// The [pageIndex]th page of items whose title [DemoItem.matches] [query], after [latency]. The
-  /// async search demo pages over this filtered view.
+  /// The [pageIndex]th page of items whose title [DemoItem.matches] [query].
   Future<List<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
@@ -54,9 +52,8 @@ class DemoRepository {
     return matchingItems.sublist(start, end > matchingItems.length ? matchingItems.length : end);
   }
 
-  /// Serves items by opaque cursor rather than page index. Returns the next slice plus the cursor
-  /// after it, or `null` once the data runs out. This cursor is just the next offset as a string,
-  /// but list_smith never looks inside it.
+  /// Serves items by opaque cursor: the next slice plus the cursor after it, or `null` once the data
+  /// runs out. This one is just the next offset as a string, but list_smith never looks inside it.
   Future<(List<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {
     await Future<void>.delayed(latency);
 

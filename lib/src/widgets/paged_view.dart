@@ -12,14 +12,12 @@ import 'defaults/neutral_loading_indicator.dart';
 import 'defaults/neutral_no_more_items_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
 
-/// Wraps ISP's [PagedListView], filling every delegate slot with list_smith's neutral defaults
-/// (or the consumer's overrides) so no Material surface leaks through, and bridging the bare error
-/// slots to our [ErrorBuilder] contract.
+/// Wraps ISP's [PagedListView], filling every delegate slot with our neutral defaults or the consumer's
+/// overrides, so no Material surface leaks through.
 ///
-/// Internal, built inside a [PagingListener] where the paging [state] and its [fetchNextPage] are
-/// in scope.
+/// Internal, built inside a [PagingListener] where [state] and [fetchNextPage] are in scope.
 class PagedView<T extends Object> extends StatelessWidget {
-  /// The current paging state, driving which surface renders.
+  /// Drives which surface renders.
   final PagingState<int, T> state;
 
   /// Requests the next page. Doubles as the retry action on error surfaces.
@@ -64,7 +62,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   /// See [firstPageLoadingBuilder].
   final WidgetBuilder? noMoreItemsBuilder;
 
-  /// Creates the paged view around the current [state].
+  /// Creates it.
   const new({
     required this.state,
     required this.fetchNextPage,
@@ -114,16 +112,16 @@ class PagedView<T extends Object> extends StatelessWidget {
           );
   }
 
-  /// The item builder handed to ISP, from [Grouping.decorate]. The group look-back walks the pages
-  /// lazily, and only when grouping is on, since [Grouping.decorate] takes it as a callback.
+  /// The item builder handed to ISP. The group look-back only walks the pages when grouping is on, since
+  /// [Grouping.decorate] takes it as a callback.
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
     flatItems: () => state.pages?.expand((page) => page) ?? const Iterable.empty(),
     axis: scroll.scrollDirection,
   );
 
-  /// Fills every ISP delegate slot with the neutral defaults or the consumer's overrides. The error
-  /// slots read `state.error!`, non-null because ISP only builds them when there is an error.
+  /// Fills every ISP delegate slot. The error slots read `state.error!`, non-null because ISP only builds
+  /// them when there is an error.
   PagedChildBuilderDelegate<T> _buildDelegate() => PagedChildBuilderDelegate<T>(
     itemBuilder: _effectiveItemBuilder(),
     firstPageProgressIndicatorBuilder: (context) =>
@@ -146,8 +144,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   );
 }
 
-/// Picks the consumer's [ErrorBuilder] if given, else the neutral default, wiring both to the same
-/// `error` and `onRetry`.
+/// The consumer's [ErrorBuilder] if there is one, else the neutral default.
 class _ResolvedError extends StatelessWidget {
   final Object error;
   final VoidCallback onRetry;

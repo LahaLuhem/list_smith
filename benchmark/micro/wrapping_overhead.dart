@@ -1,9 +1,8 @@
 /// Micro-benchmark: list_smith's per-`getNextPageKey` overhead on top of ISP.
 ///
-/// Each time ISP asks for the next page key, `_nextPageKey` rebuilds the per-page item counts into
-/// an `EndContext` and runs the end policy over it. This measures that ISP-agnostic core as the
-/// loaded-page count grows, confirming the wrapping costs ~nothing. BICC's `check_once_overhead`
-/// analogue.
+/// Each time ISP asks for the next page key, `_nextPageKey` rebuilds the per-page item counts into an
+/// `EndContext` and runs the end policy over it. This measures that core as the loaded-page count grows.
+/// BICC's `check_once_overhead` analogue.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -35,8 +34,8 @@ final class _WrappingOverhead extends BenchmarkBase {
 
   @override
   void run() {
-    // Mirror _nextPageKey's per-call work: rebuild the page-item-counts, wrap them in an
-    // EndContext, then run the end policy.
+    // Mirror _nextPageKey's per-call work: rebuild the page-item-counts, wrap them in an EndContext,
+    // then run the end policy.
     final pageItemCounts = _pages.map((page) => page.length).toList(growable: false);
     final context = EndContext(pageItemCounts: pageItemCounts, pageSize: _itemsPerPage);
     lastKey = _endPolicy.hasReachedEnd(context) ? -1 : _pages.length;

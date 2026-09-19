@@ -5,18 +5,18 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Custom surfaces demo, wrapping the repository fetch with an optional injected failure
-/// so the error and retry surfaces can be exercised.
+/// Backs the Custom surfaces demo, wrapping the repository fetch with an optional injected failure so
+/// the error and retry surfaces can be exercised.
 ///
-/// The failure flag is a scoped [ValueNotifier]: flipping it rebuilds the toggle, not the view that
-/// holds the list. See `CODESTYLE.md` *State management*.
+/// The failure flag is a scoped [ValueNotifier], so flipping it rebuilds the toggle, not the list. See
+/// `CODESTYLE.md` *State management*.
 final class CustomSurfacesViewModel extends ViewModel {
   final _repository = DemoRepository();
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
 
   ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
-  // Simple case
+  // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onFailureToggled({required bool value}) => _shouldInjectFailuresNotifier.value = value;
 

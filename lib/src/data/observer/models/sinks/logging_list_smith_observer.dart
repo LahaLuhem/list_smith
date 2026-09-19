@@ -5,19 +5,17 @@ import '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.
 ///
-/// For quick diagnostics: pass `observer: const LoggingListSmithObserver()` and every event turns
-/// up in the console and DevTools' logging view, filterable by the `list_smith` source. Uses
-/// [developer.log] rather than `print`, so the package stays `avoid_print`-clean. Want a custom
-/// name, structured records, or filtered telemetry? Subclass [ListSmithObserver] instead.
+/// Pass `observer: const LoggingListSmithObserver()` and events show up in the console and DevTools'
+/// logging view, filterable by that name. Want your own name, structured records or filtered telemetry?
+/// Subclass [ListSmithObserver] instead.
 final class LoggingListSmithObserver extends ListSmithObserver {
   /// The logger name on every record. Filter DevTools by it.
   static const _name = 'list_smith';
 
-  /// Matches `package:logging`'s `Level.SEVERE`, so a consumer piping through it sees the level
-  /// they expect.
+  /// `package:logging`'s `Level.SEVERE`, so piping through it gives the level you'd expect.
   static const _severeLevel = 900;
 
-  /// Creates a [LoggingListSmithObserver].
+  /// Creates it.
   const new();
 
   @override

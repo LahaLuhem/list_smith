@@ -11,10 +11,10 @@ enum ListSmithRefreshPhase {
   /// Being pulled, but not yet far enough to arm a refresh on release.
   dragging,
 
-  /// Pulled past the threshold, so releasing now triggers a refresh.
+  /// Pulled past the threshold, so letting go now triggers a refresh.
   armed,
 
-  /// A refresh is in flight: the fetch triggered by the release is running.
+  /// A refresh is in flight.
   refreshing,
 
   /// Animating back to rest, whether cancelled below the threshold or done after a refresh.

@@ -5,8 +5,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 /// A fixed-height panel showing a demo's recorded events, newest first, with a clear button.
 ///
-/// A plain widgets-layer surface, like list_smith's own defaults, so it reads under either shell.
-/// Only the header's clear button borrows a platform control.
+/// Plain widgets-layer, like list_smith's own defaults, so it reads under either shell.
 class EventLogPanel extends StatelessWidget {
   /// The event lines to show, newest first.
   final ValueListenable<List<String>> events;

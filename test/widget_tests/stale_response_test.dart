@@ -32,8 +32,8 @@ void main() {
       await _pumpSearch(tester, searchFetchPage: searchFetchPage, query: 'ab');
       await settle(tester);
 
-      // Land the fresh page, then the superseded one, with no frame between. The stale write only
-      // does damage when it arrives last, so the order is forced rather than left to timing.
+      // Land the fresh page, then the superseded one, with no frame between. The stale write only does
+      // damage when it arrives last, so the order is forced rather than left to timing.
       holds['ab:0']!.complete();
       holds['a:1']!.complete();
       await tester.idle();
@@ -50,7 +50,7 @@ void main() {
     scenarioWidgets('a superseded page does not fire onPageLoaded', (tester) async {
       var calls = 0;
       final hold = Completer<void>();
-      // Holds the second fetch, page 1 of the pre-refresh stream, so it lands after the reload.
+      // Holds the 2nd fetch, page 1 of the pre-refresh stream, so it lands after the reload.
       final fetchPage = PageFetcher<int>((request) async {
         if (calls++ == 1) await hold.future;
 
@@ -91,8 +91,8 @@ void main() {
       final observer = RecordingListSmithObserver();
       final controller = ListSmithController();
       var pageTwoCalls = 0;
-      // Page 2 held, pages 0 and 1 already in, so reload depth is 2. Killing the held fetch frees
-      // the list to ask again, hence the counter.
+      // Page 2 held, pages 0 and 1 already in, so reload depth is 2. Killing the held fetch frees the
+      // list to ask again, hence the counter.
       final fetchPage = PageFetcher<int>((request) async {
         final pageIndex = request.pageIndex;
         if (pageIndex == 2) {
@@ -126,7 +126,7 @@ void main() {
       await tester.idle();
       await drain(tester);
 
-      // Asked twice: once before the reload (superseded), once after. Only the second announces.
+      // Asked twice: once before the reload (superseded), once after. Only the 2nd announces.
       check(pageTwoCalls).equals(2);
       check(observer.events.where((event) => event.startsWith('pageLoaded(index: 2,')).toList())
           .length
@@ -163,8 +163,8 @@ void main() {
       await tester.idle();
       await drain(tester, frames: 16);
 
-      // The restore cancels first, so the abandoned search page has nowhere to land. Without it,
-      // hits for a deleted query show up under the feed.
+      // The restore cancels first, so the abandoned search page has nowhere to land. Without it, hits
+      // for a deleted query show up under the feed.
       check(find.text('item 10').evaluate()).length.equals(0);
       check(find.text('item 11').evaluate()).length.equals(0);
       check(find.text('item 1').evaluate()).length.equals(1);
@@ -254,8 +254,8 @@ void main() {
       await tester.idle();
       await drain(tester, frames: 16);
 
-      // Pins the end state, not the mechanism: leaving search mid-fetch has to settle, not spin.
-      // The re-fetch is what settles it today, so this passes without the seam too.
+      // Pins the end state, not the mechanism: leaving search mid-fetch has to settle, not spin. The
+      // re-fetch is what settles it today, so this passes without the seam too.
       check(find.text('loading more').evaluate()).length.equals(0);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).length.equals(1);
@@ -286,8 +286,8 @@ void main() {
           fetchPage: fetchPage,
           controller: controller,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
-          // No refresh: passed, so this runs the default PullToRefresh with its default
-          // ResetToFirstPage reload, the pairing most consumers never change.
+          // No refresh: passed, so this runs the default PullToRefresh with its default ResetToFirstPage
+          // reload, the pairing most consumers never change.
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -303,9 +303,8 @@ void main() {
       await tester.idle();
       await drain(tester, frames: 12);
 
-      // ResetToFirstPage throws the loaded pages away and starts again, so the page held from
-      // before the refresh has nothing to attach to. Its body never shows, and page 2's fresh one
-      // does.
+      // ResetToFirstPage throws the loaded pages away and starts again, so the page held from before
+      // the refresh has nothing to attach to. Its body never shows, and page 2's fresh one does.
       check(find.text('item 2001').evaluate()).length.equals(0);
       check(find.text('item 2002').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(1);
@@ -318,8 +317,8 @@ void main() {
       // Page 2 answers differently per attempt, so stale (20, 21) and fresh (6, 7) are told apart.
       final fetchPage = PageFetcher<int>((request) async {
         final pageIndex = request.pageIndex;
-        // Bounded: page 2 no longer blocks pagination, and an endless fetcher would mint the very
-        // ids checked absent below.
+        // Bounded: page 2 no longer blocks pagination, and an endless fetcher would mint the very ids
+        // checked absent below.
         if (pageIndex > 2) return const <int>[];
         if (pageIndex != 2) return [pageIndex * 3, pageIndex * 3 + 1, pageIndex * 3 + 2];
         pageTwoCalls++;
@@ -382,7 +381,7 @@ void main() {
       await pumpListSmith(tester, build(''));
       await settle(tester);
 
-      // Enter search: the normal list is snapshotted and the search's first page is left in flight.
+      // Enter search: the normal list is snapshotted and the search's 1st page is left in flight.
       await pumpListSmith(tester, build('x'));
       await settle(tester);
 
@@ -463,8 +462,8 @@ void main() {
     scenarioWidgets('leaving search under a hung search reload drops it and re-reads the feed', (
       tester,
     ) async {
-      // Under KeepCache the search's first load is attempt 2 and its reload attempt 3, so the feed's
-      // re-read on the way back is attempt 4.
+      // Under KeepCache the search's 1st load is attempt 2 and its reload attempt 3, so the feed's re-read
+      // on the way back is attempt 4.
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (_, attempt) => attempt == 3 ? hold.future : null,
@@ -589,7 +588,7 @@ void main() {
       await settle(tester);
       await drain(tester, frames: 12);
 
-      // All three pages re-read as a refresh. Depth is what KeepCache keeps, whatever the pull does.
+      // All 3 pages re-read as a refresh. Depth is what KeepCache keeps, whatever the pull does.
       check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
     });
 
@@ -627,7 +626,8 @@ void main() {
     scenarioWidgets('a feed reload cut off by entering search is paid on the way back', (
       tester,
     ) async {
-      // The refresh's fetches are attempt 2. Search then takes attempt 3, the feed's re-read attempt 4.
+      // The refresh's fetches are attempt 2. Search then takes attempt 3, the feed's re-read attempt
+      // 4.
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (_, attempt) => attempt == 2 ? hold.future : null,
@@ -661,7 +661,7 @@ void main() {
     });
 
     scenarioWidgets('a debt reload cut off by a new search is owed again', (tester) async {
-      // The first restore's re-read is sequential and hangs on p0#4, so the next search cuts it off.
+      // The 1st restore's re-read is sequential and hangs on p0#4, so the next search cuts it off.
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (pageIndex, attempt) => (pageIndex, attempt) == (0, 4) ? hold.future : null,
@@ -678,7 +678,7 @@ void main() {
       await drain(tester, frames: 12);
       await _pumpStamped(tester, source, controller: controller);
       await settle(tester);
-      // Premise: the feed is back while its re-read hangs on the first page.
+      // Premise: the feed is back while its re-read hangs on the 1st page.
       check(_shown(tester)).deepEquals([1, 1001, 2001]);
 
       await _pumpStamped(tester, source, controller: controller, query: 'y');
@@ -693,7 +693,7 @@ void main() {
       await settle(tester);
       await drain(tester, frames: 12);
 
-      // The second restore pays the refresh the first one never finished.
+      // The 2nd restore pays the refresh the 1st one never finished.
       check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
       check(_shown(tester)).not((it) => it.deepEquals([1, 1001, 2001]));
     });
@@ -820,11 +820,11 @@ typedef _StampedSource = ({
   List<String> log,
 });
 
-/// Stamps each page `page * 1000 + attempt`, so a re-fetched page is told from its first load, and
-/// blocks the fetches [holdFor] picks. The feed and the search share the counter, so a query change
-/// restarts the stream with the next stamp: the stand-in for anything that moves the list on under
-/// a reload. `log` records every request as `page#attempt:trigger`. [signal] makes the feed a
-/// `withSignal` source (always a null signal), which reloads through the in-order path.
+/// Stamps each page `page * 1000 + attempt`, so a re-fetched page is told from its 1st load, and blocks
+/// the fetches [holdFor] picks. The feed and the search share the counter, so a query change restarts
+/// the stream with the next stamp: the stand-in for anything that moves the list on under a reload.
+/// `log` records every request as `page#attempt:trigger`. [signal] makes the feed a `withSignal` source
+/// (always a null signal), which reloads through the in-order path.
 _StampedSource _stampedSource({
   required _HoldFor holdFor,
   SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
@@ -880,9 +880,8 @@ List<int> _shown(WidgetTester tester) => tester
     .map((data) => int.parse(data.split(' ').last))
     .toList();
 
-/// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher
-/// is never reached (the query is always non-empty), and refresh is off so only the query drives
-/// resets.
+/// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher is
+/// never reached (the query is always non-empty), and refresh is off so only the query drives resets.
 Future<void> _pumpSearch(
   WidgetTester tester, {
   required SearchPageFetcher<int> searchFetchPage,

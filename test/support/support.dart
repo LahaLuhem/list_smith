@@ -1,6 +1,5 @@
-/// One-stop widget-test support: the local Gherkin vocabulary (feature / scenarioWidgets /
-/// scenarioOutlineWidgets), the pump/drain harness, reusable fake sources, and the recording
-/// observer double. Import this single file from a widget test instead of the individual pieces.
+/// One import for widget-test support: the Gherkin vocabulary, the pump/drain harness, the fake sources
+/// and the recording observer. Import this instead of the individual pieces.
 library;
 
 export 'bdd.dart';

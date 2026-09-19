@@ -4,21 +4,20 @@ import 'package:flutter/widgets.dart';
 import '/src/data/refresh/models/list_smith_refresh_state.dart';
 import 'neutral_progress_indicator.dart';
 
-/// The neutral default pull-to-refresh indicator.
+/// The neutral pull-to-refresh indicator.
 ///
-/// Reveals a [NeutralProgressIndicator] from the top of the list as the pull progresses (keyed to
-/// [ListSmithRefreshState.value]) and keeps it spinning while a refresh runs. Override
-/// `refreshBuilder` to replace it.
+/// Reveals a [NeutralProgressIndicator] from the top as the pull progresses, keyed to [ListSmithRefreshState.value].
+/// Override `refreshBuilder` to replace it.
 class NeutralRefreshIndicator extends StatelessWidget {
   static const double _revealExtent = 64;
 
-  /// The list being refreshed, translated down to reveal the indicator.
+  /// The list, translated down to reveal the indicator.
   final Widget child;
 
-  /// The pull-to-refresh state driving the reveal.
+  /// Drives the reveal.
   final ListSmithRefreshState state;
 
-  /// Creates the neutral refresh indicator around [child] for [state].
+  /// Creates it.
   const new({required this.child, required this.state, super.key});
 
   @override

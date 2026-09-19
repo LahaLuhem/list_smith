@@ -6,9 +6,9 @@ description: >-
 
 inputs:
   channel:
-    description: Flutter channel. Defaults to `stable`.
+    description: Flutter channel. Defaults to the one `.fvmrc` pins for local FVM.
     required: false
-    default: stable
+    default: ''
   working-directory:
     description: Directory containing the `pubspec.yaml` to resolve. Defaults to the repo root.
     required: false
@@ -17,9 +17,18 @@ inputs:
 runs:
   using: composite
   steps:
+    # .fvmrc is the single source for the SDK local dev uses; CI reads it rather than
+    # keeping a second copy that drifts the moment either side moves.
+    - name: Resolve channel
+      id: sdk
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+      run: echo "channel=${CHANNEL:-$(jq -r .flutter .fvmrc)}" >> "$GITHUB_OUTPUT"
+
     - uses: subosito/flutter-action@v2
       with:
-        channel: ${{ inputs.channel }}
+        channel: ${{ steps.sdk.outputs.channel }}
         cache: true
 
     - name: Cache .pub-cache

@@ -2,12 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import '/src/utils/neutral_theme.dart';
 
-/// The neutral default surface shown when a search matches none of the source's items.
+/// The neutral surface for a search that matched nothing.
 ///
-/// A centred, muted "No results" message. The query is deliberately not echoed, to stay overflow-
-/// and i18n-safe. Override `noResultsBuilder` to replace it.
+/// The query is deliberately not echoed, to stay overflow- and translation-safe. Override `noResultsBuilder`
+/// to replace it.
 class NeutralNoResultsIndicator extends StatelessWidget {
-  /// Creates the neutral no-results surface.
+  /// Creates it.
   const new({super.key});
 
   @override

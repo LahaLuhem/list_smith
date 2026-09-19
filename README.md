@@ -14,7 +14,7 @@
 - [Install](#install)
 - [Why list_smith?](#why-list_smith)
 - [A quick taste](#a-quick-taste)
-- [Two kinds of list](#two-kinds-of-list)
+- [2 kinds of list](#2-kinds-of-list)
 - [Pagination](#pagination)
     * [Where the data ends](#where-the-data-ends)
 - [Pull to refresh](#pull-to-refresh)
@@ -66,9 +66,9 @@ then override. list_smith does neither.
 |------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Runs on a proven paging engine** | Paging runs on [infinite_scroll_pagination](https://pub.dev/packages/infinite_scroll_pagination), not a custom-made one. list_smith adds the seams around it and hides the controller.   |
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
-| **One widget, not three**          | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
+| **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
-| **Swap behaviour, not widgets**    | Eight sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                     |
+| **Swap behaviour, not widgets**    | 8 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                     |
 | **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
@@ -85,7 +85,7 @@ ListSmith.async(
 That already paginates as you scroll, pulls to refresh, loads, errors with a retry button, and knows
 when it has hit the end.
 
-## Two kinds of list
+## 2 kinds of list
 
 Which constructor you reach for comes down to where your data lives.
 
@@ -98,9 +98,9 @@ Each takes only the parameters that make sense for it, so nothing you pass is ev
 
 ## Pagination
 
-`ListSmith.async` calls `fetchPage` with a `PageRequest` (0-based `pageIndex`, the `pageSize`, the
-previous page's `previousSignal`), then asks for the next as the user nears the end. Return that
-page's items, any `Iterable`, materialised once for you. An empty page is the end of the road:
+`ListSmith.async` calls `fetchPage` with a `PageRequest`, then asks for the next as the user nears
+the end. Return that page's items, any `Iterable`, turned into a list once for you. An empty page
+is the end of the road:
 
 ```dart
 ListSmith.async(
@@ -118,7 +118,7 @@ out of the cache rather defeats the pull. `request.trigger` says which it was.
 
 | `FetchTrigger` | What happened                                                               |
 |----------------|-----------------------------------------------------------------------------|
-| `initialLoad`  | the first page of a cold list                                               |
+| `initialLoad`  | the 1st page of a cold list                                               |
 | `nextPage`     | the user neared the end, so the next page was asked for                     |
 | `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
 | `retry`        | this page's last attempt threw, and Retry was tapped                        |
@@ -157,14 +157,14 @@ swap the policy. Pick by how your source behaves, not by mechanism:
 | `ExplicitHasMorePolicy`              | your backend returns a `hasMore` / `isLast` flag per response.       |
 | `StopOnNullSignalPolicy`             | your backend is cursor-based, returning `null` when there's no more. |
 
-The two count-based tweaks are one line each:
+The 2 count-based tweaks are one line each:
 
 ```dart
-endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),  // tolerate up to two empty pages
-endPolicy: const FixedPageCountPolicy(pageCount: 5),            // stop after five pages
+endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),  // tolerate up to 2 empty pages
+endPolicy: const FixedPageCountPolicy(pageCount: 5),            // stop after 5 pages
 ```
 
-The two signal-based ones read a value off each fetch, so they need `PageFetcher.withSignal` (and
+The 2 signal-based ones read a value off each fetch, so they need `PageFetcher.withSignal` (and
 `SearchPageFetcher.withSignal` if the list searches). Stopping on the flag saves the trailing empty
 page a count-based policy fetches to find the end:
 
@@ -179,7 +179,7 @@ ListSmith.async(
 )
 ```
 
-None of the four fit? `PaginationEndPolicy` is an open contract. Its context carries the per-page
+None of the 4 fit? `PaginationEndPolicy` is an open contract. Its context carries the per-page
 counts, the page size, and the last fetch's signal:
 
 ```dart
@@ -194,7 +194,7 @@ class ShortLastPage extends PaginationEndPolicy {
 
 Keyset/cursor APIs don't take a page number, you hand back the cursor the previous page returned.
 Same `withSignal` channel: a page's signal arrives on the next request as `previousSignal` (null for
-the first page), and `StopOnNullSignalPolicy` ends the list when the cursor runs out.
+the 1st page), and `StopOnNullSignalPolicy` ends the list when the cursor runs out.
 
 ```dart
 ListSmith.async(
@@ -219,7 +219,7 @@ The policies above decide *whether* more pages exist. A page with nothing to sho
 problem: nothing on screen means nothing to scroll, so the pager never asks for the pages that do
 have data. A calendar paged by day hits this on a quiet today.
 
-`onEmptyPage` closes the gap. `AdvanceToFirstNonEmpty` pages past empty pages itself, to the first
+`onEmptyPage` closes the gap. `AdvanceToFirstNonEmpty` pages past empty pages itself, to the 1st
 one with items or the true end, showing the loading surface while it goes:
 
 ```dart
@@ -227,7 +227,7 @@ ListSmith.async(
   fetchPage: PageFetcher((request) => calendar.dayPage(request.pageIndex, request.pageSize)),
   // An empty day isn't the end...
   endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 31),
-  // ...so page straight past empty days to the first with entries.
+  // ...so page straight past empty days to the 1st with entries.
   onEmptyPage: const AdvanceToFirstNonEmpty(),
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -257,15 +257,14 @@ ListSmith.async(
 Keys compare by value, so an `int` or `String` id works. Compose one like `'${item.a}:${item.b}'`
 for multi-field identity. Keyset/cursor pagination rarely needs any of this.
 
-De-dup runs over every loaded item when a page arrives, never per scroll frame, and only when you
-pass `itemId`. Under a millisecond for the first few thousand items. Past tens of thousands in one
-live list, de-duplicate at the source instead.
+De-dup runs when a page arrives, never per scroll frame, and only when you pass `itemId`. What it
+costs is in [Performance](#performance).
 
 </details>
 
 ## Pull to refresh
 
-On by default for `ListSmith.async`. Pull down, the list resets and reloads from the first page.
+On by default for `ListSmith.async`. Pull down, the list resets and reloads from the 1st page.
 Switch it off with `refresh: NoRefresh()`.
 
 Want your own indicator? Give `PullToRefresh` a builder: `refresh: PullToRefresh(refreshBuilder:
@@ -285,7 +284,7 @@ fetchPage: PageFetcher((request) =>
 <details>
 <summary><b>Keeping the user's scroll depth across a pull</b></summary>
 
-The default `ResetToFirstPage` clears the list, snaps to the top, and reloads page one. If the user
+The default `ResetToFirstPage` clears the list, snaps to the top, and reloads page 1. If the user
 had scrolled deep, they lose their place. `ReloadToCurrentDepth` re-fetches every page they had
 loaded instead:
 
@@ -302,7 +301,7 @@ refresh: const PullToRefresh(
 your fetcher's own retries: `commitSucceeded` keeps whatever reloaded and leaves the failed page as
 it was, `allOrNothing` commits only if every page succeeds.
 
-Three caveats:
+3 caveats:
 
 - **Best-effort can seam.** A kept-old page beside fresh neighbours can duplicate or gap if the data
   shifted meanwhile. An `itemId` handles the duplicates, and gaps heal on the next refresh.
@@ -326,7 +325,7 @@ ListSmith.async(fetchPage: PageFetcher(...), itemBuilder: ..., controller: contr
 
 await controller.refresh();     // fresh data wanted: exactly a pull
 await controller.invalidate();  // my data changed: re-read every loaded page, keep my place
-await controller.reset();       // start over from page one: logout, account switch, a filter
+await controller.reset();       // start over from page 1: logout, account switch, a filter
 ```
 
 | Verb           | Runs                                                      | Pages report  | Meets a running reload                             |
@@ -335,11 +334,10 @@ await controller.reset();       // start over from page one: logout, account swi
 | `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does            | `invalidated` | joins it, then runs once more                      |
 | `reset()`      | `ResetToFirstPage`, always                                | `invalidated` | cuts in                                            |
 
-`refresh()` runs exactly what a pull runs, so your `PullToRefresh` config applies and an active
-search reloads the search rather than the feed. `invalidate()` keeps the user's place on purpose: a
-pull snapping to the top is a convention, a local write doing it is a bug. `reset()` keeps the
-query, so while searching the search restarts. A feed kept by `KeepCachePolicy` catches up once you
-come back, see the search section below.
+In search mode `refresh()` reloads the search rather than the feed, and `reset()` keeps the query
+so the search restarts. `invalidate()` keeps the user's place on purpose: a pull snapping to the
+top is a convention, a local write doing it is a bug. A feed kept by `KeepCachePolicy` catches up
+once you come back.
 
 No indicator: that belongs to the pull, and your button owns its progress, hence the futures.
 Awaiting follows the reload, so `ResetToFirstPage` completes as the list clears, not when fresh data
@@ -354,7 +352,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 
 ## Search
 
-This is where the two constructors part ways the most.
+This is where the 2 constructors part ways the most.
 
 ### In memory, with `ListSmith.sync`
 
@@ -397,9 +395,9 @@ in memory. And if you don't need search at all, a plain `ListView.builder` will 
 
 ### Paged, with `ListSmith.async`
 
-Pass `search: AsyncSearch(...)` and the list grows a second mode. An empty query shows the normal
-feed, a non-empty one switches to paginated *search results*, and back again once it clears. One
-list, two views, with pagination and pull-to-refresh working in both:
+Pass `search: AsyncSearch(...)` and the list grows a 2nd mode. An empty query shows the normal feed,
+a non-empty one switches to paginated *search results*, and back again once it clears. 1 list, 2
+views, with pagination and pull-to-refresh working in both:
 
 ```dart
 ListSmith.async(
@@ -424,7 +422,7 @@ ListSmith.async(
 search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
 ```
 
-"No refetch" has three exceptions:
+"No refetch" has 3 exceptions:
 
 - a page still loading when the search started is dropped and asked again
 - a pull, `refresh()` or `invalidate()` while searching re-reads the kept feed in place once you're
@@ -454,7 +452,7 @@ Widget build(BuildContext context) => Column(
 A `ValueNotifier` and a `ValueListenableBuilder` work too, and the field can sit anywhere. Clearing
 is just `_query = ''`, and list_smith flips back to the feed on its own.
 
-Two knobs shape the query. **`searchDebounce`** waits for typing to settle, 300ms on async and zero
+2 knobs shape the query. **`searchDebounce`** waits for typing to settle, 300ms on async and zero
 on sync where an in-memory filter is instant. **`minSearchLength`** ignores anything shorter than N
 characters. The query is trimmed first, so a field full of spaces counts as empty.
 
@@ -482,7 +480,7 @@ matches as you type.
 <details>
 <summary><b>How each path orders its sections, and what to watch</b></summary>
 
-The two paths order differently, and the difference matters:
+The 2 paths order differently, and the difference matters:
 
 - **`.sync` buckets for you.** It holds the whole list, so it gathers each group into one contiguous
   run: groups in the order they first appear, items kept in order within a group. Your input can
@@ -503,7 +501,7 @@ grouping: Grouping.by(
 ),
 ```
 
-Two more things:
+2 more things:
 
 - **Type the `groupBy` parameter**, or pass a typed function reference, so the key type infers
   instead of widening to `Object`.
@@ -519,7 +517,7 @@ Every surface list_smith draws (loaders, errors, the empty state, the "that's ev
 the pull indicator) is a neutral `widgets`-layer default. No `CircularProgressIndicator`, nothing
 from Material or Cupertino, so nothing fights the app you've built. Override the slot for your own.
 
-Two sit on the constructor, because every list has them: **`emptyBuilder`** for a source with no
+2 sit on the constructor, because every list has them: **`emptyBuilder`** for a source with no
 items, **`noResultsBuilder`** for a search that matched nothing (it gets the query). The rest are
 async-only, gathered into an `AsyncListSurfaces` you define once and reuse for a house style:
 
@@ -550,9 +548,9 @@ In `AsyncListSurfaces` (async lists only):
 
 | Slot                      | Shown when                                                |
 |---------------------------|-----------------------------------------------------------|
-| `firstPageLoadingBuilder` | the first page is loading                                 |
+| `firstPageLoadingBuilder` | the 1st page is loading                                 |
 | `newPageLoadingBuilder`   | a further page is loading                                 |
-| `firstPageErrorBuilder`   | the first page failed (receives the error + a retry call) |
+| `firstPageErrorBuilder`   | the 1st page failed (receives the error + a retry call) |
 | `newPageErrorBuilder`     | a further page failed (receives the error + a retry call) |
 | `noMoreItemsBuilder`      | every page has loaded                                     |
 
@@ -571,11 +569,11 @@ ListSmith.async(
   fetchPage: PageFetcher(...),
   itemBuilder: (context, article, index) => ArticleTile(article),
   surfaces: AsyncListSurfaces(
-    // Held in a field. Otherwise might cose unnecessary rebuilds
+    // Hold the placeholder in a field, or you rebuild it every frame.
     newPageLoadingBuilder: (_) => MyShimmer(child: ArticleTile(_placeholderArticle)),
     // Sparse source? AdvanceToFirstNonEmpty sits on this slot for the whole scan.
     firstPageLoadingBuilder: (_) => MyShimmer(
-      child: Column(children: List.filled(3, ArticleTile(_placeholderArticle)),
+      child: Column(children: List.filled(3, ArticleTile(_placeholderArticle))),
     ),
   ),
 )
@@ -607,7 +605,7 @@ ListSmith.async(
 
 Override only what you care about, the rest cost nothing: `onPageLoaded`, `onError`, `onReload`,
 `onQueryCommitted`, `onSearchModeChanged`. `onReload` carries the trigger its pages will report and
-fires before the first of them is asked for, so anything you start there is under way by the time
+fires before the 1st of them is asked for, so anything you start there is under way by the time
 your fetcher runs. In a hurry? `LoggingListSmithObserver()` pushes every event through
 `dart:developer`, so it lands in DevTools and stays `avoid_print`-clean. Overrides run synchronously
 while a page loads, so keep them light (see [Performance](#performance)).
@@ -633,7 +631,7 @@ Lists race. The user types while an old query's page is still loading, or pulls 
 page is in the air. list_smith settles those, and each guarantee below has a test behind it.
 
 <details>
-<summary><b>The three guarantees</b></summary>
+<summary><b>The 3 guarantees</b></summary>
 
 **A query change drops the pages still in flight.** They're discarded, not appended. Cursors too, so
 the next page starts from the new query's cursor and not one an abandoned request returned.
@@ -670,7 +668,7 @@ one live list, de-duplicate at the source. Observers are called synchronously wh
 log, count, report, and do heavy work elsewhere.
 
 Numbers are per-machine, so capture your own baseline before trusting a delta. The suite lives in
-[`benchmark/`](benchmark/), and `run.py compare` diffs two runs with a Mann-Whitney test.
+[`benchmark/`](benchmark/), and `run.py compare` diffs 2 runs with a Mann-Whitney test.
 
 ![Render latency vs observer delay](benchmark/reports/observer_latency.png)
 

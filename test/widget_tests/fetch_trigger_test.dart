@@ -207,8 +207,8 @@ void main() {
     scenarioWidgets("leaving search drops a failed search page's retry marker", (tester) async {
       final normal = <FetchTrigger>[];
       var searchPageOneAttempts = 0;
-      // Page 0 fills the viewport, so the restored list's next page is index 1: the same index the
-      // search stream failed on, which is what a marker carried across streams would mislabel.
+      // Page 0 fills the viewport, so the restored list's next page is index 1: the same index the search
+      // stream failed on, which is what a marker carried across streams would mislabel.
       final fetchPage = PageFetcher<int>((request) async {
         normal.add(request.trigger);
 
@@ -310,16 +310,15 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // The list paged itself past the empty first page. That self-driven fetch is still a next
-      // page.
+      // The list paged itself past the empty 1st page. That self-driven fetch is still a next page.
       check(seen.first).equals((page: 0, trigger: FetchTrigger.initialLoad));
       check(seen[1]).equals((page: 1, trigger: FetchTrigger.nextPage));
     });
   });
 }
 
-/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of
-/// three items and then empty pages (the default end policy's end).
+/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of three
+/// items and then empty pages (the default end policy's end).
 PageFetcher<int> _recording(List<FetchTrigger> triggers, {required int pages}) => PageFetcher<int>((
   request,
 ) async {

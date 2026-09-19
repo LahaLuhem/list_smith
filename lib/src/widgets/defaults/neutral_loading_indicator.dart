@@ -2,20 +2,19 @@ import 'package:flutter/widgets.dart';
 
 import 'neutral_progress_indicator.dart';
 
-/// The neutral default surface shown while a page is loading.
+/// The neutral surface shown while a page loads.
 ///
-/// Wraps [NeutralProgressIndicator] in the layout each slot wants: centred and larger for the first
-/// page, smaller and padded for a footer below the items already loaded. Pass [isCompact] for the
-/// footer form.
+/// A [NeutralProgressIndicator], centred and larger for the 1st page. Pass [isCompact] for the smaller
+/// padded footer form.
 class NeutralLoadingIndicator extends StatelessWidget {
   static const double _firstPageSize = 32;
   static const double _newPageSize = 20;
   static const double _newPagePadding = 16;
 
-  /// Whether to render the compact footer form rather than the full-viewport one.
+  /// Render the compact footer form rather than the full-viewport one.
   final bool isCompact;
 
-  /// Creates the neutral loading surface.
+  /// Creates it.
   const new({this.isCompact = false, super.key});
 
   @override

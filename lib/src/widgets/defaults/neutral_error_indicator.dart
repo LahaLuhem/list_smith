@@ -3,11 +3,10 @@ import 'package:flutter/widgets.dart';
 import '/src/utils/neutral_theme.dart';
 import 'neutral_retry_button.dart';
 
-/// The neutral default surface shown when a page fails to load.
+/// The neutral surface for a page that failed to load.
 ///
-/// A short heading, the error's own description, and a [NeutralRetryButton] wired to re-attempt the
-/// load. Full-viewport and centred for the first page, or pass [isCompact] for the tighter footer form
-/// used when a later page fails below the items already loaded.
+/// A heading, the error's own description, and a [NeutralRetryButton]. Full-viewport for the 1st page,
+/// or pass [isCompact] for the tighter footer used when a later page fails below the items already loaded.
 class NeutralErrorIndicator extends StatelessWidget {
   static const double _spacing = 12;
   static const double _padding = 16;
@@ -15,16 +14,16 @@ class NeutralErrorIndicator extends StatelessWidget {
   static const double _compactPadding = 12;
   static const _errorMaxLines = 3;
 
-  /// The error that caused the load to fail.
+  /// What the load failed with.
   final Object error;
 
-  /// Invoked to re-attempt the failed load.
+  /// Re-attempts the failed load.
   final VoidCallback onRetry;
 
-  /// Whether to render the tighter footer form rather than the full-viewport one.
+  /// Render the tighter footer form rather than the full-viewport one.
   final bool isCompact;
 
-  /// Creates the neutral error surface for [error], wiring retry to [onRetry].
+  /// Creates it.
   const new({required this.error, required this.onRetry, this.isCompact = false, super.key});
 
   @override

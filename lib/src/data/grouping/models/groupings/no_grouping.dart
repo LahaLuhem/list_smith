@@ -1,11 +1,8 @@
 part of '../grouping.dart';
 
-/// The absence of grouping: the list renders as a flat sequence with no section headers.
-///
-/// The default, built as `NoGrouping<T>()` at the list's own item type. Generic in [T] rather than
-/// one shared `Grouping<Never>`, so its per-item operations get real `T` values.
+/// No grouping: a flat list, no section headers. The default.
 final class NoGrouping<T extends Object> extends Grouping<T> {
-  /// Creates the no-grouping default.
+  /// Creates it.
   const new();
 
   @override

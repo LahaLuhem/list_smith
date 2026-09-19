@@ -91,7 +91,7 @@ can only hold at the same time later:
 2. No checked-in file is modified, true only after `git commit`.
 3. The tarball builds and validates against pub.dev's rules.
 
-So it runs as step 6, after the prep commit lands. The `ERR` trap covers failure in two phases:
+So it runs as step 6, after the prep commit lands. The `ERR` trap covers failure in 2 phases:
 
 - **Pre-commit** (bump, release or the `example/` resync errored): restore `pubspec.yaml`,
   `CHANGELOG.md` and `example/pubspec.lock` from `HEAD`.

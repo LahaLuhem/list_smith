@@ -1,5 +1,5 @@
-// `_ShortLastPagePolicy` is a private fixture proving the open contract, not this file's subject,
-// so its name intentionally differs from the filename.
+// `_ShortLastPagePolicy` is a private fixture proving the open contract, not this file's subject, so
+// its name intentionally differs from the filename.
 // ignore_for_file: prefer-match-file-name
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -57,9 +57,9 @@ void main() {
             .equals(ctx.example.val(endedKey) as bool);
       });
 
-  // The end policy is an open contract: a consumer can supply their own without a change to
-  // list_smith. This one ends when the last page came back shorter than the page size (a common
-  // REST idiom), proving the seam is usable from outside via EndContext alone.
+  // The end policy is an open contract: a consumer can supply their own without a change to list_smith.
+  // This one ends when the last page came back shorter than the page size (a common REST idiom), proving
+  // the seam is usable from outside via EndContext alone.
   Bdd(endDetection)
       .scenario('a custom policy can end on a short last page')
       .given('a ShortLastPage policy over a list with pageSize = <$pageSizeKey>')
@@ -124,9 +124,8 @@ void main() {
       });
 }
 
-/// A consumer-authored end policy: ends when the most recent page held fewer than a full page of
-/// items. Lives in the test to prove [PaginationEndPolicy] is implementable from outside
-/// list_smith.
+/// A consumer-authored end policy, ending when the last page held fewer than a full page. In the test
+/// to prove [PaginationEndPolicy] is implementable from outside.
 final class _ShortLastPagePolicy extends PaginationEndPolicy {
   const new();
 

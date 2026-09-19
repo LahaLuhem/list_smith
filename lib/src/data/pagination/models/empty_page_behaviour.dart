@@ -8,18 +8,16 @@ import 'empty_page_context.dart';
 part 'empty_page_behaviours/advance_to_first_non_empty.dart';
 part 'empty_page_behaviours/show_empty_surface.dart';
 
-/// What an async list does when a page settles with no items but [PaginationEndPolicy] says more
-/// pages remain. Nothing on screen means nothing to scroll, so the pager's scroll-driven fetch
-/// never fires and the pages that do hold data stay out of reach.
+/// What an async list does when a page comes back empty but [PaginationEndPolicy] says more pages remain.
+/// Nothing on screen means nothing to scroll, so the list would otherwise sit there stuck.
 ///
-/// [ShowEmptySurface] (the default) shows the empty surface right there. [AdvanceToFirstNonEmpty]
-/// pages through to the first page with items. It only bites under a policy that continues past an
-/// empty page, so it pairs with a raised [StopOnEmptyPagesPolicy.emptyRunBeforeEnd] or a signal
-/// policy. [ListSmith.async] only, since a `.sync` list never paginates.
+/// [ShowEmptySurface] (the default) shows the empty surface. [AdvanceToFirstNonEmpty] pages on to the
+/// 1st page with items, which only matters under a policy that continues past an empty page: a raised
+/// [StopOnEmptyPagesPolicy.emptyRunBeforeEnd] or a signal policy. [ListSmith.async] only.
 sealed class EmptyPageBehaviour {
   /// Const base constructor.
   const new();
 
-  /// Whether the list should page past the current empty page. Called after each page settles.
+  /// Whether to page past the current empty page. Called after each page lands.
   bool shouldAdvance(EmptyPageContext context);
 }

@@ -4,12 +4,11 @@ import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
 
-/// Backs the Reload demo. Items are stamped with a per-page fetch count, so a pull visibly
-/// re-stamps whatever it reloaded.
+/// Backs the Reload demo. Items are stamped with a per-page fetch count, so a pull visibly re-stamps
+/// whatever it reloaded.
 ///
-/// The three config knobs all feed the list's `PullToRefresh`, so they take `notifyListeners()`.
-/// The failure toggle is read only inside [fetchPage], so it is a scoped `ValueNotifier` rebuilding
-/// just its own switch. See `CODESTYLE.md` *State management*.
+/// The config knobs all feed `PullToRefresh`, so they take `notifyListeners()`. The failure toggle is
+/// read only inside [fetchPage], so it is a scoped `ValueNotifier`. See `CODESTYLE.md` *State management*.
 final class ReloadViewModel extends ViewModel {
   static const _dataPages = 6;
   static const _failPage = 1;
@@ -33,8 +32,7 @@ final class ReloadViewModel extends ViewModel {
 
   bool get atomic => _atomic;
 
-  /// Whether the next reload should fail one page, to exercise the error policy. Read live by
-  /// [fetchPage].
+  /// Whether the next reload fails one page, to exercise the error policy. Read live by [fetchPage].
   ValueListenable<bool> get injectFailures => _injectFailures;
 
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
@@ -85,13 +83,13 @@ final class ReloadViewModel extends ViewModel {
     notifyListeners();
   }
 
-  // A setter can't be torn off as the switch's onChanged callback.
+  // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onInjectFailuresToggled({required bool value}) => _injectFailures.value = value;
 
-  /// Refreshes without a pull, holding the button busy until `refresh()` completes. That is when
-  /// the refetch lands under [ReloadToCurrentDepth], but only when the list clears under
-  /// [ResetToFirstPage], where its own first-page loader takes over.
+  /// Refreshes without a pull, holding the button busy until `refresh()` completes. Under [ReloadToCurrentDepth]
+  /// that's when the refetch lands, under [ResetToFirstPage] only when the list clears and its own first-page
+  /// loader takes over.
   Future<void> onRefreshPressed() async {
     _refreshing.value = true;
 

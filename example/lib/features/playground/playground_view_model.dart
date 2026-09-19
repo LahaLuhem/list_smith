@@ -3,11 +3,11 @@ import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
 
-/// Backs the Playground demo. Holds the live-editable config and serves a deliberately gappy source
-/// (first page empty, data after) so the end-policy and empty-page knobs have a visible effect.
+/// Backs the Playground demo. Serves a deliberately gappy source, 1st page empty and data after, so
+/// the end-policy and empty-page knobs have a visible effect.
 ///
-/// The preview depends on every knob at once, so `notifyListeners()` beats per-field notifiers
-/// here. See `CODESTYLE.md` *State management*.
+/// The preview depends on every knob at once, so `notifyListeners()` beats per-field notifiers here.
+/// See `CODESTYLE.md` *State management*.
 final class PlaygroundViewModel extends ViewModel {
   static const _dataPages = {1, 2, 4, 5};
 

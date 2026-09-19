@@ -201,7 +201,7 @@ void main() {
       await drain(tester);
       await controller.reset();
       await drain(tester);
-      // Two invalidates back to back: the second joins and books one rerun, so two events, not three.
+      // 2 invalidates back to back: the 2nd joins and books one rerun, so 2 events, not 3.
       await [controller.invalidate(), controller.invalidate()].wait;
       await drain(tester);
 

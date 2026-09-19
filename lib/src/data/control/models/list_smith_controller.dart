@@ -9,21 +9,20 @@ import 'package:meta/meta.dart';
 
 import 'list_smith_controller_host.dart';
 
-/// A narrow handle for driving a [ListSmith.async] list from code: a refresh button, a tab re-tap,
-/// a re-read after a local write, a logout.
+/// Drives a [ListSmith.async] list from code: a refresh button, a tab re-tap, a re-read after a local
+/// write, a logout.
 ///
-/// Intent-only by design: it never exposes the pager or its state. For lifecycle notifications use
-/// a [ListSmithObserver] instead. Holds no resources, so there is nothing to dispose.
+/// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
+/// Holds nothing, so there's nothing to dispose.
 class ListSmithController {
   ListSmithControllerHost? _host;
   var _wasEverAttached = false;
 
-  /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] on a
-  /// `NoRefresh` list) and reloading the current search while searching.
+  /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] when the list
+  /// has no pull). While searching, it reloads the search.
   ///
-  /// Completes when that reload does: [ResetToFirstPage] as the list clears, not when fresh data
-  /// lands, [ReloadToCurrentDepth] once the re-fetch is in. Joins a running refresh, runs once more
-  /// after an [invalidate]. Inert once the list is gone, and asserts if no list ever attached.
+  /// Completes when that reload does, which for [ResetToFirstPage] means as the list clears, not when
+  /// fresh data lands. Joins a refresh already running. Asserts if no list ever attached.
   Future<void> refresh() {
     assert(
       _host != null || _wasEverAttached,
@@ -33,22 +32,21 @@ class ListSmithController {
     return _host?.refresh() ?? Future<void>.syncValue(null);
   }
 
-  /// Re-reads every loaded page in place because what you handed the list changed locally, keeping
-  /// the user's place whatever the pull is configured to do. Pages report [FetchTrigger.invalidated].
+  /// Re-reads every loaded page in place, keeping the user's scroll position, because your data changed
+  /// locally. Pages report [FetchTrigger.invalidated].
   ///
-  /// A call during a running reload joins it and runs once more after, so a write landing mid-read
-  /// is not missed. A no-op before any list attached: nothing loaded, nothing stale.
+  /// Called during a running reload it joins that one and runs again after, so a write landing mid-read
+  /// isn't missed.
   Future<void> invalidate() => _host?.invalidate() ?? Future<void>.syncValue(null);
 
-  /// Starts the list over from its first page, whatever the pull is configured to do: a logout, an
-  /// account switch, a filter outside search. Page 0 reports [FetchTrigger.invalidated].
+  /// Starts the list over from page 0: a logout, an account switch, a filter outside search. That page
+  /// reports [FetchTrigger.invalidated].
   ///
-  /// Cuts in on a running reload rather than joining it. Keeps the query, so while searching the
-  /// search restarts, and a feed kept by [KeepCachePolicy] starts over once the query clears. A
-  /// no-op before any list attached.
+  /// Cuts in on a running reload rather than joining it. Keeps the query, so a search restarts, and
+  /// a feed held by [KeepCachePolicy] starts over once the query clears.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
 
-  /// Binds this controller to the list that serves its intents. One controller, one list.
+  /// Binds this controller to the list it drives. One controller, one list.
   @internal
   void attach(ListSmithControllerHost host) {
     assert(_host == null, 'A ListSmithController drives one list; this one is already attached.');

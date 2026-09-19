@@ -1,30 +1,29 @@
 import 'package:flutter/widgets.dart';
 
-/// The scroll and layout knobs, gathered here so they don't crowd the behavioural parameters.
+/// The scroll and layout knobs, kept together so they don't crowd the behaviour parameters.
 ///
-/// A curated subset of [ScrollView] / [BoxScrollView], each field defaulting to the framework's own
-/// default.
+/// A subset of [ScrollView] / [BoxScrollView], each field keeping the framework's own default.
 @immutable
 class ListScrollConfig {
-  /// Padding around the list contents. Maps to [BoxScrollView.padding].
+  /// Maps to [BoxScrollView.padding].
   final EdgeInsetsGeometry? padding;
 
-  /// The scroll physics. Maps to [ScrollView.physics].
+  /// Maps to [ScrollView.physics].
   final ScrollPhysics? physics;
 
-  /// An externally-owned scroll controller. Maps to [ScrollView.controller].
+  /// Maps to [ScrollView.controller], for a scroll controller you own.
   final ScrollController? controller;
 
-  /// Whether the list scrolls in reverse. Maps to [ScrollView.reverse].
+  /// Maps to [ScrollView.reverse].
   final bool reverse;
 
-  /// The axis along which the list scrolls. Maps to [ScrollView.scrollDirection].
+  /// Maps to [ScrollView.scrollDirection].
   final Axis scrollDirection;
 
-  /// The viewport cache extent, in logical pixels (the scrollable's cache extent).
+  /// The viewport cache extent, in logical pixels.
   final double? cacheExtent;
 
-  /// Creates a scroll/layout configuration. Each field defaults to the framework's own default.
+  /// Creates it.
   const new({
     this.padding,
     this.physics,

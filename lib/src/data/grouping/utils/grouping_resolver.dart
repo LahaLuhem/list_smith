@@ -2,18 +2,18 @@ import 'package:collection/collection.dart';
 
 import '../models/group_order_policy.dart';
 
-/// Reorders [items] so items sharing a group key (per [keyOf]) sit contiguously, groups in
-/// first-appearance order, item order kept within a group.
+/// Reorders [items] so ones sharing a group key sit together, groups in first-appearance order, item
+/// order kept inside a group.
 ///
-/// The sync path's ordering step, so the consumer needn't pre-sort. Async never calls it. Leans on
-/// `groupListsBy` keeping groups in first-insertion order.
+/// The sync path's ordering step. Async never calls it. Leans on `groupListsBy` keeping groups in first-insertion
+/// order.
 List<T> bucketByGroup<T extends Object>(Iterable<T> items, Object Function(T item) keyOf) =>
     items.groupListsBy(keyOf).values.flattened.toList(growable: false);
 
 /// One flag per item: whether it draws its group's header.
 ///
-/// [policy] gets first look and can reject out-of-order items. Whatever it lets through goes to
-/// [headerFlagsByFirstSighting]. Walks [items] once, twice while the order is being checked.
+/// [policy] gets first look and can reject out-of-order items. Walks [items] once, twice while the order
+/// is being checked.
 BoolList resolveHeaderFlags<T extends Object>(
   Iterable<T> items,
   Object Function(T item) keyOf,
@@ -38,11 +38,10 @@ BoolList resolveHeaderFlags<T extends Object>(
   return headerFlagsByFirstSighting(items, keyOf);
 }
 
-/// True the first time a key shows up, false after, so a split group never draws two headers.
+/// True the 1st time a key shows up, false after, so a split group never draws 2 headers.
 ///
-/// Split out because the default policy asserts before reaching it, so a debug test only gets here
-/// by calling directly. A loop on purpose: per item on every build, several times cheaper than the
-/// chain (`APPENDIX.md#scan-loops`). Packed, since the item builder reads it per row.
+/// A loop on purpose: this runs per item on every build, and the chain version measured several times
+/// slower (`APPENDIX.md#scan-loops`). Packed, since the item builder reads it per row.
 BoolList headerFlagsByFirstSighting<T extends Object>(
   Iterable<T> items,
   Object Function(T item) keyOf,
@@ -59,12 +58,11 @@ BoolList headerFlagsByFirstSighting<T extends Object>(
   return headerFlags;
 }
 
-/// Whether every group in [items] is contiguous: each group key (per [keyOf], compared with `==`)
-/// occupies a single run, never recurring once a different key has intervened.
+/// Whether every group key in [items] sits in one unbroken run, never coming back after a different
+/// key has shown up.
 ///
-/// The async path's order check, since it leans on the fetcher grouping for it. Sync never needs
-/// one, [bucketByGroup] makes contiguity hold by construction. A loop for the same reason as
-/// [headerFlagsByFirstSighting], and it stops at the first repeat.
+/// The async path's order check. Sync never needs one, [bucketByGroup] already guarantees it. A loop
+/// for the same reason as [headerFlagsByFirstSighting], and it bails at the 1st repeat.
 bool groupsAreContiguous<T extends Object>(Iterable<T> items, Object Function(T item) keyOf) {
   final seenKeys = <Object>{};
   Object? runKey;

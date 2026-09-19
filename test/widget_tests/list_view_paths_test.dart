@@ -75,7 +75,7 @@ void main() {
         ),
       );
 
-      // Held on the first page, so the neutral spinner is what is on screen.
+      // Held on the 1st page, so the neutral spinner is what is on screen.
       await pumpListSmith(tester, build(const Color(0xFFFF0000)));
       await drain(tester);
       check(find.byType(CustomPaint).evaluate()).isNotEmpty();
@@ -144,7 +144,7 @@ void main() {
       await tester.pump();
 
       check(find.text('apple').evaluate()).length.equals(1);
-      // Two items yield one separator.
+      // 2 items yield one separator.
       check(find.text('sep').evaluate()).length.equals(1);
     });
   });

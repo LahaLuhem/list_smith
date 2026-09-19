@@ -9,11 +9,10 @@ import '/src/data/search/typedefs/sync_search_predicate.dart';
 part 'sources/async_source.dart';
 part 'sources/sync_source.dart';
 
-/// Where a list_smith list gets its data. Internal, never exposed.
+/// Where a list gets its data. Internal, never exposed.
 ///
-/// [AsyncSource] (paginated, optionally searchable) or [SyncSource] (in-memory search). The named
-/// constructors build one, so the dispatcher switches a sealed type instead of juggling nullable
-/// mode-fields, and no parameter is ever silently inert.
+/// [AsyncSource] (paginated, optionally searchable) or [SyncSource] (in-memory search). Each named constructor
+/// builds one, so no parameter is ever silently inert on the wrong mode.
 sealed class ListSource<T extends Object> {
   const new();
 }

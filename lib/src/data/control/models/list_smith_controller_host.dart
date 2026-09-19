@@ -8,12 +8,12 @@ import 'package:meta/meta.dart';
 /// The engine implements it and attaches itself, so the handle and the gesture can't drift apart.
 @internal
 abstract interface class ListSmithControllerHost {
-  /// Reloads exactly as a pull would. The contract is [ListSmithController.refresh]'s.
+  /// See [ListSmithController.refresh].
   Future<void> refresh();
 
-  /// Re-reads every loaded page in place. The contract is [ListSmithController.invalidate]'s.
+  /// See [ListSmithController.invalidate].
   Future<void> invalidate();
 
-  /// Starts the list over from its first page. The contract is [ListSmithController.reset]'s.
+  /// See [ListSmithController.reset].
   Future<void> reset();
 }

@@ -7,17 +7,17 @@ part 'policies/stop_on_null_signal_policy.dart';
 
 /// Decides when an async list has reached the end of its data.
 ///
-/// Open on purpose: implement [hasReachedEnd] for a rule of your own (say, ending on a short last
-/// page) with no change here. Ships [StopOnEmptyPagesPolicy] (the default), [FixedPageCountPolicy],
-/// [ExplicitHasMorePolicy] and [StopOnNullSignalPolicy].
+/// Open on purpose: implement [hasReachedEnd] for a rule of your own (ending on a short last page, say)
+/// with no change here. Ships [StopOnEmptyPagesPolicy] (the default), [FixedPageCountPolicy], [ExplicitHasMorePolicy]
+/// and [StopOnNullSignalPolicy].
 abstract class PaginationEndPolicy {
-  /// Const base constructor for subclasses.
+  /// Const base constructor.
   const new();
 
   /// Whether pagination has reached its end, given [context] over the pages loaded so far.
   bool hasReachedEnd(EndContext context);
 
-  /// Whether this policy reads [EndContext.lastPageSignal]. When true, list_smith asserts the list
-  /// was built with a `withSignal` fetcher. Defaults to `false`.
+  /// Whether this policy reads [EndContext.lastPageSignal]. When true, list_smith asserts the list was
+  /// built with a `withSignal` fetcher. Defaults to `false`.
   bool get requiresSignal => false;
 }

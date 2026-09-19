@@ -1,5 +1,4 @@
-// A flutter_driver driver, run via `flutter drive`, not a `flutter test` file, so the
-// `_test.dart` naming convention doesn't apply.
+// Run via `flutter drive`, not `flutter test`, so the `_test.dart` naming convention doesn't apply.
 // ignore_for_file: prefer-correct-test-file-name
 
 import 'dart:convert';
@@ -7,14 +6,13 @@ import 'dart:io';
 
 import 'package:integration_test/integration_test_driver.dart';
 
-/// Driver for the UI benchmark scenarios. Writes whatever the scenario accumulated in
-/// `binding.reportData` to the `--dart-define=OUTPUT` path, as a JSON array matching
-/// `harness/result_writer.dart`'s schema.
+/// Driver for the UI benchmark scenarios. Writes whatever the scenario accumulated in `binding.reportData`
+/// to the `--dart-define=OUTPUT` path, as a JSON array matching `harness/result_writer.dart`'s schema.
 ///
 /// `flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/<scenario>.dart`
 Future<void> main() => integrationDriver(
-  // A healthy scenario settles inside a minute, so cap the wait well below the 20-min default. A
-  // wedged device producing no frames then fails fast instead of stalling for half an hour.
+  // A healthy scenario settles inside a minute, so a wedged device fails fast instead of stalling for
+  // the 20-minute default.
   timeout: const Duration(minutes: 5),
   responseDataCallback: (data) async {
     if (data == null) return;

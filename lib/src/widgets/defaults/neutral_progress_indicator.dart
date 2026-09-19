@@ -4,16 +4,15 @@ import 'package:flutter/widgets.dart';
 
 import '/src/utils/neutral_theme.dart';
 
-/// A neutral, widgets-layer progress spinner for list_smith's loading surfaces.
+/// A widgets-layer progress spinner for the loading surfaces.
 ///
-/// The widgets layer ships no progress indicator, so this hand-rolls one: an arc drawn with a
-/// [CustomPainter] and spun by a [RotationTransition]. Inherits the ambient foreground colour via
-/// [neutralForegroundOf], so it drops into any app unchanged.
+/// The widgets layer ships no progress indicator, so this hand-rolls one. Picks up the ambient foreground
+/// colour via [neutralForegroundOf], so it drops into any app unchanged.
 class NeutralProgressIndicator extends StatefulWidget {
-  /// The diameter of the spinner, in logical pixels.
+  /// Diameter, in logical pixels.
   final double size;
 
-  /// Creates a neutral spinner [size] logical pixels across.
+  /// Creates it.
   const new({this.size = 24, super.key});
 
   @override

@@ -1,11 +1,10 @@
 part 'policies/keep_cache_policy.dart';
 part 'policies/replace_cache_policy.dart';
 
-/// Decides how an async list's cached items carry across entering or leaving search.
+/// Decides what happens to an async list's cached items when it enters or leaves search.
 ///
-/// [ReplaceCachePolicy] is the default. Only that boundary is governed, so a change between two
-/// different queries always starts clean. Sealed, so a later strategy (a merge that de-dupes by
-/// identity, say) can land without a breaking change.
+/// [ReplaceCachePolicy] is the default. Only that boundary, so a change between 2 different queries
+/// always starts clean.
 sealed class SearchCachePolicy {
   /// Const base constructor.
   const new();

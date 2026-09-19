@@ -8,8 +8,7 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'basic_feed_view_model.dart';
 
-/// `ListSmith.async` with nothing but a fetcher and an item builder, so every surface is a neutral
-/// default.
+/// `ListSmith.async` with nothing but a fetcher and an item builder, so every surface is a neutral default.
 class BasicFeedView extends StatelessWidget {
   const new({super.key});
 

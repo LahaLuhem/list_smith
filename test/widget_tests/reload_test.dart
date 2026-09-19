@@ -9,9 +9,9 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async ReloadToCurrentDepth', () {
-    // Each page yields one item whose value encodes `page * 1000 + attempt`, so a test can tell a
-    // freshly-reloaded page (attempt 2) from a kept-old one (attempt 1), and `attempts` records how
-    // many times each page index was fetched.
+    // Each page yields one item whose value encodes `page * 1000 + attempt`, so a test can tell a freshly-reloaded
+    // page (attempt 2) from a kept-old one (attempt 1), and `attempts` records how many times each page
+    // index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher({int? failPageOnReload}) {
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>((request) async {
@@ -49,8 +49,7 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // All three loaded pages were fetched again, and page 0 now shows its fresh value (attempt
-      // 2).
+      // All 3 loaded pages were fetched again, and page 0 now shows its fresh value (attempt 2).
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
       check(find.text('item 2').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(0);
@@ -74,8 +73,7 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // Pages 0 and 2 reloaded (fresh attempt-2 values). Page 1's fetch failed so its old value
-      // stays.
+      // Pages 0 and 2 reloaded (fresh attempt-2 values). Page 1's fetch failed so its old value stays.
       check(find.text('item 2').evaluate()).length.equals(1); // page 0 fresh
       check(find.text('item 1001').evaluate()).length.equals(1); // page 1 kept old
       check(find.text('item 2002').evaluate()).length.equals(1); // page 2 fresh
@@ -125,14 +123,14 @@ void main() {
       await pumpListSmith(
         tester,
         ListSmith.async(
-          // A plain index-based normal fetcher, so only the search side reports a signal. If the
-          // reload asked the normal fetcher instead, it would take the parallel path, not this one.
+          // A plain index-based normal fetcher, so only the search side reports a signal. If the reload
+          // asked the normal fetcher instead, it would take the parallel path, not this one.
           fetchPage: PageFetcher((request) async => [request.pageIndex]),
           search: AsyncSearch(fetchPage: searchFetchPage),
           query: 'q',
           searchDebounce: const Duration(milliseconds: 20),
-          // Not a signal-requiring policy: that one asserts BOTH fetchers report a signal, which
-          // would destroy the asymmetry this scenario turns on.
+          // Not a signal-requiring policy: that one asserts BOTH fetchers report a signal, which would
+          // destroy the asymmetry this scenario turns on.
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           controller: controller,
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
@@ -145,8 +143,8 @@ void main() {
       await controller.refresh();
       await drain(tester, frames: 16);
 
-      // In search mode the reload asks the search fetcher whether it is signal-based, so this runs
-      // sequentially and threads the search cursor, despite concurrency: null asking for parallel.
+      // In search mode the reload asks the search fetcher whether it is signal-based, so this runs sequentially
+      // and threads the search cursor, despite concurrency: null asking for parallel.
       check(searchAttempts).deepEquals({0: 2, 1: 2});
       check(searchCursors[1]).equals('scursor0');
       check(find.text('item 2').evaluate()).length.equals(1);
@@ -180,8 +178,8 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // The sibling scenario always fails mid-chain, so it returns before committing and never
-      // covers this. Here every page succeeds, so the reload reaches its commit.
+      // The sibling scenario always fails mid-chain, so it returns before committing and never covers
+      // this. Here every page succeeds, so the reload reaches its commit.
       check(attempts).deepEquals({0: 2, 1: 2, 2: 2});
       check(find.text('item 2').evaluate()).length.equals(1);
       check(find.text('item 1002').evaluate()).length.equals(1);
@@ -201,7 +199,7 @@ void main() {
       final fetchPage = PageFetcher<int>.withSignal((request) async {
         final pageIndex = request.pageIndex;
         final attempt = attempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
-        // Page 3 is held on its first attempt only, so the reload's own walk never blocks.
+        // Page 3 is held on its 1st attempt only, so the reload's own walk never blocks.
         if (pageIndex == 3 && attempt == 1) await hold.future;
 
         return ([pageIndex * 1000 + attempt], 'cursor$pageIndex');
@@ -259,8 +257,8 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // Sequential: it walked 0, hit the failure at 1, and never reached 2 (attempt still 1).
-      // Atomic: the old values all remain (the broken chain committed nothing).
+      // Sequential: it walked 0, hit the failure at 1, and never reached 2 (attempt still 1). Atomic:
+      // the old values all remain (the broken chain committed nothing).
       check(attempts).deepEquals({0: 2, 1: 2, 2: 1});
       check(find.text('item 1').evaluate()).length.equals(1); // page 0 old kept
       check(find.text('item 2').evaluate()).length.equals(0); // no fresh commit

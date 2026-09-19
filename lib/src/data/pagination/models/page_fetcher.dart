@@ -4,20 +4,19 @@ library;
 
 import 'page_request.dart';
 
-/// Fetches one page of items for an async list, given the [PageRequest] describing it.
+/// Fetches one page of items for an async list, from the [PageRequest] describing it.
 ///
-/// The returned `Iterable` is materialised once at the boundary, so a lazy `.map()` / `.where()`
+/// The `Iterable` you return is turned into a list once at the boundary, so a lazy `.map()` / `.where()`
 /// needs no trailing `.toList()`. A misbehaving endpoint (a 404 past the last page, say) is yours to
-/// catch and return as an empty page.
+/// catch and hand back as an empty page.
 ///
-/// [PageFetcher.new] returns items only and leaves the end to [PaginationEndPolicy].
-/// [PageFetcher.withSignal] also returns a signal, read by the policy as
-/// [EndContext.lastPageSignal] and by the next fetch as [PageRequest.previousSignal]. That is the
-/// cursor channel, so pair it with [StopOnNullSignalPolicy].
+/// [PageFetcher.new] returns items only and leaves the end to [PaginationEndPolicy]. [PageFetcher.withSignal]
+/// returns a signal too, which the policy reads as [EndContext.lastPageSignal] and the next fetch gets
+/// as [PageRequest.previousSignal]. That's the cursor channel, so pair it with [StopOnNullSignalPolicy].
 final class PageFetcher<T extends Object> {
   final Future<(Iterable<T>, Object?)> Function(PageRequest request) _fetch;
 
-  /// Whether this fetcher was built with [PageFetcher.withSignal].
+  /// Whether this fetcher came from [PageFetcher.withSignal].
   final bool reportsSignal;
 
   /// Wraps a function returning one page of items, leaving the end to [PaginationEndPolicy].

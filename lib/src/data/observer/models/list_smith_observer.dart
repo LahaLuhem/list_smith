@@ -7,16 +7,10 @@ library;
 
 import '/src/data/pagination/enums/fetch_trigger.dart';
 
-/// Lifecycle observer for a [ListSmith.async] list: an optional, injected sink for logging,
-/// telemetry, or analytics.
+/// Lifecycle sink for a [ListSmith.async] list: logging, telemetry, analytics.
 ///
-/// Wired through `ListSmith.async(observer: ...)`, `null` (the default) being silent. Every callback
-/// gets plain values (page indices, counts, the committed query, the error), never the paging
-/// controller or a dependency type, so wiring up diagnostics can't reach an internal handle.
-///
-/// Each method has a no-op default body, so override only the events you want. Extend, never
-/// implement: `abstract base` means a later minor release can add an event without breaking you.
-/// [LoggingListSmithObserver] is the ready-made sink.
+/// Pass it as `ListSmith.async(observer: ...)`. Every method has a no-op default, so override only what
+/// you care about. [LoggingListSmithObserver] is the ready-made one.
 ///
 /// ```dart
 /// final class _MyObserver extends ListSmithObserver {
@@ -28,39 +22,33 @@ import '/src/data/pagination/enums/fetch_trigger.dart';
 /// }
 /// ```
 ///
-/// Callbacks fire synchronously from the fetch, reload, and query-commit paths, never during
-/// `build`, so heavy work in an override stalls that path. Keep them cheap. Async only:
-/// [ListSmith.sync] has no fetch, refresh, or controller to watch, and you already own its query.
+/// Callbacks run synchronously on the fetch, reload and query-commit paths, never during `build`, so
+/// keep them cheap or you stall the list. Async only: a `.sync` list has nothing to watch.
 abstract base class ListSmithObserver {
   /// Const default constructor.
   const new();
 
-  /// Called after a page is fetched and materialised, before it reaches the list.
+  /// A page came back, before it reaches the list. [pageIndex] is 0-based.
   ///
-  /// [pageIndex] is 0-based, [itemCount] is what that page returned, and [isSearchMode] says which
-  /// fetcher it came from. An empty page still fires: whether that is the end is the end policy's
-  /// call.
+  /// An empty page still fires. Whether that's the end is the end policy's call.
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) {}
 
-  /// Called when a page fetch throws, with the [error] and [stackTrace] as thrown. Nothing is
-  /// swallowed, the list still shows its error surface.
+  /// A page fetch threw. Nothing is swallowed, the list still shows its error surface.
   void onError(Object error, StackTrace stackTrace) {}
 
-  /// Called when a reload starts, before any page of it is asked for. [trigger] is what those pages
-  /// will report: `.refresh` for a pull or `refresh()`, `.queryChanged` for a committed query change.
-  /// Joining a reload already running fires nothing, nor does a `KeepCachePolicy` restore unless it
-  /// pays for a reload asked while searching.
+  /// A reload started, before any of its pages is asked for. [trigger] is what those pages report.
+  ///
+  /// Joining a reload already running fires nothing, and neither does a restored cached feed unless
+  /// it owes a reload asked while searching.
   void onReload(FetchTrigger trigger) {}
 
-  /// Called when a new search [query] takes effect, after trimming, gating, and debounce.
+  /// A new search [query] took effect, after trimming, gating and debounce.
   ///
-  /// The query actually searched on, not the per-keystroke value, so it fires once typing settles.
-  /// Empty means back to the normal feed. The query a list is built with doesn't fire, only changes.
+  /// What's actually searched on, not every keystroke. Empty means back to the normal feed. The query
+  /// a list is built with doesn't fire, only changes do.
   void onQueryCommitted(String query) {}
 
-  /// Called when the list crosses between normal and search mode, [isSearchMode] being the new one.
-  ///
-  /// The edge only. [onQueryCommitted] fires on every committed change, one search replacing
-  /// another included.
+  /// The list crossed between normal and search mode. The edge only: [onQueryCommitted] fires on every
+  /// committed change, one search replacing another included.
   void onSearchModeChanged({required bool isSearchMode}) {}
 }

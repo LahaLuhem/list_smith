@@ -1,10 +1,9 @@
 /// Micro-benchmark: [resolveSyncSearch] cost as the in-memory list grows.
 ///
-/// `SyncListView` re-runs `resolveSyncSearch` synchronously on every committed query, an
-/// `items.where(predicate).toList()` costing O(n) times the predicate. Measuring it AOT across a
-/// range of sizes puts a trustworthy microseconds figure on where a big in-memory list crosses the
-/// frame budget. The predicate is a naive case-insensitive `contains`, one `toLowerCase()`
-/// allocation per item, which is what a consumer typically writes.
+/// `SyncListView` re-runs `resolveSyncSearch` synchronously on every committed query, an `items.where(predicate).toList()`
+/// costing O(n) times the predicate. Measured AOT across a range of sizes, so the microseconds figure
+/// says where a big in-memory list crosses the frame budget. The predicate is a naive case-insensitive
+/// `contains`, one `toLowerCase()` per item, which is what a consumer typically writes.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';

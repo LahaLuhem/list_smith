@@ -2,14 +2,11 @@ import 'package:flutter/widgets.dart';
 
 import '/src/utils/neutral_theme.dart';
 
-/// The neutral default footer shown once every page has loaded.
-///
-/// A centred, muted "no more items" line in a padded footer below the list. Override
-/// `noMoreItemsBuilder` to replace it.
+/// The neutral footer for a fully-loaded list. Override `noMoreItemsBuilder` to replace it.
 class NeutralNoMoreItemsIndicator extends StatelessWidget {
   static const double _padding = 16;
 
-  /// Creates the neutral end-of-list footer.
+  /// Creates it.
   const new({super.key});
 
   @override

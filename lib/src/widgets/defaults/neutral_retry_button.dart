@@ -2,19 +2,18 @@ import 'package:flutter/widgets.dart';
 
 import '/src/utils/neutral_theme.dart';
 
-/// A neutral, widgets-layer "retry" control for list_smith's error surfaces.
+/// A widgets-layer "retry" control for the error surfaces.
 ///
-/// The widgets layer ships no button, so this hand-rolls a tappable outlined control that inherits
-/// the ambient foreground colour via [neutralForegroundOf]. Internal: restyling means overriding
-/// the error builder wholesale, not this.
+/// The widgets layer ships no button, so this hand-rolls one. Internal: restyling means overriding the
+/// error builder wholesale, not this.
 class NeutralRetryButton extends StatelessWidget {
   static const _padding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
   static const _radius = BorderRadius.all(.circular(8));
 
-  /// Invoked when the control is tapped, to re-attempt the failed load.
+  /// Runs on tap, to re-attempt the failed load.
   final VoidCallback onRetry;
 
-  /// Creates a retry control that calls [onRetry] when tapped.
+  /// Creates it.
   const new({required this.onRetry, super.key});
 
   @override

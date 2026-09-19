@@ -2,11 +2,9 @@ import 'package:flutter/widgets.dart';
 
 import '/src/utils/neutral_theme.dart';
 
-/// The neutral default surface shown when the source yields no items at all.
-///
-/// A centred, muted message on an otherwise empty viewport. Override `emptyBuilder` to replace it.
+/// The neutral surface for a source with no items at all. Override `emptyBuilder` to replace it.
 class NeutralEmptyIndicator extends StatelessWidget {
-  /// Creates the neutral empty-state surface.
+  /// Creates it.
   const new({super.key});
 
   @override

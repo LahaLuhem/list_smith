@@ -1,5 +1,5 @@
-// `_Item` is a private test fixture (a reference-identity type with no `==`), not this file's
-// subject, so its name intentionally differs from the filename.
+// `_Item` is a private test fixture (a reference-identity type with no `==`), not this file's subject,
+// so its name intentionally differs from the filename.
 // ignore_for_file: prefer-match-file-name
 
 import 'package:checks/checks.dart';
@@ -11,27 +11,27 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async pagination dedup', () {
-    // Overlapping pages: page 0 ends with ids 3, 4 and page 1 begins with FRESH `_Item(3)`,
-    // `_Item(4)` (the shape an offset-based backend produces when its data shifts between fetches).
-    // ISP appends pages verbatim and never dedups, so ids 3 and 4 land in the list twice. They are
-    // different objects with no `==`, so only an id-based dedup key can collapse them.
+    // Overlapping pages: page 0 ends with ids 3, 4 and page 1 begins with FRESH `_Item(3)`, `_Item(4)`
+    // (the shape an offset-based backend produces when its data shifts between fetches). ISP appends
+    // pages verbatim and never dedups, so ids 3 and 4 land in the list twice. They are different objects
+    // with no `==`, so only an id-based dedup key can collapse them.
     final overlappingPages = pagedFetcher([
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
       [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
     ]);
 
-    // A mid-stream page that is ENTIRELY page 0's ids (fresh objects), followed by a genuinely new
-    // page. De-dup collapses page 1 to nothing for display. The end policy must still see that the
-    // backend returned a full page there, or it reads the empty result as end-of-data and never
-    // fetches page 2. Page 3 is empty, the real end.
+    // A mid-stream page that is ENTIRELY page 0's ids (fresh objects), followed by a genuinely new page.
+    // De-dup collapses page 1 to nothing for display. The end policy must still see that the backend
+    // returned a full page there, or it reads the empty result as end-of-data and never fetches page
+    // 2. Page 3 is empty, the real end.
     final allDuplicateMidStreamPages = pagedFetcher([
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
       [_Item(5), _Item(6), _Item(7), _Item(8), _Item(9)],
     ]);
 
-    // The same overlap as [overlappingPages], but served through `searchFetchPage`. De-dup runs on
-    // the shared fetch path, so it must behave identically under an active query.
+    // The same overlap as [overlappingPages], but served through `searchFetchPage`. De-dup runs on the
+    // shared fetch path, so it must behave identically under an active query.
     final overlappingSearchPages = pagedSearchFetcher([
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
       [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
@@ -110,8 +110,8 @@ void main() {
   });
 }
 
-/// A reference-identity item: two `_Item`s with the same [id] are DIFFERENT objects (no `==`
-/// override), modelling a refetch that returns the same data as new instances.
+/// A reference-identity item: 2 `_Item`s with the same [id] are DIFFERENT objects (no `==` override),
+/// modelling a refetch that returns the same data as new instances.
 class _Item {
   new(this.id);
 
@@ -133,8 +133,8 @@ Future<void> _pumpPagedList(
   ),
 );
 
-/// Pumps a search list driven by [searchFetchPage] under a seeded, non-empty query, so the first
-/// fetch runs in search mode. The normal [PageFetcher] is never reached, so it is a stub.
+/// Pumps a search list driven by [searchFetchPage] under a seeded, non-empty query, so the 1st fetch
+/// runs in search mode. The normal [PageFetcher] is never reached, so it is a stub.
 Future<void> _pumpPagedSearch(
   WidgetTester tester, {
   required SearchPageFetcher<_Item> searchFetchPage,
