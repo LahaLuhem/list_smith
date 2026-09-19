@@ -13,6 +13,8 @@ import sys
 from list_smith_bench.config import (
     DEFAULT_ITERATIONS,
     DEFAULT_SCENARIO_DEVICE,
+    GATE_MEASURE_WINDOW_MILLIS,
+    MEASURE_WINDOW_MILLIS,
     REGRESSION_THRESHOLD_PCT,
     RESULTS_DIR,
 )
@@ -74,6 +76,12 @@ def _add_run_parser(sub: argparse._SubParsersAction) -> None:
         "--device",
         default=DEFAULT_SCENARIO_DEVICE,
         help=f"device for UI scenarios (default {DEFAULT_SCENARIO_DEVICE}; e.g. emulator-5554)",
+    )
+    parser_run.add_argument(
+        "--measure-millis",
+        type=int,
+        default=MEASURE_WINDOW_MILLIS,
+        help=f"per-measurement window in ms (default {MEASURE_WINDOW_MILLIS})",
     )
     parser_run.add_argument("--skip-micros", action="store_true", help="skip the AOT micros")
     parser_run.add_argument("--skip-scenarios", action="store_true", help="skip the UI scenarios")
@@ -137,6 +145,12 @@ def _add_ab_parser(sub: argparse._SubParsersAction) -> None:
     )
     parser_ab.add_argument(
         "--scenarios", nargs="*", help="restrict to named micros (default: all present in both)"
+    )
+    parser_ab.add_argument(
+        "--measure-millis",
+        type=int,
+        default=GATE_MEASURE_WINDOW_MILLIS,
+        help=f"per-measurement window in ms (default {GATE_MEASURE_WINDOW_MILLIS})",
     )
     parser_ab.set_defaults(func=cmd_ab)
 

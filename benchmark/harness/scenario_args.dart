@@ -1,35 +1,28 @@
 /// Parsed CLI arguments for a benchmark entrypoint.
 ///
-/// Every entrypoint takes the same flags so the Python orchestrator can drive them uniformly: `--iterations
-/// N`, `--output PATH`, `--git-sha SHA`, `--package-version V`, and optionally `--duration-seconds N`,
-/// which micros ignore. Hand-parsed, the surface being too small to justify `package:args`.
+/// One flag set across every entrypoint, so the Python orchestrator drives them all the same way.
+/// [ScenarioArgs.parse] is the list. Hand-parsed: the surface is too small for `package:args`.
 library;
 
 import 'dart:io';
 
-/// The standard flag set every benchmark entrypoint parses from its argv.
 final class ScenarioArgs {
   /// Iterations to run in this one subprocess, so process startup amortises over N runs.
   final int iterations;
 
-  /// Path the JSON result file is written to.
   final String outputPath;
-
-  /// The git HEAD SHA captured by the orchestrator, recorded in every record for traceability.
   final String gitSha;
-
-  /// The package version the orchestrator read from `pubspec.yaml`, recorded in every record.
   final String packageVersion;
 
-  /// Wall-clock seconds a long-running scenario should run. Micro-benchmarks ignore this.
-  final int durationSeconds;
+  /// Milliseconds each `measure` call times for. Required, so it cannot drift from the orchestrator.
+  final int measureMillis;
 
   const new _({
     required this.iterations,
     required this.outputPath,
     required this.gitSha,
     required this.packageVersion,
-    required this.durationSeconds,
+    required this.measureMillis,
   });
 
   /// Parses the standard flags from [argv], exiting non-zero on failure. Benchmarks are non-interactive,
@@ -48,14 +41,15 @@ final class ScenarioArgs {
     final outputPath = _required(flags, 'output');
     final gitSha = _required(flags, 'git-sha');
     final packageVersion = _required(flags, 'package-version');
-    final durationSeconds = int.tryParse(flags['duration-seconds'] ?? '10') ?? 10;
+    final measureMillis = _requiredInt(flags, 'measure-millis');
+    if (measureMillis <= 0) _die('--measure-millis must be >= 1, got: $measureMillis');
 
     return ScenarioArgs._(
       iterations: iterations,
       outputPath: outputPath,
       gitSha: gitSha,
       packageVersion: packageVersion,
-      durationSeconds: durationSeconds,
+      measureMillis: measureMillis,
     );
   }
 

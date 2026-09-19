@@ -100,10 +100,9 @@ trying to speed it up.
 or docs has no micro-timing delta to catch, so it skips the gate. Keep that filter tight. Widening
 it back to `benchmark/**` makes every unrelated PR pay the full cost for nothing.
 
-**It takes ~8 min, and most of that is irreducible.** The cost is the 2 run phases, not the build
-(~10s) or the cached Flutter setup. Each run is `iterations x pivots x ~2s`, since
-benchmark_harness's `measure()` holds a fixed ~2s window per sample, so N=10 over 3 sizes is
-~3.5 min a side, run twice. It doesn't parallelise:
+**Nearly all of it is measurement, not setup.** Cached Flutter setup and both AOT builds come to
+well under a minute. The rest is `micros x pivots x iterations x 2 sides` cells, each holding a fixed
+time window. Two things keep it serial:
 
 - Candidate and baseline **must share one runner**, because GitHub VMs vary run to run and a
   cross-machine baseline would drown real regressions in noise. Caching a baseline across runs is
@@ -111,9 +110,16 @@ benchmark_harness's `measure()` holds a fixed ~2s window per sample, so N=10 ove
 - The micros **can't run concurrently**, since CPU contention corrupts the very timings being
   measured.
 
-If a genuine run is still too slow, the methodology-safe levers are shortening the CI measure window
-(parameterise benchmark_harness to ~500ms for the gate while committed report runs keep 2s, which
-costs per-sample noise a >10% gate tolerates) or trimming the pivot sweep. Not parallelism.
+**The window is the lever.** `benchmark_harness`'s `measure()` hardcodes 2s per cell
+(`minimumMeasureDurationMillis`), so an 11ns dispatch costs the same as a 41ms scan.
+[`harness/measure.dart`](harness/measure.dart) opens it up, and `ab` takes a shorter window than
+`run` does. At 500ms a sweep ran 2.8x faster, every median moved under 3.1%, and within-side spread
+was unchanged.
+
+Still too slow? Shard by scenario across jobs. `compare` pairs strictly on `(scenario, metric)`, so
+nothing compares across shards, and `ab --scenarios` already takes the split. Trimming pivots or
+iterations works too, but both cost detection power, which
+[`test_gate_power.py`](python/tests/test_gate_power.py) pins.
 
 ## Result JSON schema
 

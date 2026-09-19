@@ -9,6 +9,7 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 import 'package:list_smith/src/data/pagination/models/end_context.dart';
 import 'package:list_smith/src/data/pagination/models/pagination_end_policy.dart';
 
+import '../harness/measure.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
@@ -57,8 +58,7 @@ Future<void> main(List<String> argv) async {
     for (final pageCount in _pageCounts) {
       final benchmark = _WrappingOverhead(pageCount);
 
-      forceGc();
-      final microseconds = benchmark.measure();
+      final microseconds = measureWindowed(benchmark, millis: args.measureMillis);
 
       writer.writeRecord(
         iteration: i,
