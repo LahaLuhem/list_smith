@@ -1,14 +1,13 @@
 part of '../pagination_end_policy.dart';
 
-/// Ends pagination after [pageCount] pages, whatever those pages contain.
+/// Ends pagination after [pageCount] pages, whatever those pages hold.
 ///
-/// For a capped feed: a "top 100", a teaser of N pages. Emptiness is ignored, unlike
-/// [StopOnEmptyPagesPolicy].
+/// For a capped feed: a "top 100", a teaser of N pages. Emptiness is ignored, unlike [StopOnEmptyPagesPolicy].
 final class FixedPageCountPolicy extends PaginationEndPolicy {
-  /// The number of pages to fetch before ending. Minimum `1`.
+  /// How many pages to fetch before ending. Minimum `1`.
   final int pageCount;
 
-  /// Creates a policy that ends after [pageCount] pages.
+  /// Ends after [pageCount] pages.
   const new({required this.pageCount}) : assert(pageCount >= 1, 'pageCount must be at least 1.');
 
   @override

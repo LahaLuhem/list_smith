@@ -1,7 +1,6 @@
 import 'package:list_smith/list_smith.dart';
 
-/// A [ListSmithObserver] that records each event as a compact tag, for asserting the lifecycle a
-/// list fires. Lives under `test/support/` so library code stays free of test scaffolding.
+/// A [ListSmithObserver] recording each event as a compact tag, for asserting the lifecycle a list fires.
 final class RecordingListSmithObserver extends ListSmithObserver {
   /// Every event received, in order, each a compact tag asserted with `checks`.
   final List<String> events = [];

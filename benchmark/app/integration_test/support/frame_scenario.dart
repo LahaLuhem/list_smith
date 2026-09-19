@@ -14,9 +14,9 @@ const _refreshSettleFrames = 60;
 const _frameBudgetMicros = 16667; // 60 Hz frame budget.
 const _flushDelay = Duration(seconds: 2);
 
-/// Flings [scrollable] down [passes] times, pumping fixed frames after each (never `pumpAndSettle`:
-/// list_smith's loading indicator animates forever). Shared by the scroll scenarios so list_smith
-/// and the bare-`ListView` control are scrolled identically.
+/// Flings [scrollable] down [passes] times, pumping fixed frames after each. Never `pumpAndSettle`,
+/// since the loading indicator animates forever. Shared by the scroll scenarios, so both are scrolled
+/// identically.
 Future<void> flingThrough(
   WidgetTester tester, {
   required Finder scrollable,
@@ -30,12 +30,11 @@ Future<void> flingThrough(
   }
 }
 
-/// Drives [passes] full pull-to-refresh cycles on [scrollable]: a stepped overscroll drag past
-/// CRI's arm threshold, release, then a fixed settle window while onRefresh runs and the indicator
-/// returns. Never `pumpAndSettle`, since list_smith's loading indicator animates forever. The drag
-/// is stepped over several pumps so the animation renders real intermediate frames rather than one
-/// jump, and each pass starts at the leading edge, which is what CRI's default `onEdge` trigger
-/// needs to arm.
+/// Drives [passes] full pull-to-refresh cycles on [scrollable]: a stepped overscroll drag past CRI's
+/// arm threshold, release, then a fixed settle window. Never `pumpAndSettle`, since the loading indicator
+/// animates forever. The drag is stepped over several pumps so the animation renders real intermediate
+/// frames, and each pass starts at the leading edge, which is what CRI's default `onEdge` trigger needs
+/// to arm.
 Future<void> refreshThrough(
   WidgetTester tester, {
   required Finder scrollable,
@@ -56,11 +55,10 @@ Future<void> refreshThrough(
 
 /// Collects [FrameTiming]s across [action] and summarises them, WITHOUT touching the VM service.
 ///
-/// `binding.watchPerformance` is the SDK's built-in, but its GC-info step opens a localhost socket
-/// the sandboxed macOS app is denied, so this hand-rolls it: register a timings callback, bracket
-/// [action] with fixed flush delays (the engine batches timings roughly once a second), then
-/// summarise. Same keys as `FrameTimingSummarizer.summary` minus GC counts, so [buildFrameRecord]
-/// reads it unchanged.
+/// `binding.watchPerformance` is the SDK's built-in, but its GC-info step opens a localhost socket the
+/// sandboxed macOS app is denied. So this hand-rolls it: register a timings callback, bracket [action]
+/// with fixed flush delays (the engine batches roughly once a second), then summarise. Same keys as
+/// `FrameTimingSummarizer.summary` minus GC counts.
 Future<Map<String, dynamic>> captureFrames(
   WidgetsBinding binding,
   Future<void> Function() action,
@@ -123,9 +121,8 @@ double _percentileMillis(List<int> micros, int percentile) {
 
 int _missedCount(List<int> micros) => micros.where((m) => m > _frameBudgetMicros).length;
 
-/// Maps a [captureFrames] summary into a unified benchmark record: the raw per-frame build and
-/// raster times (microseconds) become samples, the aggregate stats (milliseconds) become summary
-/// scalars.
+/// Maps a [captureFrames] summary into a benchmark record: raw per-frame times (microseconds) become
+/// samples, aggregate stats (milliseconds) become summary scalars.
 Map<String, dynamic> buildFrameRecord({
   required String scenario,
   required Map<String, dynamic> summary,

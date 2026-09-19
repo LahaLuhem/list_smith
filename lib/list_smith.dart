@@ -1,5 +1,4 @@
-/// A developer-first `ListView.builder` wrapper for async pagination and
-/// pull-to-refresh.
+/// A `ListView.builder` wrapper for async pagination, pull-to-refresh and search.
 library;
 
 export 'src/data/control/models/list_smith_controller.dart';

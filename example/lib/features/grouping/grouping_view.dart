@@ -8,8 +8,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'grouping_view_model.dart';
 
-/// `ListSmith.sync` plus `Grouping.by`. The fixture cycles three categories per row, so the raw
-/// list is fully interleaved and sync bucketing has something to do.
+/// `ListSmith.sync` plus `Grouping.by`. The fixture cycles 3 categories per row, so the raw list is
+/// interleaved and sync bucketing has something to do.
 class GroupingView extends StatelessWidget {
   const new({super.key});
 
@@ -58,7 +58,7 @@ class GroupingView extends StatelessWidget {
   );
 }
 
-/// The section header stacked above each group's first item.
+/// The section header stacked above each group's 1st item.
 class _SectionHeader extends StatelessWidget {
   final String label;
 

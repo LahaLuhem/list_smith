@@ -32,7 +32,7 @@ void main() {
       );
       await tester.pump();
 
-      // Input order A, B, A is bucketed to A, A, B: exactly one header per group.
+      // Input order A, B, A is bucketed to A, A, B: exactly 1 header per group.
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('avocado').evaluate()).length.equals(1);
@@ -83,8 +83,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // B opens at the end of page 0 and runs into page 1. Headers come from every loaded page, so
-      // B gets one. A page-local fold would draw two.
+      // B opens at the end of page 0 and runs into page 1. Headers come from every loaded page, so B
+      // gets one. A page-local fold would draw two.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -108,8 +108,8 @@ void main() {
       );
       await drain(tester, frames: 16);
 
-      // Page 1 is all B, so this reaches back past a whole page. A two-page case cannot tell
-      // 'every page' from 'the last two'.
+      // Page 1 is all B, so this reaches back past a whole page. A two-page case cannot tell 'every
+      // page' from 'the last two'.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -161,8 +161,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the
-      // overlap first, so grouping never sees it. itemId is load-bearing for grouping here.
+      // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the overlap
+      // first, so grouping never sees it. itemId is load-bearing for grouping here.
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('a2').evaluate()).length.equals(1);

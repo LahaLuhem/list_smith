@@ -1,6 +1,5 @@
-/// Extracts the group key for [item], for a list_smith list that shows its items in sections.
+/// Pulls the group key off [item], for a list showing its items in sections.
 ///
-/// Keys are compared with `==` to decide where one group ends and the next begins, so use a type with
-/// value equality (a `String`, `enum`, `int`, `DateTime`, and so on). Keep the extractor cheap: on the
-/// async path it is called about twice per visible item to detect group boundaries during scroll.
+/// Keys compare with `==`, so use something with value equality (`String`, `enum`, `int`, `DateTime`).
+/// Keep it cheap: the async path calls it about twice per visible item while scrolling.
 typedef GroupKeyOf<T extends Object, K extends Object> = K Function(T item);

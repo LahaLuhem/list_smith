@@ -1,7 +1,7 @@
 /// Micro-benchmark: [headerFlagsByFirstSighting] cost as the loaded list grows.
 ///
-/// Runs per item on every `PagedView` build, over the lazy flatten of the pages, so a slower scan
-/// trips the gate. Groups are runs of ten.
+/// Runs per item on every `PagedView` build, over the lazy flatten of the pages, so a slower scan trips
+/// the gate. Groups are runs of ten.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -16,7 +16,7 @@ const _itemCounts = <int>[1000, 10000, 100000];
 /// Items per page, so the source is a lazy flatten of pages like the real one.
 const _pageSize = 100;
 
-/// Items per group. Every tenth item opens a run.
+/// Items per group. Every 10th item opens a run.
 const _groupSize = 10;
 
 final class _HeaderFlagsScaling extends BenchmarkBase {

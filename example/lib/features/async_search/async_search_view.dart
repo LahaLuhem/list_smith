@@ -9,8 +9,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'async_search_view_model.dart';
 
-/// `ListSmith.async` plus `AsyncSearch`, with a live `SearchCachePolicy` toggle between Keep and
-/// the default Replace.
+/// `ListSmith.async` plus `AsyncSearch`, with a live `SearchCachePolicy` toggle between Keep and the
+/// default Replace.
 class AsyncSearchView extends StatelessWidget {
   const new({super.key});
 

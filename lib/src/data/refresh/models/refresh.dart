@@ -9,9 +9,8 @@ part 'refreshes/pull_to_refresh.dart';
 
 /// Whether an async list has pull-to-refresh, and how its indicator is drawn.
 ///
-/// [PullToRefresh] (the default) is refresh on with the neutral indicator, [NoRefresh] is off. The
-/// indicator rides the on-case, so it can't be set on a list that never refreshes.
-/// [ListSmith.async] only: an in-memory list has nothing to refresh.
+/// [PullToRefresh] (the default) is on, [NoRefresh] is off. The indicator rides the on-case, so it can't
+/// be set on a list that never refreshes. [ListSmith.async] only.
 sealed class Refresh {
   /// Const base constructor.
   const new();

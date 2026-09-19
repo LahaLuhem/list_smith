@@ -22,9 +22,11 @@ jobs:
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
+      - id: sdk
+        run: echo "channel=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ steps.sdk.outputs.channel }}
           cache: true
       - name: Install dependencies (root only, skip example/)
         run: flutter --no-version-check pub get --no-example

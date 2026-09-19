@@ -8,7 +8,7 @@ wrapper.
 [`.pubignore`](../.pubignore) excludes the whole `benchmark/` tree from the pub.dev tarball, so none
 of it reaches downstream users.
 
-## Two layers, two fidelities
+## 2 layers, 2 fidelities
 
 | Layer | What | Runner | Fidelity |
 |---|---|---|---|
@@ -92,7 +92,7 @@ the delta from a change.
 
 [`.github/workflows/benchmark.yml`](../.github/workflows/benchmark.yml) builds and runs the
 micros twice on one runner (the PR head and an `origin/main` worktree) and fails the job on a
-significant regression past the threshold. Two things about it are deliberate, so know them before
+significant regression past the threshold. 2 things about it are deliberate, so know them before
 trying to speed it up.
 
 **It only triggers on code whose timing it measures:** `lib/**`, `benchmark/micro/**`,
@@ -100,9 +100,9 @@ trying to speed it up.
 or docs has no micro-timing delta to catch, so it skips the gate. Keep that filter tight. Widening
 it back to `benchmark/**` makes every unrelated PR pay the full cost for nothing.
 
-**It takes ~8 min, and most of that is irreducible.** The cost is the two run phases, not the build
+**It takes ~8 min, and most of that is irreducible.** The cost is the 2 run phases, not the build
 (~10s) or the cached Flutter setup. Each run is `iterations x pivots x ~2s`, since
-benchmark_harness's `measure()` holds a fixed ~2s window per sample, so N=10 over three sizes is
+benchmark_harness's `measure()` holds a fixed ~2s window per sample, so N=10 over 3 sizes is
 ~3.5 min a side, run twice. It doesn't parallelise:
 
 - Candidate and baseline **must share one runner**, because GitHub VMs vary run to run and a
@@ -161,5 +161,5 @@ capture reproduces it rather than restamping it with today.
 | `bare_listview` | the same scroll over a plain `ListView.builder`, the attribution control |
 | `cri_refresh` | per-frame build cost across full pull-to-refresh cycles |
 
-On top of those, `compare` diffs two runs with a Mann-Whitney test, and `ab` runs two builds' micros
+On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
 interleaved so run-order drift lands on both sides equally.

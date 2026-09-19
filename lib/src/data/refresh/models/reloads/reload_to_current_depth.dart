@@ -1,25 +1,24 @@
 part of '../reload.dart';
 
-/// Re-fetches every currently-loaded page so a pull-to-refresh keeps the user's scroll depth instead
-/// of snapping back to the first page.
+/// Re-fetches every loaded page, so a pull keeps the user's scroll depth instead of snapping back to
+/// the top.
 ///
-/// [concurrency] and [onError] are live only for index-based sources. A `PageFetcher.withSignal`
-/// source threads a per-page signal, so page `k` needs page `k-1`: its reload walks in order and is
-/// always atomic, since a half-rewritten cursor chain can't be committed. Scroll depth is still
+/// [concurrency] and [onError] only apply to index-based sources. A `PageFetcher.withSignal` source
+/// needs page `k-1` before page `k`, so its reload walks in order and is always atomic. Depth is still
 /// kept, just without the tuning.
 ///
-/// A page still loading when the pull happens is dropped and asked again, so pre-refresh data can't
-/// land on top of the refreshed pages.
+/// A page still loading when the pull happens is dropped and asked again, so stale data can't land on
+/// top of the fresh pages.
 final class ReloadToCurrentDepth extends Reload {
-  /// The most page-fetches to run at once: `1` (the default) sequential, `null` all together, `K` at
-  /// most `K` in flight. Ignored for `withSignal` sources, which always reload sequentially.
+  /// How many page fetches may run at once: `1` (the default) sequential, `null` all together, `K` at
+  /// most `K` in flight. Ignored for `withSignal` sources.
   final int? concurrency;
 
-  /// How the reload settles when a page-fetch fails. Best-effort
-  /// ([ReloadOnError.commitSucceeded]) by default. Ignored for `withSignal` sources, always atomic.
+  /// How the reload settles when a page fetch fails. Best-effort by default. Ignored for `withSignal`
+  /// sources, which are always atomic.
   final ReloadOnError onError;
 
-  /// Creates a reload-to-current-depth strategy.
+  /// Creates it.
   const new({this.concurrency = 1, this.onError = .commitSucceeded})
     : assert(concurrency == null || concurrency > 0, 'concurrency must be positive or null.');
 
@@ -46,7 +45,7 @@ final class ReloadToCurrentDepth extends Reload {
         signal = pageSignal;
       }
     } on Exception {
-      return; // keep the old pages; the observer already saw the error
+      return; // keep the old pages, the observer already saw the error
     }
 
     context.commit(freshPages, lastSignal: signal);

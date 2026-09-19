@@ -49,7 +49,7 @@ void main() {
         val(flagItemsKey, const [10, 11, 20, 30]),
         val(flagsKey, const [true, false, true, true]),
       )
-      // A key coming back is not a second header. That is the repair.
+      // A key coming back is not a 2nd header. That is the repair.
       .example(val(flagItemsKey, const [10, 20, 11]), val(flagsKey, const [true, true, false]))
       .run((ctx) {
         final flags = headerFlagsByFirstSighting(

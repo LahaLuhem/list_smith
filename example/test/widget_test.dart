@@ -5,7 +5,7 @@ import 'package:list_smith_example/main.dart';
 
 import 'support/bdd.dart';
 
-/// Pumps the example app and settles the first frame.
+/// Pumps the example app and settles the 1st frame.
 Future<void> pumpExampleApp(WidgetTester tester) async {
   await tester.pumpWidget(const ListSmithExampleApp());
   await tester.pump();
@@ -44,8 +44,8 @@ void main() {
     });
 
     scenarioWidgets('playground pages past its empty first page to the data', (tester) async {
-      // The playground stacks its knob panel above the list, so give the list room to
-      // render items under the knobs, but not so tall it over-fetches pages to fill the viewport.
+      // The playground stacks its knob panel above the list, so give the list room to render items under
+      // the knobs, but not so tall it over-fetches pages to fill the viewport.
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -127,7 +127,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       check(find.text('Item 1').evaluate()).length.equals(1);
-      // The first item (id 0) sits in the 'Alpha' section, whose header renders above it.
+      // The 1st item (id 0) sits in the 'Alpha' section, whose header renders above it.
       check(find.text('Alpha').evaluate()).length.equals(1);
     });
 
@@ -156,12 +156,12 @@ void main() {
           await tester.pump(const Duration(milliseconds: 300));
         }
 
-        // The pull reported refresh, so the fetch skipped the cache and re-stamped the first page.
+        // The pull reported refresh, so the fetch skipped the cache and re-stamped the 1st page.
         check(find.textContaining('refresh · network (bypassed)').evaluate().length)
             .isGreaterThan(0);
         check(find.textContaining('from fetch #1').evaluate()).length.equals(0);
-        // The pages it then paged on to reported nextPage, so those came back from the cache: both
-        // halves of the routing, not just the bypass.
+        // The pages it then paged on to reported nextPage, so those came back from the cache: both halves
+        // of the routing, not just the bypass.
         check(find.textContaining('· cache').evaluate().length).isGreaterThan(0);
       },
     );
@@ -173,13 +173,13 @@ void main() {
       await tester.scrollUntilVisible(find.text('Reload'), 100);
       await tester.tap(find.text('Reload'));
       await tester.pump();
-      // The feed fetches with a 500ms latency, so pump enough for the first pages to settle.
+      // The feed fetches with a 500ms latency, so pump enough for the 1st pages to settle.
       for (var frame = 0; frame < 8; frame++) {
         await tester.pump(const Duration(milliseconds: 300));
       }
 
       check(find.text('Item 1').evaluate()).length.equals(1);
-      // Each item carries its per-page fetch stamp, "load #1" on the first load.
+      // Each item carries its per-page fetch stamp, "load #1" on the 1st load.
       check(find.textContaining('load #1').evaluate().length).isGreaterThan(0);
     });
 

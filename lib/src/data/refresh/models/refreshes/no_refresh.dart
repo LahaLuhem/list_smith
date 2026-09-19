@@ -1,10 +1,8 @@
 part of '../refresh.dart';
 
-/// Pull-to-refresh off: the list wires no refresh gesture and draws no refresh indicator.
-///
-/// Pass it to `.async`'s `refresh` to opt out. The default is [PullToRefresh].
+/// Pull-to-refresh off: no gesture, no indicator. Pass it to `.async`'s `refresh` to opt out.
 final class NoRefresh extends Refresh {
-  /// Creates the no-refresh case.
+  /// Creates it.
   const new();
 
   @override

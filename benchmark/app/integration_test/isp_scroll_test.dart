@@ -1,8 +1,8 @@
 /// Scenario: scrolling a list_smith async list (ISP under the hood).
 ///
-/// Per-frame build and raster timing while flinging through many pages, so ISP's index-triggered
-/// load-more plus list_smith's wrapping shows up as real frames. Paired with `bare_listview` for
-/// attribution: this minus bare, minus the ~0 micro overhead, is ISP's own share.
+/// Per-frame build and raster timing while flinging through many pages, so ISP's index-triggered load-more
+/// plus our wrapping shows up as real frames. This minus `bare_listview`, minus the ~0 micro overhead,
+/// is ISP's own share.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -18,7 +18,7 @@ const _iterations = int.fromEnvironment('ITERATIONS', defaultValue: 10);
 const _pageSize = int.fromEnvironment('PAGE_SIZE', defaultValue: 20);
 const _outputPath = String.fromEnvironment('OUTPUT');
 
-// The loading indicator animates forever, so the first page is settled with fixed pumps.
+// The loading indicator animates forever, so the 1st page is settled with fixed pumps.
 const _warmupPumps = 10;
 
 void main() {

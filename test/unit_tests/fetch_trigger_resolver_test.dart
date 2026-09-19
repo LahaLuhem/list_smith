@@ -29,7 +29,7 @@ void main() {
         val(failedKey, null),
         val(triggerKey, FetchTrigger.nextPage),
       )
-      // The page whose last attempt threw is a retry, first page included.
+      // The page whose last attempt threw is a retry, 1st page included.
       .example(
         val(pageKey, 2),
         val(pendingKey, null),

@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-/// Builds the surface shown when a search matches nothing, carrying the `query` that found none.
+/// Builds the surface for a search that matched nothing, carrying the `query` that found none.
 ///
-/// Not the empty state: empty means the source holds no items at all, no-results means it holds
-/// items and none match.
+/// Not the empty state. Empty means the source has no items at all, no-results means it has some and
+/// none match.
 typedef NoResultsBuilder = Widget Function(BuildContext context, String query);

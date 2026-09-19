@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-/// A representative list item shared by the scroll scenarios (list_smith and the bare-`ListView`
-/// control), so their per-frame build cost is measured over identical widgets.
+/// The list item shared by both scroll scenarios, so their per-frame build cost is measured over identical
+/// widgets.
 class ScrollBenchItem extends StatelessWidget {
   const new({required this.index, super.key});
 

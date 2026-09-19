@@ -8,9 +8,8 @@ import '/features/core/repos/demo_repository.dart';
 
 /// Backs the Cache routing demo: a repository-with-a-cache routed on `PageRequest.trigger`.
 ///
-/// The cache lives here rather than in [DemoRepository], which every other demo shares and none of
-/// them should start caching. Items carry the fetch number that produced them, so a cached page is
-/// visibly the same one and a bypassed page is visibly new.
+/// The cache lives here rather than in [DemoRepository], which every other demo shares. Items carry
+/// the fetch number that produced them, so a cached page is visibly the same one.
 final class CacheRoutingViewModel extends ViewModel {
   /// Cap on the log so it can't grow without bound. The newest lines are kept.
   static const _maxLoggedFetches = 50;
@@ -22,8 +21,7 @@ final class CacheRoutingViewModel extends ViewModel {
 
   var _fetchCount = 0;
 
-  /// Whether the fetch honours [PageRequest.trigger]. Off, any cached page is served, so a
-  /// pull-to-refresh hands back stale rows.
+  /// Whether the fetch honours [PageRequest.trigger]. Off, a pull-to-refresh hands back stale rows.
   ValueListenable<bool> get shouldRouteOnTriggerListenable => _shouldRouteOnTriggerNotifier;
 
   /// One line per fetch, newest first: the page, its trigger, and whether it hit the cache.
@@ -49,8 +47,8 @@ final class CacheRoutingViewModel extends ViewModel {
   }
 
   // A refresh is the user asking for fresh data and a retry follows a failure, so neither should be
-  // answered from the cache. The rest are ordinary reads, an invalidated one included: the store
-  // changed, not the network.
+  // answered from the cache. The rest are ordinary reads, an invalidated one included: the store changed,
+  // not the network.
   bool _bypassesCache(FetchTrigger trigger) => switch (trigger) {
     .refresh || .retry => true,
     .initialLoad || .nextPage || .queryChanged || .invalidated => false,
@@ -74,7 +72,7 @@ final class CacheRoutingViewModel extends ViewModel {
     _record('cache cleared');
   }
 
-  // A setter can't be torn off as the switch's onChanged callback.
+  // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onRouteOnTriggerToggled({required bool value}) =>
       _shouldRouteOnTriggerNotifier.value = value;

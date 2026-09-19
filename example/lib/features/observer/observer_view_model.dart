@@ -6,8 +6,8 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Observer demo: a searchable `ListSmith.async` whose observer records each lifecycle
-/// event into a live log, plus an inject-failure toggle so the error event can fire.
+/// Backs the Observer demo: a searchable `ListSmith.async` whose observer records each event into a
+/// live log, plus an inject-failure toggle so the error event can fire.
 final class ObserverViewModel extends ViewModel {
   /// Cap on the log so it can't grow without bound. The newest events are kept.
   static const _maxLoggedEvents = 50;
@@ -47,11 +47,11 @@ final class ObserverViewModel extends ViewModel {
     return page;
   }
 
-  // A setter can't be torn off as the search field's onChanged callback.
+  // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onQueryChanged(String value) => _queryNotifier.value = value;
 
-  // A setter can't be torn off as the switch's onChanged callback.
+  // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onInjectFailuresToggled({required bool value}) =>
       _shouldInjectFailuresNotifier.value = value;

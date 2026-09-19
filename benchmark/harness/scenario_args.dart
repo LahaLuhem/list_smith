@@ -1,18 +1,15 @@
-/// Parsed CLI arguments for a benchmark micro (or pure-Dart scenario) entrypoint. Ported from the
-/// `better_internet_connectivity_checker` suite.
+/// Parsed CLI arguments for a benchmark entrypoint.
 ///
-/// Every entrypoint takes the same flags so the Python orchestrator can drive them uniformly:
-/// `--iterations N`, `--output PATH`, `--git-sha SHA`, `--package-version V`, and optionally
-/// `--duration-seconds N`, which micros ignore. Hand-parsed, the surface being too small to
-/// justify a `package:args` dependency.
+/// Every entrypoint takes the same flags so the Python orchestrator can drive them uniformly: `--iterations
+/// N`, `--output PATH`, `--git-sha SHA`, `--package-version V`, and optionally `--duration-seconds N`,
+/// which micros ignore. Hand-parsed, the surface being too small to justify `package:args`.
 library;
 
 import 'dart:io';
 
 /// The standard flag set every benchmark entrypoint parses from its argv.
 final class ScenarioArgs {
-  /// How many iterations to run in this one subprocess invocation. The entrypoint loops `0..N-1`
-  /// and emits one record per iteration, amortising process startup over N runs.
+  /// Iterations to run in this one subprocess, so process startup amortises over N runs.
   final int iterations;
 
   /// Path the JSON result file is written to.
@@ -21,8 +18,7 @@ final class ScenarioArgs {
   /// The git HEAD SHA captured by the orchestrator, recorded in every record for traceability.
   final String gitSha;
 
-  /// The package version captured by the orchestrator from `pubspec.yaml`, recorded in every
-  /// record.
+  /// The package version the orchestrator read from `pubspec.yaml`, recorded in every record.
   final String packageVersion;
 
   /// Wall-clock seconds a long-running scenario should run. Micro-benchmarks ignore this.
@@ -36,8 +32,8 @@ final class ScenarioArgs {
     required this.durationSeconds,
   });
 
-  /// Parses the standard flags from [argv], exiting with a non-zero code on failure (benchmarks are
-  /// non-interactive, so a thrown exception would have no handler).
+  /// Parses the standard flags from [argv], exiting non-zero on failure. Benchmarks are non-interactive,
+  /// so a thrown exception would have no handler.
   factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {

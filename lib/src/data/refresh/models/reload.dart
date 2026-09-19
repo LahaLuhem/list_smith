@@ -14,17 +14,13 @@ part 'reloads/reset_to_first_page.dart';
 
 /// What pull-to-refresh does to the pages already loaded.
 ///
-/// Carried on `PullToRefresh`. [ResetToFirstPage] (the default) discards everything and reloads page
-/// one. [ReloadToCurrentDepth] re-fetches every loaded page so scroll depth survives.
-///
-/// Each variant does its own work in [run], which the engine calls with a [ReloadContext] without
-/// ever inspecting the concrete type.
+/// [ResetToFirstPage] (the default) throws everything away and reloads page one. [ReloadToCurrentDepth]
+/// re-fetches every loaded page, so scroll depth survives.
 sealed class Reload {
   /// Const base constructor.
   const new();
 
-  /// Performs the reload through [context]. The engine calls this, never the consumer, the same way
-  /// nobody calls `Widget.build` by hand.
+  /// Does the reload through [context]. The engine calls it, you don't, same as `Widget.build`.
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context);
 }

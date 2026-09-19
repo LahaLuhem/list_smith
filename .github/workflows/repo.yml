@@ -22,9 +22,11 @@ jobs:
       # Formatter output is version-sensitive, so take Dart from Flutter rather than
       # Dart stable, which runs ahead of it. Why: APPENDIX.md#ci-format-sdk. The
       # composite stays skipped: format scans in place, so no pub get is needed.
+      - id: sdk
+        run: echo "channel=$(jq -r .flutter .fvmrc)" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable # Matches .fvmrc.
+          channel: ${{ steps.sdk.outputs.channel }}
           cache: true
       - run: dart format --output=none --set-exit-if-changed .
 

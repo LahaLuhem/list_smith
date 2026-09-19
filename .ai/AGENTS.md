@@ -5,9 +5,9 @@ in this package. Claude-Code-specific guidance lives in [CLAUDE.md](CLAUDE.md).
 
 ## Project goal
 
-A developer-first Flutter package wrapping `ListView.builder` for real-world lists, doing three
-jobs properly: **pagination** and **pull-to-refresh** for an async source, and **search** for
-either kind. A sync source holds all its items, so it has nothing to page, and refreshing it means
+A developer-first Flutter package wrapping `ListView.builder` for real-world lists, doing 3 jobs
+properly: **pagination** and **pull-to-refresh** for an async source, and **search** for either
+kind. A sync source holds all its items, so it has nothing to page, and refreshing it means
 rebuilding the widget. Async search additionally needs a policy for how cached items interact with
 new results.
 
@@ -82,7 +82,7 @@ These are the general, architecture-independent rules.
 3. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference` and `strict-raw-types` are
    all on. Reaching for `dynamic` or a bare `Object?` is the signal to stop and reconsider.
 4. **Public symbols carry `///` dartdoc** explaining the *why* and the guarantee, not the
-   mechanical *what*. A line or two, with anything longer going to `APPENDIX.md`.
+   mechanical *what*. A line or 2, with anything longer going to `APPENDIX.md`.
    `public_member_api_docs` is on.
 5. **Semver, strictly.** A public signature change, a deletion, or a behavioural change to a
    documented contract is breaking. Surface the implication before the diff lands.
@@ -107,7 +107,7 @@ Enforced by [`.github/workflows/pr-conventions.yml`](.github/workflows/pr-conven
 
 - **Branch name**: `<type>/#<issue>-<slug>`, `<type>` one of `feature`, `bugfix`, `chore`,
   `refactor`, `acceptance-test-issues`, `hotfix`. Example: `feature/#7-paginated-listview`.
-- **Exactly one `sem-*` label per PR.** Selects the changelog category for the post-merge
+- **Exactly 1 `sem-*` label per PR.** Selects the changelog category for the post-merge
   automation:
 
   | Label           | Cider type   | When to use                                    |
@@ -139,11 +139,13 @@ people out most often:
   over hand-rolled loops for any transform or scan. Collection-`for` is for *building* a literal,
   not for deriving one collection from another.
 - British spelling in prose and identifiers, except names the SDK fixes (`toJson`, `hashCode`).
-- No AI-tells in prose: no em-dashes, no spliced semicolons, no filler vocabulary.
 
 ## Guidelines for any AI agent
 
-- **Always ask before making technical choices.** Anything with more than one defensible answer
+- **Read <https://noslopgrenade.com/> before writing any prose.** Docs, dartdoc, comments, commit
+  messages, PR bodies. Fetch the page, don't cite it from memory: it is the intent behind
+  [Prose & voice](CODESTYLE.md#prose), and skipping it is how the wall of text gets written.
+- **Always ask before making technical choices.** Anything with more than 1 defensible answer
   (an API shape, public vs `lib/src/`, a new dependency, a widget's parameter model) stops and
   asks: options, trade-offs, the one you'd pick and why, then wait. Small choices compound. Mark
   your recommendation `★` so the user can reply by echoing or overriding it.

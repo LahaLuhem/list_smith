@@ -19,6 +19,7 @@ don't break callers.
 - [Class structure](#class-structure)
 - [Package-specific patterns](#package-patterns)
 - [Idioms](#idioms)
+- [Prose & voice](#prose)
 - [Comments & dartdoc](#dartdoc)
 - [DCM rules (applied by hand)](#dcm-rules)
 - [Test style](#test-style)
@@ -135,7 +136,7 @@ feature**:
 - **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
   (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
 
-Two placement rules earn their keep:
+2 placement rules earn their keep:
 
 - **A typedef with a single home type stays in that type's file.** Only a standalone typedef with
   no such home gets its own file under the feature's `typedefs/`. So `RefreshBuilder` sits with
@@ -179,10 +180,16 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
 
 - **Wrap text-file content at 100 columns.** `formatter.page_width` in `analysis_options.yaml` is
   authoritative for Dart, [`.editorconfig`](.editorconfig) matches it for Markdown and YAML, and
-  they move together. `dart format` does *not* reflow doc-comment prose, so a `///` block wrapped
-  narrow stays narrow forever. Aim for ~95 columns of content in one (the `///` and its space
-  count), and reflow when you're already touching the block rather than churning files to widen
-  them.
+  they move together. `dart format` does *not* reflow comment prose, so a `///` or `//` block
+  wrapped narrow stays narrow forever.
+- **Fill a comment line to 100, then wrap.** Keep adding words while the line is still under 100
+  columns, so the word that crosses the boundary stays on that line instead of starting the next
+  one. Wrapping early is the thing to avoid. A long `[Identifier]` landing on the boundary can push
+  a line to ~120, which is fine. Reflow when you're already touching the block rather than churning
+  files to widen them.
+- **Markdown is a hard 100, though.** `rumdl`'s `MD013` fails the build over it, so the
+  crossing-word licence above is for `///` and `//` only. Prose in a `.md` file wraps at 100 or
+  under.
 - **Blank lines separate logical chunks within a method.** Guards, setup, the main action, the
   return, one blank line between, so a reader can skip the chunks they don't need.
 - **Prefer expression bodies** (`prefer_expression_function_bodies`) and **single quotes**
@@ -198,12 +205,12 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   live on that type, close to where they're read. Check for an existing shared constant before
   adding a cross-cutting one.
 - **Inline single-use defaults, don't promote them to a named `kDefault…` constant.** The name
-  earns its place only when the value is read from **more than one place**, typically a field
+  earns its place only when the value is read from **more than 1 place**, typically a field
   default *and* a build-method substitution (`foo ?? kDefaultFoo`). One reader means nothing to
   diverge from, and a top-level `kDefaultXxx` shows up in auto-complete and rendered dartdoc as
   noise a downstream user skims past.
 
-  A dartdoc reference (`Defaults to [kDefaultXxx]`) is not a second use. Once inlined, the dartdoc
+  A dartdoc reference (`Defaults to [kDefaultXxx]`) is not a 2nd use. Once inlined, the dartdoc
   spells out the literal instead (`Defaults to \`20\``).
 
 ---
@@ -220,7 +227,7 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   guarantee at compile time. Init-list asserts, with messages, per
   `prefer_asserts_in_initializer_lists` and `prefer_asserts_with_message`.
 - **Enforce constructor invariants with `assert(condition, message)` in the initializer list, not
-  by silently accepting params and ignoring them downstream.** When two parameters are mutually
+  by silently accepting params and ignoring them downstream.** When 2 parameters are mutually
   exclusive, or one is only meaningful when another is set, say so loudly at construction time:
 
   ```dart
@@ -235,7 +242,7 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
 
   A silently-dropped param is the "ghost param" this package exists to avoid: someone sets it,
   finds it in the dartdoc, and never learns it does nothing. Prefer compile-time exclusivity where
-  the invariant splits into two constructors. `assert` is for what a signature can't express:
+  the invariant splits into 2 constructors. `assert` is for what a signature can't express:
   cross-parameter conditions, value ranges, length constraints.
 - **Value types override `toString`.** The default `Instance of 'ClassName'` is hostile in logs and
   test failures, so immutable data classes return `'ClassName(field1: value1, ...)'` as an
@@ -295,7 +302,7 @@ back door. Watching the list is the observer's job. Full rationale:
 
 - One verb per consumer intent, returning a `Future<void>` that completes when the work does.
 - The engine implements `ListSmithControllerHost` and attaches itself, so the gesture and the handle
-  run the same entry point and the handle can't carry a second implementation that drifts.
+  run the same entry point and the handle can't carry a 2nd implementation that drifts.
 - Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached no-ops rather
   than throwing. Assert only for what can only be wiring, meaning nothing ever attached.
 - A new intent is one method on the host and one forwarding verb on the handle, nothing else. The
@@ -564,8 +571,40 @@ switch (snapshot) {
 }
 ```
 
-**Why:** two null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
+**Why:** 2 null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
 type dispatch that isn't there.
+
+---
+
+<a id="prose"></a>
+## Prose & voice
+
+**Read <https://noslopgrenade.com/> before writing any prose here.** Open it, don't cite it from
+memory. It is short and it carries the examples and the intent behind every line below.
+
+Covers every surface a person reads: dartdoc, comments, READMEs, APPENDIX entries, commit messages,
+PR and issue bodies.
+
+- Keep it trimmed and compacted to reduce noise. Brief, concise, succinct. No over-explaining.
+- Comment at the call site, rather than a preamble wall-of-text.
+- **Point at the source, never copy the value.** Anything a file or a command already states, an
+  SDK floor, a version, a count, a file list, gets referenced rather than restated: "the floor in
+  `pubspec.yaml`'s `environment:` block", not "Dart 3.13". A copy is redundant the day it lands and
+  wrong the day the source moves, and nothing fails when it rots. A CHANGELOG is the exception: it
+  records what was true at that release and must not be updated to match today.
+- Use the Markdown features that improve readability: subsection layout, tables, (un)ordered lists,
+  show-hide sections. Structure replaces prose rather than getting added to it.
+- Prefer not using technical buzz-words, use ELI18 level instead.
+- No AI-tell-tale signs like em-dashes, `;` and others, and no filler vocabulary (leverage, robust,
+  seamless, simply, powerful, comprehensive).
+- Keep the tone informal and light. Give it a natural flow.
+- **Numerals, not number words.** `2 headers`, `3 exceptions`, `the 1st page`, `every 10th item`.
+  Counting and position only: `one` stays a word where it works as "a" (`one header per group`,
+  `the ready-made one`), `first` stays one where it is an adverb (`ask first`, `newest first`) or
+  part of a compound (`first-page loading`, `one-line pointer`), and a `second` of time is never
+  `2nd`. Changing a heading changes its GitHub anchor, so fix the links in the same edit.
+
+Reflowing a block you have edited is part of this. The wrap rule is in [Formatting](#formatting).
 
 ---
 
@@ -574,11 +613,14 @@ type dispatch that isn't there.
 
 Public symbols carry `///` dartdoc explaining *why* and *what guarantee*, not the mechanical
 *what*, which the type already says. `public_member_api_docs` is on (see
-[hard rule 4 in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules)).
+[hard rule 4 in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules)), and it will force a line onto a member
+with nothing to say. `Creates it.` is a complete answer there, not a placeholder to expand.
 
-Keep them to a line or two. A doc that needs a paragraph is rationale, so put that in
-[`APPENDIX.md`](APPENDIX.md) and leave a one-line pointer naming the anchor. Comment the surprising
-thing at the call site rather than writing a preamble block above it.
+**Aim for 1 or 2 lines.** A guideline, not a cap: an explanation that earns its length keeps it,
+and a decision a reader would otherwise question is worth the sentence. What doesn't earn it is
+restating the signature, or rationale that belongs in [`APPENDIX.md`](APPENDIX.md) behind a one-line
+pointer naming the anchor. Surplus lines are noise the next reader pays for and they bury the
+comment that mattered, so trim the neighbours whenever you edit a file.
 
 ### `@docImport` for dartdoc-only references
 
@@ -682,10 +724,8 @@ class-shaped to mock.
 - **British spelling in prose and identifiers** (`normalise`, `behaviour`, `initialise`). The one
   carve-out is names fixed by the SDK or a dependency (`toJson`, `compareTo`, `hashCode`, `color`,
   `center`).
-- **No AI-tells in prose.** No em-dashes, no semicolons splicing two sentences, no filler
-  vocabulary (leverage, robust, seamless, simply, powerful, comprehensive). Informal and direct,
-  contractions welcome. Structure (a table, a list, a `<details>` reveal) replaces prose rather
-  than getting added to it.
+- **Prose follows [Prose & voice](#prose)**, every Markdown file here included, and that section
+  starts by telling you to read the page it links.
 
 ---
 

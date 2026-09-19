@@ -15,18 +15,17 @@ import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
 
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
-/// and renders it with a plain widgets-layer `ListView`.
+/// and renders it with a plain `ListView`.
 ///
-/// Unexported, built by [ListSmith] for a [SyncSource]. No paging controller and no
-/// pull-to-refresh, since an in-memory list has nothing to page or refresh. The only moving part is
-/// the query: trimmed, gated, debounced, then filtered. The source list is materialised once (again
-/// only when the source's items change) and the filtered result lives in a [ValueNotifier], so only
-/// the list subtree rebuilds. Every default is already resolved by [ListSmith.sync].
+/// Unexported. No paging controller and no pull-to-refresh, since in-memory data has nothing to page
+/// or refresh. The only moving part is the query: trimmed, gated, debounced, then filtered. The items
+/// are turned into a list once, again only when they change, and the result lives in a [ValueNotifier]
+/// so only the list subtree rebuilds.
 class SyncListView<T extends Object> extends StatefulWidget {
-  /// The in-memory source: the items and the predicate that filters them.
+  /// The items and the predicate that filters them.
   final SyncSource<T> source;
 
-  /// The current search query, owned and passed in by the consumer.
+  /// The current search query, yours to own and pass in.
   final String query;
 
   /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
@@ -53,7 +52,7 @@ class SyncListView<T extends Object> extends StatefulWidget {
   /// Scroll and layout configuration for the underlying scrollable.
   final ListScrollConfig scroll;
 
-  /// Creates the sync search list around a [SyncSource].
+  /// Creates it.
   const new({
     required this.source,
     required this.query,

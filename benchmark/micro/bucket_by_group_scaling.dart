@@ -1,9 +1,9 @@
 /// Micro-benchmark: [bucketByGroup] cost as the in-memory list grows.
 ///
-/// The sync path buckets its filtered items into contiguous sections on every committed query,
-/// before rendering. Measuring it AOT across a range of sizes puts a trustworthy microseconds
-/// figure on where a big grouped list crosses the frame budget. The key extractor is a cheap modulo
-/// over fully interleaved input, so every item really is reordered.
+/// The sync path buckets its filtered items into sections on every committed query, before rendering.
+/// Measured AOT across a range of sizes, so the microseconds figure says where a big grouped list crosses
+/// the frame budget. The key extractor is a cheap modulo over interleaved input, so every item really
+/// is reordered.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';

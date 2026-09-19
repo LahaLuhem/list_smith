@@ -4,15 +4,15 @@ library;
 
 /// Why list_smith asked for a page, carried on every [PageRequest].
 ///
-/// A fact to route on, not an instruction: what a cache should do about it is the app's call.
+/// A fact to route on, not an instruction: what a cache should do about it is your call.
 enum FetchTrigger {
-  /// The first page of a cold list.
+  /// The 1st page of a cold list.
   initialLoad,
 
   /// The next page, because the user neared the end (or an empty page was paged past).
   nextPage,
 
-  /// A pull-to-refresh, or [ListSmithController.refresh], which reloads exactly as a pull does.
+  /// A pull-to-refresh, or [ListSmithController.refresh], which does the same thing.
   refresh,
 
   /// A re-fetch of the page whose last attempt threw.
@@ -21,8 +21,7 @@ enum FetchTrigger {
   /// A reload from a committed query change, entering or leaving search included.
   queryChanged,
 
-  /// A re-read the consumer asked for through [ListSmithController.invalidate] or
-  /// [ListSmithController.reset], because what it handed the list changed locally. Read like a cold
-  /// page, not like a refresh.
+  /// A re-read you asked for via [ListSmithController.invalidate] or [ListSmithController.reset], because
+  /// your data changed locally. Treat it like a cold page, not a refresh.
   invalidated,
 }

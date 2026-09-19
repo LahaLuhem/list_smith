@@ -8,8 +8,8 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'cursor_feed_view_model.dart';
 
-/// `PageFetcher.withSignal` plus `StopOnNullSignalPolicy`, where the end signal doubles as the
-/// driving cursor.
+/// `PageFetcher.withSignal` plus `StopOnNullSignalPolicy`, where the end signal doubles as the driving
+/// cursor.
 class CursorFeedView extends StatelessWidget {
   const new({super.key});
 

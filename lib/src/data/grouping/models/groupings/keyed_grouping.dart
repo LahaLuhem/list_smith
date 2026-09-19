@@ -1,17 +1,17 @@
 part of '../grouping.dart';
 
-/// Grouping by a key extracted from each item, with one header per group. Built via [Grouping.by].
+/// Grouping by a key pulled off each item, one header per group. Built via [Grouping.by].
 ///
-/// Key extractor and header builder, with the key erased to `Object`. The private constructor keeps
-/// that erasure sound: every key reaching [headerFor] came from this instance's own [groupOf].
+/// The key is erased to `Object`. The private constructor is what keeps that safe: every key reaching
+/// [headerFor] came from this instance's own [groupOf].
 final class KeyedGrouping<T extends Object> extends Grouping<T> {
-  /// Extracts an item's group key, erased to `Object`.
+  /// Pulls an item's group key, erased to `Object`.
   final Object Function(T item) groupOf;
 
   /// Builds a group's header from its key, erased to `Object`.
   final Widget Function(BuildContext context, Object key) headerFor;
 
-  /// What to do when async pages do not arrive grouped by key.
+  /// What to do when async pages don't arrive grouped by key.
   final GroupOrderPolicy orderPolicy;
 
   const new _({required this.groupOf, required this.headerFor, required this.orderPolicy});

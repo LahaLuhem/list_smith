@@ -35,8 +35,8 @@ for the shell and the `core` fake sources.
 
 **Where a demo's explanation goes.** The user-facing walkthrough is the screen's own `DemoIntro`,
 and the hub tile's `description` is its one-line pitch. The view's dartdoc names the list_smith API
-it exercises and stops there. Otherwise the same sentence ends up in three places and drifts into
-three versions of itself.
+it exercises and stops there. Otherwise the same sentence ends up in 3 places and drifts into
+3 versions of itself.
 
 ## Mobile-targeted
 

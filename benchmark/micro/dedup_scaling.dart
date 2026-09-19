@@ -1,14 +1,13 @@
 /// Micro-benchmark: the async list's overlap de-dup cost as the loaded list grows.
 ///
-/// Measured over pages that do NOT overlap, the common case where `itemId` is carried as insurance
-/// and collapses nothing. That is both the worst case for the pass, every item being retained so
-/// allocation is maximal, and the penalty you pay for not having the problem.
+/// Measured over pages that do NOT overlap, the common case where `itemId` is carried as insurance and
+/// collapses nothing. That's the worst case for the pass, every item retained so allocation is maximal,
+/// and the penalty you pay for not having the problem.
 ///
-/// The cost scales with the whole loaded list rather than the incoming page: `filterItems` re-walks
-/// every loaded page and `copyWith` re-wraps each one in `List.unmodifiable`. Mirrored in pure Dart
-/// here because the real code is a widget method over an ISP `PagingState`, which won't
-/// AOT-compile as a plain exe. Keep the mirror in step with `_dedupedForDisplay` if either side
-/// changes.
+/// The cost scales with the whole loaded list, not the incoming page: `filterItems` re-walks every loaded
+/// page and `copyWith` re-wraps each in `List.unmodifiable`. Mirrored in pure Dart here because the
+/// real code is a widget method over an ISP `PagingState`, which won't AOT-compile as a plain exe. Keep
+/// the mirror in step with `_dedupedForDisplay`.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -16,8 +15,8 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-/// Loaded item counts the de-dup is measured against. The pivot for the scaling curve (matches
-/// `sync_search_scaling`'s range so the curves are read side by side).
+/// Loaded item counts the de-dup is measured against. The pivot for the scaling curve (matches `sync_search_scaling`'s
+/// range so the curves are read side by side).
 const _itemCounts = [1000, 10000, 100000];
 const _itemsPerPage = 20;
 
@@ -43,8 +42,7 @@ final class _DedupScaling extends BenchmarkBase {
     final filtered = _pages
         .map((page) => page.where((item) => seen.add(_idOf(item))).toList())
         .toList();
-    // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys
-    // re-wrapped.
+    // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys re-wrapped.
     final wrappedPages = List<List<_Item>>.unmodifiable(filtered.map(List<_Item>.unmodifiable));
     List<int>.unmodifiable(_keys);
 
