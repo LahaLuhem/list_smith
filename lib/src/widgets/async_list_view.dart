@@ -78,7 +78,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
   final ListSmithObserver? observer;
 
   /// Refreshes this list from code. Null leaves refresh gesture-only.
-  final ListSmithController? controller;
+  final ListSmithController<T>? controller;
 
   /// Creates it.
   const new({
@@ -103,7 +103,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 }
 
 class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
-    implements ListSmithControllerHost {
+    implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
 

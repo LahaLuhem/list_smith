@@ -62,6 +62,28 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('an idle list under the neutral pull indicator requests no frames', (
+      tester,
+    ) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: pagedFetcher(const [
+            [1, 2, 3],
+          ]),
+          refresh: const PullToRefresh(),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      // Loaded to the end, so no page-loading spinner is left either.
+      check(find.text('No more items').evaluate()).length.equals(1);
+
+      await tester.pump(const Duration(seconds: 1));
+
+      check(tester.binding.hasScheduledFrame).isFalse();
+    });
+
     scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
       final hold = Completer<List<int>>();
       Widget build(Color colour) => DefaultTextStyle(

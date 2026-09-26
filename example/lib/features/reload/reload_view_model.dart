@@ -20,7 +20,7 @@ final class ReloadViewModel extends ViewModel {
   final _refreshing = ValueNotifier(false);
 
   /// Drives the list from the "Refresh from code" button, running whatever [reload] describes.
-  final controller = ListSmithController();
+  final controller = ListSmithController<DemoItem>();
 
   var _keepDepth = true;
   var _concurrency = 1;

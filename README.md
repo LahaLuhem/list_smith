@@ -316,10 +316,10 @@ it was, `allOrNothing` commits only if every page succeeds.
 ### Refreshing from code
 
 A toolbar button, a re-tapped tab, a re-read after a local write, a logout. Pass a
-`ListSmithController` and call the verb that says why.
+`ListSmithController` typed with your item, and call the verb that says why.
 
 ```dart
-final controller = ListSmithController();
+final controller = ListSmithController<Task>();
 
 ListSmith.async(fetchPage: PageFetcher(...), itemBuilder: ..., controller: controller)
 
