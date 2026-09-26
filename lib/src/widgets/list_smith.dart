@@ -51,7 +51,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   final ListSmithObserver? observer;
 
   /// Refreshes the list from code. Null leaves refresh gesture-only. Async only.
-  final ListSmithController? controller;
+  final ListSmithController<T>? controller;
 
   /// The current search query, yours to own and pass in. Trimmed, then gated by [minSearchLength].
   final String query;
@@ -102,7 +102,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     super.key,
   }) : assert(
          search is AsyncSearch<T> || query.isEmpty,
-         'A query was set without search; pass search: AsyncSearch(...) to enable it.',
+         'A query was set without search. Pass search: AsyncSearch(...) to turn it on.',
        ),
        assert(
          !endPolicy.requiresSignal || fetchPage.reportsSignal,

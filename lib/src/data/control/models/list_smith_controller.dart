@@ -14,8 +14,8 @@ import 'list_smith_controller_host.dart';
 ///
 /// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
 /// Holds nothing, so there's nothing to dispose.
-class ListSmithController {
-  ListSmithControllerHost? _host;
+class ListSmithController<T extends Object> {
+  ListSmithControllerHost<T>? _host;
   var _wasEverAttached = false;
 
   /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] when the list
@@ -48,8 +48,11 @@ class ListSmithController {
 
   /// Binds this controller to the list it drives. One controller, one list.
   @internal
-  void attach(ListSmithControllerHost host) {
-    assert(_host == null, 'A ListSmithController drives one list; this one is already attached.');
+  void attach(ListSmithControllerHost<T> host) {
+    assert(
+      _host == null,
+      'A ListSmithController drives one list, and this one is already attached.',
+    );
     _host = host;
     _wasEverAttached = true;
   }
