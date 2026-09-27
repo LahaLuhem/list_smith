@@ -300,7 +300,9 @@ back door. Watching the list is the observer's job. Full rationale:
 
 **How:**
 
-- One verb per consumer intent, returning a `Future<void>` that completes when the work does.
+- One verb per consumer intent, returning a `Future<void>` that completes when the work does. The
+  edit verbs have no work to wait for, so they're sync `void`
+  ([`APPENDIX.md#edit-layer`](APPENDIX.md#edit-layer)).
 - The engine implements `ListSmithControllerHost` and attaches itself, so the gesture and the handle
   run the same entry point and the handle can't carry a 2nd implementation that drifts.
 - Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached no-ops rather

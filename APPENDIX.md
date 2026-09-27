@@ -31,6 +31,7 @@ renames.
 - [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind 6 aggregate checks](#dependabot-automerge)
+- [Local edits live beside the pages, not in them](#edit-layer)
 
 <!-- TOC end -->
 
@@ -427,9 +428,10 @@ renames.
 <a id="controller-handle"></a>
 ## A narrow controller: intents out, nothing back
 
-- **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying 3 intents:
-  `refresh()`, `invalidate()` and `reset()`. A bounded exception to the hidden pager, and the line
-  held is that no `PagingController`, `PagingState` or other ISP type is reachable through it.
+- **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying intents:
+  `refresh()`, `invalidate()`, `reset()` and the [edits](#edit-layer). A bounded exception to the
+  hidden pager, and the line held is that no `PagingController`, `PagingState` or other ISP type is
+  reachable through it.
 - **Only refresh was unreachable.** `scrollToTop` and `jumpTo(index)` were floated too, but a
   consumer can already scroll via `ListScrollConfig.controller`, so those are sugar where this is
   capability. Index-scrolling needs fixed extents, which puts it with the sliver and grid work.
@@ -648,6 +650,30 @@ rather than 6.
 - **`pull_request_target`** because Dependabot's `pull_request` token is read-only and arming
   auto-merge needs write. Safe the same way `changelog.yml` is: the workflow loads from `main` and
   PR code is never checked out.
+
+---
+
+<a id="edit-layer"></a>
+## Local edits live beside the pages, not in them
+
+- **Decision:** `upsert` and `remove` book an edit beside the loaded pages, applied in the display
+  pass de-dup already runs. The pages keep saying what the backend returned, because the end policy
+  counts them and a depth reload or `KeepCachePolicy` writes them back. An edit made inside them
+  would end the list early, or be undone.
+- **Each page key carries a read stamp,** the edit counter when its fetch went out, and an edit
+  covers only pages read before it. A page read after already has the server's answer. Once every
+  loaded and parked page was read after an edit, the edit is forgotten.
+- **Values, not transforms.** An edit is re-applied over whatever the server sends until it
+  expires, so a `likes + 1` would count twice.
+- **Sync and `void`,** unlike the other verbs. The change is already true on the server or in the
+  store, and `void` keeps `Dismissible.onDismissed` plain.
+- **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
+  in-flight page's cursor, so the next page repeats. Anything that changes what the edits show
+  bumps `_editStamp` instead, since the display memo keys on it.
+- **New items** join the start of their group, else the top, since async groups have to stay
+  together. They stay out of search results: only the server knows what matches.
+- **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
+  setting is about the server sending an empty page, not the user deleting rows.
 
 ---
 

@@ -19,6 +19,7 @@
     * [Where the data ends](#where-the-data-ends)
 - [Pull to refresh](#pull-to-refresh)
     * [Refreshing from code](#refreshing-from-code)
+- [Editing loaded items](#editing-loaded-items)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async`](#paged-with-listsmithasync)
@@ -350,6 +351,57 @@ a store event before its view builds. `refresh()` there asserts: only wiring can
 Nothing to dispose, and async-only. To *watch* the list rather than drive it, use an
 [observer](#watching-what-it-does).
 
+## Editing loaded items
+
+A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
+re-read: tell the list, and it shows the change at once, keeping the scroll position.
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher(...),
+  itemId: (task) => task.id,  // required: an edit finds its row by this
+  itemBuilder: ...,
+  controller: controller,
+)
+
+final saved = await api.save(task);
+controller.upsert(saved);  // replaces the loaded copy, or adds it if none is loaded
+
+await api.delete(task);
+controller.remove(task);   // hides every loaded copy
+```
+
+Both are sync and return nothing, since the list takes the change as already true on your server or
+in your store. Where the item shows:
+
+- A loaded item changes in place.
+- A new one goes on top, newest first. On a [grouped](#grouping) list it joins the start of its
+  group, or goes on top if that group isn't loaded.
+- An item whose group changed moves to the start of its new group.
+- While searching, a new item waits for the feed, since only your server knows what matches the
+  query. Changes and removals show in the results too.
+
+An edit lasts until the pages it covers are read again, and a page loaded after it shows your
+server's copy. So after a failed save, a refresh puts that copy back. Removals never end the list
+early: the end policy still counts what the server sent, and removing every row on screen loads the
+next page.
+
+`remove` fits `Dismissible.onDismissed` as it is:
+
+```dart
+itemBuilder: (context, task, index) => Dismissible(
+  key: ValueKey(task.id),
+  onDismissed: (_) => controller.remove(task),
+  child: TaskTile(task),
+),
+```
+
+The row has to go before your server has answered, so if the delete then fails, a refresh brings it
+back.
+
+> On an offset-paged list, a delete on your server moves every later row up a place, so the next
+> page skips one. Use cursor paging for a list you edit, for now.
+
 ## Search
 
 This is where the 2 constructors part ways the most.
@@ -631,7 +683,7 @@ Lists race. The user types while an old query's page is still loading, or pulls 
 page is in the air. list_smith settles those, and each guarantee below has a test behind it.
 
 <details>
-<summary><b>The 3 guarantees</b></summary>
+<summary><b>The 4 guarantees</b></summary>
 
 **A query change drops the pages still in flight.** They're discarded, not appended. Cursors too, so
 the next page starts from the new query's cursor and not one an abandoned request returned.
@@ -643,6 +695,10 @@ gets one header, and isn't split. For out-of-order pages see [Grouping](#groupin
 **A refresh drops the pages still in flight**, on both reload strategies, so a page requested before
 the pull can't land after it and duplicate rows or leave a hole. It's asked again, so you keep what
 the refresh committed. Same when the feed returns after a search.
+
+**An edit outlives a reload already in flight.** A page fetched before your edit shows the edit when
+it lands, and so does one whose re-fetch failed. Otherwise a row you just deleted would come back
+mid-reload.
 
 </details>
 
@@ -664,8 +720,9 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
 on the debounce or go async. De-dup is opt-in and off the scroll path, but past tens of thousands in
-one live list, de-duplicate at the source. Observers are called synchronously while a page loads:
-log, count, report, and do heavy work elsewhere.
+one live list, de-duplicate at the source. Edits run in that same pass, and
+[`edit_layer_scaling`](benchmark/micro/edit_layer_scaling.dart) measures what they add. Observers
+are called synchronously while a page loads: log, count, report, and do heavy work elsewhere.
 
 Numbers are per-machine, so capture your own baseline before trusting a delta. The suite lives in
 [`benchmark/`](benchmark/), and `run.py compare` diffs 2 runs with a Mann-Whitney test.
@@ -682,9 +739,8 @@ Numbers are per-machine, so capture your own baseline before trusting a delta. T
 
 ## The example app
 
-The [`example/`](example/) app is the best place to watch it all work: a basic feed, a cursor feed,
-fully custom surfaces, a playground with live knobs, both flavours of search, and an observer demo
-that streams every lifecycle event into a panel as you scroll, refresh, and type.
+The [`example/`](example/) app is the best place to watch it all work. It opens on the list of
+demos.
 
 ## Contributing
 
