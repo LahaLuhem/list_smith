@@ -39,5 +39,15 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
   }
 
   @override
+  int placementOf(T item, {required List<T> Function() flatItems}) {
+    final key = groupOf(item);
+
+    return max(0, flatItems().indexWhere((other) => groupOf(other) == key));
+  }
+
+  @override
+  bool isSameGroup(T a, T b) => groupOf(a) == groupOf(b);
+
+  @override
   String toString() => 'KeyedGrouping(orderPolicy: $orderPolicy)';
 }

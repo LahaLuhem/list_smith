@@ -1,6 +1,8 @@
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
+import 'dart:math';
+
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
@@ -35,6 +37,15 @@ sealed class Grouping<T extends Object> {
     required Iterable<T> Function() flatItems,
     required Axis axis,
   });
+
+  /// Where a new [item] goes among [flatItems]: the start of its group, or the top when its group isn't
+  /// there, which keeps async groups contiguous. A callback for the reason [decorate] takes one.
+  @internal
+  int placementOf(T item, {required List<T> Function() flatItems});
+
+  /// Lets an edited item stay put when its group didn't change.
+  @internal
+  bool isSameGroup(T a, T b);
 
   /// Groups items by the key from [groupBy], drawing each section's header with [headerBuilder].
   ///

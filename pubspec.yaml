@@ -38,6 +38,7 @@ dependencies:
   collection: ^1.19.1
   meta: ^1.18.0
   pool: ^1.5.2
+  multi_value_listenable_builder_typed: ^0.2.1
 
 dev_dependencies:
   flutter_test:

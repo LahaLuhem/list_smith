@@ -313,11 +313,16 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('invalidate() and reset() before any list attached are no-ops', (tester) async {
-      final controller = ListSmithController();
+    scenarioWidgets('invalidate(), reset() and edits before any list attached are no-ops', (
+      tester,
+    ) async {
+      final controller = ListSmithController<int>();
 
       await controller.invalidate();
       await controller.reset();
+      controller
+        ..upsert(1)
+        ..remove(1);
       check(controller.refresh).throws<AssertionError>();
     });
 
