@@ -9,8 +9,9 @@ import 'package:meta/meta.dart';
 /// controller.
 @internal
 abstract interface class ReloadContext<T extends Object> {
-  /// The pages loaded right now, in order. Its length is the depth to reload to, and a best-effort reload
-  /// reuses an entry whose re-fetch failed.
+  /// The pages loaded when the reload began, in order. Its length is the depth to reload to, and a
+  /// best-effort reload reuses an entry whose re-fetch failed. Hand that entry back as is, not a copy,
+  /// so it keeps its read stamp.
   List<List<T>> get loadedPages;
 
   /// Whether the source threads a per-page signal, which forces a sequential, atomic reload whatever

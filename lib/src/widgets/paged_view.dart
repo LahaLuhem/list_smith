@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
+import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -18,7 +19,7 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// Internal, built inside a [PagingListener] where [state] and [fetchNextPage] are in scope.
 class PagedView<T extends Object> extends StatelessWidget {
   /// Drives which surface renders.
-  final PagingState<int, T> state;
+  final PagingState<PageKey, T> state;
 
   /// Requests the next page. Doubles as the retry action on error surfaces.
   final VoidCallback fetchNextPage;
