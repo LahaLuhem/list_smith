@@ -1,8 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
-import 'package:flutter/widgets.dart';
-import 'package:list_smith/list_smith.dart';
 import 'package:list_smith/src/data/edits/typedefs/item_edit.dart';
 import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
 
@@ -22,7 +20,7 @@ void main() {
     readStamps: readStamps,
     edits: edits,
     itemId: (item) => item.id,
-    grouping: const NoGrouping<_Row>(),
+    groupOf: null,
     acceptsNewItems: acceptsNewItems,
   ).flattened.map((item) => item.label).toList(growable: false);
 
@@ -133,27 +131,68 @@ void main() {
         check(labels).deepEquals(ctx.example.val(shownKey) as List<String>);
       });
 
+  /// Adds [items] one after another, each newer than every page.
+  Map<Object, ItemEdit<int>> addedInTurn(List<int> items) => Map.fromEntries(
+    items.mapIndexed((index, item) => MapEntry(item, (item: item, stamp: index + 1))),
+  );
+
+  /// Resolves int pages grouped by the tens digit, every page read before the edits.
+  List<int> resolveByTens(List<List<int>> pages, Map<Object, ItemEdit<int>> edits) =>
+      resolveDisplayPages<int>(
+        pages: pages,
+        readStamps: List.filled(pages.length, 0),
+        edits: edits,
+        itemId: (item) => item,
+        groupOf: (item) => item ~/ 10,
+        acceptsNewItems: true,
+      ).flattened.toList(growable: false);
+
+  const loadedKey = 'loaded';
+  const addedKey = 'added';
+
   Bdd(resolution)
       .scenario('a new item goes to the start of its group, or on top when its group is not loaded')
-      .given('groups 0 and 1 loaded, grouped by the tens digit')
-      .when('12 and then 20 are added')
-      .then('12 opens group 1 and 20 opens a group of its own on top')
-      .run((_) {
-        final pages = resolveDisplayPages<int>(
-          pages: const [
-            [0, 1, 10, 11],
-          ],
-          readStamps: const [0],
-          edits: {12: (item: 12, stamp: 1), 20: (item: 20, stamp: 2)},
-          itemId: (item) => item,
-          grouping: Grouping.by(
-            groupBy: (item) => item ~/ 10,
-            headerBuilder: (_, key) => Text('group $key'),
-          ),
-          acceptsNewItems: true,
-        );
+      .given('<$loadedKey> loaded, grouped by the tens digit')
+      .when('<$addedKey> are added in turn')
+      .then('the list is <$shownKey>')
+      .example(
+        val(loadedKey, const [0, 1, 10, 11]),
+        val(addedKey, const [12, 20]),
+        val(shownKey, const [20, 0, 1, 12, 10, 11]),
+      )
+      // 2 into one group, the newer first.
+      .example(
+        val(loadedKey, const [0, 1, 10, 11]),
+        val(addedKey, const [12, 13]),
+        val(shownKey, const [0, 1, 13, 12, 10, 11]),
+      )
+      // 2 groups on one page, so placing one must not shift where the other starts.
+      .example(
+        val(loadedKey, const [0, 1, 10, 11, 20, 21]),
+        val(addedKey, const [12, 22]),
+        val(shownKey, const [0, 1, 12, 10, 11, 22, 20, 21]),
+      )
+      .run((ctx) {
+        final shown = resolveByTens([
+          ctx.example.val(loadedKey) as List<int>,
+        ], addedInTurn(ctx.example.val(addedKey) as List<int>));
 
-        check(pages.flattened.toList()).deepEquals(const [20, 0, 1, 12, 10, 11]);
+        check(shown).deepEquals(ctx.example.val(shownKey) as List<int>);
+      });
+
+  Bdd(resolution)
+      .scenario(
+        'new items of a group that is not loaded yet stay together, the newest group on top',
+      )
+      .given('groups 0 and 1 loaded, grouped by the tens digit')
+      .when('30, 40 and then 31 are added')
+      .then('31 joins 30 under the newer group 4')
+      .run((_) {
+        final shown = resolveByTens(const [
+          [0, 1, 10, 11],
+        ], addedInTurn(const [30, 40, 31]));
+
+        check(shown).deepEquals(const [40, 31, 30, 0, 1, 10, 11]);
       });
 
   Bdd(resolution)
@@ -169,10 +208,7 @@ void main() {
           readStamps: const [0],
           edits: {0: (item: (id: 0, group: 1), stamp: 1)},
           itemId: (item) => item.id,
-          grouping: Grouping.by(
-            groupBy: (item) => item.group,
-            headerBuilder: (_, key) => Text('group $key'),
-          ),
+          groupOf: (item) => item.group,
           acceptsNewItems: true,
         );
 

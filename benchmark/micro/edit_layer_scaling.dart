@@ -1,0 +1,114 @@
+/// Micro-benchmark: the edit layer's display pass as the loaded list grows.
+///
+/// 10 new items join groups spread across a grouped list, the case that has to find where each group
+/// starts. Pages and items match `dedup_scaling`'s, so the 2 curves read side by side.
+library;
+
+import 'package:benchmark_harness/benchmark_harness.dart';
+import 'package:list_smith/src/data/edits/typedefs/item_edit.dart';
+import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
+
+import '../harness/measure.dart';
+import '../harness/result_writer.dart';
+import '../harness/scenario_args.dart';
+
+/// Loaded item counts the pass is measured against. The pivot for the scaling curve, `dedup_scaling`'s.
+const _itemCounts = [1000, 10000, 100000];
+const _itemsPerPage = 20;
+const _groupSize = 100;
+const _newItemCount = 10;
+
+/// Resolves the display pages and re-wraps them, as `copyWith` does in the engine.
+final class _EditLayerScaling extends BenchmarkBase {
+  new(this.itemCount) : super('edit_layer_scaling_n$itemCount');
+
+  final int itemCount;
+  late final List<List<_Item>> _pages;
+  late final List<int> _keys;
+  late final List<int> _readStamps;
+  late final Map<Object, ItemEdit<_Item>> _edits;
+  var lastRowCount = 0;
+
+  @override
+  void setup() {
+    _pages = List<List<_Item>>.generate(
+      itemCount ~/ _itemsPerPage,
+      (page) => List<_Item>.generate(
+        _itemsPerPage,
+        (index) => _Item.at(page * _itemsPerPage + index),
+        growable: false,
+      ),
+      growable: false,
+    );
+    _keys = List.generate(_pages.length, (index) => index, growable: false);
+    _readStamps = List.filled(_pages.length, 0);
+    final groupStride = itemCount ~/ (_newItemCount * _groupSize);
+    _edits = Map.fromEntries(
+      Iterable.generate(_newItemCount, (index) {
+        final newItem = _Item(itemCount + index, index * groupStride);
+
+        return MapEntry(newItem.id, (item: newItem, stamp: index + 1)); // newer than every page
+      }),
+    );
+  }
+
+  @override
+  void run() {
+    final displayPages = resolveDisplayPages(
+      pages: _pages,
+      readStamps: _readStamps,
+      edits: _edits,
+      itemId: (item) => item.id,
+      groupOf: (item) => item.group,
+      acceptsNewItems: true,
+    );
+    final wrappedPages = List<List<_Item>>.unmodifiable(displayPages.map(List<_Item>.unmodifiable));
+    List<int>.unmodifiable(_keys);
+
+    lastRowCount = wrappedPages.fold(0, (total, page) => total + page.length);
+  }
+}
+
+/// A reference-identity item, the shape `itemId` keys on, in groups of [_groupSize].
+final class _Item {
+  const new(this.id, this.group);
+
+  const new at(int id) : this(id, id ~/ _groupSize);
+
+  final int id;
+  final int group;
+}
+
+Future<void> main(List<String> argv) async {
+  final args = ScenarioArgs.parse(argv);
+
+  final writer = await ResultWriter.open(
+    outputPath: args.outputPath,
+    scenario: 'edit_layer_scaling',
+    sdkVersion: ScenarioArgs.sdkVersion,
+    packageVersion: args.packageVersion,
+    gitSha: args.gitSha,
+  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    for (final itemCount in _itemCounts) {
+      final benchmark = _EditLayerScaling(itemCount);
+
+      final microseconds = measureWindowed(benchmark, millis: args.measureMillis);
+
+      writer.writeRecord(
+        iteration: i,
+        samples: {
+          'microseconds_per_pass': [microseconds],
+        },
+        summary: {
+          'item_count': itemCount,
+          'microseconds_per_pass': microseconds,
+          'row_count': benchmark.lastRowCount,
+        },
+      );
+    }
+  }
+
+  await writer.close();
+}

@@ -313,7 +313,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
               readStamps: keys.map((key) => key.readStamp).toList(growable: false),
               edits: _edits,
               itemId: itemId,
-              grouping: widget.grouping,
+              groupOf: widget.grouping.groupOf,
               acceptsNewItems: !isSearchMode, // only the server knows what matches the query
             ),
           );

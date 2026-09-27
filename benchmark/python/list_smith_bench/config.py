@@ -54,6 +54,7 @@ MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
         "bucket_by_group_scaling",
         "header_flags_scaling",
         "dedup_scaling",
+        "edit_layer_scaling",
         "wrapping_overhead",
         "slow_observer",
     }
