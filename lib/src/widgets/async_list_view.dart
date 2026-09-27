@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
@@ -16,6 +17,7 @@ import '/src/data/pagination/enums/fetch_trigger.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/pagination/models/page_request.dart';
+import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/pagination/utils/fetch_trigger_resolver.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -105,7 +107,10 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
-  late final _pager = PagingController<int, T>(getNextPageKey: _nextPageKey, fetchPage: _fetchPage);
+  late final _pager = PagingController<PageKey, T>(
+    getNextPageKey: _nextPageKey,
+    fetchPage: _fetchPage,
+  );
 
   /// The normal-mode stream kept aside while searching, for [KeepCachePolicy].
   _NormalSnapshot<T>? _normalSnapshot;
@@ -128,7 +133,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// Memo for [_dedupedForDisplay], keyed on paging-state identity, so a rebuild that changes no data
   /// skips the O(loaded) pass. One cell, so the pair can't drift.
-  ({PagingState<int, T> raw, PagingState<int, T> display})? _displayMemo;
+  ({PagingState<PageKey, T> raw, PagingState<PageKey, T> display})? _displayMemo;
+
+  /// Counts local edits.
+  final _editStamp = ValueNotifier<int>(0);
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
@@ -164,6 +172,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _debouncer.dispose();
     _pager.dispose();
     _searchModeNotifier.dispose();
+    _editStamp.dispose();
 
     super.dispose();
   }
@@ -171,16 +180,16 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
   /// The paging controller's fetch: consumes any latched trigger, then threads the signal forward.
-  Future<List<T>> _fetchPage(int pageKey) async {
+  Future<List<T>> _fetchPage(PageKey pageKey) async {
     final generation = _generation;
     final trigger = resolveTrigger(
-      pageIndex: pageKey,
+      pageIndex: pageKey.index,
       pending: _pendingTrigger,
       lastFailedPageIndex: _lastFailedPageIndex,
     );
     _pendingTrigger = null;
 
-    final (items, signal) = await _fetchPageRaw(pageKey, _lastPageSignal, trigger);
+    final (items, signal) = await _fetchPageRaw(pageKey.index, _lastPageSignal, trigger);
     if (generation == _generation) _lastPageSignal = signal;
 
     return items;
@@ -238,10 +247,12 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   }
 
   /// The next 0-based page key for [state], or `null` once [AsyncSource.endPolicy] reports the end.
-  /// Keys are the page count so far, so they stay sequential.
-  int? _nextPageKey(PagingState<int, T> state) {
+  /// Keys are the page count so far, so they stay sequential. Stamped here because ISP asks for the key
+  /// right before it fetches.
+  PageKey? _nextPageKey(PagingState<PageKey, T> state) {
     final pages = state.pages;
-    if (pages == null || pages.isEmpty) return 0;
+    final readStamp = _editStamp.value;
+    if (pages == null || pages.isEmpty) return (index: 0, readStamp: readStamp);
 
     final endContext = EndContext(
       pageItemCounts: pages.map((page) => page.length).toList(growable: false),
@@ -249,7 +260,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       lastPageSignal: _lastPageSignal,
     );
 
-    return widget.source.endPolicy.hasReachedEnd(endContext) ? null : pages.length;
+    return widget.source.endPolicy.hasReachedEnd(endContext)
+        ? null
+        : (index: pages.length, readStamp: readStamp);
   }
 
   /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already showed
@@ -258,7 +271,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
   /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per state change, memoised
   /// in [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
-  PagingState<int, T> _dedupedForDisplay(PagingState<int, T> state) {
+  PagingState<PageKey, T> _dedupedForDisplay(PagingState<PageKey, T> state) {
     final itemId = widget.source.itemId;
     if (itemId == null) return state;
 
@@ -288,7 +301,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide. Emptiness comes
   /// off the de-duplicated view, what the user sees, more-available off the raw pages. Gates both the
   /// auto-fetch and the loading surface meanwhile, so the two can't disagree.
-  bool _shouldAdvancePastEmpty(PagingState<int, T> state) =>
+  bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) =>
       widget.source.onEmptyPage.shouldAdvance(
         EmptyPageContext(
           isEmpty: _dedupedForDisplay(state).items?.isEmpty ?? false,
@@ -354,7 +367,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't move
   /// the pager's token, so a landed fetch would still apply. Every direct write comes through here.
-  void _replacePagingState(PagingState<int, T> next) {
+  void _replacePagingState(PagingState<PageKey, T> next) {
     _pager.cancel();
     _pager.value = next;
   }
@@ -380,14 +393,16 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   };
 
   /// Replaces the loaded pages with [pages] atomically, recording [lastSignal] as the new end signal.
-  void _commit(List<List<T>> pages, {Object? lastSignal}) {
+  void _commit(List<List<T>> pages, {required List<int> readStamps, Object? lastSignal}) {
     _generation++;
     _lastPageSignal = lastSignal;
-    final pageKeys = List<int>.generate(pages.length, (index) => index, growable: false);
-    final probeState = PagingState<int, T>(pages: pages, keys: pageKeys);
+    final pageKeys = readStamps
+        .mapIndexed((index, readStamp) => (index: index, readStamp: readStamp))
+        .toList(growable: false);
+    final probeState = PagingState<PageKey, T>(pages: pages, keys: pageKeys);
 
     _replacePagingState(
-      PagingState<int, T>(
+      PagingState<PageKey, T>(
         pages: pages,
         keys: pageKeys,
         hasNextPage: _nextPageKey(probeState) != null,
@@ -524,20 +539,40 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   @override
   bool get isStale => _engine._generation != _epoch;
 
+  /// What this run started from, for the pages a best-effort commit keeps.
+  PagingState<PageKey, T>? _startState;
+
+  /// When each re-fetch went out.
+  final _readStamps = <int, int>{};
+
   @override
-  List<List<T>> get loadedPages => _engine._pager.value.pages ?? [];
+  List<List<T>> get loadedPages => (_startState ??= _engine._pager.value).pages ?? [];
 
   @override
   bool get isSignalBased => _engine._isSignalBased;
 
   @override
-  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) =>
-      _engine._fetchPageRaw(index, previousSignal, trigger);
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
+    _readStamps[index] = _engine._editStamp.value;
+
+    return _engine._fetchPageRaw(index, previousSignal, trigger);
+  }
 
   @override
   void commit(List<List<T>> pages, {Object? lastSignal}) {
     if (isStale) return;
-    _engine._commit(pages, lastSignal: lastSignal);
+    final startPages = _startState?.pages ?? const [];
+    final startKeys = _startState?.keys ?? const [];
+    // A page whose re-fetch failed is the old one, handed back as is, so it keeps its old stamp. Every
+    // other page came through [fetch].
+    final readStamps = pages
+        .mapIndexed(
+          (index, page) => index < startPages.length && identical(page, startPages[index])
+              ? startKeys[index].readStamp
+              : _readStamps[index]!,
+        )
+        .toList(growable: false);
+    _engine._commit(pages, readStamps: readStamps, lastSignal: lastSignal);
     _epoch = _engine._generation;
   }
 
@@ -553,7 +588,7 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
 final class _NormalSnapshot<T extends Object> {
-  final PagingState<int, T> state;
+  final PagingState<PageKey, T> state;
 
   /// The stream's last end signal, restored with [state] so a signal policy reads its own.
   final Object? signal;
