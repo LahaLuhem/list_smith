@@ -6,6 +6,7 @@ part of '../grouping.dart';
 /// [headerFor] came from this instance's own [groupOf].
 final class KeyedGrouping<T extends Object> extends Grouping<T> {
   /// Pulls an item's group key, erased to `Object`.
+  @override
   final Object Function(T item) groupOf;
 
   /// Builds a group's header from its key, erased to `Object`.
@@ -37,16 +38,6 @@ final class KeyedGrouping<T extends Object> extends Grouping<T> {
       index: index,
     );
   }
-
-  @override
-  int placementOf(T item, {required List<T> Function() flatItems}) {
-    final key = groupOf(item);
-
-    return max(0, flatItems().indexWhere((other) => groupOf(other) == key));
-  }
-
-  @override
-  bool isSameGroup(T a, T b) => groupOf(a) == groupOf(b);
 
   @override
   String toString() => 'KeyedGrouping(orderPolicy: $orderPolicy)';
