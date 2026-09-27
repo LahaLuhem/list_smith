@@ -157,8 +157,7 @@ people out most often:
 - **Document new user-facing features in the README** in the same change. Rationale goes in
   `APPENDIX.md`.
 - **Prefer an existing package over a custom solution**, vetted for pure Dart where possible, a
-  permissive licence, and current maintenance. A trivial fixed algorithm belongs in `lib/src/`
-  rather than a micro-dependency, so the dependency set stays honest.
+  permissive licence, and current maintenance.
 - **The user manages git state, and some tracked files won't show in `git status`.** They may hide
   local edits with `git update-index --skip-worktree` / `--assume-unchanged`. Those files are
   tracked, not gitignored, so something you just edited can be genuinely changed on disk and absent
