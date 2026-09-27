@@ -216,19 +216,20 @@ void main() {
       });
 
   Bdd(resolution)
-      .scenario('while searching, a new item stays out but an edit to a result still shows')
-      .given('a search result, row 1')
-      .when('row 1 is edited and a new row 9 is added')
+      .scenario('while searching, a new item stays out but edits to results still apply')
+      .given('search results, rows 1 and 2')
+      .when('row 1 is edited, row 2 removed and a new row 9 added')
       .then('only the edited row 1 shows')
       .run((_) {
         final labels = resolveLabels(
           [
-            [(id: 1, label: 'a')],
+            [(id: 1, label: 'a'), (id: 2, label: 'b')],
           ],
           readStamps: const [0],
           edits: {
             1: (item: (id: 1, label: 'mine'), stamp: 1),
-            9: (item: (id: 9, label: 'new'), stamp: 2),
+            2: (item: null, stamp: 2),
+            9: (item: (id: 9, label: 'new'), stamp: 3),
           },
           acceptsNewItems: false,
         );
