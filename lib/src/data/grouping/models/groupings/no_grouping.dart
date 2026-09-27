@@ -16,5 +16,11 @@ final class NoGrouping<T extends Object> extends Grouping<T> {
   }) => itemBuilder;
 
   @override
+  int placementOf(T item, {required List<T> Function() flatItems}) => 0;
+
+  @override
+  bool isSameGroup(T a, T b) => true;
+
+  @override
   String toString() => 'NoGrouping()';
 }

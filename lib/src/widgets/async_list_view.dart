@@ -8,9 +8,12 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/control/models/list_smith_controller_host.dart';
+import '/src/data/edits/typedefs/item_edit.dart';
+import '/src/data/edits/utils/edit_resolver.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
@@ -131,9 +134,19 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// from paging state: ISP clears `error` before re-invoking the fetch.
   int? _lastFailedPageIndex;
 
-  /// Memo for [_dedupedForDisplay], keyed on paging-state identity, so a rebuild that changes no data
-  /// skips the O(loaded) pass. One cell, so the pair can't drift.
-  ({PagingState<PageKey, T> raw, PagingState<PageKey, T> display})? _displayMemo;
+  /// Memo for [_displayFor], keyed on paging-state identity, the edit counter and the mode, so a rebuild
+  /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
+  ({
+    PagingState<PageKey, T> raw,
+    int editStamp,
+    bool isSearchMode,
+    PagingState<PageKey, T> display,
+  })?
+  _displayMemo;
+
+  /// The latest local edit per item id, oldest first. Beside the pages rather than in them, so the end
+  /// policy and the reloads keep reading what the server sent.
+  final _edits = <Object, ItemEdit<T>>{};
 
   /// Counts local edits.
   final _editStamp = ValueNotifier<int>(0);
@@ -150,7 +163,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
-    _pager.addListener(_maybeAdvancePastEmptyPage);
+    _pager
+      ..addListener(_dropDeadEdits)
+      ..addListener(_maybeAdvancePastEmptyPage);
+    _editStamp.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
   }
 
@@ -265,24 +281,66 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         : (index: pages.length, readStamp: readStamp);
   }
 
-  /// A display-only copy of [state] dropping any item whose [AsyncSource.itemId] key already showed
-  /// up, so overlapping pages don't render a row twice. Null `itemId` hands [state] straight back.
+  /// What renders: [state] with the local edits applied and overlap duplicates dropped. Null `itemId`
+  /// hands [state] straight back, since edits need an identity too.
   ///
   /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
-  /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per state change, memoised
-  /// in [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
-  PagingState<PageKey, T> _dedupedForDisplay(PagingState<PageKey, T> state) {
+  /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per change, memoised in
+  /// [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
+  PagingState<PageKey, T> _displayFor(PagingState<PageKey, T> state) {
     final itemId = widget.source.itemId;
-    if (itemId == null) return state;
+    final pages = state.pages;
+    final keys = state.keys;
+    if (itemId == null || pages == null || keys == null) return state;
 
+    final editStamp = _editStamp.value;
+    final isSearchMode = _searchModeNotifier.value;
     final displayMemo = _displayMemo;
-    if (displayMemo != null && identical(state, displayMemo.raw)) return displayMemo.display;
+    if (displayMemo != null &&
+        identical(state, displayMemo.raw) &&
+        displayMemo.editStamp == editStamp &&
+        displayMemo.isSearchMode == isSearchMode) {
+      return displayMemo.display;
+    }
 
     final seenIds = <Object>{};
-    final displayState = state.filterItems((item) => seenIds.add(itemId(item)));
-    _displayMemo = (raw: state, display: displayState);
+    // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
+    final displayState = _edits.isEmpty
+        ? state.filterItems((item) => seenIds.add(itemId(item)))
+        : state.copyWith(
+            pages: resolveDisplayPages(
+              pages: pages,
+              readStamps: keys.map((key) => key.readStamp).toList(growable: false),
+              edits: _edits,
+              itemId: itemId,
+              grouping: widget.grouping,
+              acceptsNewItems: !isSearchMode, // only the server knows what matches the query
+            ),
+          );
+    _displayMemo = (
+      raw: state,
+      editStamp: editStamp,
+      isSearchMode: isSearchMode,
+      display: displayState,
+    );
 
     return displayState;
+  }
+
+  /// Forgets edits that every loaded and parked page was read after, since the server's copy has
+  /// caught up.
+  void _dropDeadEdits() {
+    if (_edits.isEmpty) return;
+
+    final readStamps = [
+      ...?_pager.value.keys,
+      ...?_normalSnapshot?.state.keys,
+    ].map((key) => key.readStamp);
+    if (readStamps.isEmpty) return;
+
+    final oldestRead = readStamps.min;
+    // Nothing dropped here still shows, so no [_editStamp] bump, which the display memo keys on.
+    _edits.removeWhere((_, edit) => edit.stamp <= oldestRead);
   }
 
   /// Pages the controller past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since
@@ -298,17 +356,24 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     });
   }
 
-  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide. Emptiness comes
-  /// off the de-duplicated view, what the user sees, more-available off the raw pages. Gates both the
-  /// auto-fetch and the loading surface meanwhile, so the two can't disagree.
-  bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) =>
-      widget.source.onEmptyPage.shouldAdvance(
-        EmptyPageContext(
-          isEmpty: _dedupedForDisplay(state).items?.isEmpty ?? false,
-          isMoreAvailable: _nextPageKey(state) != null,
-          pagesLoaded: state.pages?.length ?? 0,
-        ),
-      );
+  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide, unless edits
+  /// emptied the screen. Emptiness comes off what the user sees, more-available off the raw pages. Gates
+  /// both the auto-fetch and the loading surface meanwhile, so the two can't disagree.
+  bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) {
+    final isEmpty = _displayFor(state).items?.isEmpty ?? false;
+    final isMoreAvailable = _nextPageKey(state) != null;
+    // The user emptied it, not the server, so there's more to show.
+    final wasEmptiedByEdits = isEmpty && (state.pages?.any((page) => page.isNotEmpty) ?? false);
+    if (wasEmptiedByEdits && isMoreAvailable) return true;
+
+    return widget.source.onEmptyPage.shouldAdvance(
+      EmptyPageContext(
+        isEmpty: isEmpty,
+        isMoreAvailable: isMoreAvailable,
+        pagesLoaded: state.pages?.length ?? 0,
+      ),
+    );
+  }
 
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
@@ -416,9 +481,10 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     final pagedList = PagingListener(
       controller: _pager,
-      builder: (_, state, fetchNextPage) => ValueListenableBuilder(
-        valueListenable: _searchModeNotifier,
-        builder: (context, isSearchMode, _) {
+      builder: (_, state, fetchNextPage) => DualValueListenableBuilder(
+        firstListenable: _searchModeNotifier,
+        secondListenable: _editStamp, // an edit only needs the rebuild, _displayFor reads the edits
+        builder: (context, isSearchMode, _, _) {
           // AdvanceToFirstNonEmpty pages past an empty page itself, so show loading while it does and
           // keep the empty surface for the true end (or the maxPages give-up).
           if (_shouldAdvancePastEmpty(state)) {
@@ -427,7 +493,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
           }
 
           return PagedView(
-            state: _dedupedForDisplay(state),
+            state: _displayFor(state),
             fetchNextPage: fetchNextPage,
             itemBuilder: widget.itemBuilder,
             grouping: widget.grouping,
@@ -471,6 +537,26 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _resetPaging(.invalidated);
 
     return Future<void>.syncValue(null);
+  }
+
+  @override
+  void upsert(T item) => _edit(item, item);
+
+  @override
+  void remove(T item) => _edit(item, null);
+
+  /// Books [edited] against [item]'s id, null for a removal.
+  void _edit(T item, T? edited) {
+    final itemId = widget.source.itemId;
+    assert(itemId != null, 'Pass itemId to ListSmith.async to upsert or remove items.');
+    if (itemId == null) return;
+
+    final id = itemId(item);
+    final stamp = _editStamp.value + 1;
+    _edits
+      ..remove(id) // re-booked at the end, so the newest new item lands on top
+      ..[id] = (item: edited, stamp: stamp);
+    _editStamp.value = stamp;
   }
 
   /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run. [reload]

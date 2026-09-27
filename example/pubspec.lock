@@ -215,6 +215,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.0"
+  multi_value_listenable_builder_typed:
+    dependency: transitive
+    description:
+      name: multi_value_listenable_builder_typed
+      sha256: ff2010cf53c249fb2975ae0be565500b0b54547c191c7d64ad65f711067a7525
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.1"
   nested:
     dependency: transitive
     description:

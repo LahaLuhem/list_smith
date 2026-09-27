@@ -7,7 +7,7 @@
 /// The cost scales with the whole loaded list, not the incoming page: `filterItems` re-walks every loaded
 /// page and `copyWith` re-wraps each in `List.unmodifiable`. Mirrored in pure Dart here because the
 /// real code is a widget method over an ISP `PagingState`, which won't AOT-compile as a plain exe. Keep
-/// the mirror in step with `_dedupedForDisplay`.
+/// the mirror in step with `_displayFor`'s no-edit path.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';

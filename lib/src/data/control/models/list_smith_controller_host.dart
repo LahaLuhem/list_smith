@@ -16,4 +16,10 @@ abstract interface class ListSmithControllerHost<T extends Object> {
 
   /// See [ListSmithController.reset].
   Future<void> reset();
+
+  /// See [ListSmithController.upsert].
+  void upsert(T item);
+
+  /// See [ListSmithController.remove].
+  void remove(T item);
 }

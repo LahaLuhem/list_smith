@@ -46,6 +46,13 @@ class ListSmithController<T extends Object> {
   /// a feed held by [KeepCachePolicy] starts over once the query clears.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
 
+  /// Shows [item] wherever a copy with its `itemId` is loaded, or at the top of the feed if none is. For
+  /// a change that's already true on your server or store, and lasts until those pages are read again.
+  void upsert(T item) => _host?.upsert(item);
+
+  /// Hides every loaded copy of [item] by its `itemId`, until those pages are read again.
+  void remove(T item) => _host?.remove(item);
+
   /// Binds this controller to the list it drives. One controller, one list.
   @internal
   void attach(ListSmithControllerHost<T> host) {

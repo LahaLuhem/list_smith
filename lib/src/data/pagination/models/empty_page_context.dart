@@ -6,7 +6,7 @@ library;
 ///
 /// Rebuilt after each page lands, so a behaviour stays a pure function of its input.
 final class EmptyPageContext {
-  /// Whether the list shows no items, counted after de-duplication.
+  /// Whether the list shows no items, counted after de-duplication and your edits.
   final bool isEmpty;
 
   /// Whether [PaginationEndPolicy] reports another page left to fetch.

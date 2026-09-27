@@ -314,7 +314,7 @@ renames.
 <a id="overlap-dedup"></a>
 ## Overlap de-dup runs at the display layer, not before storage
 
-- **Decision:** `itemId` de-dup is a computed view over the paging state, `_dedupedForDisplay`
+- **Decision:** `itemId` de-dup is a computed view over the paging state, `_displayFor`
   running ISP's `PagingState.filterItems` in the build, not a filter on the stored pages. The
   controller keeps the raw pages, and only what renders is de-duped.
 - **Why not de-dup before storage:** the end policy reads each stored page's item count. De-dup
