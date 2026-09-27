@@ -71,7 +71,6 @@ void main() {
           fetchPage: pagedFetcher(const [
             [1, 2, 3],
           ]),
-          refresh: const PullToRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );

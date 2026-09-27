@@ -2,6 +2,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith_example/main.dart';
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
 
 import 'support/bdd.dart';
 
@@ -206,6 +207,97 @@ void main() {
       // The button ran the pull's own reload (depth kept by default), so every page is re-stamped.
       check(find.textContaining('load #2').evaluate().length).isGreaterThan(0);
       check(find.textContaining('load #1').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('the edits demo adds on top, renames in place and swipes a row away', (
+      tester,
+    ) async {
+      // The intro, knob and button stack above the list, so give it room.
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Edits'), 100);
+      await tester.tap(find.text('Edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      await tester.tap(find.text('Add an item'));
+      await tester.pump();
+
+      check(tester.getTopLeft(find.text('New item 1')).dy)
+          .isLessThan(tester.getTopLeft(find.text('Item 1')).dy);
+
+      final renamedRowTop = tester.getTopLeft(find.text('Item 2')).dy;
+      // Short of a full swipe, so the row opens on its actions.
+      await tester.timedDrag(
+        find.text('Item 2'),
+        const Offset(-300, 0),
+        const Duration(milliseconds: 300),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Rename'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      await tester.enterText(find.byType(EditableText), 'Renamed row');
+      await tester.tap(find.text('Save'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+
+      check(find.text('Item 2').evaluate()).isEmpty();
+      check(tester.getTopLeft(find.text('Renamed row')).dy).equals(renamedRowTop);
+
+      // Timed, since a plain drag ends before the full-swipe pane has built, so the row only opens.
+      await tester.timedDrag(
+        find.text('Item 1'),
+        const Offset(-700, 0),
+        const Duration(milliseconds: 300),
+      );
+      // The dismissal then the resize take 300ms each.
+      for (var frame = 0; frame < 6; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+
+      check(find.text('Item 1').evaluate()).isEmpty();
+      check(find.text('New item 1').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('with deletes failing, a row swiped away comes back on a pull', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Edits'), 100);
+      await tester.tap(find.text('Edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      await tester.tap(find.byType(PlatformSwitch));
+      await tester.pump();
+      await tester.timedDrag(
+        find.text('Item 1'),
+        const Offset(-700, 0),
+        const Duration(milliseconds: 300),
+      );
+      for (var frame = 0; frame < 6; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      check(find.text('Item 1').evaluate()).isEmpty();
+
+      await tester.fling(find.text('Item 2'), const Offset(0, 300), 1000);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      check(find.text('Item 1').evaluate()).length.equals(1);
     });
   });
 }

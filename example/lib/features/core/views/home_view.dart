@@ -10,6 +10,7 @@ import '/features/basic_feed/basic_feed_view.dart';
 import '/features/cache_routing/cache_routing_view.dart';
 import '/features/cursor_feed/cursor_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
+import '/features/edits/edits_view.dart';
 import '/features/grouping/grouping_view.dart';
 import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
@@ -96,6 +97,13 @@ class HomeView extends StatelessWidget {
             description:
                 'Pull-to-refresh strategies: keep scroll depth or reset, best-effort or atomic.',
             pageBuilder: (_) => const ReloadView(),
+          ),
+          _DemoTile(
+            icon: const PlatformIcon(PlatformIcons.pencil),
+            title: 'Edits',
+            description:
+                'Swipe to rename or delete, add on top: upsert() and remove() with no refetch.',
+            pageBuilder: (_) => const EditsView(),
           ),
         ],
       ),
