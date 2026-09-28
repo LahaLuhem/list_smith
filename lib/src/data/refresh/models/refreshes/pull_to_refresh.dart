@@ -10,8 +10,8 @@ final class PullToRefresh extends Refresh {
   /// Defaults to `64`.
   final double indicatorExtent;
 
-  /// What the pull does to the pages already loaded. [ResetToFirstPage] (the default) snaps to the top
-  /// and reloads page one, [ReloadToCurrentDepth] re-fetches every loaded page to keep depth.
+  /// What the pull does to the pages already loaded. [ResetToFirstPage] (the default) jumps back to the
+  /// start and reloads page one, [ReloadToCurrentDepth] re-fetches every loaded page to keep depth.
   final Reload reload;
 
   /// Creates it.

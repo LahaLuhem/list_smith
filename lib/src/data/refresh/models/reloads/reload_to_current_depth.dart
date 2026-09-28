@@ -1,7 +1,7 @@
 part of '../reload.dart';
 
 /// Re-fetches every loaded page, so a pull keeps the user's scroll depth instead of snapping back to
-/// the top.
+/// the start.
 ///
 /// [concurrency] and [onError] only apply to index-based sources. A `PageFetcher.withSignal` source
 /// needs page `k-1` before page `k`, so its reload walks in order and is always atomic. Depth is still

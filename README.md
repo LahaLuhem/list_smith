@@ -265,16 +265,19 @@ costs is in [Performance](#performance).
 
 ## Pull to refresh
 
-On by default for `ListSmith.async`. Pull down, the list resets and reloads from the 1st page.
-Switch it off with `refresh: NoRefresh()`.
+On by default for `ListSmith.async`. Pull from the list's start (the top of a plain vertical list)
+and it resets and reloads from the 1st page. Switch it off with `refresh: NoRefresh()`.
 
-Want your own indicator? Give `PullToRefresh` an `indicatorBuilder`. It gets a small,
-framework-free snapshot of the pull (a phase and a drag value) and returns just the indicator.
-list_smith places it and only builds it mid-pull, so a spinner inside it can't keep running while
-the list sits idle:
+Want your own indicator? Give `PullToRefresh` an `indicatorBuilder`. It gets a small snapshot of the
+pull (its phase, drag value and `pullDirection`) and returns just the indicator. list_smith places
+it on the edge the pull comes from and only builds it mid-pull, so a spinner inside it can't keep
+running while the list sits idle. `indicatorExtent` sets how much room it gets:
 
 ```dart
-refresh: PullToRefresh(indicatorBuilder: (context, state) => MyIndicator(state)),
+refresh: PullToRefresh(
+  indicatorBuilder: (context, state) => MyIndicator(state),
+  indicatorExtent: 80,
+),
 ```
 
 Retry stays in your fetcher, not here. Wrap `fetchPage` with something like
@@ -290,9 +293,9 @@ fetchPage: PageFetcher((request) =>
 <details>
 <summary><b>Keeping the user's scroll depth across a pull</b></summary>
 
-The default `ResetToFirstPage` clears the list, snaps to the top, and reloads page 1. If the user
-had scrolled deep, they lose their place. `ReloadToCurrentDepth` re-fetches every page they had
-loaded instead:
+The default `ResetToFirstPage` clears the list, jumps back to the start, and reloads page 1. If the
+user had scrolled deep, they lose their place. `ReloadToCurrentDepth` re-fetches every page they
+had loaded instead:
 
 ```dart
 refresh: const PullToRefresh(
