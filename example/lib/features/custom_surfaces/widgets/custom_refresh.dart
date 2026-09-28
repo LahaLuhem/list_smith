@@ -14,8 +14,8 @@ class CustomRefresh extends StatelessWidget {
   Widget build(BuildContext context) {
     final indicator = switch (state.phase) {
       .refreshing || .settling => const PlatformProgressIndicator(),
-      .armed => const PlatformIcon(PlatformIcons.arrowUp),
-      .dragging => const PlatformIcon(PlatformIcons.arrowDown),
+      .dragging => _Arrow(pointing: state.pullDirection),
+      .armed => _Arrow(pointing: flipAxisDirection(state.pullDirection)),
     };
 
     return Opacity(
@@ -23,4 +23,22 @@ class CustomRefresh extends StatelessWidget {
       child: Center(child: indicator),
     );
   }
+}
+
+/// One glyph turned to point any way, since a left or right arrow icon gets mirrored under RTL.
+class _Arrow extends StatelessWidget {
+  final AxisDirection pointing;
+
+  const new({required this.pointing});
+
+  @override
+  Widget build(BuildContext context) => RotatedBox(
+    quarterTurns: switch (pointing) {
+      .down => 0,
+      .left => 1,
+      .up => 2,
+      .right => 3,
+    },
+    child: const PlatformIcon(PlatformIcons.arrowDown),
+  );
 }
