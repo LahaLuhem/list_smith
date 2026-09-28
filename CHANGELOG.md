@@ -2,6 +2,9 @@
 ### Added
 - \[#24\] In-place item edits (upsert / remove) without a refetch
 
+### Fixed
+- \[#69\] Idle lists stop drawing frames: indicatorBuilder replaces refreshBuilder
+
 ## [1.0.0] - 2026-09-11
 ### Added
 - \[#23\] Add ListSmithController to refresh an async list from code (a button, a tab re-tap)
