@@ -69,7 +69,7 @@ then override. list_smith does neither.
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
 | **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
-| **Swap behaviour, not widgets**    | 8 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                     |
+| **Swap behaviour, not widgets**    | 8 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                         |
 | **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
@@ -119,7 +119,7 @@ out of the cache rather defeats the pull. `request.trigger` says which it was.
 
 | `FetchTrigger` | What happened                                                               |
 |----------------|-----------------------------------------------------------------------------|
-| `initialLoad`  | the 1st page of a cold list                                               |
+| `initialLoad`  | the 1st page of a cold list                                                 |
 | `nextPage`     | the user neared the end, so the next page was asked for                     |
 | `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
 | `retry`        | this page's last attempt threw, and Retry was tapped                        |
@@ -608,9 +608,9 @@ In `AsyncListSurfaces` (async lists only):
 
 | Slot                      | Shown when                                                |
 |---------------------------|-----------------------------------------------------------|
-| `firstPageLoadingBuilder` | the 1st page is loading                                 |
+| `firstPageLoadingBuilder` | the 1st page is loading                                   |
 | `newPageLoadingBuilder`   | a further page is loading                                 |
-| `firstPageErrorBuilder`   | the 1st page failed (receives the error + a retry call) |
+| `firstPageErrorBuilder`   | the 1st page failed (receives the error + a retry call)   |
 | `newPageErrorBuilder`     | a further page failed (receives the error + a retry call) |
 | `noMoreItemsBuilder`      | every page has loaded                                     |
 
