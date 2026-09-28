@@ -23,16 +23,23 @@ class RefreshBinding extends StatefulWidget {
   /// Draws the indicator, or `null` to use the neutral default.
   final RefreshIndicatorBuilder? indicatorBuilder;
 
+  /// The room the indicator gets along the scroll axis.
+  final double indicatorExtent;
+
   /// Creates it.
-  const new({required this.child, required this.onRefresh, this.indicatorBuilder, super.key});
+  const new({
+    required this.child,
+    required this.onRefresh,
+    required this.indicatorExtent,
+    this.indicatorBuilder,
+    super.key,
+  });
 
   @override
   State<RefreshBinding> createState() => _RefreshBindingState();
 }
 
 class _RefreshBindingState extends State<RefreshBinding> {
-  static const double _revealExtent = 64;
-
   /// How far the list has overshot its start on its own, which only bouncing physics allow.
   final _bounceDistanceNotifier = ValueNotifier<double>(0);
 
@@ -60,7 +67,7 @@ class _RefreshBindingState extends State<RefreshBinding> {
       // A pull always starts at the list's start, so its direction also says which edge it came from.
       final pullDirection = controller.direction;
       final isVertical = axisDirectionToAxis(pullDirection) == .vertical;
-      final reveal = clampDouble(controller.value, 0, 1) * _revealExtent;
+      final reveal = clampDouble(controller.value, 0, 1) * widget.indicatorExtent;
 
       return Stack(
         children: [
@@ -69,8 +76,8 @@ class _RefreshBindingState extends State<RefreshBinding> {
             bottom: pullDirection == .down ? null : 0,
             left: pullDirection == .left ? null : 0,
             right: pullDirection == .right ? null : 0,
-            width: isVertical ? null : _revealExtent,
-            height: isVertical ? _revealExtent : null,
+            width: isVertical ? null : widget.indicatorExtent,
+            height: isVertical ? widget.indicatorExtent : null,
             // Built only mid-pull, so no indicator can keep ticking while the list sits idle.
             child: state == null
                 ? const SizedBox.shrink()
