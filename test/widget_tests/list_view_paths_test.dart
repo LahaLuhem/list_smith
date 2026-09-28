@@ -104,7 +104,8 @@ void main() {
     });
 
     scenarioOutlineWidgets<_Orientation>(
-      'the pull indicator sits at the edge the pull starts from, and the list moves away from it',
+      'the pull indicator sits at the edge the pull starts from, is told which way it travels, and '
+      'the list moves away from it',
       examples: const {
         'a plain list, pulled down': (scroll: ListScrollConfig(), text: .ltr, pull: .down),
         'a reversed list, pulled up': (
@@ -124,6 +125,7 @@ void main() {
         ),
       },
       outline: (tester, orientation) async {
+        final toldDirections = <AxisDirection>{};
         await pumpListSmith(
           tester,
           Directionality(
@@ -132,7 +134,11 @@ void main() {
               fetchPage: pagedFetcher([_items]),
               scroll: orientation.scroll,
               refresh: PullToRefresh(
-                indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+                indicatorBuilder: (_, state) {
+                  toldDirections.add(state.pullDirection);
+
+                  return const SizedBox.expand(key: _indicatorKey);
+                },
               ),
               itemBuilder: (_, item, _) => _Row(item),
             ),
@@ -154,6 +160,7 @@ void main() {
         check(along(indicator.center - restingList.center)).isLessThan(0);
         check(along(tester.getRect(find.text('item 0')).center - restingRow.center))
             .isGreaterThan(0);
+        check(toldDirections).deepEquals({orientation.pull});
 
         await gesture.up();
       },

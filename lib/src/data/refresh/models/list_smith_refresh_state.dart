@@ -4,7 +4,8 @@ import '../enums/list_smith_refresh_phase.dart';
 
 /// The pull-to-refresh state at build time, handed to a [RefreshIndicatorBuilder].
 ///
-/// Just the [phase] and drag [value] a custom indicator needs, so the mechanism underneath stays swappable.
+/// Just the [phase], drag [value] and [pullDirection] a custom indicator needs, so the mechanism underneath
+/// stays swappable.
 @immutable
 class ListSmithRefreshState {
   /// Where the gesture currently is.
@@ -14,19 +15,26 @@ class ListSmithRefreshState {
   /// while over-pulled.
   final double value;
 
+  /// Which way the pull travels: `down` for a list pulled from its top, `up` when it's reversed.
+  final AxisDirection pullDirection;
+
   /// Creates it.
-  const new({required this.phase, required this.value});
+  const new({required this.phase, required this.value, required this.pullDirection});
 
   @override
-  String toString() => 'ListSmithRefreshState(phase: $phase, value: $value)';
+  String toString() =>
+      'ListSmithRefreshState(phase: $phase, value: $value, pullDirection: $pullDirection)';
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ListSmithRefreshState && other.phase == phase && other.value == value;
+      other is ListSmithRefreshState &&
+          other.phase == phase &&
+          other.value == value &&
+          other.pullDirection == pullDirection;
 
   @override
-  int get hashCode => Object.hash(phase, value);
+  int get hashCode => Object.hash(phase, value, pullDirection);
 }
 
 /// Draws the pull indicator. Only called mid-pull, and list_smith decides where it sits.
