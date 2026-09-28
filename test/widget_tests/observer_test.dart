@@ -45,10 +45,7 @@ void main() {
       );
       await drain(tester);
 
-      await tester.fling(find.text('item 1'), const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 5; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await pullToRefresh(tester, find.text('item 1'));
 
       check(observer.events).contains('reload(refresh)');
     });

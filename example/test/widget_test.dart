@@ -32,7 +32,7 @@ void main() {
       await pumpExampleApp(tester);
 
       await tester.tap(find.text('Custom surfaces'));
-      // The spinner animates forever, so fixed pumps, never pumpAndSettle.
+      // Fixed pumps, so the loader is still up when it's checked.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 

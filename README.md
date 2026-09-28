@@ -268,9 +268,14 @@ costs is in [Performance](#performance).
 On by default for `ListSmith.async`. Pull down, the list resets and reloads from the 1st page.
 Switch it off with `refresh: NoRefresh()`.
 
-Want your own indicator? Give `PullToRefresh` a builder: `refresh: PullToRefresh(refreshBuilder:
-...)`. It gets a small, framework-free snapshot of the pull (a phase and a drag value), never the
-controller underneath.
+Want your own indicator? Give `PullToRefresh` an `indicatorBuilder`. It gets a small,
+framework-free snapshot of the pull (a phase and a drag value) and returns just the indicator.
+list_smith places it and only builds it mid-pull, so a spinner inside it can't keep running while
+the list sits idle:
+
+```dart
+refresh: PullToRefresh(indicatorBuilder: (context, state) => MyIndicator(state)),
+```
 
 Retry stays in your fetcher, not here. Wrap `fetchPage` with something like
 [retry](https://pub.dev/packages/retry) so a transient blip is handled before the reload sees it:

@@ -19,7 +19,7 @@ const _iterations = int.fromEnvironment('ITERATIONS', defaultValue: 10);
 const _pageSize = int.fromEnvironment('PAGE_SIZE', defaultValue: 20);
 const _outputPath = String.fromEnvironment('OUTPUT');
 
-// The loading indicator animates forever, so the 1st page is settled with fixed pumps.
+// Fixed pumps settle the 1st page, so every run warms up over the same frames.
 const _warmupPumps = 10;
 
 void main() {

@@ -32,6 +32,7 @@ renames.
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [Dependabot automerges the boring tier, behind 6 aggregate checks](#dependabot-automerge)
 - [Local edits live beside the pages, not in them](#edit-layer)
+- [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
 
 <!-- TOC end -->
 
@@ -674,6 +675,18 @@ rather than 6.
   together. They stay out of search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
   setting is about the server sending an empty page, not the user deleting rows.
+
+---
+
+<a id="pull-indicator-layout"></a>
+## list_smith places the pull indicator, the builder only draws it
+
+- **Decision:** `indicatorBuilder` returns just the indicator. `RefreshBinding` owns the slot and
+  the push, and only builds the indicator while a pull is in progress, so `ListSmithRefreshPhase`
+  has no resting phase.
+- **Why:** when each indicator owned the whole pull layout, each had to get its own lifetime right.
+  The neutral one kept a spinner mounted at rest, asking for a frame on every screen refresh. Now
+  nothing is built at rest, ours or a consumer's, and placement lives in one spot.
 
 ---
 
