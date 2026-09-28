@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../enums/list_smith_refresh_phase.dart';
 
-/// The pull-to-refresh state at build time, handed to a [RefreshBuilder].
+/// The pull-to-refresh state at build time, handed to a [RefreshIndicatorBuilder].
 ///
 /// Just the [phase] and drag [value] a custom indicator needs, so the mechanism underneath stays swappable.
 @immutable
@@ -10,8 +10,8 @@ class ListSmithRefreshState {
   /// Where the gesture currently is.
   final ListSmithRefreshPhase phase;
 
-  /// Pull progress: `0.0` at rest, `1.0` at the threshold that arms a refresh, more than `1.0` while
-  /// over-pulled.
+  /// Pull progress: `0.0` as the pull starts, `1.0` at the threshold that arms a refresh, more than `1.0`
+  /// while over-pulled.
   final double value;
 
   /// Creates it.
@@ -29,9 +29,8 @@ class ListSmithRefreshState {
   int get hashCode => Object.hash(phase, value);
 }
 
-/// Draws a custom pull-to-refresh indicator around the scrollable `child`, using `state`.
-typedef RefreshBuilder = Widget Function(
+/// Draws the pull indicator. Only called mid-pull, and list_smith decides where it sits.
+typedef RefreshIndicatorBuilder = Widget Function(
   BuildContext context,
-  Widget child,
   ListSmithRefreshState state,
 );

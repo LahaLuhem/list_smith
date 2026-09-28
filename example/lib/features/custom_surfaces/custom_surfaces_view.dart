@@ -44,9 +44,7 @@ class CustomSurfacesView extends StatelessWidget {
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
               emptyBuilder: (_) => const CustomEmpty(),
-              refresh: PullToRefresh(
-                refreshBuilder: (_, child, state) => CustomRefresh(state: state, child: child),
-              ),
+              refresh: PullToRefresh(indicatorBuilder: (_, state) => CustomRefresh(state: state)),
               surfaces: AsyncListSurfaces(
                 firstPageLoadingBuilder: (_) => const CustomLoading(),
                 newPageLoadingBuilder: (_) => const CustomLoading(isCompact: true),

@@ -4,40 +4,23 @@ import 'package:list_smith/list_smith.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
-/// A custom pull-to-refresh indicator, revealed from the top keyed to [ListSmithRefreshState.value].
-/// An arrow while pulling, a spinner while refreshing.
+/// A platform-adaptive pull indicator: an arrow while pulling, a spinner while refreshing.
 class CustomRefresh extends StatelessWidget {
-  static const double _extent = 72;
-
-  final Widget child;
   final ListSmithRefreshState state;
 
-  const new({required this.child, required this.state, super.key});
+  const new({required this.state, super.key});
 
   @override
   Widget build(BuildContext context) {
-    final progress = clampDouble(state.value, 0, 1);
-    final revealed = progress * _extent;
     final indicator = switch (state.phase) {
       .refreshing || .settling => const PlatformProgressIndicator(),
       .armed => const PlatformIcon(PlatformIcons.arrowUp),
-      .idle || .dragging => const PlatformIcon(PlatformIcons.arrowDown),
+      .dragging => const PlatformIcon(PlatformIcons.arrowDown),
     };
 
-    return Stack(
-      children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: _extent,
-          child: Opacity(
-            opacity: progress,
-            child: Center(child: indicator),
-          ),
-        ),
-        Transform.translate(offset: Offset(0, revealed), child: child),
-      ],
+    return Opacity(
+      opacity: clampDouble(state.value, 0, 1),
+      child: Center(child: indicator),
     );
   }
 }
