@@ -24,14 +24,6 @@ void main() {
       return (fetchPage: fetchPage, attempts: attempts);
     }
 
-    Future<void> pullToRefresh(WidgetTester tester, Finder anchor) async {
-      await tester.fling(anchor, const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      await drain(tester, frames: 16);
-    }
-
     scenarioWidgets('re-fetches every loaded page, keeping depth', (tester) async {
       final fetcher = valuedFetcher();
 

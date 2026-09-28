@@ -139,8 +139,8 @@ feature**:
 2 placement rules earn their keep:
 
 - **A typedef with a single home type stays in that type's file.** Only a standalone typedef with
-  no such home gets its own file under the feature's `typedefs/`. So `RefreshBuilder` sits with
-  `ListSmithRefreshState` in `refresh/models/`, while `ItemId` and `ItemBuilder` stand alone in
+  no such home gets its own file under the feature's `typedefs/`. So `RefreshIndicatorBuilder` sits
+  with `ListSmithRefreshState` in `refresh/models/`, while `ItemId` and `ItemBuilder` stand alone in
   their features' `typedefs/`. A callable class is not a typedef: `PageFetcher` and
   `SearchPageFetcher` live under `models/`.
 - **A resolver is an unexported `extension` in `<feature>/extensions/`**, named
@@ -686,9 +686,10 @@ Assert with `checks` throughout (`check(x).equals(...)`, `.isA<T>()`, `.throws<E
 finder API, so bridge a `flutter_test` finder by evaluating it:
 `check(find.text(...).evaluate()).length.equals(1)`.
 
-Keep tests deterministic and exercise the failure paths, not just the happy one. The neutral spinner
-animates forever, so drive fixed `pump()`s and never `pumpAndSettle`. The example app keeps its own
-copy of the Gherkin helper, since a local helper can't cross a package boundary.
+Keep tests deterministic and exercise the failure paths, not just the happy one. Drive fixed
+`pump()`s, never `pumpAndSettle`: it hides how many frames ran, and it skips past in-between states
+like a loader before its page lands. The example app keeps its own copy of the Gherkin helper, since
+a local helper can't cross a package boundary.
 
 **Widget tests share one harness, not per-file copies.** The pieces live under `test/support/`,
 re-exported by the `support.dart` barrel, so import that one file:
@@ -698,6 +699,7 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pumpListSmith(tester, child)` | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs |
 | `drain(tester, {frames})` | pumps a fixed number of frames |
 | `settle(tester, {debounce})` | advances past a search debounce, then drains |
+| `pullToRefresh(tester, anchor)` | pulls down from `anchor` far enough to refresh, then pumps timed frames so it runs |
 | `containsIgnoreCase` | sync-search predicate |
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
 

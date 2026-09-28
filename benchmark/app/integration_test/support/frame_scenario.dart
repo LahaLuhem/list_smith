@@ -14,9 +14,8 @@ const _refreshSettleFrames = 60;
 const _frameBudgetMicros = 16667; // 60 Hz frame budget.
 const _flushDelay = Duration(seconds: 2);
 
-/// Flings [scrollable] down [passes] times, pumping fixed frames after each. Never `pumpAndSettle`,
-/// since the loading indicator animates forever. Shared by the scroll scenarios, so both are scrolled
-/// identically.
+/// Flings [scrollable] down [passes] times, pumping fixed frames after each, so every pass is measured
+/// over the same frames. Shared by the scroll scenarios, so both are scrolled identically.
 Future<void> flingThrough(
   WidgetTester tester, {
   required Finder scrollable,
@@ -31,10 +30,9 @@ Future<void> flingThrough(
 }
 
 /// Drives [passes] full pull-to-refresh cycles on [scrollable]: a stepped overscroll drag past CRI's
-/// arm threshold, release, then a fixed settle window. Never `pumpAndSettle`, since the loading indicator
-/// animates forever. The drag is stepped over several pumps so the animation renders real intermediate
-/// frames, and each pass starts at the leading edge, which is what CRI's default `onEdge` trigger needs
-/// to arm.
+/// arm threshold, release, then a fixed settle window, the same length every pass. The drag is stepped
+/// over several pumps so the animation renders real intermediate frames, and each pass starts at the
+/// leading edge, which is what CRI's default `onEdge` trigger needs to arm.
 Future<void> refreshThrough(
   WidgetTester tester, {
   required Finder scrollable,

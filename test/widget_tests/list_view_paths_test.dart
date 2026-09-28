@@ -68,13 +68,6 @@ void main() {
     scenarioWidgets('a custom indicator is built only while a pull is in progress', (tester) async {
       final hold = Completer<List<int>>();
       var firstPageFetches = 0;
-      // Timed frames, so the indicator's animations actually run.
-      Future<void> animate() async {
-        for (var frame = 0; frame < 5; frame++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
-      }
-
       await pumpListSmith(
         tester,
         ListSmith.async(
@@ -96,13 +89,15 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
 
-      await tester.fling(find.text('item 1'), const Offset(0, 300), 1000);
-      await animate();
+      await pullToRefresh(tester, find.text('item 1'));
       check(firstPageFetches).equals(2);
       check(find.byType(_SpinningIndicator).evaluate()).length.equals(1);
 
       hold.complete(const [1, 2, 3]);
-      await animate();
+      // Timed frames, so the indicator's animation back to rest actually runs.
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
       check(tester.binding.hasScheduledFrame).isFalse();
