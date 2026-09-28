@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -11,9 +13,7 @@ import 'defaults/neutral_refresh_indicator.dart';
 /// Decides when the indicator exists and where it sits, so [indicatorBuilder] or [NeutralRefreshIndicator]
 /// only draws it. The controller type never leaks past here, so the mechanism stays swappable. Whether
 /// refresh happens at all is the engine's call: it leaves this wrapper out when refresh is off.
-class RefreshBinding extends StatelessWidget {
-  static const double _revealExtent = 64;
-
+class RefreshBinding extends StatefulWidget {
   /// The scrollable the gesture drives.
   final Widget child;
 
@@ -27,38 +27,83 @@ class RefreshBinding extends StatelessWidget {
   const new({required this.child, required this.onRefresh, this.indicatorBuilder, super.key});
 
   @override
+  State<RefreshBinding> createState() => _RefreshBindingState();
+}
+
+class _RefreshBindingState extends State<RefreshBinding> {
+  static const double _revealExtent = 64;
+
+  /// How far the list has overshot its start on its own, which only bouncing physics allow.
+  final _bounceDistanceNotifier = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _bounceDistanceNotifier.dispose();
+
+    super.dispose();
+  }
+
+  bool _trackBounce(ScrollUpdateNotification notification) {
+    final metrics = notification.metrics;
+    _bounceDistanceNotifier.value = math.max(0, metrics.minScrollExtent - metrics.pixels);
+
+    // Keeps bubbling, since custom_refresh_indicator reads the same notifications further up.
+    return false;
+  }
+
+  @override
   Widget build(BuildContext context) => CustomRefreshIndicator(
-    onRefresh: onRefresh,
-    child: child,
+    onRefresh: widget.onRefresh,
+    child: NotificationListener(onNotification: _trackBounce, child: widget.child),
     builder: (context, child, controller) {
       final state = _stateOf(controller);
-      final revealedExtent = clampDouble(controller.value, 0, 1) * _revealExtent;
+      // A pull always starts at the list's start, so its direction also says which edge it came from.
+      final pullDirection = controller.direction;
+      final isVertical = axisDirectionToAxis(pullDirection) == .vertical;
+      final reveal = clampDouble(controller.value, 0, 1) * _revealExtent;
 
       return Stack(
         children: [
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: _revealExtent,
+            top: pullDirection == .up ? null : 0,
+            bottom: pullDirection == .down ? null : 0,
+            left: pullDirection == .left ? null : 0,
+            right: pullDirection == .right ? null : 0,
+            width: isVertical ? null : _revealExtent,
+            height: isVertical ? _revealExtent : null,
             // Built only mid-pull, so no indicator can keep ticking while the list sits idle.
             child: state == null
                 ? const SizedBox.shrink()
-                : indicatorBuilder?.call(context, state) ?? NeutralRefreshIndicator(state: state),
+                : widget.indicatorBuilder?.call(context, state) ??
+                      NeutralRefreshIndicator(state: state),
           ),
-          Transform.translate(offset: Offset(0, revealedExtent), child: child),
+          ValueListenableBuilder(
+            valueListenable: _bounceDistanceNotifier,
+            // Only the gap the list's own bounce hasn't opened, so bouncing physics aren't pushed twice.
+            builder: (_, bounceDistance, _) {
+              final distance = math.max<double>(0, reveal - bounceDistance);
+              final signed = axisDirectionIsReversed(pullDirection) ? -distance : distance;
+
+              return Transform.translate(
+                offset: isVertical ? Offset(0, signed) : Offset(signed, 0),
+                child: child,
+              );
+            },
+          ),
         ],
       );
     },
   );
 
   static ListSmithRefreshState? _stateOf(IndicatorController controller) {
-    final phase = _phaseOf(controller.state);
+    final refreshPhase = _refreshPhaseOf(controller.state);
 
-    return phase == null ? null : ListSmithRefreshState(phase: phase, value: controller.value);
+    return refreshPhase == null
+        ? null
+        : ListSmithRefreshState(phase: refreshPhase, value: controller.value);
   }
 
-  static ListSmithRefreshPhase? _phaseOf(IndicatorState state) => switch (state) {
+  static ListSmithRefreshPhase? _refreshPhaseOf(IndicatorState state) => switch (state) {
     .idle => null,
     .dragging => .dragging,
     .armed => .armed,
