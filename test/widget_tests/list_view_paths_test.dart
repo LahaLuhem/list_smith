@@ -228,6 +228,34 @@ void main() {
       },
     );
 
+    scenarioWidgets(
+      'the indicator gets the configured room, and a full pull moves the list that far',
+      (tester) async {
+        const double extent = 100;
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: pagedFetcher([_items]),
+            refresh: PullToRefresh(
+              indicatorExtent: extent,
+              indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+            ),
+            itemBuilder: (_, item, _) => _Row(item),
+          ),
+        );
+        await drain(tester);
+        final restingRow = tester.getRect(find.text('item 0'));
+
+        // Well past the arm threshold, so the pull is a full one.
+        final gesture = await _pullAndHold(tester, .down);
+
+        check(tester.getRect(find.byKey(_indicatorKey)).height).isCloseTo(extent, 1);
+        check(tester.getRect(find.text('item 0')).top - restingRow.top).isCloseTo(extent, 1);
+
+        await gesture.up();
+      },
+    );
+
     scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
       final hold = Completer<List<int>>();
       Widget build(Color colour) => DefaultTextStyle(
