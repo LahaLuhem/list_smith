@@ -1,4 +1,4 @@
-// A test-local spinning indicator shares the file with the scenario that drives it.
+// Test-local widgets share the file with the scenarios that drive them.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:async';
@@ -102,6 +102,124 @@ void main() {
       check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
       check(tester.binding.hasScheduledFrame).isFalse();
     });
+
+    scenarioOutlineWidgets<_Orientation>(
+      'the pull indicator sits at the edge the pull starts from, and the list moves away from it',
+      examples: const {
+        'a plain list, pulled down': (scroll: ListScrollConfig(), text: .ltr, pull: .down),
+        'a reversed list, pulled up': (
+          scroll: ListScrollConfig(reverse: true),
+          text: .ltr,
+          pull: .up,
+        ),
+        'a horizontal list, pulled right': (
+          scroll: ListScrollConfig(scrollDirection: .horizontal),
+          text: .ltr,
+          pull: .right,
+        ),
+        'a right-to-left horizontal list, pulled left': (
+          scroll: ListScrollConfig(scrollDirection: .horizontal),
+          text: .rtl,
+          pull: .left,
+        ),
+      },
+      outline: (tester, orientation) async {
+        await pumpListSmith(
+          tester,
+          Directionality(
+            textDirection: orientation.text,
+            child: ListSmith.async(
+              fetchPage: pagedFetcher([_items]),
+              scroll: orientation.scroll,
+              refresh: PullToRefresh(
+                indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+              ),
+              itemBuilder: (_, item, _) => _Row(item),
+            ),
+          ),
+        );
+        await drain(tester);
+        final restingList = tester.getRect(find.byType(Scrollable));
+        final restingRow = tester.getRect(find.text('item 0'));
+
+        final gesture = await _pullAndHold(tester, orientation.pull);
+
+        final unit = _unit(orientation.pull);
+        double along(Offset offset) => offset.dx * unit.dx + offset.dy * unit.dy;
+
+        final indicator = tester.getRect(find.byKey(_indicatorKey));
+        check(_startEdge(indicator, orientation.pull))
+            .isCloseTo(_startEdge(restingList, orientation.pull), 1);
+        // Touching the start edge isn't enough: a slot along the wrong axis touches it too.
+        check(along(indicator.center - restingList.center)).isLessThan(0);
+        check(along(tester.getRect(find.text('item 0')).center - restingRow.center))
+            .isGreaterThan(0);
+
+        await gesture.up();
+      },
+    );
+
+    scenarioWidgets("on bouncing physics the list isn't pushed on top of its own bounce", (
+      tester,
+    ) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: pagedFetcher([_items]),
+          scroll: const ListScrollConfig(physics: BouncingScrollPhysics()),
+          itemBuilder: (_, item, _) => _Row(item),
+        ),
+      );
+      await drain(tester);
+      final restingRow = tester.getRect(find.text('item 0'));
+
+      final gesture = await _pullAndHold(tester, .down);
+
+      final overshoot = -tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels;
+      check(overshoot).isGreaterThan(0);
+      check(tester.getRect(find.text('item 0')).top - restingRow.top).isCloseTo(overshoot, 1);
+
+      await gesture.up();
+    });
+
+    scenarioOutlineWidgets<ListScrollConfig>(
+      "while a refresh runs, the indicator doesn't cover the 1st row",
+      examples: const {
+        'clamping physics': ListScrollConfig(),
+        'bouncing physics': ListScrollConfig(physics: BouncingScrollPhysics()),
+      },
+      outline: (tester, scroll) async {
+        final hold = Completer<List<int>>();
+        var firstPageFetches = 0;
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: PageFetcher((request) {
+              if (request.pageIndex > 0) return Future.value(const <int>[]);
+              firstPageFetches++;
+
+              return firstPageFetches == 1 ? Future.value(_items) : hold.future;
+            }),
+            scroll: scroll,
+            refresh: PullToRefresh(
+              // Waits on the held fetch, so the refresh keeps running.
+              reload: const ReloadToCurrentDepth(),
+              indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+            ),
+            itemBuilder: (_, item, _) => _Row(item),
+          ),
+        );
+        await drain(tester);
+
+        await pullToRefresh(tester, find.text('item 0'));
+        check(firstPageFetches).equals(2);
+
+        final indicator = tester.getRect(find.byKey(_indicatorKey));
+        check(indicator.overlaps(tester.getRect(find.text('item 0')))).isFalse();
+
+        hold.complete(_items);
+      },
+    );
 
     scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
       final hold = Completer<List<int>>();
@@ -225,6 +343,49 @@ Future<void> _pumpSync(
     itemBuilder: (_, item, _) => Text(item),
   ),
 );
+
+typedef _Orientation = ({ListScrollConfig scroll, TextDirection text, AxisDirection pull});
+
+const _indicatorKey = ValueKey('indicator');
+
+/// Enough rows to overfill the viewport along either axis, so every orientation can scroll.
+final _items = List<int>.generate(30, (index) => index);
+
+/// Drags from the list's centre towards [pull] and keeps the finger down, so a test can look mid-pull.
+Future<TestGesture> _pullAndHold(WidgetTester tester, AxisDirection pull) async {
+  final gesture = await tester.startGesture(tester.getCenter(find.byType(Scrollable)));
+  // Stepped, a frame each, so the drag clears touch slop and the indicator follows it.
+  for (var step = 0; step < 12; step++) {
+    await gesture.moveBy(_unit(pull) * 30);
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+
+  return gesture;
+}
+
+Offset _unit(AxisDirection direction) => switch (direction) {
+  .down => const Offset(0, 1),
+  .up => const Offset(0, -1),
+  .right => const Offset(1, 0),
+  .left => const Offset(-1, 0),
+};
+
+/// The side of [rect] that a pull travelling towards [pull] starts from.
+double _startEdge(Rect rect, AxisDirection pull) => switch (pull) {
+  .down => rect.top,
+  .up => rect.bottom,
+  .right => rect.left,
+  .left => rect.right,
+};
+
+class _Row extends StatelessWidget {
+  final int item;
+
+  const new(this.item);
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(dimension: 100, child: Text('item $item'));
+}
 
 /// Spins for as long as it's mounted, so one left behind at rest keeps asking for frames.
 class _SpinningIndicator extends StatefulWidget {
