@@ -473,9 +473,9 @@ renames.
   `.refresh` winning, because a write landing on a page the run already read would otherwise never
   be re-read. A joiner's future completes with the run it joined. `reset()` never joins: it bumps the
   generation and lets the next caller start fresh.
-- **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping to the top
-  is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull config to lean
-  on.
+- **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping back to
+  the start is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull
+  config to lean on.
 - **Accepted edge:** the pull indicator spins through a superseded run until its fetches finish.
 - **Build upward: a run that owns its stream.** A feed reload cut off by entering search burns its
   fetches and the restore re-reads the same pages. Correct and safe, just wasteful. A run that
@@ -687,6 +687,9 @@ rather than 6.
 - **Why:** when each indicator owned the whole pull layout, each had to get its own lifetime right.
   The neutral one kept a spinner mounted at rest, asking for a frame on every screen refresh. Now
   nothing is built at rest, ours or a consumer's, and placement lives in one spot.
+- **Placement follows the pull:** the slot hugs the edge the pull starts from, read off its
+  direction, and the list is pushed only by what its own bounce hasn't opened. Clamping physics get
+  the push, bouncing ones keep their native look, and no platform is special-cased.
 
 ---
 
