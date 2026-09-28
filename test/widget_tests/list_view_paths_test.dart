@@ -1,5 +1,5 @@
-// One scenario is parked in a comment until its fix lands, see where it sits.
-// ignore_for_file: avoid-commented-out-code
+// A test-local spinning indicator shares the file with the scenario that drives it.
+// ignore_for_file: prefer-match-file-name
 
 import 'dart:async';
 
@@ -44,48 +44,69 @@ void main() {
       check(find.text('sep').evaluate()).length.isGreaterThan(1);
     });
 
-    scenarioWidgets('a custom refreshBuilder replaces the neutral pull indicator', (tester) async {
+    scenarioWidgets('an idle list under the neutral pull indicator requests no frames', (
+      tester,
+    ) async {
       await pumpListSmith(
         tester,
         ListSmith.async(
           fetchPage: pagedFetcher(const [
             [1, 2, 3],
           ]),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      // Loaded to the end, so no page-loading spinner is left either.
+      check(find.text('No more items').evaluate()).length.equals(1);
+
+      await tester.pump(const Duration(seconds: 1));
+
+      check(tester.binding.hasScheduledFrame).isFalse();
+    });
+
+    scenarioWidgets('a custom indicator is built only while a pull is in progress', (tester) async {
+      final hold = Completer<List<int>>();
+      var firstPageFetches = 0;
+      // Timed frames, so the indicator's animations actually run.
+      Future<void> animate() async {
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: PageFetcher((request) {
+            if (request.pageIndex > 0) return Future.value(const <int>[]);
+            firstPageFetches++;
+
+            return firstPageFetches == 1 ? Future.value(const [1, 2, 3]) : hold.future;
+          }),
           refresh: PullToRefresh(
-            refreshBuilder: (context, child, state) =>
-                Stack(children: [child, Text('pull ${state.phase.name}')]),
+            // A depth reload waits on its fetches, so the held one keeps the refresh running.
+            reload: const ReloadToCurrentDepth(),
+            indicatorBuilder: (_, _) => const _SpinningIndicator(),
           ),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
       await drain(tester);
-
-      // The consumer's builder gets the child and the refresh state, and draws instead of ours.
-      check(find.textContaining('pull ').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(1);
-    });
+      check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
 
-    // Red until the pull indicator is only mounted mid-pull. Re-enable it with that fix.
-    // scenarioWidgets('an idle list under the neutral pull indicator requests no frames', (
-    //   tester,
-    // ) async {
-    //   await pumpListSmith(
-    //     tester,
-    //     ListSmith.async(
-    //       fetchPage: pagedFetcher(const [
-    //         [1, 2, 3],
-    //       ]),
-    //       itemBuilder: (_, item, _) => Text('item $item'),
-    //     ),
-    //   );
-    //   await drain(tester);
-    //   // Loaded to the end, so no page-loading spinner is left either.
-    //   check(find.text('No more items').evaluate()).length.equals(1);
-    //
-    //   await tester.pump(const Duration(seconds: 1));
-    //
-    //   check(tester.binding.hasScheduledFrame).isFalse();
-    // });
+      await tester.fling(find.text('item 1'), const Offset(0, 300), 1000);
+      await animate();
+      check(firstPageFetches).equals(2);
+      check(find.byType(_SpinningIndicator).evaluate()).length.equals(1);
+
+      hold.complete(const [1, 2, 3]);
+      await animate();
+
+      check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
+      check(tester.binding.hasScheduledFrame).isFalse();
+    });
 
     scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
       final hold = Completer<List<int>>();
@@ -209,3 +230,27 @@ Future<void> _pumpSync(
     itemBuilder: (_, item, _) => Text(item),
   ),
 );
+
+/// Spins for as long as it's mounted, so one left behind at rest keeps asking for frames.
+class _SpinningIndicator extends StatefulWidget {
+  const new();
+
+  @override
+  State<_SpinningIndicator> createState() => _SpinningIndicatorState();
+}
+
+class _SpinningIndicatorState extends State<_SpinningIndicator>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))
+    ..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      RotationTransition(turns: _controller, child: const Text('spinner'));
+}

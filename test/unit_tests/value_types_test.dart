@@ -29,9 +29,9 @@ void main() {
       .when('it is compared to states differing in phase or in value')
       .then('neither is equal to the base')
       .run((_) {
-        const base = ListSmithRefreshState(phase: .idle, value: 0);
-        const otherPhase = ListSmithRefreshState(phase: .dragging, value: 0);
-        const otherValue = ListSmithRefreshState(phase: .idle, value: 0.5);
+        const base = ListSmithRefreshState(phase: .dragging, value: 0);
+        const otherPhase = ListSmithRefreshState(phase: .armed, value: 0);
+        const otherValue = ListSmithRefreshState(phase: .dragging, value: 0.5);
 
         check(base == otherPhase).isFalse();
         check(base == otherValue).isFalse();

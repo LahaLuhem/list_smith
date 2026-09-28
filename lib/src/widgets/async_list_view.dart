@@ -515,9 +515,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
     return switch (widget.source.refresh) {
       NoRefresh() => pagedList,
-      PullToRefresh(:final refreshBuilder) => RefreshBinding(
+      PullToRefresh(:final indicatorBuilder) => RefreshBinding(
         onRefresh: refresh,
-        refreshBuilder: refreshBuilder,
+        indicatorBuilder: indicatorBuilder,
         child: pagedList,
       ),
     };
