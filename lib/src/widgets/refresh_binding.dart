@@ -100,7 +100,11 @@ class _RefreshBindingState extends State<RefreshBinding> {
 
     return refreshPhase == null
         ? null
-        : ListSmithRefreshState(phase: refreshPhase, value: controller.value);
+        : ListSmithRefreshState(
+            phase: refreshPhase,
+            value: controller.value,
+            pullDirection: controller.direction,
+          );
   }
 
   static ListSmithRefreshPhase? _refreshPhaseOf(IndicatorState state) => switch (state) {
