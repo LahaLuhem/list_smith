@@ -2,6 +2,9 @@
 ### Added
 - \[#24\] In-place item edits (upsert / remove) without a refetch
 
+### Changed
+- \[#74\] Pull indicator follows the pull's side and physics, adds pullDirection and indicatorExtent
+
 ### Fixed
 - \[#69\] Idle lists stop drawing frames: indicatorBuilder replaces refreshBuilder
 
