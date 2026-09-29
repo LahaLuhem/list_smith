@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of truth for container-based lint checks, shared by .github/workflows/repo.yml (CI dynamic matrix) and scripts/release.sh (release preflight). Add a linter = add one { name, cmd } entry to `checks`. Bump the image tag here, in one place. https://github.com/LahaLuhem/linterpol",
+  "_comment": "Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.",
   "image": "ghcr.io/lahaluhem/linterpol:latest",
   "checks": [
     { "name": "ShellCheck", "cmd": "shellcheck scripts/*.sh" },

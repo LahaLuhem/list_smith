@@ -1,0 +1,21 @@
+# Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # The required check, ci / ok, takes its name from this job.
+  ci:
+    uses: LahaLuhem/dartender/.github/workflows/ci.yml@main
+    # What its Auto-merge job asks for. A run whose caller grants less won't start.
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      coveralls: true
+      min-coverage: 95
+      coverage-excludes: ""
