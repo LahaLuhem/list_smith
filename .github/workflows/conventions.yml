@@ -1,0 +1,17 @@
+# Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.
+name: Conventions
+
+on:
+  pull_request:
+    branches: [main]
+    # edited for a changed description, labeled and unlabeled for the sem-* label check.
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+jobs:
+  # The required check, conventions / ok, takes its name from this job.
+  conventions:
+    uses: LahaLuhem/dartender/.github/workflows/conventions.yml@main
+    # For reading the PR's commits and labels.
+    permissions:
+      contents: read
+      pull-requests: read

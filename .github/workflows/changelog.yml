@@ -1,0 +1,19 @@
+# Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.
+name: Changelog
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  changelog:
+    uses: LahaLuhem/dartender/.github/workflows/changelog.yml@main
+    # For reading the merged PR. The App's token does the writing.
+    permissions:
+      contents: read
+      pull-requests: read
+    # The changelog App's, which the rulesets let past to commit the line.
+    with:
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
