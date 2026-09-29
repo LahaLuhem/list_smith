@@ -1,0 +1,15 @@
+# Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.
+name: Publish
+
+on:
+  push:
+    # The package's tag pattern on pub.dev, which only takes a publish from a tag push matching it.
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+
+jobs:
+  publish:
+    uses: LahaLuhem/dartender/.github/workflows/publish.yml@main
+    # The OIDC token pub.dev takes instead of a login.
+    permissions:
+      contents: read
+      id-token: write
