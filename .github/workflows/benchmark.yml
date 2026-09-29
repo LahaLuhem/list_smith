@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
       - uses: LahaLuhem/dartender/actions/setup-flutter@main
       # No floating tag since v8, hence the full version. `latest-known` keeps the install verified.
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           version: latest-known
           enable-cache: true
