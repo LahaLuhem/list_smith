@@ -16,6 +16,8 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # Its own package, analysed by bench-app.yml. APPENDIX.md#root-analysis-skips-bench-app
+    - benchmark/app/**
   language:
     strict-casts: true
     strict-inference: true

@@ -594,6 +594,18 @@ Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) 
 
 ---
 
+<a id="root-analysis-skips-bench-app"></a>
+## The root analysis skips `benchmark/app`
+
+`benchmark/app` is its own Flutter package, and the root `flutter pub get` resolves only the package
+and `example/`. So CI's `dart analyze .` at the root would fail on the app's unresolved
+`integration_test` imports. The root [`analysis_options.yaml`](analysis_options.yaml) excludes it,
+and [`bench-app.yml`](.github/workflows/bench-app.yml) analyses it after a `pub get` of its own. The
+app inherits the exclude through its `include:`, where it matches nothing, so its own run still
+analyses every file.
+
+---
+
 <a id="dependabot-automerge"></a>
 ## Dependabot automerges the boring tier, behind 6 aggregate checks
 
