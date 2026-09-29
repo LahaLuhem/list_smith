@@ -1,0 +1,95 @@
+name: Benchmark regression
+
+on:
+  pull_request:
+    branches: [main]
+    # Only what the micros time. Anything else has no timing delta, so skips this slow gate.
+    paths:
+      - lib/**
+      - benchmark/micro/**
+      - benchmark/harness/**
+      - .github/workflows/benchmark.yml
+
+concurrency:
+  group: bench-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  micro-regression:
+    name: Micro-benchmark regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+      # No floating tag since v8, hence the full version. `latest-known` keeps the install verified.
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: latest-known
+          enable-cache: true
+          prune-cache: false
+          download-from-astral-mirror: true
+      # `update-environment` makes `python3` the .python-version one, not the runner's.
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: benchmark/python/.python-version
+          update-environment: true
+
+      # build needs only the stdlib, so the analysis venv waits for compare.
+      - name: Build micros - candidate (PR head)
+        working-directory: benchmark/python
+        run: python3 run.py build
+
+      # Skips when main has no suite yet, rather than erroring.
+      - name: Build micros - baseline (origin/main)
+        id: baseline
+        run: |
+          git fetch --no-tags --depth=1 origin main
+          git worktree add "$RUNNER_TEMP/base" origin/main
+          if [ ! -f "$RUNNER_TEMP/base/benchmark/python/run.py" ]; then
+            echo "origin/main has no benchmark suite yet; skipping the regression gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          cd "$RUNNER_TEMP/base/benchmark/python"
+          python3 run.py build
+
+      # VMs vary ~2.7x run to run, so the sides alternate on 1 runner and a shift hits both.
+      - name: Micros - interleaved
+        if: steps.baseline.outputs.skip != 'true'
+        working-directory: benchmark/python
+        run: |
+          python3 run.py ab \
+            --candidate-build ../build \
+            --baseline-build "$RUNNER_TEMP/base/benchmark/build" \
+            --candidate-out "$RUNNER_TEMP/candidate" \
+            --baseline-out "$RUNNER_TEMP/baseline" \
+            --scratch "$RUNNER_TEMP/ab"
+
+      # A temp dir, never the committed reports/.
+      - name: Compare and gate
+        if: steps.baseline.outputs.skip != 'true'
+        working-directory: benchmark/python
+        run: |
+          uv sync
+          uv run python run.py compare \
+            "$RUNNER_TEMP/baseline/aggregated.json" \
+            "$RUNNER_TEMP/candidate/aggregated.json" \
+            --out "$RUNNER_TEMP/compare" \
+            --fail-on-regression
+
+      # Kept when the gate fails too, so a flagged regression or a flake can be inspected.
+      - name: Upload compare artifacts
+        if: always() && steps.baseline.outputs.skip != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: micro-compare
+          path: |
+            ${{ runner.temp }}/compare
+            ${{ runner.temp }}/candidate/aggregated.json
+            ${{ runner.temp }}/baseline/aggregated.json
+          if-no-files-found: warn

@@ -1,0 +1,42 @@
+name: Benchmark host app checks
+
+# No `paths:` filter: a filtered run never reports on a PR outside it, blocking the required check.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # The root analysis skips benchmark/app, so this is its only one.
+  analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/app
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+        with:
+          working-directory: benchmark/app
+      - run: flutter --no-version-check analyze .
+
+  # The ruleset requires this job's id, so no `name:` and no rename.
+  bench-app-ok:
+    needs: [analyze]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          RESULTS: analyze=${{ needs.analyze.result }}
+        run: echo "$RESULTS"
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
