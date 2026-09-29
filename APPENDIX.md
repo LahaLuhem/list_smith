@@ -598,7 +598,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 [dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. 4 things still bite here:
 
 - **The rulesets are the load-bearing half.** Auto-merge only waits on required checks, so it's
-  safe only while `main` requires all 4 in [hard rule 6](.ai/AGENTS.md#hard-rules). Keep
+  safe only while `main` requires every check in [hard rule 6](.ai/AGENTS.md#hard-rules). Keep
   `required_signatures` out: GitHub's rebase-merge makes unsigned commits, so that rule would block
   every merge, bot or human.
 - **An Actions major can change CI and still pass, which is what hard rule 8 is for.** dartender's
@@ -607,11 +607,10 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   `pull_request_target`, `workflow_run`, `release` and tag pushes. v10 was a no-op here only because
   every `setup-uv` step already wrote `enable-cache: true`.
 - **A required workflow can't have a `paths:` filter.** A filtered run never reports on a PR outside
-  its paths, so the PR waits forever. That's why `bench-analyzer.yml` runs on every PR: `uv` bumps
-  land in `benchmark/python`, so its tests matter most on the PRs that merge themselves.
-  `bench-app.yml` does too, as the only analysis of a host app that gets bumps of its own
-  ([why](#root-analysis-skips-bench-app)). [`benchmark.yml`](.github/workflows/benchmark.yml) keeps
-  its filter and stays unrequired, since no Dependabot PR touches the `lib/**` it measures.
+  its paths, so the PR waits forever. That's why `bench-app.yml` runs on every PR, as the only
+  analysis of a host app that gets bumps of its own ([why](#root-analysis-skips-bench-app)).
+  [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and stays unrequired, since no
+  Dependabot PR touches the `lib/**` it measures.
 - **Auto-merge uses `GITHUB_TOKEN`, not the changelog App.** The App sits in both rulesets' bypass
   lists so its changelog commit gets through, and merging as the App would skip the checks. The
   cost: a `GITHUB_TOKEN` merge starts no workflows, so `main`'s push run is skipped for auto-merged

@@ -19,3 +19,4 @@ jobs:
       coveralls: true
       min-coverage: 95
       coverage-excludes: ""
+      python-min-coverage: 90
