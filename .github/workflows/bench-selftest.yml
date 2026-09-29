@@ -1,0 +1,125 @@
+name: Benchmark gate self-test
+
+# Manual only: a measurement, not a check, and on PRs it would double an expensive job.
+on:
+  workflow_dispatch:
+    inputs:
+      measure-millis:
+        description: Per-measurement window in ms. Blank uses the gate's own default.
+        required: false
+        type: string
+        default: ''
+
+# Never cancel: a run in flight is part of the sample.
+concurrency:
+  group: bench-selftest-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  selftest:
+    name: Self-comparison ${{ matrix.run }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Independent samples: one flaky runner must not cancel the rest of the measurement.
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+      # No floating tag since v8, hence the full version. `latest-known` keeps the install verified.
+      - uses: astral-sh/setup-uv@v10.1.0
+        with:
+          version: latest-known
+          enable-cache: true
+          prune-cache: false
+          download-from-astral-mirror: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: benchmark/python/.python-version
+          update-environment: true
+
+      # Same binaries on both sides, so any trip is the runner, never the code.
+      - name: Measure the same commit against itself
+        working-directory: benchmark/python
+        run: |
+          python3 run.py build
+          python3 run.py ab \
+            --candidate-build ../build \
+            --baseline-build ../build \
+            --candidate-out "$RUNNER_TEMP/sideA" \
+            --baseline-out "$RUNNER_TEMP/sideB" \
+            --scratch "$RUNNER_TEMP/ab" \
+            ${WINDOW:+--measure-millis "$WINDOW"}
+        env:
+          WINDOW: ${{ inputs.measure-millis }}
+
+      # The gate's own verdict, captured rather than enforced.
+      - name: Gate verdict and timing separation
+        working-directory: benchmark/python
+        run: |
+          uv sync
+
+          set +e
+          uv run python run.py compare \
+            "$RUNNER_TEMP/sideA/aggregated.json" \
+            "$RUNNER_TEMP/sideB/aggregated.json" \
+            --out "$RUNNER_TEMP/compare" \
+            --fail-on-regression > "$RUNNER_TEMP/compare.log" 2>&1
+          gate_exit=$?
+          set -e
+          cat "$RUNNER_TEMP/compare.log"
+
+          separation=$(uv run python - <<'PY'
+          import json
+          import os
+
+          from list_smith_bench.data.utils.drift import side_timing_separation
+
+          temp = os.environ["RUNNER_TEMP"]
+          with open(f"{temp}/sideA/aggregated.json") as handle:
+              side_a = json.load(handle)
+          with open(f"{temp}/sideB/aggregated.json") as handle:
+              side_b = json.load(handle)
+
+          print(f"{side_timing_separation(side_a, side_b):.3f}")
+          PY
+          )
+
+          if [ "$gate_exit" -eq 0 ]; then
+            verdict='pass (no false positive)'
+          else
+            verdict='**TRIPPED**, a false positive'
+          fi
+
+          {
+            echo "### Self-comparison ${{ matrix.run }}"
+            echo
+            echo "- window: \`${WINDOW:-gate default}\` ms"
+            echo "- gate: $verdict"
+            echo "- side timing separation: \`$separation\` of the job span"
+            echo "  (0.5 = each side in its own half, 0.0 = fully interleaved)"
+            echo
+            echo '```text'
+            cat "$RUNNER_TEMP/compare.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          WINDOW: ${{ inputs.measure-millis }}
+
+      - name: Upload self-test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gate-selftest-${{ matrix.run }}
+          path: |
+            ${{ runner.temp }}/compare
+            ${{ runner.temp }}/compare.log
+            ${{ runner.temp }}/sideA/aggregated.json
+            ${{ runner.temp }}/sideB/aggregated.json
+          if-no-files-found: warn
