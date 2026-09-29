@@ -87,10 +87,9 @@ These are the general, architecture-independent rules.
 5. **Semver, strictly.** A public signature change, a deletion, or a behavioural change to a
    documented contract is breaking. Surface the implication before the diff lands.
 6. **`main` requires `ci / ok` and `conventions / ok` from the `dartender` ruleset, plus
-   `bench-analyzer-ok` and `bench-app-ok` from this repo's own `Protected`.** Those 2 are job ids in
-   `bench-analyzer.yml` and `bench-app.yml`, and a required check that stops reporting blocks every
-   PR. So renaming either, giving it a `name:` or path-filtering its workflow means changing
-   `Protected` in the same pass:
+   `bench-app-ok` from this repo's own `Protected`.** That one is a job id in `bench-app.yml`, and a
+   required check that stops reporting blocks every PR. So renaming it, giving it a `name:` or
+   path-filtering its workflow means changing `Protected` in the same pass:
    [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
    headers are written by [`scripts/release.sh`](scripts/release.sh), and the `## [Unreleased]`
