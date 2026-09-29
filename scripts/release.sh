@@ -40,9 +40,8 @@ fi
 
 MAIN_BRANCH="main"
 
-# The lint checks and the linterpol image tag come from one manifest shared with
-# repo.yml, so this preflight and CI can't drift. Adding a linter is one entry
-# there, with no change here.
+# The lint checks and the linterpol image tag come from the manifest dartender's CI reads too, so
+# this preflight and CI can't drift.
 LINT_MANIFEST="${REPO_ROOT}/.github/lint-checks.json"
 
 BUMP=""
@@ -275,9 +274,7 @@ log "'## Unreleased' populated."
 # Preflight: lint / format / analyze / test (cheapest to slowest)
 # ---------------------------------------------------------------------------
 step 'Preflight: lint checks (via linterpol)'
-# Image + checks come from the manifest shared with CI (repo.yml), so both gates
-# run the identical set. Validate it parses and is non-empty first: an unreadable
-# manifest must fail loudly here, not silently skip every lint.
+# An unreadable manifest must fail loudly here, not silently skip every lint.
 if ! jq -e '.image and (.checks | length > 0)' "$LINT_MANIFEST" >/dev/null 2>&1; then
     err '.github/lint-checks.json is missing, malformed, or has no checks.'
     exit 1
@@ -285,9 +282,8 @@ fi
 lint_image="$(jq -r '.image' "$LINT_MANIFEST")"
 while IFS=$'\t' read -r lint_name lint_cmd; do
     log "lint: ${lint_name}"
-    # $lint_cmd is intentionally unquoted so it word-splits into the tool + args
-    # and glob-expands (e.g. scripts/*.sh) against the checkout, matching how
-    # repo.yml's matrix invokes it.
+    # Left unquoted so it splits into the tool plus its args, and so globs like scripts/*.sh expand.
+    # dartender's lint job runs it the same way.
     # shellcheck disable=SC2086
     if ! docker run --rm -v "${REPO_ROOT}:/work:ro" "$lint_image" $lint_cmd; then
         err "${lint_name} failed (via linterpol)."

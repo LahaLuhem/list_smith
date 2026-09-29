@@ -30,7 +30,7 @@ renames.
 - [Fetchers are told why they were called](#fetch-trigger)
 - [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
-- [Dependabot automerges the boring tier, behind 6 aggregate checks](#dependabot-automerge)
+- [Dependabot's PRs auto-merge through dartender](#dependabot-automerge)
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
 
@@ -568,27 +568,12 @@ renames.
 <a id="ci-format-sdk"></a>
 ## The format gate runs Flutter's Dart, not standalone Dart
 
-**What broke:** [`repo.yml`](.github/workflows/repo.yml)'s format job installed Dart stable
-directly, skipping the `setup-flutter` composite to save a `pub get` it doesn't need. Dart stable
-runs ahead of Flutter's bundled Dart and the formatter changed between them, so a tree that was
-clean locally met a red gate reformatting files the pull request never touched.
+Whatever CI rejects, a local `dart format .` has to fix. Standalone Dart stable runs ahead of
+Flutter's bundled Dart and the formatter changed between them, so a tree that was clean locally
+once met a red gate reformatting files the pull request never touched.
 
-**Why Flutter's Dart, not a pinned version:** whatever CI rejects, a local `dart format .` has to be
-able to fix. Dart stable can't promise that once it drifts from Flutter's bundled Dart, and a
-literal pin can't either once it drifts from [`.fvmrc`](.fvmrc). The SDK the package already targets
-is the only version that stays in step by construction. The job still skips the composite, so it
-keeps the speed.
-
-**Which channel is read, not repeated.** Every job that installs Flutter takes the channel from
-[`.fvmrc`](.fvmrc) with `jq`, so the SDK that CI runs and the one FVM gives you locally cannot
-disagree. A second copy in a workflow would agree on the day it was written and silently stop
-agreeing later.
-
-**No job can go the other way, onto pure Dart.** The package depends on `flutter` from the SDK and
-its tests are widget tests, so analyze, test, the dependency validator, the example and the
-benchmark all need Flutter to resolve at all.
-[`changelog.yml`](.github/workflows/changelog.yml) is the one genuinely Dart-only job, and already
-runs `dart-lang/setup-dart`.
+dartender's Format job runs Flutter's Dart, on the stable channel like the rest of its jobs. It
+doesn't read [`.fvmrc`](.fvmrc), which only picks the SDK FVM gives you locally.
 
 Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) and ported here.
 
@@ -607,62 +592,30 @@ analyses every file.
 ---
 
 <a id="dependabot-automerge"></a>
-## Dependabot automerges the boring tier, behind 6 aggregate checks
+## Dependabot's PRs auto-merge through dartender
 
-[`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) arms GitHub's native
-auto-merge (rebase) for every `github-actions` bump, majors included, and for patch and minor bumps
-in `uv`. Every `pub` bump and every `uv` major waits for a human. Dependabot has no `automerge`
-config key the way Renovate does, so the mechanism is a workflow. Ported from
-[`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager), which runs it behind 4 checks
-rather than 6.
+Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job in
+[dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. 4 things still bite here:
 
-- **`pub` stays manual** because a root-pubspec bump reaches every consumer's resolution and is
-  semver-relevant, and bots are exempt from [`changelog.yml`](.github/workflows/changelog.yml), so
-  it would land on pub.dev with no release note. `uv` is benchmark tooling and `github-actions` is
-  CI wiring, and neither reaches a published byte.
-- **Minor, not just patch,** because `dependabot.yml` groups minor with patch and `fetch-metadata`
-  reports a group's *highest* step. Patch-only would skip any batch holding one minor, which is most
-  of them.
-- **`github-actions` majors ride along, and hard rule 8 is what pays for it.** A green check is a
-  weak oracle here: Actions warns on an unknown input rather than failing, and majors in this
-  ecosystem are default-flips more often than API breaks. `setup-uv` v9 flipped `prune-cache` to
-  `false`, and v10 made `enable-cache: auto` skip `pull_request_target`, `workflow_run`, `release`
-  and tag pushes. Both would have merged green while quietly changing CI. v10 was a real no-op here
-  only because every `setup-uv` step already wrote `enable-cache: true` rather than leaning on
-  `auto`.
-- **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks and ignores
-  failing ones that aren't, so this is safe only while `main`'s ruleset is **active** and requires
-  all 6 contexts. Keep `required_signatures` out of it: rebase-merge emits unsigned commits, so it
-  would block every rebase merge, bot or human.
-- **Aggregates, not the real job names.** [`repo.yml`](.github/workflows/repo.yml) fans its lint
-  matrix out of [`lint-checks.json`](.github/lint-checks.json), so those contexts move whenever a
-  linter does. `package.yml` and `example.yml` both hold a job displayed as *Flutter analyze*, which
-  no ruleset could tell apart, and `bench-app.yml` adds a 3rd. Each workflow instead closes with
-  one `*-ok` job that `needs` its siblings, so 6 names are the contract and the jobs behind them
-  are free to move. They inspect `needs.*.result` by hand because a skipped job passes a required
-  check, which is what keeps `conventions-ok` green on bot PRs.
-- **`pr-conventions.yml` alone runs without a `concurrency` group.** Dependabot fires a burst of
-  events on one SHA, and `conventions-ok` is `if: always()`, which Actions runs *even on a
-  cancelled run*. It then trips its own `cancelled` guard and pins the required check red on a SHA
-  nothing re-reports. `cancel-in-progress: false` is no middle ground, since a superseded *pending*
-  run is cancelled too. 3 jobs of bash per event is the cheaper trade.
-- **`bench-analyzer.yml` and `bench-app.yml` gave up their path filters to join them.** A filtered
-  workflow never reports on a PR that misses its paths, so it cannot back a required check, and
-  leaving the analyzer tests unrequired was worse: every `uv` bump touches `benchmark/python/**`, so
-  those tests matter most on exactly the PRs being automated. ~20s with the uv cache, so it runs
-  everywhere rather than behind bespoke change detection.
-  [`bench-app.yml`](.github/workflows/bench-app.yml) takes the same trade for one `flutter analyze`
-  on the host app, which nothing else covered, `package.yml` analysing `lib test` only.
-  [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and stays unrequired: no
-  Dependabot PR can touch `lib/**`, and it costs ~8 minutes a side.
-- **`GITHUB_TOKEN`, not the changelog App.** The App sits in the ruleset's bypass list so it can
-  push `CHANGELOG.md` to `main`, and a bypass covers the ruleset whole, status checks included. The
-  cost is that a `GITHUB_TOKEN` merge triggers no further workflows, so
-  [`package.yml`](.github/workflows/package.yml)'s push-to-main run is skipped on automerged PRs.
-  For these 2 ecosystems that run only re-tests Dart neither touches.
-- **`pull_request_target`** because Dependabot's `pull_request` token is read-only and arming
-  auto-merge needs write. Safe the same way `changelog.yml` is: the workflow loads from `main` and
-  PR code is never checked out.
+- **The rulesets are the load-bearing half.** Auto-merge only waits on required checks, so it's
+  safe only while `main` requires all 4 in [hard rule 6](.ai/AGENTS.md#hard-rules). Keep
+  `required_signatures` out: GitHub's rebase-merge makes unsigned commits, so that rule would block
+  every merge, bot or human.
+- **An Actions major can change CI and still pass, which is what hard rule 8 is for.** dartender's
+  Action inputs check fails on an input an action no longer takes, but not on a default it flipped.
+  `setup-uv` v9 flipped `prune-cache` to `false`, and v10 made `enable-cache: auto` skip
+  `pull_request_target`, `workflow_run`, `release` and tag pushes. v10 was a no-op here only because
+  every `setup-uv` step already wrote `enable-cache: true`.
+- **A required workflow can't have a `paths:` filter.** A filtered run never reports on a PR outside
+  its paths, so the PR waits forever. That's why `bench-analyzer.yml` runs on every PR: `uv` bumps
+  land in `benchmark/python`, so its tests matter most on the PRs that merge themselves.
+  `bench-app.yml` does too, as the only analysis of a host app that gets bumps of its own
+  ([why](#root-analysis-skips-bench-app)). [`benchmark.yml`](.github/workflows/benchmark.yml) keeps
+  its filter and stays unrequired, since no Dependabot PR touches the `lib/**` it measures.
+- **Auto-merge uses `GITHUB_TOKEN`, not the changelog App.** The App sits in both rulesets' bypass
+  lists so its changelog commit gets through, and merging as the App would skip the checks. The
+  cost: a `GITHUB_TOKEN` merge starts no workflows, so `main`'s push run is skipped for auto-merged
+  PRs.
 
 ---
 
