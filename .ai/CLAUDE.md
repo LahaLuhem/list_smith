@@ -98,7 +98,7 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 - `dcm analyze` clean where the CLI is there. Otherwise apply the DCM rules by hand, since
   `flutter analyze` surfaces none of them. See [`CODESTYLE.md`](CODESTYLE.md#dcm-rules).
 - `dart format --output=none --set-exit-if-changed .` clean.
-- `flutter test` green.
+- `flutter test` green, in the root and in `example/`.
 - Lint clean via the linterpol image for whatever changed, per
   [`lint-checks.json`](.github/lint-checks.json).
 - `flutter pub publish --dry-run` clean if the change is publish-relevant. Never bump the version or

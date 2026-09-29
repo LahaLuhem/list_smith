@@ -27,13 +27,13 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
   [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
 - **`flutter_test`** for widget and unit tests.
 - **`dependency_validator`** guards the dependency set, scoped by `dart_dependency_validator.yaml`
-  to the published surface. It runs as a global tool, not a dev-dependency.
+  to the published surface.
 - **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
   Docker image, so the only local requirement is Docker plus `jq`. The check set and image tag live
-  in [`lint-checks.json`](.github/lint-checks.json), which `repo.yml` fans a CI matrix out of and
-  `scripts/release.sh` loops in its preflight, so the two can't drift. **Adding a linter is one
-  entry in that manifest**, no workflow or script edit. Per-tool config sits in `.rumdl.toml` and
-  `.yamllint.yaml`.
+  in [`lint-checks.json`](.github/lint-checks.json), which dartender's setup writes and its CI fans a
+  matrix out of. `scripts/release.sh` loops the same file in its preflight, so the 2 can't drift.
+  **A linter only this repo needs goes in a workflow of its own**, since the next setup run rewrites
+  the manifest. Per-tool config sits in `.rumdl.toml` and `.yamllint.yaml`.
 - **Published to pub.dev.** `.pubignore` controls the tarball, `.editorconfig` is the source of
   truth for text-file conventions (width 100, LF, UTF-8).
 
@@ -86,10 +86,11 @@ These are the general, architecture-independent rules.
    `public_member_api_docs` is on.
 5. **Semver, strictly.** A public signature change, a deletion, or a behavioural change to a
    documented contract is breaking. Surface the implication before the diff lands.
-6. **`repo-ok`, `package-ok`, `example-ok`, `conventions-ok`, `bench-analyzer-ok`, `bench-app-ok`
-   are `main`'s required checks.** Each closes one PR workflow, and the job id *is* the context:
-   renaming one, giving it a `name:`, dropping it, or path-filtering its workflow un-gates
-   Dependabot automerge silently. Touch one, update the ruleset in the same pass:
+6. **`main` requires `ci / ok` and `conventions / ok` from the `dartender` ruleset, plus
+   `bench-analyzer-ok` and `bench-app-ok` from this repo's own `Protected`.** Those 2 are job ids in
+   `bench-analyzer.yml` and `bench-app.yml`, and a required check that stops reporting blocks every
+   PR. So renaming either, giving it a `name:` or path-filtering its workflow means changing
+   `Protected` in the same pass:
    [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
    headers are written by [`scripts/release.sh`](scripts/release.sh), and the `## [Unreleased]`
@@ -98,15 +99,16 @@ These are the general, architecture-independent rules.
    `cider` by hand. The `cider:` block in `pubspec.yaml` is static config, hand-editable.
 8. **Workflows write out the action defaults they rely on**, even when the default is already the
    value you want. Every `github-actions` bump automerges, majors included, and an action major is
-   usually a default-flip that CI stays green through, since Actions warns on an unknown input
-   rather than failing: [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
+   usually a default-flip that CI stays green through:
+   [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 
 ## PR conventions
 
-Enforced by [`.github/workflows/pr-conventions.yml`](.github/workflows/pr-conventions.yml).
+Enforced by dartender's `conventions.yml`, called from
+[`.github/workflows/conventions.yml`](.github/workflows/conventions.yml).
 
 - **Branch name**: `<type>/#<issue>-<slug>`, `<type>` one of `feature`, `bugfix`, `chore`,
-  `refactor`, `acceptance-test-issues`, `hotfix`. Example: `feature/#7-paginated-listview`.
+  `refactor`. Example: `feature/#7-paginated-listview`.
 - **Exactly 1 `sem-*` label per PR.** Selects the changelog category for the post-merge
   automation:
 

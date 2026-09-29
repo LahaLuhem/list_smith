@@ -10,8 +10,8 @@ in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
 - Not published (`publish_to: 'none'`), so no semver discipline and it may depend on whatever
   ecosystem packages it likes.
 - Local only, no publish impact, but keep it building and analysing clean on the strict lint set it
-  inherits via `include`. [`example.yml`](../.github/workflows/example.yml) runs `flutter analyze`
-  and `dependency_validator` here.
+  inherits via `include`. dartender's CI, called from [`ci.yml`](../.github/workflows/ci.yml),
+  checks it along with the package.
 
 ## Architecture
 
