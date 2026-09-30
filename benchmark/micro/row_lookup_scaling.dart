@@ -1,0 +1,120 @@
+/// Micro-benchmark: finding every built row again on a rebuild, as the loaded list grows.
+///
+/// A page landing at the end moves no row, so each one is found at its last index. An item landing on
+/// top moves them all, so the 1st lookup builds the id map. Pages and items match `dedup_scaling`'s,
+/// so the curves read side by side.
+library;
+
+import 'package:benchmark_harness/benchmark_harness.dart';
+import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
+
+import '../harness/measure.dart';
+import '../harness/result_writer.dart';
+import '../harness/scenario_args.dart';
+
+/// Loaded item counts the lookups are measured against. The pivot for the scaling curve, `dedup_scaling`'s.
+const _itemCounts = [1000, 10000, 100000];
+const _itemsPerPage = 20;
+
+/// Rows a list keeps built around its viewport.
+const _builtRows = 30;
+
+/// One rebuild: a fresh [RowLookup] over the new pages, then every built row found again and re-keyed.
+final class _RowLookupScaling extends BenchmarkBase {
+  new(this.itemCount, {required this.isItemOnTop}) : super('row_lookup_scaling_n$itemCount');
+
+  final int itemCount;
+  final bool isItemOnTop;
+  late final List<List<_Item>> _pages;
+  late final List<({int id, int lastIndex})> _rows;
+  var lastFoundCount = 0;
+
+  @override
+  void setup() {
+    final loadedPages = List<List<_Item>>.generate(
+      itemCount ~/ _itemsPerPage,
+      (page) => List<_Item>.generate(
+        _itemsPerPage,
+        (index) => _Item(page * _itemsPerPage + index),
+        growable: false,
+      ),
+      growable: false,
+    );
+    if (isItemOnTop) {
+      // The user sits at the top, and every row there now sits 1 lower than it was built.
+      _pages = [
+        [const _Item(-1), ...loadedPages.first],
+        ...loadedPages.skip(1),
+      ];
+      _rows = List.generate(_builtRows, (index) => (id: index, lastIndex: index));
+    } else {
+      // The user scrolled to the bottom, and the page that brought in moves nothing.
+      _pages = [
+        ...loadedPages,
+        List.generate(_itemsPerPage, (index) => _Item(itemCount + index), growable: false),
+      ];
+      _rows = List.generate(_builtRows, (index) {
+        final id = itemCount - _builtRows + index;
+
+        return (id: id, lastIndex: id);
+      });
+    }
+  }
+
+  @override
+  void run() {
+    final rows = RowLookup(_pages, (item) => item.id);
+    var foundCount = 0;
+    for (final row in _rows) {
+      final index = rows.indexOf(row.id, row.lastIndex);
+      // Keying the rebuilt row reads its item again, so that read is part of the rebuild too.
+      if (index != null && rows.itemAt(index).id == row.id) foundCount++;
+    }
+
+    lastFoundCount = foundCount;
+  }
+}
+
+/// A reference-identity item with an [id], the shape `itemId` keys on.
+final class _Item {
+  const new(this.id);
+
+  final int id;
+}
+
+Future<void> main(List<String> argv) async {
+  final args = ScenarioArgs.parse(argv);
+
+  final writer = await ResultWriter.open(
+    outputPath: args.outputPath,
+    scenario: 'row_lookup_scaling',
+    sdkVersion: ScenarioArgs.sdkVersion,
+    packageVersion: args.packageVersion,
+    gitSha: args.gitSha,
+  );
+
+  for (var i = 0; i < args.iterations; i++) {
+    for (final itemCount in _itemCounts) {
+      final append = _RowLookupScaling(itemCount, isItemOnTop: false);
+      final appendMicroseconds = measureWindowed(append, millis: args.measureMillis);
+      final itemOnTop = _RowLookupScaling(itemCount, isItemOnTop: true);
+      final itemOnTopMicroseconds = measureWindowed(itemOnTop, millis: args.measureMillis);
+
+      writer.writeRecord(
+        iteration: i,
+        samples: {
+          'page_appended_microseconds_per_pass': [appendMicroseconds],
+          'item_on_top_microseconds_per_pass': [itemOnTopMicroseconds],
+        },
+        summary: {
+          'item_count': itemCount,
+          'page_appended_microseconds_per_pass': appendMicroseconds,
+          'item_on_top_microseconds_per_pass': itemOnTopMicroseconds,
+          'found_rows': append.lastFoundCount + itemOnTop.lastFoundCount,
+        },
+      );
+    }
+  }
+
+  await writer.close();
+}

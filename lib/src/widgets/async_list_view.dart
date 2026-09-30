@@ -495,6 +495,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
             state: _displayFor(state),
             fetchNextPage: fetchNextPage,
             itemBuilder: widget.itemBuilder,
+            itemId: widget.source.itemId,
             grouping: widget.grouping,
             scroll: widget.scroll,
             isSearchMode: isSearchMode,
