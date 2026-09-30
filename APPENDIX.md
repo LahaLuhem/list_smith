@@ -329,8 +329,8 @@ renames.
   derivation, so search-mode overlaps de-dup exactly like normal-mode ones.
 - **Cost, and why it's acceptable:** O(loaded items), re-run on each state change. There is no
   cheaper seam without storing de-duped pages plus a parallel raw-count side-channel for the end
-  policy, since ISP re-materialises the whole page list on every change anyway. Measured with no
-  real overlap: ~0.3 ms at 1k items, ~3.5 ms at 10k, ~40 ms at 100k. Memoised on paging-state
+  policy, since ISP re-materialises the whole page list on every change anyway. The [benchmark
+  report](benchmark/reports/SUMMARY.md) measures it with no real overlap. Memoised on paging-state
   identity, so a keystroke before the debounce commits reuses the last view. Sub-millisecond for
   most lists, with the cliff only at tens of thousands in one live list, which strains widget count
   and memory regardless.

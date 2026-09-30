@@ -257,8 +257,22 @@ def _plot_frame_thread_costs(
         linewidth=1.0,
         label=f"60 Hz frame budget ({budget_ms:.2f} ms)",
     )
-    # A raster spike can pass the budget, and a clipped bar would hide by how much.
-    ax.set_ylim(0, max(budget_ms, long["ms"].max()) + 1.5)
+    top_ms = budget_ms + 1.5
+    ax.set_ylim(0, top_ms)
+    # A spike past the axis gets clipped and labelled, rather than squashing every other bar.
+    for container in ax.containers:
+        for bar in container:
+            if bar.get_height() > top_ms:
+                ax.annotate(
+                    f"{bar.get_height():.0f} ms",
+                    xy=(bar.get_x() + bar.get_width() / 2, top_ms),
+                    xytext=(0, -3),
+                    textcoords="offset points",
+                    ha="center",
+                    va="top",
+                    fontsize=7,
+                    bbox={"boxstyle": "round,pad=0.2", "facecolor": "white", "edgecolor": "none"},
+                )
     ax.set_xlabel("")
     # Tilted, or the edit_transitions_* names run into each other.
     plt.setp(ax.get_xticklabels(), rotation=25, ha="right", rotation_mode="anchor")
