@@ -63,8 +63,9 @@ uv run python run.py report ../results-local/current/aggregated.json --out ../re
 ```
 
 `run` executes the micros and drives the UI scenarios, writing one `aggregated.json`. Useful
-flags: `--skip-scenarios` (micros only, no device needed), `--skip-micros`,
-`--scenarios <name...>`, `--device <id>`.
+flags: `--skip-scenarios` (micros only, no device needed), `--skip-micros`, `--device <id>`, and
+`--scenarios <file...>`, which takes file names without `.dart` (`dedup_scaling`,
+`isp_scroll_test`), not the scenario names below.
 
 Lint the Python side before committing: `uv run ruff format .` then `uv run ruff check .`.
 
