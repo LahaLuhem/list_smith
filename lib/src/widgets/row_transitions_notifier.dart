@@ -78,12 +78,9 @@ final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
   void settle() {
     if (_transitions.isEmpty) return;
 
-    final leavingItems = _transitions.values
-        .map((transition) => transition.leavingItem)
-        .nonNulls
-        .toList(growable: false);
+    _transitions.values.map((transition) => transition.leavingItem).nonNulls.forEach(bookRemoval);
     _disposeTransitions();
-    leavingItems.forEach(bookRemoval);
+
     notifyListeners();
   }
 
@@ -103,8 +100,8 @@ final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
 
   void _animate(_Transition<T> transition, {required bool isEntering}) {
     transition.hasStarted = true;
-    final controller = transition.controller;
-    unawaited(isEntering ? controller.forward() : controller.reverse());
+    unawaited(isEntering ? transition.controller.forward() : transition.controller.reverse());
+
     notifyListeners();
   }
 

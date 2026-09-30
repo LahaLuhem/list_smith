@@ -4,6 +4,7 @@ library;
 import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/models/grouping.dart';
+import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
