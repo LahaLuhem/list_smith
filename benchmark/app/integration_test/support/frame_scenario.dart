@@ -146,6 +146,7 @@ Map<String, dynamic> buildFrameRecord({
       'missed_frame_build_count': summary['missed_frame_build_budget_count'] as num,
       'avg_frame_raster_millis': summary['average_frame_rasterizer_time_millis'] as num,
       'worst_frame_raster_millis': summary['worst_frame_rasterizer_time_millis'] as num,
+      'p99_frame_raster_millis': summary['99th_percentile_frame_rasterizer_time_millis'] as num,
       'missed_frame_raster_count': summary['missed_frame_rasterizer_budget_count'] as num,
       'frame_count': summary['frame_count'] as num,
     },

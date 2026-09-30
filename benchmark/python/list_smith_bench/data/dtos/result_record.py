@@ -6,7 +6,10 @@ is internal and stable, and we control both writer and reader end to end.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
+
+# The thread a frame scenario's summary keys name, as in `avg_frame_<thread>_millis`.
+type FrameThread = Literal["build", "raster"]
 
 # One JSON-decoded record. See `harness/result_writer.dart` for the writer. The shape is:
 #
