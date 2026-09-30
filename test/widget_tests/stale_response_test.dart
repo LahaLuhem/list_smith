@@ -65,6 +65,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           controller: controller,
           observer: observer,
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -107,6 +108,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           controller: controller,
           observer: observer,
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
@@ -145,6 +147,7 @@ void main() {
         fetchPage: pagedFetcher(const [
           [1, 2, 3],
         ]),
+        itemId: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
@@ -190,6 +193,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: fetchPage,
+        itemId: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
@@ -229,6 +233,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: fetchPage,
+        itemId: (item) => item,
         search: AsyncSearch(
           fetchPage: SearchPageFetcher(
             (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
@@ -284,6 +289,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           controller: controller,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           // No refresh: passed, so this runs the default PullToRefresh with its default ResetToFirstPage
@@ -335,6 +341,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           controller: controller,
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -370,6 +377,7 @@ void main() {
         fetchPage: PageFetcher(
           (request) async => [request.pageIndex * 3, request.pageIndex * 3 + 1],
         ),
+        itemId: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
@@ -862,6 +870,7 @@ Future<void> _pumpStamped(
   tester,
   ListSmith.async(
     fetchPage: source.fetchPage,
+    itemId: (item) => item,
     endPolicy: const FixedPageCountPolicy(pageCount: 3),
     refresh: PullToRefresh(reload: reload),
     search: source.search,
@@ -890,6 +899,7 @@ Future<void> _pumpSearch(
   tester,
   ListSmith.async(
     fetchPage: PageFetcher.withSignal((_) async => (const [0], null)),
+    itemId: (item) => item,
     search: AsyncSearch(fetchPage: searchFetchPage),
     query: query,
     searchDebounce: const Duration(milliseconds: 20),

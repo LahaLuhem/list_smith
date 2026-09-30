@@ -33,6 +33,7 @@ class CursorFeedView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               fetchPage: PageFetcher.withSignal(viewModel.cursorFetchPage),
+              itemId: (item) => item.id,
               endPolicy: const StopOnNullSignalPolicy(),
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) =>

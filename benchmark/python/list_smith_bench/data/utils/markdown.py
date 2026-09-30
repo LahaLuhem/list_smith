@@ -308,14 +308,14 @@ def render_summary_markdown(
     parts.extend(
         [
             "## Overlap de-dup cost vs loaded list size\n",
-            "From the `dedup_scaling` micro (AOT, `benchmark_harness`). With an `itemId`, the "
-            "async list de-dups overlapping pages as a computed view over the paging state, "
+            "From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dups "
+            "overlapping pages by `itemId` as a computed view over the paging state, "
             "re-walking every loaded item on each change so the stored pages stay raw and the end "
-            "policy can't read an all-duplicate page as the end. Measured at its worst case: "
-            "`itemId` set with no actual overlap, so nothing collapses and every item is "
-            "retained. Opt-in, and off the scroll path since it runs per page-load rather than "
-            "per frame. Sub-millisecond for a few thousand loaded items and climbing from there, "
-            "so past tens of thousands in one live list, de-duplicate at the source.\n",
+            "policy can't read an all-duplicate page as the end. Measured at its worst case: no "
+            "actual overlap, so nothing collapses and every item is retained. Off the scroll "
+            "path, since it runs per page-load rather than per frame. Sub-millisecond for a few "
+            "thousand loaded items and climbing from there, past the frame budget at tens of "
+            "thousands in one live list.\n",
             dedup_scaling_table(dataframe),
         ]
     )

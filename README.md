@@ -74,17 +74,20 @@ then override. list_smith does neither.
 
 ## A quick taste
 
-A function that fetches a page, a builder for each item. That's the whole setup:
+A function that fetches a page and a builder for each item, plus an `itemId` so the list can tell
+items apart. That's the whole setup:
 
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => api.fetchArticles(page: request.pageIndex, size: request.pageSize)),
+  itemId: (article) => article.id,
   itemBuilder: (context, article, index) => ArticleTile(article),
 )
 ```
 
 That already paginates as you scroll, pulls to refresh, loads, errors with a retry button, and knows
-when it has hit the end.
+when it has hit the end. No id field? A value with its own `==`, like an `int`, a `String` or a
+record, can be its own id: `itemId: (item) => item`.
 
 ## 2 kinds of list
 
@@ -107,6 +110,7 @@ is the end of the road:
 ListSmith.async(
   pageSize: 30,
   fetchPage: PageFetcher((request) => repo.load(request.pageIndex, request.pageSize)),
+  itemId: (item) => item.id,
   itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
@@ -175,6 +179,7 @@ ListSmith.async(
     final response = await api.load(request.pageIndex, request.pageSize);
     return (response.items, response.hasMore);
   }),
+  itemId: (item) => item.id,
   endPolicy: const ExplicitHasMorePolicy(),
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -203,6 +208,7 @@ ListSmith.async(
     final page = await api.list(cursor: request.previousSignal as String?, limit: request.pageSize);
     return (page.items, page.nextCursor);   // null nextCursor ends it
   }),
+  itemId: (item) => item.id,
   endPolicy: const StopOnNullSignalPolicy(),
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -226,6 +232,7 @@ one with items or the true end, showing the loading surface while it goes:
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => calendar.dayPage(request.pageIndex, request.pageSize)),
+  itemId: (item) => item.id,
   // An empty day isn't the end...
   endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 31),
   // ...so page straight past empty days to the 1st with entries.
@@ -244,22 +251,14 @@ pull re-scans.
 <summary><b>De-duplicating overlapping pages</b></summary>
 
 Offset-based sources can hand you the same row twice when the data shifts between fetches: a row is
-inserted, so page N's tail reappears as page N+1's head. list_smith renders what your source
-returns, so those repeats show. Pass an `itemId` and it drops any item whose key already appeared:
-
-```dart
-ListSmith.async(
-  fetchPage: PageFetcher(...),
-  itemId: (item) => item.id,
-  itemBuilder: ...,
-)
-```
+inserted, so page N's tail reappears as page N+1's head. list_smith drops any item whose `itemId`
+already showed up, so the repeat never renders.
 
 Keys compare by value, so an `int` or `String` id works. Compose one like `'${item.a}:${item.b}'`
-for multi-field identity. Keyset/cursor pagination rarely needs any of this.
+for multi-field identity.
 
-De-dup runs when a page arrives, never per scroll frame, and only when you pass `itemId`. What it
-costs is in [Performance](#performance).
+De-dup runs when a page arrives, never per scroll frame. What it costs is in
+[Performance](#performance).
 
 </details>
 
@@ -313,7 +312,7 @@ it was, `allOrNothing` commits only if every page succeeds.
 3 caveats:
 
 - **Best-effort can seam.** A kept-old page beside fresh neighbours can duplicate or gap if the data
-  shifted meanwhile. An `itemId` handles the duplicates, and gaps heal on the next refresh.
+  shifted meanwhile. De-dup drops the duplicates, and gaps heal on the next refresh.
 - **`withSignal` sources reload sequentially and atomically.** Page `k` needs page `k-1`, so the
   reload walks in order and any failure keeps the old list whole. `concurrency` and `onError` are
   ignored there. Scroll depth is still kept.
@@ -330,7 +329,7 @@ A toolbar button, a re-tapped tab, a re-read after a local write, a logout. Pass
 ```dart
 final controller = ListSmithController<Task>();
 
-ListSmith.async(fetchPage: PageFetcher(...), itemBuilder: ..., controller: controller)
+ListSmith.async(fetchPage: PageFetcher(...), itemId: (task) => task.id, itemBuilder: ..., controller: controller)
 
 await controller.refresh();     // fresh data wanted: exactly a pull
 await controller.invalidate();  // my data changed: re-read every loaded page, keep my place
@@ -367,7 +366,7 @@ re-read: tell the list, and it shows the change at once, keeping the scroll posi
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (task) => task.id,  // required: an edit finds its row by this
+  itemId: (task) => task.id,  // an edit finds its row by this
   itemBuilder: ...,
   controller: controller,
 )
@@ -462,6 +461,7 @@ views, with pagination and pull-to-refresh working in both:
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => repo.feed(request.pageIndex, request.pageSize)),
+  itemId: (item) => item.id,
   search: AsyncSearch(
     fetchPage: SearchPageFetcher((r) => repo.search(r.query, r.pageIndex, r.pageSize)),
   ),
@@ -504,7 +504,7 @@ Widget build(BuildContext context) => Column(
   children: [
     // your field: a TextField, a CupertinoTextField, your design system's search bar, wherever
     TextField(onChanged: (value) => setState(() => _query = value)),
-    Expanded(child: ListSmith.async(query: _query, /* fetchPage, search, itemBuilder as above */)),
+    Expanded(child: ListSmith.async(query: _query, /* fetchPage, itemId, search, itemBuilder as above */)),
   ],
 );
 ```
@@ -584,6 +584,7 @@ async-only, gathered into an `AsyncListSurfaces` you define once and reuse for a
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
+  itemId: (item) => item.id,
   itemBuilder: ...,
   emptyBuilder: (context) => const Center(child: Text('Nothing here yet')),
   surfaces: AsyncListSurfaces(
@@ -627,6 +628,7 @@ Nicer than a spinner: hand the loading slots the row you already build, with a s
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
+  itemId: (article) => article.id,
   itemBuilder: (context, article, index) => ArticleTile(article),
   surfaces: AsyncListSurfaces(
     // Hold the placeholder in a field, or you rebuild it every frame.
@@ -658,6 +660,7 @@ final class MyObserver extends ListSmithObserver {
 
 ListSmith.async(
   fetchPage: PageFetcher(...),
+  itemId: (item) => item.id,
   itemBuilder: ...,
   observer: const MyObserver(),
 )
@@ -727,8 +730,8 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
 | A 50 ms observer callback                            | pushes render latency to ~68 ms                                               |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
-on the debounce or go async. De-dup is opt-in and off the scroll path, but past tens of thousands in
-one live list, de-duplicate at the source. Edits run in that same pass, and
+on the debounce or go async. De-dup is off the scroll path, and only crosses the budget past tens of
+thousands of items in one live list. Edits run in that same pass, and
 [`edit_layer_scaling`](benchmark/micro/edit_layer_scaling.dart) measures what they add. Observers
 are called synchronously while a page loads: log, count, report, and do heavy work elsewhere.
 

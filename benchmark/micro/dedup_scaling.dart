@@ -1,8 +1,8 @@
 /// Micro-benchmark: the async list's overlap de-dup cost as the loaded list grows.
 ///
-/// Measured over pages that do NOT overlap, the common case where `itemId` is carried as insurance and
-/// collapses nothing. That's the worst case for the pass, every item retained so allocation is maximal,
-/// and the penalty you pay for not having the problem.
+/// Measured over pages that do NOT overlap, the common case where `itemId` collapses nothing. That's
+/// the worst case for the pass, every item retained so allocation is maximal, and the penalty you pay
+/// for not having the problem.
 ///
 /// The cost scales with the whole loaded list, not the incoming page: `filterItems` re-walks every loaded
 /// page and `copyWith` re-wraps each in `List.unmodifiable`. Mirrored in pure Dart here because the

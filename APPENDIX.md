@@ -33,6 +33,7 @@ renames.
 - [Dependabot's PRs auto-merge through dartender](#dependabot-automerge)
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
+- [`itemId` is required](#item-id-required)
 
 <!-- TOC end -->
 
@@ -329,9 +330,9 @@ renames.
   cheaper seam without storing de-duped pages plus a parallel raw-count side-channel for the end
   policy, since ISP re-materialises the whole page list on every change anyway. Measured with no
   real overlap: ~0.3 ms at 1k items, ~3.5 ms at 10k, ~40 ms at 100k. Memoised on paging-state
-  identity, so a keystroke before the debounce commits reuses the last view, and skipped entirely
-  when `itemId` is null. Sub-millisecond for most lists, with the cliff only at tens of thousands in
-  one live list, which strains widget count and memory regardless.
+  identity, so a keystroke before the debounce commits reuses the last view. Sub-millisecond for
+  most lists, with the cliff only at tens of thousands in one live list, which strains widget count
+  and memory regardless.
 - **The side-channel design was rejected, for now.** Incremental de-dup in the fetch plus a
   raw-count side-channel would erase the cost, but that state has to snapshot and restore in
   lockstep with `KeepCachePolicy`, and a bug there corrupts pagination rather than just display.
@@ -654,6 +655,18 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Placement follows the pull:** the slot hugs the edge the pull starts from, read off its
   direction, and the list is pushed only by what its own bounce hasn't opened. Clamping physics get
   the push, bouncing ones keep their native look, and no platform is special-cased.
+
+---
+
+<a id="item-id-required"></a>
+## `itemId` is required
+
+- **Decision:** `ListSmith.async` takes an `itemId`, with no default, because de-dup and edits both
+  find items by it. It's there for correctness, not speed.
+- **Why not `(item) => item` as the default:** most JSON models have no `==`, so an upserted copy
+  never matches the loaded one and shows as a 2nd row. The README suggests it for values that do.
+- **Cost:** the display pass now runs on every list, at the price
+  [#overlap-dedup](#overlap-dedup) measures.
 
 ---
 

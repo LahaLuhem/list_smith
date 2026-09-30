@@ -1,6 +1,7 @@
-/// Pulls a stable identity key off an item, so overlapping pages don't render a row twice.
+/// Pulls a stable identity key off an item. The list drops an item whose key already showed up, and
+/// an edit finds its row by it.
 ///
-/// Passed to `ListSmith.async` as `itemId`. Any item whose key already showed up is dropped before it
-/// renders. Keys compare by `==` / `hashCode`, so an `int`, a `String`, or a composite like `'${item.a}:${item.b}'`.
-/// Null (the default) de-duplicates nothing.
+/// Keys compare by `==` / `hashCode`, so an `int`, a `String`, or a composite like `'${item.a}:${item.b}'`.
+/// Anything with its own `==`, a record included, can key itself with `(item) => item`. A class without
+/// one can't: an edited copy is a new object, so it would show as a 2nd row.
 typedef ItemId<T extends Object> = Object Function(T item);

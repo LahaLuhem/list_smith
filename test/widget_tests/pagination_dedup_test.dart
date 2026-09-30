@@ -51,17 +51,6 @@ void main() {
       check(find.text('item 7').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('without an itemId, the overlap renders twice (de-dup is opt-in)', (
-      tester,
-    ) async {
-      await _pumpPagedList(tester, fetchPage: overlappingPages);
-      await drain(tester, frames: 8);
-
-      // Default matches the underlying pager, which never de-duplicates: both copies show.
-      check(find.text('item 3').evaluate()).length.equals(2);
-      check(find.text('item 4').evaluate()).length.equals(2);
-    });
-
     scenarioWidgets('an all-duplicate mid-stream page does not end pagination before later pages', (
       tester,
     ) async {
@@ -98,15 +87,6 @@ void main() {
       check(find.text('item 0').evaluate()).length.equals(1);
       check(find.text('item 7').evaluate()).length.equals(1);
     });
-
-    scenarioWidgets('without an itemId, a search overlap renders twice', (tester) async {
-      await _pumpPagedSearch(tester, searchFetchPage: overlappingSearchPages);
-      await drain(tester, frames: 8);
-
-      // De-dup is opt-in on the search path too: both copies show.
-      check(find.text('item 3').evaluate()).length.equals(2);
-      check(find.text('item 4').evaluate()).length.equals(2);
-    });
   });
 }
 
@@ -121,7 +101,7 @@ class _Item {
 Future<void> _pumpPagedList(
   WidgetTester tester, {
   required PageFetcher<_Item> fetchPage,
-  ItemId<_Item>? itemId,
+  required ItemId<_Item> itemId,
 }) => pumpListSmith(
   tester,
   ListSmith.async(
@@ -138,7 +118,7 @@ Future<void> _pumpPagedList(
 Future<void> _pumpPagedSearch(
   WidgetTester tester, {
   required SearchPageFetcher<_Item> searchFetchPage,
-  ItemId<_Item>? itemId,
+  required ItemId<_Item> itemId,
 }) => pumpListSmith(
   tester,
   ListSmith.async(
