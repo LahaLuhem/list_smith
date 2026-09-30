@@ -20,6 +20,7 @@
 - [Pull to refresh](#pull-to-refresh)
     * [Refreshing from code](#refreshing-from-code)
 - [Editing loaded items](#editing-loaded-items)
+    * [Animating edits](#animating-edits)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async`](#paged-with-listsmithasync)
@@ -69,7 +70,7 @@ then override. list_smith does neither.
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
 | **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
-| **Swap behaviour, not widgets**    | 8 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order. Built-ins for each, or write your own.                                         |
+| **Swap behaviour, not widgets**    | 9 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order, edit transitions. Built-ins for each, or write your own.                       |
 | **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
@@ -411,6 +412,34 @@ back.
 
 > On an offset-paged list, a delete on your server moves every later row up a place, so the next
 > page skips one. Use cursor paging for a list you edit, for now.
+
+### Animating edits
+
+An edit shows at once unless you pass an `editTransition`. Then the row an `upsert` adds animates
+in, and the row a `remove` takes animates out:
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher(...),
+  itemId: (task) => task.id,
+  itemBuilder: ...,
+  controller: controller,
+  editTransition: EditTransition(
+    duration: const Duration(milliseconds: 300),
+    builder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
+  ),
+)
+```
+
+The builder runs forward for a row coming in and backwards for one going out, so any transition
+works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the timing, not a
+look.
+
+- Only edits animate. Page loads, reloads and rows scrolling in show at once.
+- A removed row stays until its exit ends, so upserting it meanwhile brings it back.
+- A row that shrinks itself, like a `Dismissible` or a Slidable's full swipe, goes at once, with no
+  second animation on top.
+- With the platform's reduce-motion setting on, edits show at once.
 
 ## Search
 

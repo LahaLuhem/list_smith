@@ -1,6 +1,3 @@
-// The test rows share the file with the scenarios that use them.
-// ignore_for_file: prefer-match-file-name
-
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +15,7 @@ void main() {
       controller.upsert(0);
       await tester.pump();
 
-      check(_shownRows()).deepEquals(['off 0', 'off 1', 'on 2', 'off 3']);
+      check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'on 2', 'off 3']);
     });
 
     scenarioWidgets('a row keeps its state when a row above is swiped away', (tester) async {
@@ -29,7 +26,7 @@ void main() {
       await tester.drag(find.text('off 1'), const Offset(-700, 0));
       await _finishSwipes(tester);
 
-      check(_shownRows()).deepEquals(['off 2', 'off 3', 'on 4']);
+      check(shownToggleRows()).deepEquals(['off 2', 'off 3', 'on 4']);
     });
 
     scenarioWidgets('a 2nd swipe while the 1st still animates dismisses both', (tester) async {
@@ -42,7 +39,7 @@ void main() {
       await _finishSwipes(tester);
 
       check(dismissed).deepEquals([1, 2]);
-      check(_shownRows()).deepEquals(['off 3', 'off 4', 'off 5', 'off 6']);
+      check(shownToggleRows()).deepEquals(['off 3', 'off 4', 'off 5', 'off 6']);
     });
 
     scenarioWidgets('a swipe finishes when an item lands above it mid-swipe', (tester) async {
@@ -55,7 +52,7 @@ void main() {
       await _finishSwipes(tester);
 
       check(dismissed).deepEquals([2]);
-      check(_shownRows()).deepEquals(['off 0', 'off 1', 'off 3']);
+      check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'off 3']);
     });
 
     scenarioOutlineWidgets<({List<int> items, void Function(ListSmithController<int>) edit})>(
@@ -85,7 +82,7 @@ void main() {
         example.edit(controller);
         await tester.pump();
 
-        check(_shownRows()).contains('on 11');
+        check(shownToggleRows()).contains('on 11');
         check(find.text('group 1').evaluate()).length.equals(1);
       },
     );
@@ -116,7 +113,7 @@ Future<ListSmithController<int>> _pumpRows(
           dismissed?.add(item);
           controller.remove(item);
         },
-        child: _Toggle(item),
+        child: ToggleRow(item),
       ),
     ),
   );
@@ -130,32 +127,4 @@ Future<void> _finishSwipes(WidgetTester tester) async {
   for (var frame = 0; frame < 12; frame++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
-}
-
-/// The rows on screen, top to bottom.
-List<String> _shownRows() => find
-    .textContaining(RegExp('^(on|off) '))
-    .evaluate()
-    .map((element) => (element.widget as Text).data)
-    .nonNulls
-    .toList(growable: false);
-
-/// A 50 px row showing `off N` until a tap flips it to `on N`, so a kept state reads as `on N`.
-class _Toggle extends StatefulWidget {
-  final int item;
-
-  const new(this.item);
-
-  @override
-  State<_Toggle> createState() => _ToggleState();
-}
-
-class _ToggleState extends State<_Toggle> {
-  var _isOn = false;
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: () => setState(() => _isOn = !_isOn),
-    child: SizedBox(height: 50, child: Text('${_isOn ? 'on' : 'off'} ${widget.item}')),
-  );
 }

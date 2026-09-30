@@ -704,6 +704,7 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
 | `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |
 | `release(tester, holds)` | lets held fetches through, then drains |
+| `ToggleRow(item)`, `shownToggleRows()` | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin
 delegation carrying only that suite's own `ListSmith` config, never a re-declared scaffold or drain

@@ -169,6 +169,7 @@ capture reproduces it rather than restamping it with today.
 | `isp_scroll` | per-frame build cost scrolling a `ListSmith.async` list |
 | `bare_listview` | the same scroll over a plain `ListView.builder`, the attribution control |
 | `cri_refresh` | per-frame build cost across full pull-to-refresh cycles |
+| `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide` |
 
 On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
 interleaved so run-order drift lands on both sides equally.

@@ -26,6 +26,9 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Tells items apart, for de-dup, edits and keeping each row with its item.
   final ItemId<T> itemId;
 
+  /// Whether the rows edits add and take animate.
+  final EditTransition editTransition;
+
   /// Creates it.
   const new({
     required this.fetchPage,
@@ -35,6 +38,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.refresh,
     required this.search,
     required this.itemId,
+    required this.editTransition,
   });
 
   /// Whether [search] is an [AsyncSearch].
@@ -42,6 +46,12 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
 
   @override
   String toString() =>
-      'AsyncSource(pageSize: $pageSize, endPolicy: $endPolicy, onEmptyPage: $onEmptyPage, '
-      'refresh: $refresh, search: $search)';
+      'AsyncSource('
+      'pageSize: $pageSize, '
+      'endPolicy: $endPolicy, '
+      'onEmptyPage: $onEmptyPage, '
+      'refresh: $refresh, '
+      'search: $search, '
+      'editTransition: $editTransition'
+      ')';
 }

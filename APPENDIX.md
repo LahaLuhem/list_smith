@@ -35,6 +35,7 @@ renames.
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
 - [`itemId` is required](#item-id-required)
 - [Async rows follow their item, not their index](#row-identity)
+- [Edit transitions animate the rows edits add and take](#edit-transitions)
 
 <!-- TOC end -->
 
@@ -640,6 +641,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   together. They stay out of search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
   setting is about the server sending an empty page, not the user deleting rows.
+- **A removal can land late.** Under an `EditTransition` it's booked when the row's exit ends
+  ([#edit-transitions](#edit-transitions)), so a page read during the exit still counts as read
+  before it.
 
 ---
 
@@ -685,6 +689,28 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
 - **`GroupedItem` keeps one shape,** a `Flex` with keyed header and item slots, so a row gaining or
   losing its header keeps its state too.
+
+---
+
+<a id="edit-transitions"></a>
+## Edit transitions animate the rows edits add and take
+
+- **Decision:** an `EditTransition(duration:, builder:)` seam, `NoEditTransition()` by default. The
+  builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming in and in
+  reverse for one going out. list_smith brings the timing, never a look of its own. Only an `upsert`
+  of a new, shown id and a `remove` of a shown one start one, so page loads can't.
+- **A removal lands when its exit ends.** Until then the row is still in the display, exactly where
+  it was, so there's no leaving copy to keep in step, and an upsert meanwhile turns the same
+  controller round.
+- **A row that shrank itself skips the exit.** A frame after `remove()`, a row that isn't built or
+  has no extent left goes at once. Dismissible and Slidable collapse themselves and throw if kept in
+  the tree after, and this way `remove()` needs no flag for them.
+- **Wrapped only while it animates,** with the child under a `GlobalKey` so its state survives the
+  wrapper coming and going. Around the consumer's widget only, never the header, or a group-first
+  row that shrank itself would still read the header's height.
+- **Restarts settle** (`reset()`, a query change, a pull that starts over, a `KeepCachePolicy`
+  restore), booking what the exits held back so nothing animates onto a fresh list. A depth
+  reload's commit doesn't, so a pull that keeps depth lets running animations finish.
 
 ---
 
