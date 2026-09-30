@@ -14,7 +14,7 @@ from pathlib import Path
 import polars as pl
 
 from list_smith_bench.data.dtos.compare_row import CompareRow
-from list_smith_bench.data.dtos.result_record import ResultRecord
+from list_smith_bench.data.dtos.result_record import FrameThread, ResultRecord
 from list_smith_bench.data.utils.meta import summary_metadata
 
 
@@ -180,12 +180,18 @@ def overhead_table(dataframe: pl.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
-def frame_scenarios_table(dataframe: pl.DataFrame) -> str:
-    """Per-frame build cost for the UI scroll/refresh scenarios (scroll pair, cri)."""
-    if "avg_frame_build_millis" not in dataframe.columns:
+def frame_scenarios_table(dataframe: pl.DataFrame, thread: FrameThread) -> str:
+    """Per-frame cost on one thread for the UI scenarios."""
+    columns = {
+        "avg": f"avg_frame_{thread}_millis",
+        "worst": f"worst_frame_{thread}_millis",
+        "p99": f"p99_frame_{thread}_millis",
+        "missed": f"missed_frame_{thread}_count",
+    }
+    if not set(columns.values()) <= set(dataframe.columns):
         return "_(no frame-scenario data in input)_\n"
 
-    df = dataframe.filter(pl.col("avg_frame_build_millis").is_not_null())
+    df = dataframe.filter(pl.col(columns["avg"]).is_not_null())
     if df.is_empty():
         return "_(no frame-scenario data in input)_\n"
 
@@ -193,16 +199,14 @@ def frame_scenarios_table(dataframe: pl.DataFrame) -> str:
         df.group_by("scenario")
         .agg(
             pl.col("frame_count").median().alias("frames"),
-            pl.col("avg_frame_build_millis").median().alias("avg"),
-            pl.col("worst_frame_build_millis").median().alias("worst"),
-            pl.col("p99_frame_build_millis").median().alias("p99"),
-            pl.col("missed_frame_build_count").median().alias("missed"),
+            *(pl.col(column).median().alias(stat) for stat, column in columns.items()),
         )
         .sort("scenario")
     )
 
     rows = [
-        "| Scenario | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |",
+        f"| Scenario | Frames | Avg {thread} (ms) | Worst {thread} (ms) | p99 {thread} (ms) "
+        "| Missed |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for row in agg.iter_rows(named=True):
@@ -336,18 +340,32 @@ def render_summary_markdown(
 
     parts.extend(
         [
-            "## UI scroll/refresh: per-frame build cost\n",
+            "## UI scenarios: per-frame build cost\n",
             "From the profile-mode `integration_test` scenarios, real frames on this machine. "
             "`avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is "
             "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
             "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
-            "attribution: that small delta is what the wrapper adds to a plain list.\n",
-            frame_scenarios_table(dataframe),
+            "attribution: that small delta is what the wrapper adds to a plain list. "
+            "`edit_transitions_none` makes the same edits as `_size`, `_fade` and `_slide` with no "
+            "transition, so the gap is what animating them adds.\n",
+            frame_scenarios_table(dataframe, "build"),
         ]
     )
 
     if "frame_costs.png" in chart_names:
         parts.append("\n![Per-frame build cost](frame_costs.png)\n")
+
+    parts.extend(
+        [
+            "## UI scenarios: per-frame raster cost\n",
+            "The same frames on the raster thread, which draws what the build produced. `missed` "
+            "counts frames over the same budget.\n",
+            frame_scenarios_table(dataframe, "raster"),
+        ]
+    )
+
+    if "frame_raster_costs.png" in chart_names:
+        parts.append("\n![Per-frame raster cost](frame_raster_costs.png)\n")
 
     return "\n".join(parts)
 

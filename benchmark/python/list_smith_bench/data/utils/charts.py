@@ -26,6 +26,7 @@ from list_smith_bench.config import (
     FRAME_BUDGET_MICROS_60HZ,
 )
 from list_smith_bench.data.dtos.compare_row import CompareRow
+from list_smith_bench.data.dtos.result_record import FrameThread
 
 
 def set_default_theme() -> None:
@@ -194,21 +195,39 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
 
 def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
-    """Grouped bars of per-frame build cost (avg / worst / p99) per scroll/refresh scenario.
+    """Grouped bars of per-frame build cost (avg / worst / p99) per frame scenario.
 
     The dashed 60 Hz budget line is the point of the chart: every bar sits far below it, so
     list_smith's per-frame build work is a small fraction of the 16.67 ms a frame gets. The table in
     SUMMARY.md carries the exact figures. This is the at-a-glance headroom. Returns None on no data.
     """
-    stat_labels = {
-        "avg_frame_build_millis": "avg",
-        "worst_frame_build_millis": "worst",
-        "p99_frame_build_millis": "p99",
-    }
-    if "avg_frame_build_millis" not in dataframe.columns:
+    return _plot_frame_thread_costs(
+        dataframe,
+        out_path,
+        thread="build",
+        title="Per-frame build cost sits far under the 60 Hz budget",
+    )
+
+
+def plot_frame_raster_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
+    """The same bars for the raster thread, which draws what the build produced."""
+    return _plot_frame_thread_costs(
+        dataframe,
+        out_path,
+        thread="raster",
+        title="Per-frame raster cost against the 60 Hz budget",
+    )
+
+
+def _plot_frame_thread_costs(
+    dataframe: pl.DataFrame, out_path: Path, *, thread: FrameThread, title: str
+) -> Path | None:
+    stat_labels = {f"{stat}_frame_{thread}_millis": stat for stat in ("avg", "worst", "p99")}
+    # Captures from before the raster p99 was recorded get no raster chart.
+    if not set(stat_labels) <= set(dataframe.columns):
         return None
 
-    df = dataframe.filter(pl.col("avg_frame_build_millis").is_not_null())
+    df = dataframe.filter(pl.col(f"avg_frame_{thread}_millis").is_not_null())
     if df.is_empty():
         return None
 
@@ -238,10 +257,13 @@ def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
         linewidth=1.0,
         label=f"60 Hz frame budget ({budget_ms:.2f} ms)",
     )
-    ax.set_ylim(0, budget_ms + 1.5)
+    # A raster spike can pass the budget, and a clipped bar would hide by how much.
+    ax.set_ylim(0, max(budget_ms, long["ms"].max()) + 1.5)
     ax.set_xlabel("")
-    ax.set_ylabel("Per-frame build time (ms)")
-    ax.set_title("Per-frame build cost sits far under the 60 Hz budget")
+    # Tilted, or the edit_transitions_* names run into each other.
+    plt.setp(ax.get_xticklabels(), rotation=25, ha="right", rotation_mode="anchor")
+    ax.set_ylabel(f"Per-frame {thread} time (ms)")
+    ax.set_title(title)
     ax.legend(loc="best")
     plt.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)

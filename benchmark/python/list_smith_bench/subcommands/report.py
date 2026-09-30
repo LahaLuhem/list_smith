@@ -58,6 +58,9 @@ def cmd_report(args: argparse.Namespace) -> int:
     frame_chart = charts.plot_frame_costs(dataframe, out_dir / "frame_costs.png")
     if frame_chart is not None:
         chart_paths.append(frame_chart)
+    raster_chart = charts.plot_frame_raster_costs(dataframe, out_dir / "frame_raster_costs.png")
+    if raster_chart is not None:
+        chart_paths.append(raster_chart)
     observer_chart = charts.plot_observer_latency(dataframe, out_dir / "observer_latency.png")
     if observer_chart is not None:
         chart_paths.append(observer_chart)
