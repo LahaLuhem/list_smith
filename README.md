@@ -362,7 +362,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 ## Editing loaded items
 
 A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
-re-read: tell the list, and it shows the change at once, keeping the scroll position.
+re-read: just notify the list, and it shows the change at once, keeping the scroll position.
 
 ```dart
 ListSmith.async(
@@ -383,16 +383,16 @@ Both are sync and return nothing, since the list takes the change as already tru
 in your store. Where the item shows:
 
 - A loaded item changes in place.
-- A new one goes on top, newest first. On a [grouped](#grouping) list it joins the start of its
-  group, or goes on top if that group isn't loaded.
+- A new one goes on top, the newest first. On a [grouped](#grouping) list it joins the start of its
+  group or goes on top if that group isn't loaded.
 - An item whose group changed moves to the start of its new group.
 - While searching, a new item waits for the feed, since only your server knows what matches the
   query. Changes and removals show in the results too.
 
 An edit lasts until the pages it covers are read again, and a page loaded after it shows your
 server's copy. So after a failed save, a refresh puts that copy back. Removals never end the list
-early: the end policy still counts what the server sent, and removing every row on screen loads the
-next page.
+early: the end policy still counts what the server sent, and removing every row on the screen loads
+the next page.
 
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
 while rows above it come and go.
@@ -410,7 +410,7 @@ itemBuilder: (context, task, index) => Dismissible(
 The row has to go before your server has answered, so if the delete then fails, a refresh brings it
 back.
 
-> On an offset-paged list, a delete on your server moves every later row up a place, so the next
+> On an offset-paged list, a deletion on your server moves every later row up a place, so the next
 > page skips one. Use cursor paging for a list you edit, for now.
 
 ### Animating edits
@@ -426,14 +426,14 @@ ListSmith.async(
   controller: controller,
   editTransition: EditTransition(
     duration: const Duration(milliseconds: 300),
-    builder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
+    transitionBuilder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
   ),
 )
 ```
 
-The builder runs forward for a row coming in and backwards for one going out, so any transition
-works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the timing, not a
-look.
+The transitionBuilder runs forward for a row coming in and backwards for one going out, so any
+transition works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the timing,
+not a look.
 
 - Only edits animate. Page loads, reloads and rows scrolling in show at once.
 - A removed row stays until its exit ends, so upserting it meanwhile brings it back.
@@ -753,12 +753,13 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
 
 | What                                                 | Cost                                                                          |
 |------------------------------------------------------|-------------------------------------------------------------------------------|
-| Scrolling                                            | within ~0.03 ms/frame of a plain `ListView.builder`, neither dropping a frame |
+| Scrolling                                            | within ~0.05 ms/frame of a plain `ListView.builder`, neither dropping a frame |
 | Per-page bookkeeping (end policy, observer dispatch) | sub-microsecond to a few microseconds                                         |
-| A full pull-to-refresh cycle                         | ~0.4 ms/frame, 0 frames over the 16.67 ms budget                              |
-| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~42 ms at 100k                             |
-| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~27 ms at 100k                                 |
-| `itemId` de-dup, per page arriving                   | ~0.3 ms at 1k loaded, ~3.4 ms at 10k, ~39 ms at 100k                          |
+| A full pull-to-refresh cycle                         | ~0.4 ms/frame to build, none over the 16.67 ms budget                         |
+| Animating edits (size, fade or slide)                | +0.1 to 0.3 ms/frame over the same edits unanimated, none over budget         |
+| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                             |
+| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~26 ms at 100k                                 |
+| `itemId` de-dup, per page arriving                   | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~40 ms at 100k                          |
 | A 50 ms observer callback                            | pushes render latency to ~68 ms                                               |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
@@ -773,6 +774,8 @@ Numbers are per-machine, so capture your own baseline before trusting a delta. T
 ![Render latency vs observer delay](benchmark/reports/observer_latency.png)
 
 ![Per-frame build cost vs the 60 Hz budget](benchmark/reports/frame_costs.png)
+
+![Per-frame raster cost vs the 60 Hz budget](benchmark/reports/frame_raster_costs.png)
 
 ![Sync-search cost vs list size](benchmark/reports/sync_search_scaling.png)
 
