@@ -702,6 +702,8 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pullToRefresh(tester, anchor)` | pulls down from `anchor` far enough to refresh, then pumps timed frames so it runs |
 | `containsIgnoreCase` | sync-search predicate |
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
+| `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |
+| `release(tester, holds)` | lets held fetches through, then drains |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin
 delegation carrying only that suite's own `ListSmith` config, never a re-declared scaffold or drain
