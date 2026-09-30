@@ -4,6 +4,7 @@ import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/pagination/typedefs/item_id.dart';
 import '/src/data/pagination/typedefs/page_key.dart';
+import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
