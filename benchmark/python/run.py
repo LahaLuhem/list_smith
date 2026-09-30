@@ -70,7 +70,7 @@ def _add_run_parser(sub: argparse._SubParsersAction) -> None:
     parser_run.add_argument(
         "--scenarios",
         nargs="*",
-        help="restrict to named micros/scenarios (default: all)",
+        help="files to run, named without .dart: dedup_scaling, isp_scroll_test (default: all)",
     )
     parser_run.add_argument(
         "--device",
