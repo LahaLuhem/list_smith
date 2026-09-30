@@ -1,4 +1,4 @@
-// A test-local fake server shares the file with the scenarios that drive it.
+// A test-local end policy shares the file with the scenarios that use it.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:async';
@@ -17,14 +17,14 @@ void main() {
     scenarioWidgets('an edit while the next page loads keeps both the edit and the paging', (
       tester,
     ) async {
-      final server = _Server(_range(0, 8));
+      final server = FakeServer(_range(0, 8));
       final hold = server.hold(1, attempt: 1);
       final controller = await _pumpList(tester, fetchPage: server.keyset, itemId: _byValue);
       await drain(tester);
 
       controller.remove(0);
       await tester.pump();
-      await _release(tester, [hold]);
+      await release(tester, [hold]);
 
       check(_shownRows()).deepEquals(_rows(_range(1, 8)));
       // Each page picks up where the one before it ended, so none is asked for twice.
@@ -39,7 +39,7 @@ void main() {
         'an update': (controller) => controller.upsert((id: 1, label: 'mine')),
       },
       outline: (tester, edit) async {
-        final server = _Server<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
+        final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
         final controller = await _pumpList<_Row>(
           tester,
           fetchPage: server.offsetEarly,
@@ -58,7 +58,7 @@ void main() {
         await tester.pump();
         final afterEdit = _shownRows();
         check(afterEdit).not((it) => it.deepEquals(beforeEdit));
-        await _release(tester, [hold]);
+        await release(tester, [hold]);
 
         check(server.attempts[0]).equals(2); // the reload did commit
         check(_shownRows()).deepEquals(afterEdit);
@@ -69,7 +69,7 @@ void main() {
       'a page whose re-fetch fails keeps the edit',
       examples: const {'made before the reload': true, 'made while it runs': false},
       outline: (tester, isBefore) async {
-        final server = _Server(_range(0, 5));
+        final server = FakeServer(_range(0, 5));
         final controller = await _pumpList(
           tester,
           fetchPage: server.offsetEarly,
@@ -86,7 +86,7 @@ void main() {
         await drain(tester);
         if (!isBefore) controller.remove(1);
         await tester.pump();
-        await _release(tester, [hold]);
+        await release(tester, [hold]);
 
         check(server.attempts[1]).equals(2); // the page after it did reload
         check(_shownRows()).deepEquals(_rows([0, 2, 3, 4, 5]));
@@ -106,7 +106,7 @@ void main() {
         ),
       },
       outline: (tester, example) async {
-        final server = _Server(_range(0, 14));
+        final server = FakeServer(_range(0, 14));
         final scroll = ScrollController();
         addTearDown(scroll.dispose);
         final controller = await _pumpList(
@@ -143,7 +143,7 @@ void main() {
         'AdvanceToFirstNonEmpty': AdvanceToFirstNonEmpty(),
       },
       outline: (tester, behaviour) async {
-        final server = _Server(_range(0, 39));
+        final server = FakeServer(_range(0, 39));
         final controller = await _pumpList(
           tester,
           fetchPage: server.keyset,
@@ -246,7 +246,7 @@ void main() {
     scenarioWidgets('a refresh while searching does not bring a removed row back afterwards', (
       tester,
     ) async {
-      final server = _Server(_range(1, 6));
+      final server = FakeServer(_range(1, 6));
       final feedCatchUp = server.hold(0, attempt: 2);
       final controller = ListSmithController<int>();
       await _pumpKept(tester, controller, query: '', feed: server.offsetLate);
@@ -263,7 +263,7 @@ void main() {
 
       check(server.attempts[0]).equals(2); // the feed's re-read is still in flight
       check(_shownRows()).deepEquals(_rows([1, 2, 3, 5, 6]));
-      await _release(tester, [feedCatchUp]);
+      await release(tester, [feedCatchUp]);
       check(_shownRows()).deepEquals(_rows([1, 2, 3, 5, 6]));
     });
 
@@ -290,7 +290,7 @@ void main() {
         'ResetToFirstPage': ResetToFirstPage(),
       },
       outline: (tester, reload) async {
-        final server = _Server<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
+        final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
         final controller = await _pumpList<_Row>(
           tester,
           fetchPage: server.offsetLate,
@@ -380,14 +380,6 @@ Future<void> _pumpKept(
   ),
 );
 
-Future<void> _release(WidgetTester tester, Iterable<Completer<void>> holds) async {
-  for (final hold in holds) {
-    hold.complete();
-  }
-  await tester.idle();
-  await drain(tester, frames: 12);
-}
-
 /// The rows on screen, top to bottom.
 List<String> _shownRows() => find
     .textContaining(RegExp('^item '))
@@ -406,64 +398,6 @@ Object _byValue(Object item) => item;
 Object _byRowId(_Row item) => item.id;
 
 String _rowLabel(_Row item) => '${item.id} ${item.label}';
-
-/// A store behind the fetchers, with holds and failures keyed by page and attempt.
-final class _Server<T extends Object> {
-  final List<T> store;
-  final requests = <PageRequest>[];
-  final attempts = <int, int>{};
-  final failing = <(int, int)>{};
-  final _holds = <(int, int), Completer<void>>{};
-
-  new(Iterable<T> items) : store = [...items];
-
-  Completer<void> hold(int page, {required int attempt}) =>
-      _holds[(page, attempt)] = Completer<void>();
-
-  bool asked(int page) => attempts.containsKey(page);
-
-  /// Offset paging, reading the store once the request reaches it.
-  PageFetcher<T> get offsetLate => PageFetcher((request) async {
-    await _arrive(request);
-
-    return _window(request);
-  });
-
-  /// Offset paging, answered at call time and delivered late, like a response already on its way.
-  PageFetcher<T> get offsetEarly => PageFetcher((request) async {
-    final page = _window(request);
-    await _arrive(request);
-
-    return page;
-  });
-
-  List<T> _window(PageRequest request) => store
-      .skip(request.pageIndex * request.pageSize)
-      .take(request.pageSize)
-      .toList(growable: false);
-
-  Future<void> _arrive(PageRequest request) async {
-    requests.add(request);
-    final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
-    final key = (request.pageIndex, attempt);
-    await _holds[key]?.future;
-    if (failing.contains(key)) throw Exception('page ${request.pageIndex} failed');
-  }
-}
-
-extension on _Server<int> {
-  /// Cursor paging on the last id, so an edit elsewhere can't shift it.
-  PageFetcher<int> get keyset => PageFetcher.withSignal((request) async {
-    await _arrive(request);
-    final cursor = request.previousSignal as int?;
-    final page = store
-        .where((id) => cursor == null || id > cursor)
-        .take(request.pageSize)
-        .toList(growable: false);
-
-    return (page, page.lastOrNull ?? cursor);
-  });
-}
 
 final class _ShortLastPagePolicy extends PaginationEndPolicy {
   const new();
