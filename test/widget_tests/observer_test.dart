@@ -257,6 +257,7 @@ Future<void> _pumpObserved(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
+    itemId: (item) => item,
     search: search,
     query: query,
     observer: observer,

@@ -11,6 +11,7 @@ void main() {
       expect(
         () => ListSmith.async(
           fetchPage: PageFetcher((_) async => const <int>[]),
+          itemId: (item) => item,
           endPolicy: const ExplicitHasMorePolicy(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -39,6 +40,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           endPolicy: const ExplicitHasMorePolicy(),
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -61,6 +63,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           endPolicy: const ExplicitHasMorePolicy(),
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -84,6 +87,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           search: AsyncSearch(fetchPage: searchFetchPage),
           endPolicy: const ExplicitHasMorePolicy(),
           query: 'q',
@@ -112,6 +116,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: fetchPage,
+        itemId: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         endPolicy: const ExplicitHasMorePolicy(),
         query: query,
@@ -149,6 +154,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
+          itemId: (item) => item,
           endPolicy: const ExplicitHasMorePolicy(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),

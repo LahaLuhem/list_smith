@@ -312,28 +312,13 @@ void main() {
         check(_shownRows()).deepEquals(before);
       },
     );
-
-    scenarioWidgets('editing a list with no itemId asserts', (tester) async {
-      final controller = await _pumpList(
-        tester,
-        fetchPage: pagedFetcher(const [
-          [1, 2, 3],
-        ]),
-        itemId: null,
-        endPolicy: const FixedPageCountPolicy(pageCount: 1),
-      );
-      await drain(tester);
-
-      check(() => controller.remove(1)).throws<AssertionError>();
-      check(() => controller.upsert(4)).throws<AssertionError>();
-    });
   });
 }
 
 Future<ListSmithController<T>> _pumpList<T extends Object>(
   WidgetTester tester, {
   required PageFetcher<T> fetchPage,
-  required ItemId<T>? itemId,
+  required ItemId<T> itemId,
   ListSmithController<T>? controller,
   String Function(T item)? label,
   int pageSize = 3,

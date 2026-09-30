@@ -23,8 +23,8 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Whether the list is searchable, and how: [NoSearch] for none, [AsyncSearch] for a search mode.
   final Search<T> search;
 
-  /// Pulls a stable identity key per item to de-duplicate overlapping pages. Null disables it.
-  final ItemId<T>? itemId;
+  /// Tells items apart, for de-dup and edits.
+  final ItemId<T> itemId;
 
   /// Creates it.
   const new({
@@ -34,7 +34,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.onEmptyPage,
     required this.refresh,
     required this.search,
-    this.itemId,
+    required this.itemId,
   });
 
   /// Whether [search] is an [AsyncSearch].

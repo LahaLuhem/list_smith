@@ -78,6 +78,7 @@ class ReloadView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               fetchPage: PageFetcher(viewModel.fetchPage),
+              itemId: (item) => item.id,
               pageSize: 12,
               refresh: PullToRefresh(reload: viewModel.reload),
               controller: viewModel.controller,

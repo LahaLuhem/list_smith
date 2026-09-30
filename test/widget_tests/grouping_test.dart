@@ -53,6 +53,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
+          itemId: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
@@ -75,6 +76,7 @@ void main() {
             [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
             [(group: 'B', label: 'b2'), (group: 'B', label: 'b3'), (group: 'C', label: 'c1')],
           ]),
+          itemId: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -100,6 +102,7 @@ void main() {
             [(group: 'B', label: 'b2'), (group: 'B', label: 'b3')],
             [(group: 'B', label: 'b4'), (group: 'C', label: 'c1')],
           ]),
+          itemId: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -168,28 +171,6 @@ void main() {
       check(find.text('a2').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('without an itemId, an overlap across a boundary trips the order assert', (
-      tester,
-    ) async {
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: pagedFetcher(const [
-            [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
-            [(group: 'A', label: 'a2'), (group: 'B', label: 'b1'), (group: 'B', label: 'b2')],
-          ]),
-          endPolicy: const FixedPageCountPolicy(pageCount: 2),
-          refresh: const NoRefresh(),
-          grouping: byGroup(),
-          itemBuilder: (_, item, _) => Text(item.label),
-        ),
-      );
-      await drain(tester, frames: 12);
-
-      // Same overlap, no itemId. Nothing collapses, A comes back after B opened, assert fires.
-      check(tester.takeException()).isA<AssertionError>();
-    });
-
     scenarioWidgets('FailOnUnorderedPolicy throws instead of asserting', (tester) async {
       await pumpListSmith(
         tester,
@@ -197,6 +178,7 @@ void main() {
           fetchPage: pagedFetcher(const [
             [(group: 'A', label: 'a1'), (group: 'B', label: 'b1'), (group: 'A', label: 'a2')],
           ]),
+          itemId: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(orderPolicy: const FailOnUnorderedPolicy()),
           itemBuilder: (_, item, _) => Text(item.label),
@@ -221,6 +203,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
+          itemId: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),

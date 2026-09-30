@@ -90,6 +90,7 @@ class PlaygroundView extends StatelessWidget {
                 viewModel.pagePastEmpty,
               )),
               fetchPage: PageFetcher(viewModel.fetchPage),
+              itemId: (item) => item.id,
               pageSize: viewModel.pageSize,
               endPolicy: StopOnEmptyPagesPolicy(emptyRunBeforeEnd: viewModel.emptyRunBeforeEnd),
               onEmptyPage: viewModel.pagePastEmpty

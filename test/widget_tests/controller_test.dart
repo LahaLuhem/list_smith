@@ -38,6 +38,7 @@ void main() {
       tester,
       ListSmith.async(
         fetchPage: fetchPage,
+        itemId: (item) => item,
         endPolicy: FixedPageCountPolicy(pageCount: pageCount),
         refresh: refresh,
         search: search,

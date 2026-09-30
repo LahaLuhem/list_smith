@@ -281,8 +281,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         : (index: pages.length, readStamp: readStamp);
   }
 
-  /// What renders: [state] with the local edits applied and overlap duplicates dropped. Null `itemId`
-  /// hands [state] straight back, since edits need an identity too.
+  /// What renders: [state] with the local edits applied and overlap duplicates dropped.
   ///
   /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
   /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per change, memoised in
@@ -291,7 +290,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     final itemId = widget.source.itemId;
     final pages = state.pages;
     final keys = state.keys;
-    if (itemId == null || pages == null || keys == null) return state;
+    if (pages == null || keys == null) return state;
 
     final editStamp = _editStamp.value;
     final isSearchMode = _searchModeNotifier.value;
@@ -548,11 +547,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// Books [edited] against [item]'s id, null for a removal.
   void _edit(T item, T? edited) {
-    final itemId = widget.source.itemId;
-    assert(itemId != null, 'Pass itemId to ListSmith.async to upsert or remove items.');
-    if (itemId == null) return;
-
-    final id = itemId(item);
+    final id = widget.source.itemId(item);
     final stamp = _editStamp.value + 1;
     _edits
       ..remove(id) // re-booked at the end, so the newest new item lands on top
