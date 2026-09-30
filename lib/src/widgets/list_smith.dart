@@ -4,6 +4,7 @@ library;
 import 'package:flutter/widgets.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
+import '/src/data/edits/models/edit_transition.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
@@ -75,7 +76,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   ///
   /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemId] tells them apart.
   /// Those 2 and [itemBuilder] are required. The rest default to a 20-item page, pull-to-refresh on,
-  /// pagination ending at the 1st empty page, no search, no grouping and the neutral surfaces.
+  /// pagination ending at the 1st empty page, no search, no grouping, no edit transitions and the
+  /// neutral surfaces.
   ///
   /// 2 pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading end policy
   /// needs `withSignal` fetchers on both the feed and the search.
@@ -88,6 +90,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
     EmptyPageBehaviour onEmptyPage = const ShowEmptySurface(),
     Search<T> search = const NoSearch(),
+    EditTransition editTransition = const NoEditTransition(),
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = const Duration(milliseconds: 300),
@@ -121,6 +124,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          refresh: refresh,
          search: search,
          itemId: itemId,
+         editTransition: editTransition,
        );
 
   /// Creates a sync, in-memory searchable list over [items].

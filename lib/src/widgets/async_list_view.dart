@@ -12,6 +12,7 @@ import 'package:multi_value_listenable_builder_typed/multi_value_listenable_buil
 
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/control/models/list_smith_controller_host.dart';
+import '/src/data/edits/models/edit_transition.dart';
 import '/src/data/edits/typedefs/item_edit.dart';
 import '/src/data/edits/utils/edit_resolver.dart';
 import '/src/data/grouping/models/grouping.dart';
@@ -38,6 +39,7 @@ import '/src/utils/query_debouncer.dart';
 import 'defaults/neutral_loading_indicator.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
+import 'row_transitions_notifier.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
 /// runs feed and search as 2 views on that one controller.
@@ -108,6 +110,7 @@ class AsyncListView<T extends Object> extends StatefulWidget {
 }
 
 class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
+    with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final _pager = PagingController<PageKey, T>(
@@ -157,6 +160,12 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// The reload running now, null when none is in flight.
   _ReloadRun<T>? _running;
 
+  /// The rows edits are animating. Idle unless the source has an [EditTransition].
+  late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(
+    vsync: this,
+    bookRemoval: (item) => _edit(item, null),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -179,6 +188,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       widget.controller?.attach(this);
     }
     if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
+    // Turned off mid-animation: a leaving row would otherwise build its deleted item again.
+    if (oldWidget.source.editTransition is AnimatedEditTransition &&
+        widget.source.editTransition is NoEditTransition) {
+      _rowTransitionsNotifier.settle();
+    }
   }
 
   @override
@@ -189,6 +203,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _pager.dispose();
     _searchModeNotifier.dispose();
     _editStamp.dispose();
+    _rowTransitionsNotifier.dispose();
 
     super.dispose();
   }
@@ -403,6 +418,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
         // Nothing to latch: a debt reload carries its own trigger.
+        _rowTransitionsNotifier.settle();
         _generation++;
         _lastFailedPageIndex = null;
         _replacePagingState(snapshot.state);
@@ -439,6 +455,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Restarts the stream: invalidates in-flight writes, latches [nextTrigger] for the re-fetch this
   /// drives, and clears the end signal so a signal policy can't read the old stream's last one.
   void _resetPaging(FetchTrigger nextTrigger) {
+    _rowTransitionsNotifier.settle();
     _generation++;
     _lastFailedPageIndex = null;
     _pendingTrigger = nextTrigger;
@@ -494,7 +511,15 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
           return PagedView(
             state: _displayFor(state),
             fetchNextPage: fetchNextPage,
-            itemBuilder: widget.itemBuilder,
+            itemBuilder: switch (widget.source.editTransition) {
+              AnimatedEditTransition(transitionBuilder: final builder) =>
+                _rowTransitionsNotifier.decorate(
+                  widget.itemBuilder,
+                  itemId: widget.source.itemId,
+                  builder: builder,
+                ),
+              NoEditTransition() => widget.itemBuilder,
+            },
             itemId: widget.source.itemId,
             grouping: widget.grouping,
             scroll: widget.scroll,
@@ -541,10 +566,57 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   }
 
   @override
-  void upsert(T item) => _edit(item, item);
+  void upsert(T item) {
+    final animation = _editAnimation;
+    if (animation == null) {
+      _edit(item, item);
+
+      return;
+    }
+
+    final id = widget.source.itemId(item);
+    final wasShown = _isShown(id);
+    _edit(item, item);
+    _rowTransitionsNotifier.upsert(
+      id,
+      isNewRow: !wasShown && _isShown(id),
+      duration: animation.duration,
+    );
+  }
 
   @override
-  void remove(T item) => _edit(item, null);
+  void remove(T item) {
+    final animation = _editAnimation;
+    final id = widget.source.itemId(item);
+    if (animation == null || !_isShown(id)) {
+      _edit(item, null);
+
+      return;
+    }
+
+    _rowTransitionsNotifier.remove(
+      id,
+      item,
+      duration: animation.duration,
+      axis: widget.scroll.scrollDirection,
+    );
+  }
+
+  /// The edit transition, unless there is none or the platform asks for less motion.
+  AnimatedEditTransition? get _editAnimation => switch (widget.source.editTransition) {
+    final AnimatedEditTransition transition
+        when !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
+      transition,
+    AnimatedEditTransition() || NoEditTransition() => null,
+  };
+
+  /// Whether the item with [id] has a row in what renders now.
+  bool _isShown(Object id) {
+    final itemId = widget.source.itemId;
+
+    return _displayFor(_pager.value).pages?.any((page) => page.any((item) => itemId(item) == id)) ??
+        false;
+  }
 
   /// Books [edited] against [item]'s id, null for a removal.
   void _edit(T item, T? edited) {

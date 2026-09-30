@@ -2,6 +2,7 @@
 library;
 
 export 'src/data/control/models/list_smith_controller.dart';
+export 'src/data/edits/models/edit_transition.dart' show EditTransition, NoEditTransition;
 export 'src/data/grouping/models/group_order_policy.dart';
 export 'src/data/grouping/models/grouping.dart' show Grouping, NoGrouping;
 export 'src/data/grouping/typedefs/group_header_builder.dart';

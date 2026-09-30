@@ -61,7 +61,7 @@ final class _EditLayerScaling extends BenchmarkBase {
       itemId: (item) => item.id,
       groupOf: (item) => item.group,
       acceptsNewItems: true,
-    );
+    ).pages;
     final wrappedPages = List<List<_Item>>.unmodifiable(displayPages.map(List<_Item>.unmodifiable));
     List<int>.unmodifiable(_keys);
 

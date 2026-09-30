@@ -1,5 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_slidable/flutter_slidable.dart' show Slidable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith_example/main.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
@@ -227,6 +228,7 @@ void main() {
 
       await tester.tap(find.text('Add an item'));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300)); // the new row grows in
 
       check(tester.getTopLeft(find.text('New item 1')).dy)
           .isLessThan(tester.getTopLeft(find.text('Item 1')).dy);
@@ -265,6 +267,50 @@ void main() {
 
       check(find.text('Item 1').evaluate()).isEmpty();
       check(find.text('New item 1').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets("the edits demo's Delete shrinks the row away", (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Edits'), 100);
+      await tester.tap(find.text('Edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      final fullHeight = tester
+          .getSize(find.ancestor(of: find.text('Item 3'), matching: find.byType(Slidable)))
+          .height;
+      // Short of a full swipe, so the row opens on its actions.
+      await tester.timedDrag(
+        find.text('Item 2'),
+        const Offset(-300, 0),
+        const Duration(milliseconds: 300),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Delete'));
+      // The frame that checks the row didn't shrink itself, then the exit's 1st frame.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      final leaving = find.ancestor(
+        of: find.text('Item 2', skipOffstage: false),
+        matching: find.byType(SizeTransition, skipOffstage: false),
+      );
+
+      check(tester.getSize(leaving.first).height)
+        ..isGreaterThan(0)
+        ..isLessThan(fullHeight);
+      for (var frame = 0; frame < 4; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      check(tester.takeException()).isNull();
+      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty();
+      await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
     scenarioWidgets('with deletes failing, a row swiped away comes back on a pull', (tester) async {
