@@ -55,6 +55,7 @@ MULTI_RECORD_SCENARIOS: Final[frozenset[str]] = frozenset(
         "header_flags_scaling",
         "dedup_scaling",
         "edit_layer_scaling",
+        "row_lookup_scaling",
         "wrapping_overhead",
         "slow_observer",
     }

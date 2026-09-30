@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
+import '/src/data/pagination/typedefs/item_id.dart';
 import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
@@ -12,8 +13,9 @@ import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
 import 'defaults/neutral_no_more_items_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
+import 'keyed_paged_list_view.dart';
 
-/// Wraps ISP's [PagedListView], filling every delegate slot with our neutral defaults or the consumer's
+/// The async list, with every ISP delegate slot filled by our neutral defaults or the consumer's
 /// overrides, so no Material surface leaks through.
 ///
 /// Internal, built inside a [PagingListener] where [state] and [fetchNextPage] are in scope.
@@ -26,6 +28,9 @@ class PagedView<T extends Object> extends StatelessWidget {
 
   /// Builds each item.
   final ItemBuilder<T> itemBuilder;
+
+  /// Keys each row by its item.
+  final ItemId<T> itemId;
 
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   final Grouping<T> grouping;
@@ -68,6 +73,7 @@ class PagedView<T extends Object> extends StatelessWidget {
     required this.state,
     required this.fetchNextPage,
     required this.itemBuilder,
+    required this.itemId,
     required this.grouping,
     required this.scroll,
     required this.isSearchMode,
@@ -84,34 +90,19 @@ class PagedView<T extends Object> extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final builderDelegate = _buildDelegate();
-
-    return separatorBuilder != null
-        ? PagedListView.separated(
-            state: state,
-            fetchNextPage: fetchNextPage,
-            builderDelegate: builderDelegate,
-            separatorBuilder: separatorBuilder!,
-            scrollController: scroll.controller,
-            scrollDirection: scroll.scrollDirection,
-            reverse: scroll.reverse,
-            physics: scroll.physics,
-            padding: scroll.padding,
-            cacheExtent: scroll.cacheExtent,
-          )
-        : PagedListView(
-            state: state,
-            fetchNextPage: fetchNextPage,
-            builderDelegate: builderDelegate,
-            scrollController: scroll.controller,
-            scrollDirection: scroll.scrollDirection,
-            reverse: scroll.reverse,
-            physics: scroll.physics,
-            padding: scroll.padding,
-            cacheExtent: scroll.cacheExtent,
-          );
-  }
+  Widget build(BuildContext context) => KeyedPagedListView(
+    state: state,
+    fetchNextPage: fetchNextPage,
+    builderDelegate: _buildDelegate(),
+    itemId: itemId,
+    separatorBuilder: separatorBuilder,
+    controller: scroll.controller,
+    scrollDirection: scroll.scrollDirection,
+    reverse: scroll.reverse,
+    physics: scroll.physics,
+    padding: scroll.padding,
+    scrollCacheExtent: scroll.scrollCacheExtent,
+  );
 
   /// The item builder handed to ISP. The group look-back only walks the pages when grouping is on, since
   /// [Grouping.decorate] takes it as a callback.

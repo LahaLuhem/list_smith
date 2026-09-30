@@ -393,6 +393,9 @@ server's copy. So after a failed save, a refresh puts that copy back. Removals n
 early: the end policy still counts what the server sent, and removing every row on screen loads the
 next page.
 
+Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
+while rows above it come and go.
+
 `remove` fits `Dismissible.onDismissed` as it is:
 
 ```dart

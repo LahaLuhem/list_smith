@@ -23,7 +23,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   /// Whether the list is searchable, and how: [NoSearch] for none, [AsyncSearch] for a search mode.
   final Search<T> search;
 
-  /// Tells items apart, for de-dup and edits.
+  /// Tells items apart, for de-dup, edits and keeping each row with its item.
   final ItemId<T> itemId;
 
   /// Creates it.

@@ -158,6 +158,7 @@ capture reproduces it rather than restamping it with today.
 | `header_flags_scaling` | `headerFlagsByFirstSighting` cost as the loaded list grows, over a lazy flatten of pages |
 | `dedup_scaling` | `itemId` de-dup cost as the loaded list grows, with no real overlap |
 | `edit_layer_scaling` | the edit layer's pass as the loaded list grows, with 10 new items joining groups spread across it |
+| `row_lookup_scaling` | finding each built row again on a rebuild, after a page lands at the end and after an item lands on top |
 | `observer_dispatch` | one no-op observer callback through list_smith's wrapping |
 | `wrapping_overhead` | the per-`getNextPageKey` end-policy work as loaded pages grow |
 

@@ -1,5 +1,5 @@
-/// Pulls a stable identity key off an item. The list drops an item whose key already showed up, and
-/// an edit finds its row by it.
+/// Pulls a stable identity key off an item. The list drops an item whose key already showed up, an
+/// edit finds its row by it, and a row stays with its item as the rows around it change.
 ///
 /// Keys compare by `==` / `hashCode`, so an `int`, a `String`, or a composite like `'${item.a}:${item.b}'`.
 /// Anything with its own `==`, a record included, can key itself with `(item) => item`. A class without

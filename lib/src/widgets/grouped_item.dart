@@ -41,15 +41,17 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final itemWidget = itemBuilder(context, item, index);
-    if (!drawsHeader) return itemWidget;
+  Widget build(BuildContext context) => Flex(
+    direction: scrollDirection,
+    mainAxisSize: .min,
+    crossAxisAlignment: .stretch,
+    // Keyed slots in one shape, so the item keeps its state as the header comes and goes.
+    children: [
+      if (drawsHeader) KeyedSubtree(key: _headerSlot, child: headerFor(context, groupOf(item))),
+      KeyedSubtree(key: _itemSlot, child: itemBuilder(context, item, index)),
+    ],
+  );
 
-    return Flex(
-      direction: scrollDirection,
-      mainAxisSize: .min,
-      crossAxisAlignment: .stretch,
-      children: [headerFor(context, groupOf(item)), itemWidget],
-    );
-  }
+  static const _headerSlot = ValueKey('header');
+  static const _itemSlot = ValueKey('item');
 }

@@ -34,6 +34,7 @@ renames.
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
 - [`itemId` is required](#item-id-required)
+- [Async rows follow their item, not their index](#row-identity)
 
 <!-- TOC end -->
 
@@ -147,9 +148,8 @@ renames.
   unchanged list is never re-copied or re-filtered per build.
 - **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent`
   (`double`) for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a
-  public `double?`, and `SyncListView` wraps it via `ScrollCacheExtent.pixels(...)` from
+  public `double?`, and both views wrap it via `ScrollCacheExtent.pixels(...)` from
   `package:flutter/rendering.dart`, the widgets layer's own foundation rather than a design system.
-  ISP's `PagedListView` has its own non-deprecated `cacheExtent`, so the async path is untouched.
 
 ---
 
@@ -264,10 +264,10 @@ renames.
   widens `T` to `Object`, so type the parameter or pass a typed function.
 - **The header rides the group's 1st item, not a sticky sliver.** `KeyedGrouping.decorate` wraps
   each cell in a `GroupedItem` that stacks the header before the group's 1st item in a `Flex`
-  along the scroll axis, so ISP keeps its flat pager and list_smith keeps owning the scrollable. A
-  per-cell look-back at the previous key marks where a group starts, O(1) per built cell. Sticky
-  headers would need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset
-  tracking, exactly the fragility this package rejects. Deferred.
+  along the scroll axis, so ISP keeps its flat pager and list_smith keeps owning the scrollable. One
+  pass per build flags where each group starts ([#scan-loops](#scan-loops)). Sticky headers would
+  need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset tracking, exactly
+  the fragility this package rejects. Deferred.
 - **Sync buckets, async trusts arrival order.** A sync list holds every item, so it reorders the
   filtered ones into contiguous groups (`bucketByGroup` over `collection`'s `groupListsBy`,
   first-appearance order, item order kept within a group) and input can arrive any way round. An
@@ -303,9 +303,9 @@ renames.
   couldn't name `T` inside a `const`.
 - **The ungrouped path still does no flatten.** `decorate` takes `flatItems` as a callback
   `NoGrouping.decorate` never invokes, so an ungrouped async list skips the O(loaded) page flatten.
-  Only `KeyedGrouping.decorate` calls it, once per build, for the look-back and the assert. Dispatch
-  is per build rather than per item, one virtual call replacing one `is` check, so the render path
-  is unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
+  Only `KeyedGrouping.decorate` calls it, once per build, for the header flags and the assert.
+  Dispatch is per build rather than per item, one virtual call replacing one `is` check, so the
+  render path is unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
 - **`GroupedItem` was decoupled from `KeyedGrouping`.** It takes `groupOf` and `headerFor` directly
   rather than the whole grouping, so `decorate` can build it without a cycle: the grouping model
   imports the widget, and a `KeyedGrouping` field would make the 2 files import each other. The
@@ -661,12 +661,30 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="item-id-required"></a>
 ## `itemId` is required
 
-- **Decision:** `ListSmith.async` takes an `itemId`, with no default, because de-dup and edits both
-  find items by it. It's there for correctness, not speed.
+- **Decision:** `ListSmith.async` takes an `itemId`, with no default, because de-dup, edits and
+  [row identity](#row-identity) all find items by it. It's there for correctness, not speed.
 - **Why not `(item) => item` as the default:** most JSON models have no `==`, so an upserted copy
-  never matches the loaded one and shows as a 2nd row. The README suggests it for values that do.
+  never matches the loaded one and shows as a 2nd row, and a re-read hands every row a new identity,
+  wiping its state. The README suggests it for values that do.
 - **Cost:** the display pass now runs on every list, at the price
   [#overlap-dedup](#overlap-dedup) measures.
+
+---
+
+<a id="row-identity"></a>
+## Async rows follow their item, not their index
+
+- **Decision:** each async row is keyed by its `itemId`, and the list finds a row that moved through
+  `findChildIndexCallback`. So a row keeps its state, and anything it's animating, while rows above
+  it come and go.
+- **Our own list:** ISP's `PagedListView` can't take that callback, so `KeyedPagedListView` is a
+  `BoxScrollView` and sliver of our own around ISP's `PagedLayoutBuilder`. The surfaces, the footer
+  and load-on-scroll stay ISP's.
+- **The lookup:** a row's key carries the index it was last built at, and that's checked first. Only
+  a row that moved builds the id-to-index map, once per rebuild. The
+  [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
+- **`GroupedItem` keeps one shape,** a `Flex` with keyed header and item slots, so a row gaining or
+  losing its header keeps its state too.
 
 ---
 
