@@ -1,6 +1,6 @@
 /// Micro-benchmark: the async list's overlap de-dup cost as the loaded list grows.
 ///
-/// Measured over pages that do NOT overlap, the common case where `itemId` collapses nothing. That's
+/// Measured over pages that do NOT overlap, the common case where de-dup collapses nothing. That's
 /// the worst case for the pass, every item retained so allocation is maximal, and the penalty you pay
 /// for not having the problem.
 ///
@@ -51,7 +51,7 @@ final class _DedupScaling extends BenchmarkBase {
   }
 }
 
-/// A reference-identity item keyed by [id], the shape `itemId` de-dups (fresh objects, no `==`).
+/// A reference-identity item keyed by [id], the shape `itemIdGetter` keys on (fresh objects, no `==`).
 final class _Item {
   const new(this.id);
 

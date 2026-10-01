@@ -58,7 +58,7 @@ final class _EditLayerScaling extends BenchmarkBase {
       pages: _pages,
       readStamps: _readStamps,
       edits: _edits,
-      itemId: (item) => item.id,
+      itemIdGetter: (item) => item.id,
       groupOf: (item) => item.group,
       acceptsNewItems: true,
     ).pages;
@@ -69,7 +69,7 @@ final class _EditLayerScaling extends BenchmarkBase {
   }
 }
 
-/// A reference-identity item, the shape `itemId` keys on, in groups of [_groupSize].
+/// A reference-identity item, the shape `itemIdGetter` keys on, in groups of [_groupSize].
 final class _Item {
   const new(this.id, this.group);
 

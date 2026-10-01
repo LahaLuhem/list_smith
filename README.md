@@ -75,20 +75,20 @@ then override. list_smith does neither.
 
 ## A quick taste
 
-A function that fetches a page and a builder for each item, plus an `itemId` so the list can tell
-items apart. That's the whole setup:
+A function that fetches a page and a builder for each item, plus an `itemIdGetter` so the list can
+tell items apart. That's the whole setup:
 
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => api.fetchArticles(page: request.pageIndex, size: request.pageSize)),
-  itemId: (article) => article.id,
+  itemIdGetter: (article) => article.id,
   itemBuilder: (context, article, index) => ArticleTile(article),
 )
 ```
 
 That already paginates as you scroll, pulls to refresh, loads, errors with a retry button, and knows
 when it has hit the end. No id field? A value with its own `==`, like an `int`, a `String` or a
-record, can be its own id: `itemId: (item) => item`.
+record, can be its own id: `itemIdGetter: (item) => item`.
 
 ## 2 kinds of list
 
@@ -111,7 +111,7 @@ is the end of the road:
 ListSmith.async(
   pageSize: 30,
   fetchPage: PageFetcher((request) => repo.load(request.pageIndex, request.pageSize)),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   itemBuilder: (context, item, index) => Text(item.title),
 )
 ```
@@ -180,7 +180,7 @@ ListSmith.async(
     final response = await api.load(request.pageIndex, request.pageSize);
     return (response.items, response.hasMore);
   }),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   endPolicy: const ExplicitHasMorePolicy(),
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -209,7 +209,7 @@ ListSmith.async(
     final page = await api.list(cursor: request.previousSignal as String?, limit: request.pageSize);
     return (page.items, page.nextCursor);   // null nextCursor ends it
   }),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   endPolicy: const StopOnNullSignalPolicy(),
   itemBuilder: (context, item, index) => Text(item.title),
 )
@@ -233,7 +233,7 @@ one with items or the true end, showing the loading surface while it goes:
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => calendar.dayPage(request.pageIndex, request.pageSize)),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   // An empty day isn't the end...
   endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 31),
   // ...so page straight past empty days to the 1st with entries.
@@ -252,7 +252,7 @@ pull re-scans.
 <summary><b>De-duplicating overlapping pages</b></summary>
 
 Offset-based sources can hand you the same row twice when the data shifts between fetches: a row is
-inserted, so page N's tail reappears as page N+1's head. list_smith drops any item whose `itemId`
+inserted, so page N's tail reappears as page N+1's head. list_smith drops any item whose id
 already showed up, so the repeat never renders.
 
 Keys compare by value, so an `int` or `String` id works. Compose one like `'${item.a}:${item.b}'`
@@ -330,7 +330,7 @@ A toolbar button, a re-tapped tab, a re-read after a local write, a logout. Pass
 ```dart
 final controller = ListSmithController<Task>();
 
-ListSmith.async(fetchPage: PageFetcher(...), itemId: (task) => task.id, itemBuilder: ..., controller: controller)
+ListSmith.async(fetchPage: PageFetcher(...), itemIdGetter: (task) => task.id, itemBuilder: ..., controller: controller)
 
 await controller.refresh();     // fresh data wanted: exactly a pull
 await controller.invalidate();  // my data changed: re-read every loaded page, keep my place
@@ -367,7 +367,7 @@ re-read: just notify the list, and it shows the change at once, keeping the scro
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (task) => task.id,  // an edit finds its row by this
+  itemIdGetter: (task) => task.id,  // an edit finds its row by this
   itemBuilder: ...,
   controller: controller,
 )
@@ -421,7 +421,7 @@ in, and the row a `remove` takes animates out:
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (task) => task.id,
+  itemIdGetter: (task) => task.id,
   itemBuilder: ...,
   controller: controller,
   editTransition: EditTransition(
@@ -493,7 +493,7 @@ views, with pagination and pull-to-refresh working in both:
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher((request) => repo.feed(request.pageIndex, request.pageSize)),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   search: AsyncSearch(
     fetchPage: SearchPageFetcher((r) => repo.search(r.query, r.pageIndex, r.pageSize)),
   ),
@@ -536,7 +536,7 @@ Widget build(BuildContext context) => Column(
   children: [
     // your field: a TextField, a CupertinoTextField, your design system's search bar, wherever
     TextField(onChanged: (value) => setState(() => _query = value)),
-    Expanded(child: ListSmith.async(query: _query, /* fetchPage, itemId, search, itemBuilder as above */)),
+    Expanded(child: ListSmith.async(query: _query, /* fetchPage, itemIdGetter, search, itemBuilder as above */)),
   ],
 );
 ```
@@ -616,7 +616,7 @@ async-only, gathered into an `AsyncListSurfaces` you define once and reuse for a
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   itemBuilder: ...,
   emptyBuilder: (context) => const Center(child: Text('Nothing here yet')),
   surfaces: AsyncListSurfaces(
@@ -660,7 +660,7 @@ Nicer than a spinner: hand the loading slots the row you already build, with a s
 ```dart
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (article) => article.id,
+  itemIdGetter: (article) => article.id,
   itemBuilder: (context, article, index) => ArticleTile(article),
   surfaces: AsyncListSurfaces(
     // Hold the placeholder in a field, or you rebuild it every frame.
@@ -692,7 +692,7 @@ final class MyObserver extends ListSmithObserver {
 
 ListSmith.async(
   fetchPage: PageFetcher(...),
-  itemId: (item) => item.id,
+  itemIdGetter: (item) => item.id,
   itemBuilder: ...,
   observer: const MyObserver(),
 )
@@ -759,7 +759,7 @@ the wrapping is close to free. Measured on one machine (yours will differ), from
 | Animating edits (size, fade or slide)                | +0.1 to 0.3 ms/frame over the same edits unanimated, none over budget         |
 | Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                             |
 | Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~26 ms at 100k                                 |
-| `itemId` de-dup, per page arriving                   | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~40 ms at 100k                          |
+| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~40 ms at 100k                          |
 | A 50 ms observer callback                            | pushes render latency to ~68 ms                                               |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
@@ -781,7 +781,7 @@ Numbers are per-machine, so capture your own baseline before trusting a delta. T
 
 ![Sync grouping cost vs list size](benchmark/reports/bucket_by_group_scaling.png)
 
-![itemId de-dup cost vs loaded list size](benchmark/reports/dedup_scaling.png)
+![De-dup cost vs loaded list size](benchmark/reports/dedup_scaling.png)
 
 ## The example app
 

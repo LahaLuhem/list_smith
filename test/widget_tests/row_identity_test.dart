@@ -102,7 +102,7 @@ Future<ListSmithController<int>> _pumpRows(
     tester,
     ListSmith.async(
       fetchPage: pagedFetcher([items]),
-      itemId: (item) => item,
+      itemIdGetter: (item) => item,
       endPolicy: const FixedPageCountPolicy(pageCount: 1),
       refresh: const NoRefresh(),
       grouping: grouping,

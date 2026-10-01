@@ -68,7 +68,7 @@ void main() {
             key: ValueKey('${delayMillis}_$i'),
             child: ListSmith<int>.async(
               fetchPage: PageFetcher(fetchPage),
-              itemId: (item) => item,
+              itemIdGetter: (item) => item,
               pageSize: _pageSize,
               refresh: const NoRefresh(),
               observer: observer,

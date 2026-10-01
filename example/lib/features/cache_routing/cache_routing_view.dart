@@ -46,7 +46,7 @@ class CacheRoutingView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               fetchPage: PageFetcher(viewModel.fetchPage),
-              itemId: (item) => item.id,
+              itemIdGetter: (item) => item.id,
               pageSize: 12,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) =>

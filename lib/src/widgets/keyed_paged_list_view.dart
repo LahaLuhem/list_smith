@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
-import '/src/data/pagination/typedefs/item_id.dart';
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/presentation/utils/row_lookup.dart';
 
@@ -23,7 +23,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
   final PagedChildBuilderDelegate<T> builderDelegate;
 
   /// Keys each row, so the list finds it again after a shift.
-  final ItemId<T> itemId;
+  final ItemIdGetter<T> itemIdGetter;
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
@@ -33,7 +33,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
     required this.state,
     required this.fetchNextPage,
     required this.builderDelegate,
-    required this.itemId,
+    required this.itemIdGetter,
     this.separatorBuilder,
     super.controller,
     super.scrollDirection,
@@ -46,7 +46,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    final rows = RowLookup<T>(state.pages ?? const [], itemId);
+    final rows = RowLookup<T>(state.pages ?? const [], itemIdGetter);
     // One shape whatever the footer shows: the end, a new page loading, or its error.
     Widget listing(
       BuildContext _,
@@ -55,7 +55,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
       WidgetBuilder? footerBuilder,
     ) => _KeyedRows(
       rows: rows,
-      itemId: itemId,
+      itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
       itemCount: itemCount,
       footerBuilder: footerBuilder,
@@ -78,7 +78,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
 /// as they do in ISP's list.
 class _KeyedRows<T extends Object> extends StatelessWidget {
   final RowLookup<T> rows;
-  final ItemId<T> itemId;
+  final ItemIdGetter<T> itemIdGetter;
   final IndexedWidgetBuilder itemBuilder;
   final int itemCount;
   final WidgetBuilder? footerBuilder;
@@ -86,7 +86,7 @@ class _KeyedRows<T extends Object> extends StatelessWidget {
 
   const new({
     required this.rows,
-    required this.itemId,
+    required this.itemIdGetter,
     required this.itemBuilder,
     required this.itemCount,
     required this.footerBuilder,
@@ -114,7 +114,7 @@ class _KeyedRows<T extends Object> extends StatelessWidget {
 
   Widget? _buildCell(BuildContext context, int index) => index < itemCount
       ? KeyedSubtree(
-          key: _RowKey(itemId(rows.itemAt(index)), index),
+          key: _RowKey(itemIdGetter(rows.itemAt(index)), index),
           child: itemBuilder(context, index),
         )
       : footerBuilder?.call(context);

@@ -94,6 +94,9 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
 - **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
   `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
   (`reverse` on `ListScrollConfig`), which keeps the framework's name.
+- **A function typedef is named for its job, so it reads as something you call.** `ItemIdGetter`,
+  not `ItemId`, which reads as the id itself. Flutter does the same: `ValueGetter`,
+  `ChildIndexGetter`.
 - **Unused closure parameters take the discard `_`, not a real name.** An identifier you never
   reference is noise, and `_` makes the unused-ness immediate.
 
@@ -140,8 +143,8 @@ feature**:
 
 - **A typedef with a single home type stays in that type's file.** Only a standalone typedef with
   no such home gets its own file under the feature's `typedefs/`. So `RefreshIndicatorBuilder` sits
-  with `ListSmithRefreshState` in `refresh/models/`, while `ItemId` and `ItemBuilder` stand alone in
-  their features' `typedefs/`. A callable class is not a typedef: `PageFetcher` and
+  with `ListSmithRefreshState` in `refresh/models/`, while `ItemIdGetter` and `ItemBuilder` stand
+  alone in their features' `typedefs/`. A callable class is not a typedef: `PageFetcher` and
   `SearchPageFetcher` live under `models/`.
 - **A resolver is an unexported `extension` in `<feature>/extensions/`**, named
   `<thing>_resolver_extension.dart`. A pure top-level *function* resolver goes in

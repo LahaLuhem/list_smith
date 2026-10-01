@@ -146,10 +146,10 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
 def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     """Line plot of `microseconds_per_dedup` vs `item_count`, with the 60 Hz frame budget marked.
 
-    From the `dedup_scaling` micro: with an `itemId`, the async list de-dups overlapping pages as a
-    computed view over the paging state, re-walking every loaded item on each state change. This is
-    the worst case (itemId set, no real overlap, so nothing collapses). Where the line crosses the
-    frame-budget rule is the practical ceiling for `itemId` de-dup on a single live list.
+    From the `dedup_scaling` micro: the async list de-dups overlapping pages by id as a computed
+    view over the paging state, re-walking every loaded item on each state change. This is the
+    worst case (no real overlap, so nothing collapses). Where the line crosses the frame-budget rule
+    is the practical ceiling for de-dup on a single live list.
 
     Returns None (writes nothing) when the input has no `dedup_scaling` data.
     """
@@ -186,7 +186,7 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     )
     ax.set_xlabel("Loaded list size (items)")
     ax.set_ylabel("display de-dup cost (us)")
-    ax.set_title("itemId de-dup cost scales with the loaded list size")
+    ax.set_title("De-dup cost scales with the loaded list size")
     ax.legend(loc="best")
     plt.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)

@@ -10,7 +10,7 @@ import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
-import '/src/data/pagination/typedefs/item_id.dart';
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -74,16 +74,16 @@ class ListSmith<T extends Object> extends StatelessWidget {
 
   /// Creates an async, paginated list driven by [fetchPage], searchable via [search].
   ///
-  /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemId] tells them apart.
-  /// Those 2 and [itemBuilder] are required. The rest default to a 20-item page, pull-to-refresh on,
-  /// pagination ending at the 1st empty page, no search, no grouping, no edit transitions and the
+  /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemIdGetter] tells them
+  /// apart. Those 2 and [itemBuilder] are required. The rest default to a 20-item page, pull-to-refresh
+  /// on, pagination ending at the 1st empty page, no search, no grouping, no edit transitions and the
   /// neutral surfaces.
   ///
   /// 2 pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading end policy
   /// needs `withSignal` fetchers on both the feed and the search.
   new async({
     required PageFetcher<T> fetchPage,
-    required ItemId<T> itemId,
+    required ItemIdGetter<T> itemIdGetter,
     required this.itemBuilder,
     int pageSize = 20,
     Refresh refresh = const PullToRefresh(),
@@ -123,7 +123,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          onEmptyPage: onEmptyPage,
          refresh: refresh,
          search: search,
-         itemId: itemId,
+         itemIdGetter: itemIdGetter,
          editTransition: editTransition,
        );
 

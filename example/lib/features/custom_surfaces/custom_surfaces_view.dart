@@ -41,7 +41,7 @@ class CustomSurfacesView extends StatelessWidget {
           Expanded(
             child: ListSmith.async(
               fetchPage: PageFetcher(viewModel.fetchPage),
-              itemId: (item) => item.id,
+              itemIdGetter: (item) => item.id,
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
               emptyBuilder: (_) => const CustomEmpty(),

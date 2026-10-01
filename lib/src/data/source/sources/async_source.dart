@@ -24,7 +24,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
   final Search<T> search;
 
   /// Tells items apart, for de-dup, edits and keeping each row with its item.
-  final ItemId<T> itemId;
+  final ItemIdGetter<T> itemIdGetter;
 
   /// Whether the rows edits add and take animate.
   final EditTransition editTransition;
@@ -37,7 +37,7 @@ final class AsyncSource<T extends Object> extends ListSource<T> {
     required this.onEmptyPage,
     required this.refresh,
     required this.search,
-    required this.itemId,
+    required this.itemIdGetter,
     required this.editTransition,
   });
 

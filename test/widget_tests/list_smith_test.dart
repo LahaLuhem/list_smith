@@ -239,7 +239,7 @@ Future<void> _pumpList(WidgetTester tester, PageFetcher<int> fetchPage) => pumpL
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    itemId: (item) => item,
+    itemIdGetter: (item) => item,
     itemBuilder: (_, item, _) => Text('item $item'),
   ),
 );
@@ -269,7 +269,7 @@ Future<void> _pumpAsyncSearch(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    itemId: (item) => item,
+    itemIdGetter: (item) => item,
     search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: cachePolicy),
     query: query,
     searchDebounce: const Duration(milliseconds: 20),

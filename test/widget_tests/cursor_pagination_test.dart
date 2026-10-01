@@ -15,7 +15,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _cursorFetcher(received),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnNullSignalPolicy(),
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -37,7 +37,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _cursorFetcher(received),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnNullSignalPolicy(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -72,7 +72,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: PageFetcher.withSignal((_) async => (const [1, 2, 3], null)),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           search: AsyncSearch(fetchPage: searchFetchPage),
           endPolicy: const StopOnNullSignalPolicy(),
           query: 'q',

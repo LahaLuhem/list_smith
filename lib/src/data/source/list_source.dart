@@ -2,7 +2,7 @@ import '/src/data/edits/models/edit_transition.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';
-import '/src/data/pagination/typedefs/item_id.dart';
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/refresh/models/refresh.dart';
 import '/src/data/search/models/search.dart';
 import '/src/data/search/typedefs/sync_search_predicate.dart';

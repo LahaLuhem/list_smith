@@ -53,7 +53,7 @@ void main() {
           fetchPage: pagedFetcher(const [
             [1, 2, 3],
           ]),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -78,7 +78,7 @@ void main() {
 
             return firstPageFetches == 1 ? Future.value(const [1, 2, 3]) : hold.future;
           }),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           refresh: PullToRefresh(
             // A depth reload waits on its fetches, so the held one keeps the refresh running.
             reload: const ReloadToCurrentDepth(),
@@ -134,7 +134,7 @@ void main() {
             textDirection: orientation.text,
             child: ListSmith.async(
               fetchPage: pagedFetcher([_items]),
-              itemId: (item) => item,
+              itemIdGetter: (item) => item,
               scroll: orientation.scroll,
               refresh: PullToRefresh(
                 indicatorBuilder: (_, state) {
@@ -176,7 +176,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: pagedFetcher([_items]),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           scroll: const ListScrollConfig(physics: BouncingScrollPhysics()),
           itemBuilder: (_, item, _) => _Row(item),
         ),
@@ -211,7 +211,7 @@ void main() {
 
               return firstPageFetches == 1 ? Future.value(_items) : hold.future;
             }),
-            itemId: (item) => item,
+            itemIdGetter: (item) => item,
             scroll: scroll,
             refresh: PullToRefresh(
               // Waits on the held fetch, so the refresh keeps running.
@@ -241,7 +241,7 @@ void main() {
           tester,
           ListSmith.async(
             fetchPage: pagedFetcher([_items]),
-            itemId: (item) => item,
+            itemIdGetter: (item) => item,
             refresh: PullToRefresh(
               indicatorExtent: extent,
               indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
@@ -270,7 +270,7 @@ void main() {
           fetchPage: PageFetcher(
             (request) => request.pageIndex == 0 ? hold.future : Future.value(const <int>[]),
           ),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -360,7 +360,7 @@ Future<void> _pumpAsync(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    itemId: (item) => item,
+    itemIdGetter: (item) => item,
     surfaces: surfaces,
     separatorBuilder: separatorBuilder,
     refresh: const NoRefresh(),

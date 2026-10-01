@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-import '/src/data/pagination/typedefs/item_id.dart';
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 
 /// The rows edits are animating in and out, one controller per item id.
@@ -26,12 +26,12 @@ final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
   /// [itemBuilder] for one build, each row wrapped in [transitionBuilder] while it animates.
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required ItemId<T> itemId,
+    required ItemIdGetter<T> itemIdGetter,
     required AnimatedSwitcherTransitionBuilder transitionBuilder,
   }) =>
       (_, item, index) => _TransitionRow(
         rowTransitionsNotifier: this,
-        id: itemId(item),
+        id: itemIdGetter(item),
         transitionBuilder: transitionBuilder,
         buildChild: (context) => itemBuilder(context, item, index),
       );

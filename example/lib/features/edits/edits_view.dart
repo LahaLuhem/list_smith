@@ -57,7 +57,7 @@ class EditsView extends StatelessWidget {
             child: ListSmith.async(
               fetchPage: PageFetcher.withSignal(viewModel.fetchPage),
               endPolicy: const StopOnNullSignalPolicy(),
-              itemId: (item) => item.id,
+              itemIdGetter: (item) => item.id,
               controller: viewModel.controller,
               editTransition: EditTransition(
                 duration: const Duration(milliseconds: 250),

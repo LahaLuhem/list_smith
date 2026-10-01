@@ -61,7 +61,7 @@ void main() {
                   ? List<int>.generate(_itemCount, (index) => index)
                   : const <int>[],
             ),
-            itemId: (item) => item,
+            itemIdGetter: (item) => item,
             refresh: const NoRefresh(),
             editTransition: editTransition,
             controller: controller,
