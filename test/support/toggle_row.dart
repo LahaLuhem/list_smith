@@ -22,9 +22,8 @@ class _ToggleRowState extends State<ToggleRow> {
 }
 
 /// The [ToggleRow]s on screen, top to bottom.
-List<String> shownToggleRows() => find
+Iterable<String> shownToggleRows() => find
     .textContaining(RegExp('^(on|off) '))
     .evaluate()
     .map((element) => (element.widget as Text).data)
-    .nonNulls
-    .toList(growable: false);
+    .nonNulls;

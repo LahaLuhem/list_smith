@@ -14,14 +14,14 @@ void main() {
 
       controller.upsert(0);
       await tester.pump();
-      final heights = [_heightOf(tester, 0)];
+      final heights = [_heightOf(0)];
       for (var frame = 0; frame < 4; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
-        heights.add(_heightOf(tester, 0));
+        heights.add(_heightOf(0));
       }
       controller.upsert(0); // already shown, so it changes in place
       await tester.pump();
-      heights.add(_heightOf(tester, 0));
+      heights.add(_heightOf(0));
 
       check(heights.first).equals(0);
       check(heights[1])
@@ -43,11 +43,11 @@ void main() {
 
       await tester.pump();
       await tester.pump();
-      check(_heightOf(tester, 0)).equals(50);
+      check(_heightOf(0)).equals(50);
       await drain(tester, frames: 12);
       scroll.jumpTo(1500);
       await tester.pump();
-      check(_heightOf(tester, 35)).equals(50);
+      check(_heightOf(35)).equals(50);
     });
 
     scenarioWidgets('a new row keeps its state once its entry ends', (tester) async {
@@ -56,12 +56,12 @@ void main() {
       controller.upsert(0);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
-      check(_heightOf(tester, 0)).isLessThan(50);
+      check(_heightOf(0)).isLessThan(50);
       await _tapShowingPart(tester, 0);
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
 
-      check(_heightOf(tester, 0)).equals(50);
+      check(_heightOf(0)).equals(50);
       check(shownToggleRows().first).equals('on 0');
     });
 
@@ -71,12 +71,12 @@ void main() {
       controller.remove(2);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 150));
-      final leavingHeight = _heightOf(tester, 2);
+      final leavingHeight = _heightOf(2);
 
       check(leavingHeight)
         ..isGreaterThan(0)
         ..isLessThan(50);
-      check(_heightOf(tester, 3)).equals(50);
+      check(_heightOf(3)).equals(50);
       check(_topOf(tester, 3)).equals(_topOf(tester, 2) + leavingHeight);
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
@@ -88,17 +88,17 @@ void main() {
       examples: {
         'down a list': (
           scroll: const ListScrollConfig(),
-          direction: DismissDirection.endToStart,
+          direction: .endToStart,
           swipe: const Offset(-700, 0),
         ),
         'down a reversed list': (
           scroll: const ListScrollConfig(reverse: true),
-          direction: DismissDirection.endToStart,
+          direction: .endToStart,
           swipe: const Offset(-700, 0),
         ),
         'across a sideways list': (
           scroll: const ListScrollConfig(scrollDirection: .horizontal),
-          direction: DismissDirection.up,
+          direction: .up,
           swipe: const Offset(0, -500),
         ),
       },
@@ -133,13 +133,13 @@ void main() {
       controller.remove(2);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 150));
-      check(_heightOf(tester, 2)).isLessThan(50);
+      check(_heightOf(2)).isLessThan(50);
       controller.upsert(2);
       await tester.pump(); // a restarted ticker's 1st frame has no time in it
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
 
-      check(_heightOf(tester, 2)).equals(50);
+      check(_heightOf(2)).equals(50);
       check(shownToggleRows()).deepEquals(['off 1', 'on 2', 'off 3']);
       await tester.pump(const Duration(seconds: 1));
       check(shownToggleRows()).deepEquals(['off 1', 'on 2', 'off 3']);
@@ -150,12 +150,26 @@ void main() {
 
       controller.upsert(0);
       await tester.pump();
-      check(_heightOf(tester, 0)).equals(50);
+      check(_heightOf(0)).equals(50);
       controller.remove(2);
       await tester.pump();
       await tester.pump();
 
       check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'off 3']);
+    });
+
+    scenarioWidgets('turning transitions off mid-exit takes the leaving row at once', (
+      tester,
+    ) async {
+      final controller = await _pumpRows(tester);
+
+      controller.remove(2);
+      await _startExit(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      check(_heightOf(2)).isLessThan(50);
+      await _pumpRows(tester, controller: controller, isTransitionOn: false);
+
+      check(shownToggleRows()).deepEquals(['off 1', 'off 3']);
     });
 
     scenarioWidgets('a reload committing mid-exit keeps the leaving row hidden', (tester) async {
@@ -174,7 +188,7 @@ void main() {
       await tester.pump();
       await release(tester, [hold]);
       check(server.attempts[0]).equals(2); // the re-read committed while row 2 was leaving
-      check(_heightOf(tester, 2)).isLessThan(50);
+      check(_heightOf(2)).isLessThan(50);
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
 
@@ -195,7 +209,7 @@ void main() {
       controller.upsert(9);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
-      check(_heightOf(tester, 9)).isLessThan(50);
+      check(_heightOf(9)).isLessThan(50);
       await _tapShowingPart(tester, 9);
       await controller.refresh();
       await drain(tester, frames: 12);
@@ -233,7 +247,7 @@ void main() {
       controller.remove(4);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 150));
-      check(_heightOf(tester, 4)).isLessThan(50);
+      check(_heightOf(4)).isLessThan(50);
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
       await _pumpKept(tester, controller, query: '');
@@ -255,7 +269,7 @@ void main() {
       await settle(tester);
 
       check(shownToggleRows().first).equals('off 100');
-      check(_heightOf(tester, 100)).equals(50);
+      check(_heightOf(100)).equals(50);
     });
 
     scenarioWidgets('a query change mid-exit lands the removal', (tester) async {
@@ -265,7 +279,7 @@ void main() {
       controller.remove(3);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 100));
-      check(_heightOf(tester, 3)).isLessThan(50);
+      check(_heightOf(3)).isLessThan(50);
       await _pumpKept(tester, controller, query: 'q');
       await settle(tester);
       await _pumpKept(tester, controller, query: ''); // back well inside the exit's time
@@ -281,12 +295,12 @@ void main() {
       controller.remove(2);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 100));
-      check(_heightOf(tester, 2)).isLessThan(50);
+      check(_heightOf(2)).isLessThan(50);
       await controller.reset();
       await drain(tester, frames: 12);
 
       check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3']);
-      check(_heightOf(tester, 2)).equals(50);
+      check(_heightOf(2)).equals(50);
     });
 
     scenarioWidgets('an entry in progress stops at reset()', (tester) async {
@@ -297,12 +311,12 @@ void main() {
       controller.upsert(0);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      check(_heightOf(tester, 0)).isLessThan(50);
+      check(_heightOf(0)).isLessThan(50);
       await controller.reset();
       await drain(tester, frames: 12);
 
       check(shownToggleRows().first).equals('off 0');
-      check(_heightOf(tester, 0)).equals(50);
+      check(_heightOf(0)).equals(50);
     });
 
     scenarioWidgets('a new group-first item grows in under a header that stays whole', (
@@ -329,7 +343,7 @@ void main() {
       controller.remove(10);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 150));
-      check(_heightOf(tester, 10)).isLessThan(50);
+      check(_heightOf(10)).isLessThan(50);
       check(tester.getTopLeft(find.text('group 1')).dy).isLessThan(_topOf(tester, 10));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump();
@@ -364,6 +378,7 @@ Future<ListSmithController<int>> _pumpRows(
   List<int>? dismissed,
   WidgetBuilder? emptyBuilder,
   bool isMotionReduced = false,
+  bool isTransitionOn = true,
   bool isDrained = true,
 }) async {
   final handle = controller ?? ListSmithController<int>();
@@ -380,15 +395,17 @@ Future<ListSmithController<int>> _pumpRows(
     scroll: scroll,
     emptyBuilder: emptyBuilder,
     controller: handle,
-    editTransition: EditTransition(
-      duration: duration,
-      transitionBuilder: (child, animation) => SizeTransition(
-        sizeFactor: animation,
-        axis: axis,
-        alignment: AlignmentDirectional.topStart,
-        child: child,
-      ),
-    ),
+    editTransition: !isTransitionOn
+        ? const NoEditTransition()
+        : EditTransition(
+            duration: duration,
+            transitionBuilder: (child, animation) => SizeTransition(
+              sizeFactor: animation,
+              axis: axis,
+              alignment: .topStart,
+              child: child,
+            ),
+          ),
     itemBuilder: (_, item, _) => dismissDirection == null
         ? ToggleRow(item)
         : Dismissible(
@@ -450,14 +467,14 @@ Finder _rowOf(int item) => find.byWidgetPredicate(
 );
 
 /// How much of [item]'s row shows: its transition's size while one runs, the row's own otherwise.
-double _heightOf(WidgetTester tester, int item) {
+double _heightOf(int item) {
   final row = _rowOf(item);
-  final transition = find.ancestor(
-    of: row,
-    matching: find.byType(SizeTransition, skipOffstage: false),
-  );
+  final transitionElement = find
+      .ancestor(of: row, matching: find.byType(SizeTransition, skipOffstage: false))
+      .evaluate()
+      .firstOrNull;
 
-  return tester.getSize(transition.evaluate().isEmpty ? row : transition.first).height;
+  return (transitionElement ?? row.evaluate().single).size!.height;
 }
 
 double _topOf(WidgetTester tester, int item) => tester.getTopLeft(_rowOf(item)).dy;

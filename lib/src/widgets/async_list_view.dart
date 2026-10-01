@@ -189,10 +189,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     }
     if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
     // Turned off mid-animation: a leaving row would otherwise build its deleted item again.
-    if (oldWidget.source.editTransition is AnimatedEditTransition &&
-        widget.source.editTransition is NoEditTransition) {
-      _rowTransitionsNotifier.settle();
-    }
+    if (widget.source.editTransition is NoEditTransition) _rowTransitionsNotifier.settle();
   }
 
   @override
