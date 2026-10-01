@@ -125,10 +125,10 @@ packages:
     dependency: transitive
     description:
       name: custom_refresh_indicator
-      sha256: c34dd1dfb1f6b9ee2db9c5972586dba5e4445d79f8431f6ab098a6e963ccd39c
+      sha256: "4b570ec0b526631b49de22c861a129e04572bbd76c24f0772dbd703a0822b4f3"
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.1"
+    version: "4.0.2"
   dependency_validator:
     dependency: "direct dev"
     description:
@@ -411,10 +411,10 @@ packages:
     dependency: transitive
     description:
       name: pool
-      sha256: "978783255c543aa3586a1b3c21f6e9d720eb315376a915872c61ef8b5c20177d"
+      sha256: "4177f68c237ea2128d1bee66ac17b2ce05ba3dbaafcbdd54c5d40a39d0b6b11c"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.2"
+    version: "1.5.3"
   provider:
     dependency: transitive
     description:
