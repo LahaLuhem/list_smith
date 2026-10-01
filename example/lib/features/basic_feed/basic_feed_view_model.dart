@@ -4,8 +4,7 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Basic feed demo: hands the repository's paged fetch to `ListSmith.async`, which owns the
-/// paging and refresh state itself.
+/// No paging state here, since `ListSmith.async` owns it.
 final class BasicFeedViewModel extends ViewModel {
   final _repository = DemoRepository();
 

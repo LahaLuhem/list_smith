@@ -4,7 +4,7 @@ import 'package:list_smith/src/data/grouping/models/group_order_policy.dart';
 import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
 
 void main() {
-  final grouping = BddFeature('Grouping resolution');
+  final groupingFeature = BddFeature('Grouping resolution');
 
   // Group by the tens digit: 10/11/12 fall in group 1, 20/21 in group 2, 30 in group 3.
   int decade(int item) => item ~/ 10;
@@ -12,7 +12,7 @@ void main() {
   const itemsKey = 'items';
   const bucketedKey = 'bucketed';
 
-  Bdd(grouping)
+  Bdd(groupingFeature)
       .scenario(
         'buckets items into contiguous groups, first-appearance order, stable within a group',
       )
@@ -28,16 +28,16 @@ void main() {
         val(itemsKey, const [10, 20, 11, 30, 21]),
         val(bucketedKey, const [10, 11, 20, 21, 30]),
       )
-      .run((ctx) {
-        final bucketed = bucketByGroup(ctx.example.val(itemsKey) as List<int>, decade);
+      .run((context) {
+        final bucketed = bucketByGroup(context.example.val(itemsKey) as List<int>, decade);
 
-        check(bucketed).deepEquals(ctx.example.val(bucketedKey) as List<int>);
+        check(bucketed).deepEquals(context.example.val(bucketedKey) as List<int>);
       });
 
   const flagItemsKey = 'flagItems';
   const flagsKey = 'flags';
 
-  Bdd(grouping)
+  Bdd(groupingFeature)
       .scenario('flags the first sighting of each group key, and only that one')
       .given('a tens-digit group key')
       .when('it flags headers for <$flagItemsKey>')
@@ -51,16 +51,16 @@ void main() {
       )
       // A key coming back is not a 2nd header. That is the repair.
       .example(val(flagItemsKey, const [10, 20, 11]), val(flagsKey, const [true, true, false]))
-      .run((ctx) {
+      .run((context) {
         final flags = headerFlagsByFirstSighting(
-          ctx.example.val(flagItemsKey) as List<int>,
+          context.example.val(flagItemsKey) as List<int>,
           decade,
         );
 
-        check(flags).deepEquals(ctx.example.val(flagsKey) as List<bool>);
+        check(flags).deepEquals(context.example.val(flagsKey) as List<bool>);
       });
 
-  Bdd(grouping)
+  Bdd(groupingFeature)
       .scenario('the default policy leaves properly grouped items alone')
       .given('a tens-digit group key and RepairHeadersPolicy')
       .when('it resolves headers for contiguous items')
@@ -71,7 +71,7 @@ void main() {
         check(flags).deepEquals(const [true, false, true]);
       });
 
-  Bdd(grouping)
+  Bdd(groupingFeature)
       .scenario('FailOnUnorderedPolicy throws on out-of-order items, in release too')
       .given('a tens-digit group key and FailOnUnorderedPolicy')
       .when('a group key comes back after another one')
@@ -88,7 +88,7 @@ void main() {
   const contiguousItemsKey = 'contiguousItems';
   const contiguousKey = 'contiguous';
 
-  Bdd(grouping)
+  Bdd(groupingFeature)
       .scenario('reports whether groups stay contiguous, flagging a key that recurs after its run')
       .given('a tens-digit group key')
       .when('it checks <$contiguousItemsKey>')
@@ -100,12 +100,12 @@ void main() {
       .example(val(contiguousItemsKey, const [10, 11, 20, 30]), val(contiguousKey, true))
       // A group key returning after another intervened is not contiguous.
       .example(val(contiguousItemsKey, const [10, 20, 11]), val(contiguousKey, false))
-      .run((ctx) {
+      .run((context) {
         final contiguous = groupsAreContiguous(
-          ctx.example.val(contiguousItemsKey) as List<int>,
+          context.example.val(contiguousItemsKey) as List<int>,
           decade,
         );
 
-        check(contiguous).equals(ctx.example.val(contiguousKey) as bool);
+        check(contiguous).equals(context.example.val(contiguousKey) as bool);
       });
 }

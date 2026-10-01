@@ -25,7 +25,7 @@ const _framesPerEdit = 25;
 // Fixed pumps settle the page, so every variant warms up over the same frames.
 const _warmupPumps = 10;
 
-final _slideIn = Tween(begin: const Offset(1, 0), end: Offset.zero);
+final _slideInTween = Tween(begin: const Offset(1, 0), end: Offset.zero);
 
 final _variants = <String, EditTransition>{
   'none': const NoEditTransition(),
@@ -40,7 +40,7 @@ final _variants = <String, EditTransition>{
   'slide': EditTransition(
     duration: _transitionDuration,
     transitionBuilder: (child, animation) =>
-        SlideTransition(position: _slideIn.animate(animation), child: child),
+        SlideTransition(position: _slideInTween.animate(animation), child: child),
   ),
 };
 

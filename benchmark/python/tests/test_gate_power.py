@@ -124,7 +124,7 @@ class TestNoiseTolerance:
 
 
 class TestSampleCountFloor:
-    """Mann-Whitney cannot reach p < 0.05 below four samples a side, whatever the effect size."""
+    """Mann-Whitney cannot reach p < 0.05 below 4 samples a side, whatever the effect size."""
 
     @pytest.mark.parametrize("samples_per_side", [2, 3])
     def test_too_few_samples_cannot_trip_the_gate_at_all(self, samples_per_side: int) -> None:

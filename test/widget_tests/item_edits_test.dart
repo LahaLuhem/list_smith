@@ -1,4 +1,4 @@
-// A test-local end policy shares the file with the scenarios that use it.
+// Test-local fixtures share the file with the scenarios that use them.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:async';
@@ -19,7 +19,11 @@ void main() {
     ) async {
       final server = FakeServer(_range(0, 8));
       final hold = server.hold(1, attempt: 1);
-      final controller = await _pumpList(tester, fetchPage: server.keyset, itemIdGetter: _byValue);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.keysetFetcher,
+        itemIdGetter: _byValue,
+      );
       await drain(tester);
 
       controller.remove(0);
@@ -42,9 +46,9 @@ void main() {
         final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
         final controller = await _pumpList<_Row>(
           tester,
-          fetchPage: server.offsetEarly,
+          fetchPage: server.offsetEarlyFetcher,
           itemIdGetter: _byRowId,
-          label: _rowLabel,
+          labelOf: _rowLabel,
           endPolicy: const FixedPageCountPolicy(pageCount: 1),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
         );
@@ -72,7 +76,7 @@ void main() {
         final server = FakeServer(_range(0, 5));
         final controller = await _pumpList(
           tester,
-          fetchPage: server.offsetEarly,
+          fetchPage: server.offsetEarlyFetcher,
           itemIdGetter: _byValue,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
@@ -107,16 +111,16 @@ void main() {
       },
       outline: (tester, example) async {
         final server = FakeServer(_range(0, 14));
-        final scroll = ScrollController();
-        addTearDown(scroll.dispose);
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
         final controller = await _pumpList(
           tester,
-          fetchPage: server.keyset,
+          fetchPage: server.keysetFetcher,
           itemIdGetter: _byValue,
           pageSize: 5,
           rowHeight: 300, // tall enough that page 2 waits for a scroll
           endPolicy: example.policy,
-          scrollController: scroll,
+          scrollController: scrollController,
         );
         await drain(tester, frames: 12);
         check(server.asked(2)).isFalse();
@@ -127,7 +131,7 @@ void main() {
         }
         for (var pass = 0; pass < 4; pass++) {
           await drain(tester, frames: 6);
-          scroll.jumpTo(scroll.position.maxScrollExtent);
+          scrollController.jumpTo(scrollController.position.maxScrollExtent);
         }
         await drain(tester, frames: 12);
 
@@ -146,7 +150,7 @@ void main() {
         final server = FakeServer(_range(0, 39));
         final controller = await _pumpList(
           tester,
-          fetchPage: server.keyset,
+          fetchPage: server.keysetFetcher,
           itemIdGetter: _byValue,
           pageSize: 20,
           rowHeight: 60, // tall enough that page 1 waits
@@ -249,16 +253,16 @@ void main() {
       final server = FakeServer(_range(1, 6));
       final feedCatchUp = server.hold(0, attempt: 2);
       final controller = ListSmithController<int>();
-      await _pumpKept(tester, controller, query: '', feed: server.offsetLate);
+      await _pumpKept(tester, controller, query: '', feed: server.offsetLateFetcher);
       await drain(tester);
-      await _pumpKept(tester, controller, query: 'q', feed: server.offsetLate);
+      await _pumpKept(tester, controller, query: 'q', feed: server.offsetLateFetcher);
       await settle(tester);
 
       server.store.remove(4);
       controller.remove(4);
       await controller.refresh(); // the kept feed owes a re-read for this
       await drain(tester, frames: 12);
-      await _pumpKept(tester, controller, query: '', feed: server.offsetLate);
+      await _pumpKept(tester, controller, query: '', feed: server.offsetLateFetcher);
       await settle(tester);
 
       check(server.attempts[0]).equals(2); // the feed's re-read is still in flight
@@ -293,9 +297,9 @@ void main() {
         final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
         final controller = await _pumpList<_Row>(
           tester,
-          fetchPage: server.offsetLate,
+          fetchPage: server.offsetLateFetcher,
           itemIdGetter: _byRowId,
-          label: _rowLabel,
+          labelOf: _rowLabel,
           endPolicy: const FixedPageCountPolicy(pageCount: 1),
           refresh: PullToRefresh(reload: reload),
         );
@@ -320,7 +324,7 @@ Future<ListSmithController<T>> _pumpList<T extends Object>(
   required PageFetcher<T> fetchPage,
   required ItemIdGetter<T> itemIdGetter,
   ListSmithController<T>? controller,
-  String Function(T item)? label,
+  String Function(T item)? labelOf,
   int pageSize = 3,
   PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
   EmptyPageBehaviour onEmptyPage = const ShowEmptySurface(),
@@ -351,7 +355,7 @@ Future<ListSmithController<T>> _pumpList<T extends Object>(
       itemBuilder:
           itemBuilder ??
           (_, item, _) =>
-              SizedBox(height: rowHeight, child: Text('item ${label?.call(item) ?? item}')),
+              SizedBox(height: rowHeight, child: Text('item ${labelOf?.call(item) ?? item}')),
     ),
   );
 

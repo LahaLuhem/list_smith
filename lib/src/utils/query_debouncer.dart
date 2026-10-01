@@ -2,9 +2,6 @@ import 'dart:async';
 
 /// Collapses a fast-changing search query into one committed value.
 ///
-/// Moves the committed query on once the debounce elapses, or next tick for [Duration.zero]. Trims,
-/// and does nothing when the trimmed value hasn't changed.
-///
 /// [onCommitted] only ever runs from the timer, never during `build`, so a `setState` in it is safe.
 class QueryDebouncer {
   /// Called with the new committed, trimmed query once a scheduled change elapses.

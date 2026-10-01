@@ -67,7 +67,7 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
 <a id="naming"></a>
 ## Naming
 
-- **Prefer abbreviations over initialisms for domain terms.** Expand, in code, comments, dartdocs
+- **Spell domain terms out, no abbreviations or initialisms.** Expand, in code, comments, dartdocs
   and log messages alike. Well-known protocol and platform initialisms (HTTP, DNS, TCP, TLS, iOS,
   OS) stay. Everything else spells out, because shorthand that's obvious to the author reads as a
   typo to the next person.
@@ -86,11 +86,14 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   This binds *every* identifier: fields, locals, parameters, pattern bindings. The carve-outs are
   the genre conventions: loop counters (`i`, `j`), `e` in `catch (e)`, `(a, b)` in comparator pairs,
   `x`/`y` for coordinates.
-- **Local-variable names carry a concise type-suffix.** Without IDE inlay-hints an inferred type is
-  invisible, so the name does that work. Where a domain type exists, the suffix is its name
-  (`pageResult`, not `result`, `filteredItems`, not `filtered`). Callback parameters are exempt and
-  stay single-word (`value`, `query`, `items`), since the call site already pins the type. Generic
-  suffixes (`Data`, `Info`, `Result`) lose exactly the disambiguation the rule is for.
+- **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
+  inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
+  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name that
+  already says what it holds is enough (`fetchPage`, `_pager`, a plural for a collection), but not
+  one that reads as another kind of thing (`rows` for a `RowLookup`, `_running` for a run). Callback
+  parameters are exempt and stay single-word (`value`, `query`, `items`), since the call site
+  already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
+  disambiguation the rule is for.
 - **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
   `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
   (`reverse` on `ListScrollConfig`), which keeps the framework's name.
@@ -139,7 +142,7 @@ feature**:
 - **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
   (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
 
-2 placement rules earn their keep:
+The placement rules that earn their keep:
 
 - **A typedef with a single home type stays in that type's file.** Only a standalone typedef with
   no such home gets its own file under the feature's `typedefs/`. So `RefreshIndicatorBuilder` sits
@@ -678,7 +681,7 @@ Tests split by kind under `test/`:
 
 - **`test/unit_tests/`** holds pure-logic units in `bdd_framework` + `checks`. Frame behaviour as a
   `BddFeature` with `Bdd(...).scenario().given().when().then()`, and keep the parameter matrix in
-  one place as `.example(val(...), ...)` rows read via `ctx.example.val('name')`, never literals
+  one place as `.example(val(...), ...)` rows read via `context.example.val('name')`, never literals
   scattered through the body.
 - **`test/widget_tests/`** holds widget behaviour, framed with the local Gherkin helper in
   `test/support/bdd.dart`: `feature`, `scenarioWidgets`, `scenarioOutlineWidgets`. The helper is

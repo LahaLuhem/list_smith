@@ -8,8 +8,7 @@ assignees: ''
 ---
 
 **What happened**
-What went wrong, and which behaviour it involves: pagination, pull-to-refresh, search, grouping,
-reload, the observer, or the controller.
+What went wrong, and which feature it involves.
 
 **Minimal reproduction**
 The smallest setup that shows it: your data source, the params that matter, and what you did.

@@ -26,9 +26,9 @@ class GroupingView extends StatelessWidget {
             child: DemoIntro(
               title: 'Grouping.by',
               description:
-                  'Splits the list into labelled sections. The source cycles three categories per '
-                  'row, so the interleaved items bucket into three contiguous sections; the search '
-                  'field narrows them and the sections re-form over the matches.',
+                  'Splits the list into labelled sections. The source cycles 3 categories per row, '
+                  'so the interleaved items bucket into 3 contiguous sections. The search field '
+                  'narrows them and the sections re-form over the matches.',
             ),
           ),
           Padding(
@@ -58,7 +58,6 @@ class GroupingView extends StatelessWidget {
   );
 }
 
-/// The section header stacked above each group's 1st item.
 class _SectionHeader extends StatelessWidget {
   final String label;
 

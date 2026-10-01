@@ -15,7 +15,6 @@ final class ResultWriter {
 
   new _(this._scenario, this._sdkVersion, this._packageVersion, this._gitSha, this._sink);
 
-  /// Opens [outputPath] and emits the JSON-array prefix `[`. Creates the parent directory if needed.
   static Future<ResultWriter> open({
     required String outputPath,
     required String scenario,
@@ -32,8 +31,6 @@ final class ResultWriter {
     return ResultWriter._(scenario, sdkVersion, packageVersion, gitSha, sink);
   }
 
-  /// Appends one record for iteration [iteration].
-  ///
   /// [samples] holds per-metric arrays of raw measurements, which the analyzer prefers for significance
   /// testing. [summary] holds per-metric scalars the benchmark pre-computed.
   void writeRecord({
@@ -57,7 +54,6 @@ final class ResultWriter {
     _firstRecord = false;
   }
 
-  /// Writes the closing `]`, flushes and closes the sink.
   Future<void> close() async {
     _sink.write('\n]\n');
 

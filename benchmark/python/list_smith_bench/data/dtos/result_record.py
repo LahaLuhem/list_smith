@@ -1,7 +1,6 @@
-"""Result-record type alias + the record-flatten helper.
+"""`ResultRecord` narrows `dict[str, Any]` rather than reaching for TypedDict or pydantic.
 
-`ResultRecord` narrows `dict[str, Any]` rather than reaching for TypedDict or pydantic. The schema
-is internal and stable, and we control both writer and reader end to end.
+The schema is internal and stable, and we control both writer and reader end to end.
 """
 
 from __future__ import annotations
@@ -11,18 +10,7 @@ from typing import Any, Literal
 # The thread a frame scenario's summary keys name, as in `avg_frame_<thread>_millis`.
 type FrameThread = Literal["build", "raster"]
 
-# One JSON-decoded record. See `harness/result_writer.dart` for the writer. The shape is:
-#
-#   {
-#     "scenario": str,
-#     "iteration": int,
-#     "sdk_version": str,
-#     "package_version": str,
-#     "git_sha": str,
-#     "started_at": ISO-8601 str,
-#     "samples": dict[str, list[number]],   # raw per-iteration measurements
-#     "summary": dict[str, number],          # pre-computed scalars (median, size, ...)
-#   }
+# One JSON-decoded record, shaped as in `benchmark/README.md`'s Result JSON schema.
 ResultRecord = dict[str, Any]
 
 

@@ -300,10 +300,10 @@ void main() {
     });
 
     scenarioWidgets('paging past an empty page reports nextPage, not a fresh load', (tester) async {
-      final seen = <({int page, FetchTrigger trigger})>[];
+      final seenFetches = <({int page, FetchTrigger trigger})>[];
       final fetchPage = PageFetcher<int>((request) async {
         final pageIndex = request.pageIndex;
-        seen.add((page: pageIndex, trigger: request.trigger));
+        seenFetches.add((page: pageIndex, trigger: request.trigger));
 
         return pageIndex == 0 ? const <int>[] : [pageIndex * 3, pageIndex * 3 + 1];
       });
@@ -322,13 +322,13 @@ void main() {
       await drain(tester, frames: 12);
 
       // The list paged itself past the empty 1st page. That self-driven fetch is still a next page.
-      check(seen.first).equals((page: 0, trigger: FetchTrigger.initialLoad));
-      check(seen[1]).equals((page: 1, trigger: FetchTrigger.nextPage));
+      check(seenFetches.first).equals((page: 0, trigger: FetchTrigger.initialLoad));
+      check(seenFetches[1]).equals((page: 1, trigger: FetchTrigger.nextPage));
     });
   });
 }
 
-/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of three
+/// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of 3
 /// items and then empty pages (the default end policy's end).
 PageFetcher<int> _recording(List<FetchTrigger> triggers, {required int pages}) => PageFetcher<int>((
   request,

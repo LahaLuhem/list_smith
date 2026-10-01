@@ -9,8 +9,7 @@
 
 <!-- TOC end -->
 
-For maintainers and contributors who want to understand or invoke the release flow. End users of
-the package need nothing in this directory.
+The release flow, for maintainers. Package users need nothing in this directory.
 
 `release.sh` cuts a versioned release: bump `version:` in `pubspec.yaml` via `cider`, finalise the
 `## Unreleased` block in `CHANGELOG.md` into a dated section, regenerate `example/pubspec.lock` so
@@ -25,7 +24,7 @@ Laptop-only, never CI.
 ```bash
 scripts/release.sh                                # fully interactive
 scripts/release.sh patch                          # bump type set, confirm on TTY
-scripts/release.sh patch --yes                    # non-interactive (CI-style)
+scripts/release.sh patch --yes                    # non-interactive
 scripts/release.sh --dry-run                      # full preflight + plan, no side effects
 scripts/release.sh minor -m "Big new feature"     # annotated tag with this message
 ```
@@ -38,10 +37,9 @@ By default `git tag <version>` produces a **lightweight tag**, a bare ref pointe
 message or signature. Pass `-m "MSG"` (or `--tag-message`) for an **annotated tag**, which your
 `tag.gpgSign=true` will also sign.
 
-The lightweight default ignores your `tag.gpgSign` setting: on the no-`-m` path the script applies
-`-c tag.gpgSign=false` to that one invocation, so a plain `release.sh minor` never opens an editor
-or demands a message. A lightweight tag has no body to sign, so that bypass is mechanically
-necessary rather than a preference.
+The lightweight default ignores your `tag.gpgSign`: without `-m`, the script passes
+`-c tag.gpgSign=false` to that one call, so a plain `release.sh minor` never opens an editor or asks
+for a message. A lightweight tag has nothing to sign anyway.
 
 ## What's pipeline-owned vs. hand-editable
 
@@ -66,32 +64,22 @@ pipeline-owned set and hand-editable.
 ## Tag format
 
 `<MAJOR>.<MINOR>.<PATCH>`, no `v` prefix, matching both the trigger pattern in
-[`publish.yml`](../.github/workflows/publish.yml) (`[0-9]+.[0-9]+.[0-9]+`) and pub.dev's canonical
-`{{version}}` convention.
+[`publish.yml`](../.github/workflows/publish.yml) and pub.dev's canonical `{{version}}` convention.
 
 ## Preflight
 
-The script refuses to proceed unless every check passes:
+The script refuses to proceed unless every check passes. `scripts/release.sh --help` lists them.
+The lint checks run in the linterpol image that [`lint-checks.json`](../.github/lint-checks.json)
+names, so they need Docker running rather than local installs.
 
-- `flutter` resolvable, preferring `.fvm/flutter_sdk/bin/flutter` over PATH. That also supplies
-  `dart` from the same SDK for `dart format`.
-- `cider` on PATH.
-- `jq` on PATH, for reading [`lint-checks.json`](../.github/lint-checks.json).
-- `docker` on PATH with the daemon up, since the lint checks run via the linterpol image that
-  manifest names rather than local installs. A stopped daemon fails fast with a clear message.
-- Working tree clean, on `main`, in sync with `origin/main` (it fetches first).
-- A non-empty `## Unreleased` (or `## [Unreleased]`) section in `CHANGELOG.md`.
-- `dart format`, `flutter analyze` and `flutter test` all clean.
-- The target tag doesn't already exist, locally or on the remote.
-
-`flutter pub publish --dry-run` is *not* in preflight, because it cross-checks three things that
-can only hold at the same time later:
+`flutter pub publish --dry-run` is *not* in preflight, because it cross-checks 3 things that can
+only hold at the same time later:
 
 1. `pubspec.yaml`'s `version:` matches a CHANGELOG header, true only after `cider bump` + `release`.
 2. No checked-in file is modified, true only after `git commit`.
 3. The tarball builds and validates against pub.dev's rules.
 
-So it runs as step 6, after the prep commit lands. The `ERR` trap covers failure in 2 phases:
+So it runs after the prep commit lands. The `ERR` trap covers failure in 2 phases:
 
 - **Pre-commit** (bump, release or the `example/` resync errored): restore `pubspec.yaml`,
   `CHANGELOG.md` and `example/pubspec.lock` from `HEAD`.

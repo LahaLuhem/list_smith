@@ -22,7 +22,7 @@ def _at(second: int, *, started_at: bool = True) -> ResultRecord:
 
 class TestSideTimingSeparation:
     def test_blocked_sides_separate_by_about_half_the_job(self) -> None:
-        """Today's order: candidate block first, baseline block second."""
+        """A fixed order: candidate block first, baseline block second."""
         candidate = [_at(s) for s in range(0, 10)]
         baseline = [_at(s) for s in range(10, 20)]
 

@@ -1,9 +1,4 @@
-"""Filesystem + JSON helpers.
-
-`discover_sources` walks the micro dir. `filter_by_name` restricts a path list to a user-supplied
-set. `resolve_outdir` picks where charts/markdown land. `load_aggregated` is the single JSON-read
-path, so schema validation (if ever needed) has one home.
-"""
+"""Filesystem and JSON helpers."""
 
 from __future__ import annotations
 

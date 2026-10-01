@@ -1,9 +1,4 @@
-"""`cmd_compare`: pivot-aware Mann-Whitney diff of two runs, a forest chart, and COMPARE.md.
-
-Prints the significance table to stdout for interactive use, then (best-effort) writes a forest-plot
-PNG and COMPARE.md to the output dir. Chart rendering is best-effort: a missing analysis stack still
-prints the table, so the maintainer gets the answer even without seaborn installed.
-"""
+"""`cmd_compare`: pivot-aware Mann-Whitney diff of 2 runs, a forest chart, and COMPARE.md."""
 
 from __future__ import annotations
 
@@ -23,7 +18,7 @@ from list_smith_bench.data.utils.stats import (
 
 
 def cmd_compare(args: argparse.Namespace) -> int:
-    """Diff two aggregated.json result sets with a pivot-aware Mann-Whitney U test.
+    """Diff 2 aggregated.json result sets with a pivot-aware Mann-Whitney U test.
 
     Writes to `<out>/` (default `benchmark/reports/`):
       - compare_forest.png: % deltas, coloured by significance and direction

@@ -10,8 +10,8 @@ import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'playground_view_model.dart';
 
-/// Live-editable list config. `pageSize` and the end policy are captured at construction, so the preview
-/// is keyed on them to force a fresh list. The rest update in place.
+/// `pageSize` and the end policy are read once at construction, so the preview is keyed on them to
+/// force a fresh list. The rest update in place.
 class PlaygroundView extends StatelessWidget {
   const new({super.key});
 
@@ -32,10 +32,10 @@ class PlaygroundView extends StatelessWidget {
                 const DemoIntro(
                   title: 'Tweak the config live',
                   description:
-                      "The source's first page is empty, with data after it. \"Page past empty "
-                      'pages" advances to the 1st page with items (it needs "Empty pages before '
-                      'end" high enough for pagination to continue past the empty run); turn it off '
-                      'to stop on the empty surface instead.',
+                      "The source's 1st page is empty, with data after it. \"Page past empty "
+                      'pages" advances to the 1st page with items, as long as "Empty pages before '
+                      'end" is high enough to continue past the empty run. Turn it off to stop on '
+                      'the empty surface instead.',
                 ),
                 SliderKnob(
                   label: 'Page size',

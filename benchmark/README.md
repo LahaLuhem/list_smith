@@ -30,7 +30,7 @@ proposed scenario would measure off-frame work, make it a micro instead.**
 
 ```text
 benchmark/
-├── harness/        shared pure-Dart utilities for the micros (result_writer, scenario_args)
+├── harness/        shared pure-Dart utilities for the micros (result_writer, scenario_arguments)
 ├── micro/          benchmark_harness micro-benches (AOT-compiled)
 ├── app/            minimal Flutter host app for the UI scenarios
 │   ├── integration_test/   the scenarios (+ support/ helpers, e.g. SlowListSmithObserver)

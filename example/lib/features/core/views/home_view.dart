@@ -19,7 +19,6 @@ import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
 import 'home_view_model.dart';
 
-/// The landing hub: a tappable list of the individual `list_smith` demos.
 class HomeView extends StatelessWidget {
   const new({super.key});
 
@@ -111,7 +110,6 @@ class HomeView extends StatelessWidget {
   );
 }
 
-/// One row in the hub: a platform list tile that pushes a demo screen.
 class _DemoTile extends StatelessWidget {
   final Widget icon;
   final String title;

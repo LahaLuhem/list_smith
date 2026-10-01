@@ -3,8 +3,8 @@ import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
 
-/// Backs the Playground demo. Serves a deliberately gappy source, 1st page empty and data after, so
-/// the end-policy and empty-page knobs have a visible effect.
+/// The source is gappy on purpose, 1st page empty and data after, so the end-policy and empty-page
+/// knobs have a visible effect.
 ///
 /// The preview depends on every knob at once, so `notifyListeners()` beats per-field notifiers here.
 /// See `CODESTYLE.md` *State management*.

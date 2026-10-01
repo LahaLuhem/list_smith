@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import '/src/data/grouping/typedefs/group_header_builder.dart';
+import '/src/data/grouping/typedefs/group_key_of.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 
 /// Renders one list item, with its group's header on top when the item opens a new group.
@@ -10,11 +12,11 @@ class GroupedItem<T extends Object> extends StatelessWidget {
   /// Builds the item itself.
   final ItemBuilder<T> itemBuilder;
 
-  /// Pulls an item's group key, erased to `Object`, to label the header.
-  final Object Function(T item) groupOf;
+  /// Pulls an item's group key, to label the header.
+  final GroupKeyOf<T, Object> groupOf;
 
-  /// Builds a group's header from its key, erased to `Object`.
-  final Widget Function(BuildContext context, Object key) headerFor;
+  /// Builds a group's header from its key.
+  final GroupHeaderBuilder<Object> headerFor;
 
   /// The scroll axis, so the header stacks before the item along it.
   final Axis scrollDirection;

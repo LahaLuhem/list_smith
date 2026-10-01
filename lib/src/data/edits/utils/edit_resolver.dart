@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 
+import '/src/data/grouping/typedefs/group_key_of.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '../typedefs/item_edit.dart';
 
@@ -13,7 +14,7 @@ const _opensOnTop = -1;
   required List<int> readStamps,
   required Map<Object, ItemEdit<T>> edits,
   required ItemIdGetter<T> itemIdGetter,
-  required Object Function(T item)? groupOf,
+  required GroupKeyOf<T, Object>? groupOf,
   required bool acceptsNewItems,
 }) {
   final shownIds = <Object>{};
@@ -32,10 +33,11 @@ const _opensOnTop = -1;
         continue;
       }
 
-      final edited = edit.item;
-      if (edited == null || !shownIds.add(id)) continue; // a fresher copy further down still shows
-      if (groupOf == null || groupOf(item) == groupOf(edited)) {
-        displayPage.add(edited);
+      final editedItem = edit.item;
+      // A fresher copy further down still shows.
+      if (editedItem == null || !shownIds.add(id)) continue;
+      if (groupOf == null || groupOf(item) == groupOf(editedItem)) {
+        displayPage.add(editedItem);
       } else {
         movedIds.add(id);
       }
@@ -66,7 +68,7 @@ const _opensOnTop = -1;
 void _placeAll<T extends Object>(
   List<List<T>> pages,
   List<T> items,
-  Object Function(T item)? groupOf,
+  GroupKeyOf<T, Object>? groupOf,
 ) {
   if (groupOf == null) {
     pages.first.insertAll(0, items.reversed);
@@ -76,20 +78,23 @@ void _placeAll<T extends Object>(
 
   final starts = _groupStarts(pages, items.map(groupOf).toSet(), groupOf);
   final byStart = items.groupListsBy((item) => starts[groupOf(item)] ?? _opensOnTop);
-  final opening = (byStart.remove(_opensOnTop) ?? []).groupListsBy(groupOf);
+  final openingGroups = (byStart.remove(_opensOnTop) ?? []).groupListsBy(groupOf);
   // The last start first, so an insert can't shift the starts still to come.
   final joinings = byStart.entries.sorted((a, b) => b.key.compareTo(a.key));
   for (final MapEntry(key: start, value: joiners) in joinings) {
     _insertAt(pages, start, joiners.reversed);
   }
-  pages.first.insertAll(0, opening.values.toList().reversed.expand((group) => group.reversed));
+  pages.first.insertAll(
+    0,
+    openingGroups.values.toList().reversed.expand((group) => group.reversed),
+  );
 }
 
 /// The flat index where each group in [needed] first shows. Stops once it has them all.
 Map<Object, int> _groupStarts<T extends Object>(
   List<List<T>> pages,
   Set<Object> needed,
-  Object Function(T item) groupOf,
+  GroupKeyOf<T, Object> groupOf,
 ) {
   final starts = <Object, int>{};
   var flatIndex = 0;

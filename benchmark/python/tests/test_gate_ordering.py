@@ -18,14 +18,14 @@ from list_smith_bench.config import REGRESSION_THRESHOLD_PCT
 from list_smith_bench.data.dtos.result_record import ResultRecord
 from list_smith_bench.data.utils.stats import compute_compare_rows, regressions
 
-# One run's jitter, hardcoded rather than seeded so a Python RNG change can't move the test. Ten
+# One run's jitter, hardcoded rather than seeded so a Python RNG change can't move the test. 10
 # samples per side: DEFAULT_ITERATIONS, one process each once interleaved.
 _JITTER: tuple[float, ...] = (1.000, 0.994, 1.012, 0.988, 1.006, 1.017, 0.991, 1.003, 0.985, 1.009)
 _BASE_MICROS = 380.0
 # Per-process level lottery. `wrapping_overhead[page_count=100]` is allocation-throughput bound, so
 # whatever the VM settles on at process start (new-space sizing, core assignment) fixes that
-# process's level for its whole life: flat within a block, disjoint between blocks. Measured live on
-# CI once reported +22.3% between two byte-identical binaries. The first two entries reproduce it.
+# process's level for its whole life: flat within a block, disjoint between blocks. CI once
+# reported +22.3% between 2 byte-identical binaries, and the first 2 entries reproduce it.
 _PROCESS_LEVELS: tuple[float, ...] = (
     1.22,
     1.00,
@@ -97,8 +97,8 @@ def _stepped_sides(
     """Both sides when each process settles at its own level, rather than the machine drifting.
 
     One micro is one process per side, so fixed order gives each side a single draw from
-    `_PROCESS_LEVELS` and inherits it for all ten samples. Interleaving alternates *processes*, so
-    each side draws ten and the lottery averages out. That granularity is the point: interleaving at
+    `_PROCESS_LEVELS` and inherits it for all 10 samples. Interleaving alternates *processes*, so
+    each side draws 10 and the lottery averages out. That granularity is the point: interleaving at
     the micro level instead would leave each side on one draw and fix nothing.
     """
     baseline: list[ResultRecord] = []
@@ -146,7 +146,7 @@ class TestSensitivityIsRetained:
         assert _trips(*_sides(ramp, interleaved=True, candidate_factor=1.15))
 
     def test_fixed_order_overstates_a_real_regression_under_drift(self) -> None:
-        """Drift inflates the reported delta, so today's numbers overstate severity too."""
+        """Drift inflates the reported delta, so a fixed order overstates severity too."""
         fixed = compute_compare_rows(*_sides(0.30, interleaved=False, candidate_factor=1.15))
         interleaved = compute_compare_rows(*_sides(0.30, interleaved=True, candidate_factor=1.15))
 
@@ -169,7 +169,7 @@ class TestOnlyTheThresholdDecides:
 class TestPerProcessSteps:
     """The shape CI actually produced, as opposed to a smooth ramp.
 
-    Both sides compiled byte-identical binaries and the gate still reported +22.3%, with the two
+    Both sides compiled byte-identical binaries and the gate still reported +22.3%, with the 2
     sides' sample distributions completely disjoint and each side flat internally.
     """
 

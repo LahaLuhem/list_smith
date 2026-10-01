@@ -9,9 +9,8 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async ReloadToCurrentDepth', () {
-    // Each page yields one item whose value encodes `page * 1000 + attempt`, so a test can tell a freshly-reloaded
-    // page (attempt 2) from a kept-old one (attempt 1), and `attempts` records how many times each page
-    // index was fetched.
+    // Each page yields one item stamped `page * 1000 + attempt`, so a test can tell a refetched page
+    // from its 1st load. `attempts` records how many times each index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher({int? failPageOnReload}) {
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>((request) async {
@@ -125,7 +124,7 @@ void main() {
           search: AsyncSearch(fetchPage: searchFetchPage),
           query: 'q',
           searchDebounce: const Duration(milliseconds: 20),
-          // Not a signal-requiring policy: that one asserts BOTH fetchers report a signal, which would
+          // Not a signal-requiring policy: that one asserts both fetchers report a signal, which would
           // destroy the asymmetry this scenario turns on.
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           controller: controller,
@@ -139,8 +138,8 @@ void main() {
       await controller.refresh();
       await drain(tester, frames: 16);
 
-      // In search mode the reload asks the search fetcher whether it is signal-based, so this runs sequentially
-      // and threads the search cursor, despite concurrency: null asking for parallel.
+      // In search mode the reload asks the search fetcher whether it's signal-based, so this runs in
+      // order and threads the search cursor, though `concurrency: null` asks for parallel.
       check(searchAttempts).deepEquals({0: 2, 1: 2});
       check(searchCursors[1]).equals('scursor0');
       check(find.text('item 2').evaluate()).length.equals(1);

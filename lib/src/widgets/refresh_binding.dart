@@ -67,7 +67,7 @@ class _RefreshBindingState extends State<RefreshBinding> {
       // A pull always starts at the list's start, so its direction also says which edge it came from.
       final pullDirection = controller.direction;
       final isVertical = axisDirectionToAxis(pullDirection) == .vertical;
-      final reveal = clampDouble(controller.value, 0, 1) * widget.indicatorExtent;
+      final revealedExtent = clampDouble(controller.value, 0, 1) * widget.indicatorExtent;
 
       return Stack(
         children: [
@@ -88,11 +88,11 @@ class _RefreshBindingState extends State<RefreshBinding> {
             valueListenable: _bounceDistanceNotifier,
             // Only the gap the list's own bounce hasn't opened, so bouncing physics aren't pushed twice.
             builder: (_, bounceDistance, _) {
-              final distance = math.max<double>(0, reveal - bounceDistance);
-              final signed = axisDirectionIsReversed(pullDirection) ? -distance : distance;
+              final distance = math.max<double>(0, revealedExtent - bounceDistance);
+              final signedDistance = axisDirectionIsReversed(pullDirection) ? -distance : distance;
 
               return Transform.translate(
-                offset: isVertical ? Offset(0, signed) : Offset(signed, 0),
+                offset: isVertical ? Offset(0, signedDistance) : Offset(signedDistance, 0),
                 child: child,
               );
             },

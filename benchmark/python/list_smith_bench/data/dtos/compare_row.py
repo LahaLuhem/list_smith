@@ -1,7 +1,6 @@
 """`CompareRow`: one row in the `compare` significance table.
 
-Drives the terminal table, the COMPARE.md table, and the forest plot. Frozen dataclass: a value
-object, not a mutable record.
+Drives the terminal table, the COMPARE.md table, and the forest plot.
 """
 
 from __future__ import annotations

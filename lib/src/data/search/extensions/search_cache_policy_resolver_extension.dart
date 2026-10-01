@@ -2,8 +2,6 @@ import '../enums/cache_action.dart';
 import '../models/search_cache_policy.dart';
 
 /// Maps a [SearchCachePolicy] and a mode change to the [CacheAction] the search view runs.
-///
-/// Its own file, so the policy stays pure data and this stays a small unit that tests directly.
 extension SearchCachePolicyResolverExtension on SearchCachePolicy {
   /// The action for a move from [wasSearching] to [isSearching] under this policy.
   ///

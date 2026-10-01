@@ -49,11 +49,7 @@ def _set_macos_desktop(*, enabled: bool) -> None:
 
 @contextmanager
 def macos_desktop_enabled() -> Iterator[None]:
-    """Enable macOS desktop for the block, restoring the prior flag state on exit.
-
-    A no-op if desktop was already enabled (leaves it enabled). If we flipped it on, we flip it back
-    off in the `finally`, so a normal exit or an exception both restore the prior state.
-    """
+    """Enable macOS desktop for the block, restoring the prior flag state on exit, error or not."""
     was_enabled = _is_macos_desktop_enabled()
     if not was_enabled:
         print("enabling macOS desktop (temporary; will restore on exit)")

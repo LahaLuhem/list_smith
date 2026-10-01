@@ -1,6 +1,6 @@
 /// Micro-benchmark: the async list's overlap de-dup cost as the loaded list grows.
 ///
-/// Measured over pages that do NOT overlap, the common case where de-dup collapses nothing. That's
+/// Measured over pages that don't overlap, the common case where de-dup collapses nothing. That's
 /// the worst case for the pass, every item retained so allocation is maximal, and the penalty you pay
 /// for not having the problem.
 ///
@@ -14,10 +14,10 @@ import 'package:benchmark_harness/benchmark_harness.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
-import '../harness/scenario_args.dart';
+import '../harness/scenario_arguments.dart';
 
-/// Loaded item counts the de-dup is measured against. The pivot for the scaling curve (matches `sync_search_scaling`'s
-/// range so the curves are read side by side).
+/// Loaded item counts the de-dup is measured against, `sync_search_scaling`'s so the curves read side
+/// by side.
 const _itemCounts = [1000, 10000, 100000];
 const _itemsPerPage = 20;
 
@@ -38,10 +38,10 @@ final class _DedupScaling extends BenchmarkBase {
 
   @override
   void run() {
-    final seen = <Object>{};
+    final seenIds = <Object>{};
     // filterItems: pages.map((page) => page.where(predicate).toList()).toList().
     final filtered = _pages
-        .map((page) => page.where((item) => seen.add(_idOf(item))).toList())
+        .map((page) => page.where((item) => seenIds.add(_idOf(item))).toList())
         .toList();
     // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys re-wrapped.
     final wrappedPages = List<List<_Item>>.unmodifiable(filtered.map(List<_Item>.unmodifiable));
@@ -75,22 +75,22 @@ List<List<_Item>> _pagesOf(int itemCount) {
   );
 }
 
-Future<void> main(List<String> argv) async {
-  final args = ScenarioArgs.parse(argv);
+Future<void> main(List<String> arguments) async {
+  final scenarioArguments = ScenarioArguments.parse(arguments);
 
   final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
+    outputPath: scenarioArguments.outputPath,
     scenario: 'dedup_scaling',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
+    sdkVersion: ScenarioArguments.sdkVersion,
+    packageVersion: scenarioArguments.packageVersion,
+    gitSha: scenarioArguments.gitSha,
   );
 
-  for (var i = 0; i < args.iterations; i++) {
+  for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final itemCount in _itemCounts) {
       final benchmark = _DedupScaling(itemCount);
 
-      final microseconds = measureWindowed(benchmark, millis: args.measureMillis);
+      final microseconds = measureWindowed(benchmark, millis: scenarioArguments.measureMillis);
 
       writer.writeRecord(
         iteration: i,

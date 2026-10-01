@@ -31,13 +31,13 @@ void main() {
     });
 
     scenarioWidgets('rows a page brings in show at full size at once', (tester) async {
-      final scroll = ScrollController();
-      addTearDown(scroll.dispose);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
       await _pumpRows(
         tester,
         fetchPage: pagedFetcher([_range(0, 19), _range(20, 39)]),
         pageCount: 2,
-        scroll: ListScrollConfig(controller: scroll),
+        scroll: ListScrollConfig(controller: scrollController),
         isDrained: false,
       );
 
@@ -45,7 +45,7 @@ void main() {
       await tester.pump();
       check(_heightOf(0)).equals(50);
       await drain(tester, frames: 12);
-      scroll.jumpTo(1500);
+      scrollController.jumpTo(1500);
       await tester.pump();
       check(_heightOf(35)).equals(50);
     });
@@ -176,7 +176,7 @@ void main() {
       final server = FakeServer(const [1, 2, 3]); // still has 2: the server is behind
       final controller = await _pumpRows(
         tester,
-        fetchPage: server.offsetEarly,
+        fetchPage: server.offsetEarlyFetcher,
         refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
       );
       final hold = server.hold(0, attempt: 2);
@@ -201,7 +201,7 @@ void main() {
       final server = FakeServer(const [1, 2, 3]);
       final controller = await _pumpRows(
         tester,
-        fetchPage: server.offsetLate,
+        fetchPage: server.offsetLateFetcher,
         refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
       );
 
@@ -290,7 +290,7 @@ void main() {
 
     scenarioWidgets('reset() mid-exit lands the removal before starting over', (tester) async {
       final server = FakeServer(const [1, 2, 3]); // still has 2, so the fresh read shows it
-      final controller = await _pumpRows(tester, fetchPage: server.offsetLate);
+      final controller = await _pumpRows(tester, fetchPage: server.offsetLateFetcher);
 
       controller.remove(2);
       await _startExit(tester);
@@ -305,7 +305,7 @@ void main() {
 
     scenarioWidgets('an entry in progress stops at reset()', (tester) async {
       final server = FakeServer(const [1, 2, 3]);
-      final controller = await _pumpRows(tester, fetchPage: server.offsetLate);
+      final controller = await _pumpRows(tester, fetchPage: server.offsetLateFetcher);
 
       server.store.insert(0, 0);
       controller.upsert(0);
@@ -327,10 +327,11 @@ void main() {
       controller.upsert(12); // joins the start of group 1
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
-      final growing = find.ancestor(of: _rowOf(12), matching: find.byType(SizeTransition));
+      final growingFinder = find.ancestor(of: _rowOf(12), matching: find.byType(SizeTransition));
 
-      check(growing.evaluate()).length.equals(1);
-      check(find.descendant(of: growing, matching: find.text('group 1')).evaluate()).isEmpty();
+      check(growingFinder.evaluate()).length.equals(1);
+      check(find.descendant(of: growingFinder, matching: find.text('group 1')).evaluate())
+          .isEmpty();
       check(find.text('group 1').evaluate()).length.equals(1);
       check(tester.getTopLeft(find.text('group 1')).dy).isLessThan(_topOf(tester, 12));
     });
@@ -383,7 +384,7 @@ Future<ListSmithController<int>> _pumpRows(
 }) async {
   final handle = controller ?? ListSmithController<int>();
   final axis = scroll.scrollDirection;
-  final list = ListSmith.async(
+  final listSmith = ListSmith.async(
     fetchPage: fetchPage ?? pagedFetcher([items]),
     itemIdGetter: (item) => item,
     endPolicy: FixedPageCountPolicy(pageCount: pageCount),
@@ -421,8 +422,8 @@ Future<ListSmithController<int>> _pumpRows(
   await pumpListSmith(
     tester,
     isMotionReduced
-        ? MediaQuery(data: const MediaQueryData(disableAnimations: true), child: list)
-        : list,
+        ? MediaQuery(data: const MediaQueryData(disableAnimations: true), child: listSmith)
+        : listSmith,
   );
   if (isDrained) await drain(tester);
 

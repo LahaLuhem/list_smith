@@ -1,7 +1,5 @@
-/// Scenario: scrolling a bare `ListView.builder` (the attribution control).
-///
-/// Same item widget and scroll as `isp_scroll`, over a plain `ListView.builder`. The frame-cost delta
-/// from `isp_scroll` is what the wrapper adds.
+/// Scenario: the control for `isp_scroll`, the same items and scroll over a bare `ListView.builder`,
+/// so the frame-cost gap between them is what the wrapper adds.
 library;
 
 import 'package:flutter/widgets.dart';

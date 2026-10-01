@@ -9,9 +9,9 @@ in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
 - Runnable demo of `list_smith`, wired to the parent via `list_smith: { path: ../ }`.
 - Not published (`publish_to: 'none'`), so no semver discipline and it may depend on whatever
   ecosystem packages it likes.
-- Local only, no publish impact, but keep it building and analysing clean on the strict lint set it
-  inherits via `include`. dartender's CI, called from [`ci.yml`](../.github/workflows/ci.yml),
-  checks it along with the package.
+- Keep it building and analysing clean on the strict lint set it inherits via `include`.
+  dartender's CI, called from [`ci.yml`](../.github/workflows/ci.yml), checks it along with the
+  package.
 
 ## Architecture
 

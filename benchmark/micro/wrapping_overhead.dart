@@ -2,7 +2,6 @@
 ///
 /// Each time ISP asks for the next page key, `_nextPageKey` rebuilds the per-page item counts into an
 /// `EndContext` and runs the end policy over it. This measures that core as the loaded-page count grows.
-/// BICC's `check_once_overhead` analogue.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -11,7 +10,7 @@ import 'package:list_smith/src/data/pagination/models/pagination_end_policy.dart
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
-import '../harness/scenario_args.dart';
+import '../harness/scenario_arguments.dart';
 
 /// Loaded-page counts the per-key overhead is measured against. The pivot for the curve.
 const _pageCounts = <int>[1, 10, 100];
@@ -43,22 +42,22 @@ final class _WrappingOverhead extends BenchmarkBase {
   }
 }
 
-Future<void> main(List<String> argv) async {
-  final args = ScenarioArgs.parse(argv);
+Future<void> main(List<String> arguments) async {
+  final scenarioArguments = ScenarioArguments.parse(arguments);
 
   final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
+    outputPath: scenarioArguments.outputPath,
     scenario: 'wrapping_overhead',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
+    sdkVersion: ScenarioArguments.sdkVersion,
+    packageVersion: scenarioArguments.packageVersion,
+    gitSha: scenarioArguments.gitSha,
   );
 
-  for (var i = 0; i < args.iterations; i++) {
+  for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final pageCount in _pageCounts) {
       final benchmark = _WrappingOverhead(pageCount);
 
-      final microseconds = measureWindowed(benchmark, millis: args.measureMillis);
+      final microseconds = measureWindowed(benchmark, millis: scenarioArguments.measureMillis);
 
       writer.writeRecord(
         iteration: i,

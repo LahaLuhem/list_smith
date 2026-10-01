@@ -46,7 +46,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    final rows = RowLookup<T>(state.pages ?? const [], itemIdGetter);
+    final rowLookup = RowLookup<T>(state.pages ?? const [], itemIdGetter);
     // One shape whatever the footer shows: the end, a new page loading, or its error.
     Widget listing(
       BuildContext _,
@@ -54,7 +54,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
       int itemCount,
       WidgetBuilder? footerBuilder,
     ) => _KeyedRows(
-      rows: rows,
+      rowLookup: rowLookup,
       itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
       itemCount: itemCount,
@@ -77,7 +77,7 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
 /// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too,
 /// as they do in ISP's list.
 class _KeyedRows<T extends Object> extends StatelessWidget {
-  final RowLookup<T> rows;
+  final RowLookup<T> rowLookup;
   final ItemIdGetter<T> itemIdGetter;
   final IndexedWidgetBuilder itemBuilder;
   final int itemCount;
@@ -85,7 +85,7 @@ class _KeyedRows<T extends Object> extends StatelessWidget {
   final IndexedWidgetBuilder? separatorBuilder;
 
   const new({
-    required this.rows,
+    required this.rowLookup,
     required this.itemIdGetter,
     required this.itemBuilder,
     required this.itemCount,
@@ -114,12 +114,12 @@ class _KeyedRows<T extends Object> extends StatelessWidget {
 
   Widget? _buildCell(BuildContext context, int index) => index < itemCount
       ? KeyedSubtree(
-          key: _RowKey(itemIdGetter(rows.itemAt(index)), index),
+          key: _RowKey(itemIdGetter(rowLookup.itemAt(index)), index),
           child: itemBuilder(context, index),
         )
       : footerBuilder?.call(context);
 
-  int? _indexOf(Key key) => key is _RowKey ? rows.indexOf(key.id, key.index) : null;
+  int? _indexOf(Key key) => key is _RowKey ? rowLookup.indexOf(key.id, key.index) : null;
 }
 
 /// A row's item id, plus where it was built as a lookup hint. Equal on the id alone, so a row that

@@ -6,12 +6,9 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Cache routing demo: a repository-with-a-cache routed on `PageRequest.trigger`.
-///
-/// The cache lives here rather than in [DemoRepository], which every other demo shares. Items carry
-/// the fetch number that produced them, so a cached page is visibly the same one.
+/// The cache lives here, not in [DemoRepository], which every other demo shares. Items carry the
+/// fetch number that produced them, so a cached page is visibly the same one.
 final class CacheRoutingViewModel extends ViewModel {
-  /// Cap on the log so it can't grow without bound. The newest lines are kept.
   static const _maxLoggedFetches = 50;
 
   final _repository = DemoRepository(latency: const Duration(milliseconds: 400));
@@ -21,10 +18,9 @@ final class CacheRoutingViewModel extends ViewModel {
 
   var _fetchCount = 0;
 
-  /// Whether the fetch honours [PageRequest.trigger]. Off, a pull-to-refresh hands back stale rows.
+  /// Off, a pull-to-refresh hands back stale rows.
   ValueListenable<bool> get shouldRouteOnTriggerListenable => _shouldRouteOnTriggerNotifier;
 
-  /// One line per fetch, newest first: the page, its trigger, and whether it hit the cache.
   ValueListenable<List<String>> get logListenable => _logNotifier;
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
@@ -46,9 +42,8 @@ final class CacheRoutingViewModel extends ViewModel {
     return stamped;
   }
 
-  // A refresh is the user asking for fresh data and a retry follows a failure, so neither should be
-  // answered from the cache. The rest are ordinary reads, an invalidated one included: the store changed,
-  // not the network.
+  // A refresh asks for fresh data and a retry follows a failure, so both skip the cache. The rest
+  // read it, invalidated included, since that's the store changing, not the network.
   bool _bypassesCache(FetchTrigger trigger) => switch (trigger) {
     .refresh || .retry => true,
     .initialLoad || .nextPage || .queryChanged || .invalidated => false,
@@ -63,10 +58,8 @@ final class CacheRoutingViewModel extends ViewModel {
     if (_logNotifier.length > _maxLoggedFetches) _logNotifier.removeLast();
   }
 
-  /// Empties the log.
   void clearLog() => _logNotifier.clear();
 
-  /// Drops every cached page, so the next fetch of each goes to the network again.
   void clearCache() {
     _cache.clear();
     _record('cache cleared');

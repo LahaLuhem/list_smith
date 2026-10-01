@@ -259,8 +259,7 @@ void main() {
       await tester.idle();
       await drain(tester, frames: 16);
 
-      // Pins the end state, not the mechanism: leaving search mid-fetch has to settle, not spin. The
-      // re-fetch is what settles it today, so this passes without the seam too.
+      // Pins the end state, not how it gets there: leaving search mid-fetch has to settle, not spin.
       check(find.text('loading more').evaluate()).length.equals(0);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).length.equals(1);
@@ -455,7 +454,7 @@ void main() {
       // Premise: the list is cleared and the new stream's page 0 is out there, held.
       check(_shown(tester)).isEmpty();
 
-      // The reload lands first. Its commit used to cancel that page 0, leaving stale rows for good.
+      // The reload lands first, and its commit mustn't cancel that page 0, or stale rows stay for good.
       holdReload.complete();
       await tester.idle();
       await drain(tester);
@@ -634,8 +633,7 @@ void main() {
     scenarioWidgets('a feed reload cut off by entering search is paid on the way back', (
       tester,
     ) async {
-      // The refresh's fetches are attempt 2. Search then takes attempt 3, the feed's re-read attempt
-      // 4.
+      // The refresh's fetches are attempt 2. Search then takes attempt 3, and the feed's re-read 4.
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (_, attempt) => attempt == 2 ? hold.future : null,
@@ -713,7 +711,7 @@ void main() {
 
       await _pumpStamped(tester, source, controller: controller);
       await drain(tester, frames: 12);
-      final first = controller.refresh();
+      final firstReload = controller.refresh();
       await drain(tester);
       await _pumpStamped(tester, source, controller: controller, query: 'x');
       await settle(tester);
@@ -721,7 +719,7 @@ void main() {
       check(_shown(tester)).deepEquals([3, 1003, 2003]);
 
       final before = source.log.length;
-      final second = controller.refresh();
+      final secondReload = controller.refresh();
       await drain(tester, frames: 12);
       // A live reload would have been joined. A stale one is not worth joining: nothing it does lands.
       check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
@@ -729,7 +727,7 @@ void main() {
       hold.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (first, second).wait;
+      await (firstReload, secondReload).wait;
 
       check(_shown(tester)).deepEquals([4, 1004, 2004]);
     });
@@ -776,7 +774,7 @@ void main() {
       final hold = Completer<void>();
       final source = _stampedSource(
         holdFor: (pageIndex, attempt) => (pageIndex, attempt) == (0, 2) ? hold.future : null,
-        signal: true,
+        isSignalBased: true,
       );
       final controller = ListSmithController();
 
@@ -831,12 +829,12 @@ typedef _StampedSource = ({
 /// Stamps each page `page * 1000 + attempt`, so a re-fetched page is told from its 1st load, and blocks
 /// the fetches [holdFor] picks. The feed and the search share the counter, so a query change restarts
 /// the stream with the next stamp: the stand-in for anything that moves the list on under a reload.
-/// `log` records every request as `page#attempt:trigger`. [signal] makes the feed a `withSignal` source
-/// (always a null signal), which reloads through the in-order path.
+/// `log` records every request as `page#attempt:trigger`. [isSignalBased] makes the feed a
+/// `withSignal` source (always a null signal), which reloads through the in-order path.
 _StampedSource _stampedSource({
   required _HoldFor holdFor,
   SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
-  bool signal = false,
+  bool isSignalBased = false,
 }) {
   final attempts = <int, int>{};
   final log = <String>[];
@@ -850,7 +848,7 @@ _StampedSource _stampedSource({
   }
 
   return (
-    fetchPage: signal
+    fetchPage: isSignalBased
         ? PageFetcher.withSignal((request) async => (await fetch(request), null))
         : PageFetcher(fetch),
     search: AsyncSearch(fetchPage: SearchPageFetcher(fetch), cachePolicy: cachePolicy),

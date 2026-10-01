@@ -3,15 +3,15 @@ import 'package:checks/checks.dart';
 import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
 
 void main() {
-  final lookup = BddFeature('Row lookup');
+  final lookupFeature = BddFeature('Row lookup');
 
-  Bdd(lookup)
+  Bdd(lookupFeature)
       .scenario('reads each item by its flat index, across empty pages')
       .given('pages with empty ones at the start, in the middle and at the end')
       .when('every flat index is read')
       .then('the items come back in order')
       .run((_) {
-        final rows = RowLookup(const [
+        final rowLookup = RowLookup(const [
           <int>[],
           [0, 1],
           <int>[],
@@ -20,13 +20,13 @@ void main() {
           <int>[],
         ], (item) => item);
 
-        check(List.generate(5, rows.itemAt)).deepEquals(const [0, 1, 2, 3, 4]);
+        check(List.generate(5, rowLookup.itemAt)).deepEquals(const [0, 1, 2, 3, 4]);
       });
 
   const pagesKey = 'pages';
   const indexKey = 'index';
 
-  Bdd(lookup)
+  Bdd(lookupFeature)
       .scenario('finds where a row built at index 3 for item 3 sits now')
       .given('item 3 was last built at index 3')
       .when('the pages are now <$pagesKey>')
@@ -70,9 +70,12 @@ void main() {
         ]),
         val(indexKey, null),
       )
-      .run((ctx) {
-        final rows = RowLookup(ctx.example.val(pagesKey) as List<List<int>>, (item) => item);
+      .run((context) {
+        final rowLookup = RowLookup(
+          context.example.val(pagesKey) as List<List<int>>,
+          (item) => item,
+        );
 
-        check(rows.indexOf(3, 3)).equals(ctx.example.val(indexKey) as int?);
+        check(rowLookup.indexOf(3, 3)).equals(context.example.val(indexKey) as int?);
       });
 }

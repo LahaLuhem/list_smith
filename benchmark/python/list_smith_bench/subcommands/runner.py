@@ -1,9 +1,8 @@
 """`cmd_run`: execute compiled micros and drive UI scenarios, capturing JSON.
 
-Micros run as AOT exes (batched: one subprocess per micro, N iterations inside). UI scenarios drive
-a profile-mode host app via `flutter drive` + the perf driver, wrapped in `macos_desktop_enabled()`
-so the desktop feature flag is enabled only for the run and restored after. Every record lands in
-one aggregated.json for `report`.
+Micros run as AOT exes, one subprocess per micro with N iterations inside. UI scenarios drive a
+profile-mode host app through `flutter drive` and the perf driver. Every record lands in one
+aggregated.json for `report`.
 """
 
 from __future__ import annotations
@@ -98,12 +97,7 @@ def _run_scenarios(
     git_sha: str,
     package_version: str,
 ) -> list[ResultRecord]:
-    """Drive each UI scenario via `flutter drive` (profile), returning the captured records.
-
-    Wrapped in `macos_desktop_enabled()`: the desktop feature flag is enabled for the duration and
-    restored on exit, so a run leaves no global toolchain change behind. `LANG`/`LC_ALL` are set to
-    UTF-8 for the CocoaPods step in the macOS build.
-    """
+    """Drive each UI scenario via `flutter drive` (profile), returning the captured records."""
     scenarios = list(discover_scenarios())
     if args.scenarios:
         wanted = set(args.scenarios)
@@ -111,6 +105,7 @@ def _run_scenarios(
     if not scenarios:
         return []
 
+    # CocoaPods needs a UTF-8 locale in the macOS build.
     env = {**os.environ, "LANG": "en_US.UTF-8", "LC_ALL": "en_US.UTF-8"}
     records: list[ResultRecord] = []
     with macos_desktop_enabled():

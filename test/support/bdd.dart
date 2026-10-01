@@ -1,4 +1,4 @@
-/// A local Gherkin vocabulary over `flutter_test`, mirroring `minted`'s but for widget tests.
+/// A Gherkin vocabulary over `flutter_test`, for widget tests.
 ///
 /// `bdd_framework` can't drive them: it wraps `test`, so there's no `WidgetTester`.
 ///

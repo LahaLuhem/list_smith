@@ -1,14 +1,9 @@
 import '../data/models/demo_item.dart';
 
-/// A fake async data source backing every demo.
-///
-/// Serves a fixed in-memory dataset a page at a time behind a simulated [latency]. [totalItems] is deliberately
-/// not a round multiple of a typical page size, so the final page is partial.
 class DemoRepository {
-  /// Simulated per-page network delay.
   final Duration latency;
 
-  /// The size of the fixed dataset.
+  /// Not a round multiple of a typical page size, so the last page is partial.
   final int totalItems;
 
   new({this.latency = const Duration(milliseconds: 600), this.totalItems = 137});
@@ -23,11 +18,9 @@ class DemoRepository {
     growable: false,
   );
 
-  /// The full dataset, for the sync (in-memory) search demo.
   List<DemoItem> get items => _items;
 
-  /// The [pageIndex]th page (0-based) of at most [pageSize] items. An out-of-range page comes back empty,
-  /// which the default end policy reads as the end.
+  /// A page past the data comes back empty, which the default end policy reads as the end.
   Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
@@ -39,7 +32,6 @@ class DemoRepository {
     return _items.sublist(start, end > _items.length ? _items.length : end);
   }
 
-  /// The [pageIndex]th page of items whose title [DemoItem.matches] [query].
   Future<List<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
@@ -52,8 +44,8 @@ class DemoRepository {
     return matchingItems.sublist(start, end > matchingItems.length ? matchingItems.length : end);
   }
 
-  /// Serves items by opaque cursor: the next slice plus the cursor after it, or `null` once the data
-  /// runs out. This one is just the next offset as a string, but list_smith never looks inside it.
+  /// The cursor is the next offset as a string, `null` once the data runs out. list_smith never looks
+  /// inside it.
   Future<(List<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {
     await Future<void>.delayed(latency);
 

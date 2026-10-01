@@ -15,8 +15,7 @@ What's awkward or impossible today, with `ListView.builder` or with the current 
 real use case.
 
 **Which area does it touch?**
-Pagination, pull-to-refresh, search, grouping, reload, the observer, the controller, or something
-cross-cutting like theming or state.
+One feature, or something cross-cutting like theming or state.
 
 **Have you checked it isn't already covered?**
 The README or the current API may handle it another way.

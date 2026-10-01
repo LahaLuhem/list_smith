@@ -22,9 +22,10 @@ final class RowLookup<T extends Object> {
 
   /// The item at flat [index].
   T itemAt(int index) {
-    final page = lowerBound(_pageStarts, index + 1) - 1; // the last page starting at or before it
+    final pageIndex =
+        lowerBound(_pageStarts, index + 1) - 1; // the last page starting at or before it
 
-    return _pages[page][index - _pageStarts[page]];
+    return _pages[pageIndex][index - _pageStarts[pageIndex]];
   }
 
   /// Where the item with [id] sits now, or null once it's gone. [lastIndex] is where its row was last

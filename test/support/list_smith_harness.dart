@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pumps [child] wrapped in the minimal ancestors a widget test needs, a [Directionality] and a [MediaQuery].
-/// Call it again with the same widget type to drive a rebuild that exercises `didUpdateWidget`.
+/// Pumps [child] under the minimal ancestors a widget test needs. Pumping the same widget type again
+/// exercises `didUpdateWidget`.
 Future<void> pumpListSmith(WidgetTester tester, Widget child) => tester.pumpWidget(
   Directionality(
     textDirection: .ltr,

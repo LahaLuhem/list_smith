@@ -74,9 +74,7 @@ analyzer:
     use_key_in_widget_constructors: warning
 
     # linter ignores
-    # `todo` is `ignore` (not `info`) so CI's `flutter analyze --fatal-infos` does not fail on TODO
-    # comments - TODOs stay allowed in the code; --fatal-infos still fails on
-    # every other info-level lint.
+    # `ignore`, not `info`, so `--fatal-infos` doesn't fail on a TODO. Every other info still fails.
     todo: ignore
     lines_longer_than_80_chars: ignore
     always_use_package_imports: ignore
@@ -263,7 +261,7 @@ linter:
     test_types_in_equals: true
     throw_in_finally: true
     tighten_type_of_initializing_formals: true
-    # Conflicts with omit_obvious_property_types. Type is inferred is usually correctly done
+    # Conflicts with omit_obvious_property_types, and inference usually gets the type right
     type_annotate_public_apis: false
     type_init_formals: true
     type_literal_in_constant_pattern: true

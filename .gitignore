@@ -1,12 +1,12 @@
 ### Custom ###
-# AI symlinks point into adjacent .ai/ folders; targets are committed, symlinks are not.
+# The AI symlinks point into .ai/, where the targets are committed. The symlinks aren't.
 /AGENTS.md
 /CLAUDE.md
 
 # FVM version cache. The .fvmrc pin file stays tracked (it's the SDK contract).
 .fvm/
 
-# Android Studio's AI-assistant scratch config; user-specific noise.
+# Android Studio's AI-assistant scratch config, which is per-user.
 .idea/studiobot.xml
 
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,flutter,windows,androidstudio,visualstudiocode

@@ -51,7 +51,7 @@ jobs:
           git fetch --no-tags --depth=1 origin main
           git worktree add "$RUNNER_TEMP/base" origin/main
           if [ ! -f "$RUNNER_TEMP/base/benchmark/python/run.py" ]; then
-            echo "origin/main has no benchmark suite yet; skipping the regression gate."
+            echo "origin/main has no benchmark suite yet, so skipping the regression gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi

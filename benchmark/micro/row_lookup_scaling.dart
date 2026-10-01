@@ -10,9 +10,8 @@ import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
-import '../harness/scenario_args.dart';
+import '../harness/scenario_arguments.dart';
 
-/// Loaded item counts the lookups are measured against. The pivot for the scaling curve, `dedup_scaling`'s.
 const _itemCounts = [1000, 10000, 100000];
 const _itemsPerPage = 20;
 
@@ -63,12 +62,12 @@ final class _RowLookupScaling extends BenchmarkBase {
 
   @override
   void run() {
-    final rows = RowLookup(_pages, (item) => item.id);
+    final rowLookup = RowLookup(_pages, (item) => item.id);
     var foundCount = 0;
     for (final row in _rows) {
-      final index = rows.indexOf(row.id, row.lastIndex);
+      final index = rowLookup.indexOf(row.id, row.lastIndex);
       // Keying the rebuilt row reads its item again, so that read is part of the rebuild too.
-      if (index != null && rows.itemAt(index).id == row.id) foundCount++;
+      if (index != null && rowLookup.itemAt(index).id == row.id) foundCount++;
     }
 
     lastFoundCount = foundCount;
@@ -82,23 +81,26 @@ final class _Item {
   final int id;
 }
 
-Future<void> main(List<String> argv) async {
-  final args = ScenarioArgs.parse(argv);
+Future<void> main(List<String> arguments) async {
+  final scenarioArguments = ScenarioArguments.parse(arguments);
 
   final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
+    outputPath: scenarioArguments.outputPath,
     scenario: 'row_lookup_scaling',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
+    sdkVersion: ScenarioArguments.sdkVersion,
+    packageVersion: scenarioArguments.packageVersion,
+    gitSha: scenarioArguments.gitSha,
   );
 
-  for (var i = 0; i < args.iterations; i++) {
+  for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final itemCount in _itemCounts) {
       final append = _RowLookupScaling(itemCount, isItemOnTop: false);
-      final appendMicroseconds = measureWindowed(append, millis: args.measureMillis);
+      final appendMicroseconds = measureWindowed(append, millis: scenarioArguments.measureMillis);
       final itemOnTop = _RowLookupScaling(itemCount, isItemOnTop: true);
-      final itemOnTopMicroseconds = measureWindowed(itemOnTop, millis: args.measureMillis);
+      final itemOnTopMicroseconds = measureWindowed(
+        itemOnTop,
+        millis: scenarioArguments.measureMillis,
+      );
 
       writer.writeRecord(
         iteration: i,

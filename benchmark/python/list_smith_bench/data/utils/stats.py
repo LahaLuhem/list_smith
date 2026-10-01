@@ -1,9 +1,6 @@
-"""Statistical helpers: pure math, no I/O.
+"""Statistical helpers: pure math, no I/O, so they're unit-testable without the chart stack.
 
-`median` is hand-rolled (our sample sizes never justify numpy). `group_samples` flattens raw
-`samples` arrays across records. `records_per_scenario` picks a representative iteration count for
-report headers. `compute_compare_rows` is the `compare` workhorse: a pivot-aware Mann-Whitney diff
-of two runs, extracted here so it is unit-testable without the chart stack.
+`median` is hand-rolled, since the sample sizes never justify numpy.
 """
 
 from __future__ import annotations
@@ -41,7 +38,7 @@ def _coefficient_of_variation(values: list[float]) -> float:
 
 
 def pooled_spread_pct(baseline: list[float], current: list[float]) -> float:
-    """The two sides' within-side variation, averaged: the noise a delta has to clear.
+    """The 2 sides' within-side variation, averaged: the noise a delta has to clear.
 
     p and Cliff's delta both saturate once the sets separate, so neither can size a gap. This can.
     Evidence is in the gate-ordering tests.
@@ -50,7 +47,7 @@ def pooled_spread_pct(baseline: list[float], current: list[float]) -> float:
 
 
 def p_value_floor(baseline_count: int, current_count: int) -> float:
-    """The smallest p reachable at these sample sizes, from two perfectly separated sets.
+    """The smallest p reachable at these sample sizes, from 2 perfectly separated sets.
 
     Printed with the table so a row sitting at the floor reads as "separated", not "large gap".
     """
@@ -102,11 +99,9 @@ def records_per_scenario(records: list[ResultRecord]) -> int:
     return max(counts.values())
 
 
-# Summary keys whose value splits a scenario into independent measurement regimes. The compare
-# groups on them so a regression at one size / page-count / observer-delay is not masked by pooling
-# a scenario's samples into one multi-modal distribution (this suite is a regression tripwire).
-# `item_count` is dedup_scaling's size pivot under a different name. `TestPivotCoverage` locks this
-# tuple to MULTI_RECORD_SCENARIOS and to what the Dart sources actually emit.
+# Summary keys that split a scenario into separate regimes, so a regression at one size isn't masked
+# by pooling every size into one distribution. `item_count` is dedup_scaling's size, under its own
+# name. `TestPivotCoverage` ties this to MULTI_RECORD_SCENARIOS and to what the Dart sources emit.
 _PIVOT_KEYS: Final[tuple[str, ...]] = (
     "list_size",
     "item_count",
@@ -118,10 +113,8 @@ _PIVOT_KEYS: Final[tuple[str, ...]] = (
 def _pivoted_scenario(record: ResultRecord) -> str:
     """The record's scenario, suffixed with its pivot when it has one.
 
-    `sync_search_scaling` at `list_size=100000` becomes
-    `sync_search_scaling[list_size=100000]`, keeping each size's samples in their own
-    Mann-Whitney group. Scenarios with no pivot (frame scenarios, the observer
-    micro) are returned unchanged.
+    `sync_search_scaling` at `list_size=100000` becomes `sync_search_scaling[list_size=100000]`, so
+    each size's samples get their own Mann-Whitney group.
     """
     scenario = str(record.get("scenario", "?"))
     summary: dict[str, object] = record.get("summary", {})
@@ -142,14 +135,12 @@ def compute_compare_rows(
     baseline_records: list[ResultRecord],
     current_records: list[ResultRecord],
 ) -> list[CompareRow]:
-    """Build the per-(pivoted-scenario, metric) significance table diffing two runs.
+    """The per-(pivoted scenario, metric) significance table diffing 2 runs.
 
-    For every key present in BOTH runs, compute the baseline + current medians, the delta % (or
-    `math.inf` when the baseline median is 0), and a two-sided Mann-Whitney U p-value over the raw
-    samples. Keys in only one run are skipped (no fair comparison). Mann-Whitney is undefined when
-    all samples are identical. That is coerced to `p = 1.0` so the row reads as "no difference".
+    Keys in only one run are skipped, since there's nothing fair to compare. Mann-Whitney is
+    undefined when every sample ties, which becomes `p = 1.0`, so the row reads as "no difference".
 
-    scipy is imported inside the function so importing the dtos / config never pulls scipy in.
+    scipy is imported inside, so importing the dtos or config never pulls it in.
     """
     from scipy import stats as scipy_stats
 
@@ -197,10 +188,8 @@ def compute_compare_rows(
 
 
 def regressions(rows: list[CompareRow], threshold_pct: float) -> list[CompareRow]:
-    """Rows that significantly regressed beyond `threshold_pct` (the `--fail-on-regression` gate).
+    """Rows significant and slower by more than `threshold_pct`, the `--fail-on-regression` gate.
 
-    A row trips the gate only when it is significant (p < the significance threshold) AND slower by
-    more than `threshold_pct`, so a merely noise-significant sub-threshold shift does not fail CI.
     Every metric here is lower-is-better, so a positive delta is a regression.
     """
     return [

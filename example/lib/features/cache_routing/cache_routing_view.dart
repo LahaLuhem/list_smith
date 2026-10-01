@@ -61,7 +61,6 @@ class CacheRoutingView extends StatelessWidget {
   );
 }
 
-/// Empties the demo's cache, so the next fetch of each page goes to the network again.
 class _ClearCacheButton extends StatelessWidget {
   final VoidCallback onPressed;
 

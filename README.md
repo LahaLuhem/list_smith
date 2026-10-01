@@ -70,7 +70,7 @@ then override. list_smith does neither.
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
 | **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
-| **Swap behaviour, not widgets**    | 9 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order, edit transitions. Built-ins for each, or write your own.                       |
+| **Swap behaviour, not widgets**    | Sealed seams for refresh, reload, search, cache policy, end detection, empty pages, grouping, group order, edit transitions. Built-ins for each, or write your own.                      |
 | **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
@@ -158,7 +158,7 @@ swap the policy. Pick by how your source behaves, not by mechanism:
 
 | Policy                               | Reach for it when                                                    |
 |--------------------------------------|----------------------------------------------------------------------|
-| `StopOnEmptyPagesPolicy` *(default)* | your source just runs dry (a short, then empty, page). Do nothing.   |
+| `StopOnEmptyPagesPolicy` *(default)* | your source runs dry (a short, then empty, page). Do nothing.        |
 | `FixedPageCountPolicy`               | you want a hard cap: a "top 100", or a teaser of N pages.            |
 | `ExplicitHasMorePolicy`              | your backend returns a `hasMore` / `isLast` flag per response.       |
 | `StopOnNullSignalPolicy`             | your backend is cursor-based, returning `null` when there's no more. |
@@ -186,7 +186,7 @@ ListSmith.async(
 )
 ```
 
-None of the 4 fit? `PaginationEndPolicy` is an open contract. Its context carries the per-page
+None of these fit? `PaginationEndPolicy` is an open contract. Its context carries the per-page
 counts, the page size, and the last fetch's signal:
 
 ```dart
@@ -199,9 +199,9 @@ class ShortLastPage extends PaginationEndPolicy {
 <details>
 <summary><b>Cursor pagination</b></summary>
 
-Keyset/cursor APIs don't take a page number, you hand back the cursor the previous page returned.
-Same `withSignal` channel: a page's signal arrives on the next request as `previousSignal` (null for
-the 1st page), and `StopOnNullSignalPolicy` ends the list when the cursor runs out.
+Keyset and cursor APIs don't take a page number. You hand back the cursor the previous page
+returned. Same `withSignal` channel: a page's signal arrives on the next request as `previousSignal`
+(null for the 1st page), and `StopOnNullSignalPolicy` ends the list when the cursor runs out.
 
 ```dart
 ListSmith.async(
@@ -242,7 +242,7 @@ ListSmith.async(
 )
 ```
 
-The two pair up, since advancing only bites under a policy that continues past an empty page. Cap
+They go together, since advancing only bites under a policy that continues past an empty page. Cap
 the scan with `AdvanceToFirstNonEmpty(maxPages: 31)` and it gives up after that many empty pages. A
 pull re-scans.
 
@@ -310,7 +310,7 @@ refresh: const PullToRefresh(
 your fetcher's own retries: `commitSucceeded` keeps whatever reloaded and leaves the failed page as
 it was, `allOrNothing` commits only if every page succeeds.
 
-3 caveats:
+Worth knowing:
 
 - **Best-effort can seam.** A kept-old page beside fresh neighbours can duplicate or gap if the data
   shifted meanwhile. De-dup drops the duplicates, and gaps heal on the next refresh.
@@ -362,7 +362,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 ## Editing loaded items
 
 A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
-re-read: just notify the list, and it shows the change at once, keeping the scroll position.
+re-read. Notify the list and it shows the change at once, keeping the scroll position.
 
 ```dart
 ListSmith.async(
@@ -432,8 +432,8 @@ ListSmith.async(
 ```
 
 The `transitionBuilder` runs forward for a row coming in and backwards for one going out, so any
-transition works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the timing,
-not a look.
+transition works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the
+timing, not a look.
 
 - Only edits animate. Page loads, reloads and rows scrolling in show at once.
 - A removed row stays until its exit ends, so upserting it meanwhile brings it back.
@@ -468,7 +468,7 @@ Same idea, different match: `prefix` (starts-with, for type-ahead), `exact`, and
 whitespace term must hit a field, so `"john smith"` finds `"Smith, John"`). Combine them, or your
 own predicate, with `SyncSearchPredicates.any` (OR) and `.every` (AND).
 
-Need case-sensitive or diacritic-folded matching? The predicate is yours, just a
+Need case-sensitive or diacritic-folded matching? The predicate is yours, a plain
 `bool Function(item, query)`:
 
 ```dart
@@ -514,7 +514,7 @@ ListSmith.async(
 search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePolicy()),
 ```
 
-"No refetch" has 3 exceptions:
+"No refetch" has its exceptions:
 
 - a page still loading when the search started is dropped and asked again
 - a pull, `refresh()` or `invalidate()` while searching re-reads the kept feed in place once you're
@@ -542,11 +542,11 @@ Widget build(BuildContext context) => Column(
 ```
 
 A `ValueNotifier` and a `ValueListenableBuilder` work too, and the field can sit anywhere. Clearing
-is just `_query = ''`, and list_smith flips back to the feed on its own.
+is `_query = ''`, and list_smith flips back to the feed on its own.
 
-2 knobs shape the query. **`searchDebounce`** waits for typing to settle, 300ms on async and zero
-on sync where an in-memory filter is instant. **`minSearchLength`** ignores anything shorter than N
-characters. The query is trimmed first, so a field full of spaces counts as empty.
+**`searchDebounce`** waits for typing to settle, 300ms on async and zero on sync where an in-memory
+filter is instant. **`minSearchLength`** ignores anything shorter than N characters. The query is
+trimmed first, so a field full of spaces counts as empty.
 
 ## Grouping
 
@@ -593,7 +593,7 @@ grouping: Grouping.by(
 ),
 ```
 
-2 more things:
+Worth knowing:
 
 - **Type the `groupBy` parameter**, or pass a typed function reference, so the key type infers
   instead of widening to `Object`.
@@ -609,8 +609,8 @@ Every surface list_smith draws (loaders, errors, the empty state, the "that's ev
 the pull indicator) is a neutral `widgets`-layer default. No `CircularProgressIndicator`, nothing
 from Material or Cupertino, so nothing fights the app you've built. Override the slot for your own.
 
-2 sit on the constructor, because every list has them: **`emptyBuilder`** for a source with no
-items, **`noResultsBuilder`** for a search that matched nothing (it gets the query). The rest are
+**`emptyBuilder`** (a source with no items) and **`noResultsBuilder`** (a search that matched
+nothing, it gets the query) sit on the constructor, because every list has them. The rest are
 async-only, gathered into an `AsyncListSurfaces` you define once and reuse for a house style:
 
 ```dart
@@ -673,7 +673,7 @@ ListSmith.async(
 )
 ```
 
-The shading is yours, list_smith ships none. If the row needs something from the enclosing scope,
+The shading is yours: list_smith ships none. If the row needs something from the enclosing scope,
 hoist the builder to a local and call it from both slots.
 
 ## Watching what it does
@@ -726,7 +726,7 @@ Lists race. The user types while an old query's page is still loading, or pulls 
 page is in the air. list_smith settles those, and each guarantee below has a test behind it.
 
 <details>
-<summary><b>The 4 guarantees</b></summary>
+<summary><b>The guarantees</b></summary>
 
 **A query change drops the pages still in flight.** They're discarded, not appended. Cursors too, so
 the next page starts from the new query's cursor and not one an abandoned request returned.

@@ -32,7 +32,7 @@ def side_timing_separation(
     baseline_records: list[ResultRecord],
     current_records: list[ResultRecord],
 ) -> float:
-    """How far apart in time the two sides were sampled, as a fraction of the whole job's span.
+    """How far apart in time the 2 sides were sampled, as a fraction of the whole job's span.
 
     `0.5` is the fixed-order worst case (each side confined to its own half), `0.0` is perfect
     interleaving. Returns `0.0` when either side has no usable timestamp or the job took no

@@ -16,20 +16,22 @@ state that rebuilds a **small** part of a view. Only call `notifyListeners()` on
   only changes its own widget shouldn't use it, `ListSmith` list and all. The flip side is that one
   `ValueListenableBuilder` per field is O(n) subscriptions, so a single change touching many places
   is better off with one `notifyListeners()`.
-- **How to apply:** back the field with a private `ValueNotifier<T>`, expose a `ValueListenable<T>`
-  getter, wrap only the dependent widget in a `ValueListenableBuilder`, write through a small setter
-  assigning `.value`, and dispose the notifier in the VM's `dispose()`.
+- **How to apply:** back the field with a private `ValueNotifier<T>` named `_<thing>Notifier`,
+  expose it as a `<thing>Listenable` getter (a boolean `<thing>` reads as a question), wrap only the
+  dependent widget in a `ValueListenableBuilder`, write through a small handler assigning `.value`,
+  and dispose the notifier in the VM's `dispose()`.
 
   ```dart
   // Prefer: only the switch rebuilds on toggle.
-  final _injectFailures = ValueNotifier(false);
-  ValueListenable<bool> get injectFailures => _injectFailures;
-  void setInjectFailures({required bool value}) => _injectFailures.value = value;
+  final _shouldInjectFailuresNotifier = ValueNotifier(false);
+  ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
+  void onInjectFailuresToggled({required bool value}) =>
+      _shouldInjectFailuresNotifier.value = value;
 
   // Over: rebuilds the whole MVVM subtree for a one-widget change.
-  var _injectFailures = false;
-  void setInjectFailures({required bool value}) {
-    _injectFailures = value;
+  var _shouldInjectFailures = false;
+  void onInjectFailuresToggled({required bool value}) {
+    _shouldInjectFailures = value;
     notifyListeners();
   }
   ```
@@ -61,7 +63,7 @@ take the package-root form (`/features/...`), same-feature ones stay relative.
 - A view is a `StatelessWidget` whose `build` returns
   `MVVM.builder(viewModel: XxxViewModel(), viewBuilder: ...)`, wrapping its body in a
   `DemoScaffold(title: ...)`. Its dartdoc names the list_smith API the demo exercises and stops
-  there, since the walkthrough belongs to the screen's `DemoIntro`.
+  there (see [`AGENTS.md`](AGENTS.md), where a demo's explanation goes).
 - A view-model is a `final class XxxViewModel extends ViewModel`. Expose state through getters and
   name mutation handlers `on<Thing>Changed` / `on<Thing>Toggled`. A boolean handler takes a named
   `{required bool value}`, per `avoid_positional_boolean_parameters`, and the view adapts it:

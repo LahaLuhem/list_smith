@@ -1,4 +1,4 @@
-"""`cmd_ab`: run two builds' micros interleaved, alternating sides every iteration.
+"""`cmd_ab`: run 2 builds' micros interleaved, alternating sides every iteration.
 
 The gate's false positives come from run order, not statistics: running one side's whole block then
 the other's lets anything that shifts mid-job land on one side only. Alternating means a shift hits
@@ -85,7 +85,7 @@ def _run_once(
 
 
 def cmd_ab(args: argparse.Namespace) -> int:
-    """Interleave two builds' micros and write one aggregated.json per side."""
+    """Interleave 2 builds' micros and write one aggregated.json per side."""
     candidate_build = Path(args.candidate_build).resolve()
     baseline_build = Path(args.baseline_build).resolve()
     pairs = _paired_exes(candidate_build, baseline_build)
@@ -93,7 +93,7 @@ def cmd_ab(args: argparse.Namespace) -> int:
         wanted = set(args.scenarios)
         pairs = [pair for pair in pairs if pair[0] in wanted]
     if not pairs:
-        print("no micros in BOTH builds. Run `build` on each side first", file=sys.stderr)
+        print("no micros in both builds. Run `build` on each side first", file=sys.stderr)
 
         return 1
 

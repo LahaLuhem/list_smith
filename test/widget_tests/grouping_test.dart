@@ -86,7 +86,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // B opens at the end of page 0 and runs into page 1. Headers come from every loaded page, so B
-      // gets one. A page-local fold would draw two.
+      // gets one. A page-local fold would draw 2.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -112,7 +112,7 @@ void main() {
       await drain(tester, frames: 16);
 
       // Page 1 is all B, so this reaches back past a whole page. A two-page case cannot tell 'every
-      // page' from 'the last two'.
+      // page' from 'the last 2'.
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section C').evaluate()).length.equals(1);
@@ -165,7 +165,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the overlap
-      // first, so grouping never sees it. De-dup is load-bearing for grouping here.
+      // first, so grouping never sees it. Grouping relies on de-dup here.
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('a2').evaluate()).length.equals(1);

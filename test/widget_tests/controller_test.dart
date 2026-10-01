@@ -1,4 +1,4 @@
-// A test-local observer double shares the file with the scenarios that drive it.
+// Test-local fixtures share the file with the scenarios that use them.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:async';
@@ -353,16 +353,16 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      final first = controller.invalidate(); // reads page 0 at once, then stalls
+      final firstReload = controller.invalidate(); // reads page 0 at once, then stalls
       await drain(tester);
       store[0] = 11; // a write lands on a page the run already read
-      final second = controller.invalidate();
+      final secondReload = controller.invalidate();
       await drain(tester);
 
       hold.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (first, second).wait;
+      await (firstReload, secondReload).wait;
 
       check(find.text('item 11').evaluate()).length.equals(1);
       check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(2);
@@ -408,16 +408,16 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      final first = controller.invalidate(); // held, about to be superseded
+      final firstReload = controller.invalidate(); // held, about to be superseded
       await drain(tester);
       await controller.reset();
-      final second = controller.invalidate(); // must not join a run that will commit nothing
+      final secondReload = controller.invalidate(); // must not join a run that will commit nothing
       await drain(tester, frames: 12);
 
       hold.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (first, second).wait;
+      await (firstReload, secondReload).wait;
 
       // 3 reloads started: the held one, the reset, and the invalidate that refused to join.
       check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(3);
@@ -490,19 +490,19 @@ void main() {
 
     scenarioWidgets('swapping the controller moves the handle to the new one', (tester) async {
       final fetcher = valuedFetcher();
-      final first = ListSmithController();
-      final second = ListSmithController();
+      final firstController = ListSmithController();
+      final secondController = ListSmithController();
 
-      await pumpList(tester, fetchPage: fetcher.fetchPage, controller: first);
+      await pumpList(tester, fetchPage: fetcher.fetchPage, controller: firstController);
       await drain(tester);
-      await pumpList(tester, fetchPage: fetcher.fetchPage, controller: second);
+      await pumpList(tester, fetchPage: fetcher.fetchPage, controller: secondController);
       await drain(tester);
 
-      await first.refresh();
+      await firstController.refresh();
       await drain(tester);
       check(fetcher.attempts).deepEquals({0: 1});
 
-      await second.refresh();
+      await secondController.refresh();
       await drain(tester);
       check(fetcher.attempts).deepEquals({0: 2});
     });

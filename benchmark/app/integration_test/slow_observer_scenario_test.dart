@@ -1,13 +1,11 @@
 /// Scenario: a slow synchronous observer delays list_smith rendering its own 1st page.
 ///
-/// The headline UI choke point, mirroring BICC's `slow_observer`. `onPageLoaded` fires synchronously
-/// inside `_fetchPage`, before the page reaches ISP, so a slow observer delays the list appearing, not
-/// just the consumer's side effect. Measured as wall-clock from the page's data being ready to the 1st
-/// item landing in the tree.
+/// `onPageLoaded` fires synchronously inside `_fetchPage`, before the page reaches ISP, so a slow observer
+/// delays the list appearing, not just the consumer's side effect. Measured as wall-clock from the
+/// page's data being ready to the 1st item landing in the tree.
 ///
-/// Sweeps a range of delays, one record each, so the report can show latency tracking the delay ~1:1
-/// over a fixed baseline. `delay = 0` is that baseline. The live binding in profile mode is what makes
-/// the `sleep()` genuinely block the UI isolate, so these numbers are faithful rather than directional.
+/// The live binding in profile mode makes the `sleep()` really block the UI isolate, so these numbers
+/// are faithful, not just directional.
 library;
 
 import 'dart:io';
@@ -26,7 +24,7 @@ const _outputPath = String.fromEnvironment('OUTPUT');
 const _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
 const _packageVersion = String.fromEnvironment('PKG_VERSION', defaultValue: 'unknown');
 
-// Observer delays swept per run. 0 is the no-observer-work baseline (the y-intercept of the line).
+// One record per delay, so the report shows latency tracking the delay about 1:1. 0 is the baseline.
 const _observerDelaysMillis = <int>[0, 25, 50, 100];
 
 // Bound on the pump loop waiting for the 1st item, so a stalled fetch can't hang the run.
@@ -53,7 +51,7 @@ void main() {
         int? dataReadyMicros;
 
         Future<List<int>> fetchPage(PageRequest request) async {
-          // Stamp when the page's data is ready, BEFORE list_smith fires the (slow) observer.
+          // Stamp when the page's data is ready, before list_smith fires the (slow) observer.
           dataReadyMicros ??= stopwatch.elapsedMicroseconds;
 
           final PageRequest(:pageIndex, :pageSize) = request;

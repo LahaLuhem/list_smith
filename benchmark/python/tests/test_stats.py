@@ -1,12 +1,7 @@
 """Tests for `list_smith_bench.data.utils.stats`.
 
-Pure, deterministic math, the highest-value regression target in the analyzer. Covers `median`,
-`group_samples`, and `compute_compare_rows`, including the pivot-aware grouping that splits
-multi-size scenarios (`list_size` / `page_count`) so a regression at one size is not masked by
-pooling, and the tie guard (older scipy raises, newer returns nan. Both must land on p=1.0).
-
-`TestPivotCoverage` is the structural half: it keeps `MULTI_RECORD_SCENARIOS`, `_PIVOT_KEYS` and
-the Dart sources from drifting apart, which they have done before.
+`TestPivotCoverage` keeps `MULTI_RECORD_SCENARIOS`, `_PIVOT_KEYS` and the Dart sources from drifting
+apart, which they have done before.
 """
 
 from __future__ import annotations
@@ -39,7 +34,7 @@ def _record(
     return {"scenario": scenario, "iteration": 0, "samples": samples, "summary": summary or {}}
 
 
-# Every multi-record scenario and the summary key it pivots on. Locked three ways by
+# Every multi-record scenario and the summary key it pivots on. Locked 3 ways by
 # `TestPivotCoverage`: to `MULTI_RECORD_SCENARIOS`, to `_PIVOT_KEYS` (via a real pivoted label), and
 # to the Dart source that emits it.
 _SCENARIO_PIVOTS: dict[str, str] = {
@@ -202,8 +197,8 @@ class TestPivotAwareGrouping:
 class TestPivotCoverage:
     """Every multi-record scenario must pivot, from the Dart summary key through to the label.
 
-    Issue #51: `dedup_scaling` sat in `MULTI_RECORD_SCENARIOS` emitting a key `_PIVOT_KEYS` had
-    never heard of, so its three size regimes pooled into one Mann-Whitney group.
+    Otherwise a scenario can sit in `MULTI_RECORD_SCENARIOS` emitting a key `_PIVOT_KEYS` has never
+    heard of, and its size regimes pool into one Mann-Whitney group.
     """
 
     def test_map_matches_the_configured_multi_record_scenarios(self) -> None:
@@ -256,8 +251,8 @@ class TestRecordsPerScenario:
         assert records_per_scenario([]) == 0
 
     def test_counts_the_most_emitted_scalar_scenario(self) -> None:
-        # isp_scroll + observer_dispatch emit one record per iteration (scalar, not multi-record);
-        # the header figure is the biggest such count.
+        # isp_scroll and observer_dispatch emit one record per iteration (not multi-record), and the
+        # header figure is the biggest such count.
         records = [
             _record("isp_scroll", {"m": [1.0]}),
             _record("isp_scroll", {"m": [1.0]}),
@@ -317,7 +312,7 @@ class TestPValueFloor:
     """A row sitting at the floor separated completely. It says nothing about how big the gap is."""
 
     def test_floor_matches_the_gate_s_own_sample_size(self) -> None:
-        # Ten per side is DEFAULT_ITERATIONS with nothing trimmed. Scipy goes asymptotic above 8.
+        # 10 per side is DEFAULT_ITERATIONS with nothing trimmed. Scipy goes asymptotic above 8.
         assert p_value_floor(10, 10) == pytest.approx(0.000183, abs=1e-5)
 
     def test_smaller_samples_cannot_reach_as_low(self) -> None:

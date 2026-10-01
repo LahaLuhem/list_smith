@@ -32,10 +32,11 @@ class ReloadView extends StatelessWidget {
                 const DemoIntro(
                   title: 'Reload to current depth',
                   description:
-                      'Scroll to load a few pages, then pull to refresh. "Keep scroll depth" re-fetches '
-                      'every loaded page in place (the "load #" stamp bumps); off resets to the first '
-                      'page. Inject a failure to compare best-effort with all-or-nothing. The button '
-                      'runs the same reload without a pull, staying busy as long as refresh() takes.',
+                      'Scroll to load a few pages, then pull to refresh. "Keep scroll depth" '
+                      're-fetches every loaded page in place (the "load #" stamp bumps), and off '
+                      'resets to the 1st page. Inject a failure to compare best-effort with '
+                      'all-or-nothing. The button runs the same reload without a pull, staying '
+                      'busy as long as refresh() takes.',
                 ),
                 BoolKnob(
                   label: 'Keep scroll depth',
@@ -52,10 +53,10 @@ class ReloadView extends StatelessWidget {
                   onChanged: viewModel.onConcurrencyChanged,
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.injectFailures,
-                  builder: (context, injectFailures, _) => BoolKnob(
+                  valueListenable: viewModel.shouldInjectFailuresListenable,
+                  builder: (context, shouldInjectFailures, _) => BoolKnob(
                     label: 'Inject a failure on reload',
-                    value: injectFailures,
+                    value: shouldInjectFailures,
                     onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
                   ),
                 ),
@@ -65,11 +66,11 @@ class ReloadView extends StatelessWidget {
                   onChanged: (value) => viewModel.onAtomicToggled(value: value),
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.refreshing,
-                  builder: (context, refreshing, _) => PlatformButton(
+                  valueListenable: viewModel.isRefreshingListenable,
+                  builder: (context, isRefreshing, _) => PlatformButton(
                     onPressed: viewModel.onRefreshPressed,
-                    isEnabled: !refreshing,
-                    child: Text(refreshing ? 'Refreshing…' : 'Refresh from code'),
+                    isEnabled: !isRefreshing,
+                    child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
                   ),
                 ),
               ],

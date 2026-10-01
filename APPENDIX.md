@@ -30,6 +30,7 @@ renames.
 - [Fetchers are told why they were called](#fetch-trigger)
 - [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
+- [The root analysis skips `benchmark/app`](#root-analysis-skips-bench-app)
 - [Dependabot's PRs auto-merge through dartender](#dependabot-automerge)
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
@@ -100,8 +101,8 @@ renames.
   the pull indicator retracts right away. The standard infinite_scroll_pagination pattern.
 - **Why not hold the indicator until fresh data:** awaiting the reload shows the pull indicator and
   the first-page loader at once, 2 spinners. Completing immediately keeps it to 1.
-- **Deferred:** "keep the old items, hold the indicator until fresh data, then swap" is nicer but
-  needs a soft refresh that doesn't reset up front, likely its own refresh-policy seam.
+- **Since landed as an option:** `ReloadToCurrentDepth` keeps the old items and holds the indicator
+  until the re-fetch is done ([#reload-run](#reload-run)).
 
 ---
 
@@ -123,9 +124,6 @@ renames.
   reuse one surface set across lists. Autocomplete still lists every slot inside the holder.
 - **Why not group `emptyBuilder` too:** the sync path has an empty state but none of the async
   surfaces, so a shared holder would let a `.sync` list set builders that do nothing.
-- **Landed** with the refactor that extracted the async engine into the unexported `AsyncListView`
-  and made `ListSmith` a stateless dispatcher over the sealed `ListSource`. The indicator moved onto
-  the `refresh` seam later.
 
 ---
 
@@ -147,10 +145,11 @@ renames.
 - **The iterable is copied once:** `SyncSource` keeps the consumer's raw iterable, and
   `SyncListView` turns it into a list once, again only when the iterable identity changes, so an
   unchanged list is never re-copied or re-filtered per build.
-- **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent`
-  (`double`) for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a
-  public `double?`, and both views wrap it via `ScrollCacheExtent.pixels(...)` from
-  `package:flutter/rendering.dart`, the widgets layer's own foundation rather than a design system.
+- **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent` (`double`)
+  for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a public
+  `double?`, and both views read it through an unexported extension that wraps it in
+  `ScrollCacheExtent.pixels(...)`, from `package:flutter/rendering.dart` rather than a design
+  system.
 
 ---
 
@@ -203,8 +202,6 @@ renames.
   Behaviour that is the whole reason a constructor exists stays required, like `.sync`'s `searchBy`,
   since an in-memory list with no predicate is just a `ListView.builder`. Live input that changes
   every build stays flat, since a holder rebuilt every frame buys nothing.
-- **Pre-publish, so the break was free.** `SyncSearchPredicate`, `SearchPageFetcher` and the
-  `SearchCachePolicy` cases stay public, now reached through `AsyncSearch(...)`.
 
 ---
 
@@ -213,8 +210,8 @@ renames.
 
 - **Decision:** an optional `ListSmithObserver` injected via `ListSmith.async(observer: ...)`,
   modelled on `better_internet_connectivity_checker`'s `ConnectivityObserver`. An
-  `abstract base class` with a no-op default per event, so a subclass overrides only what it wants.
-  5 async events, plus a `LoggingListSmithObserver` that logs each via `dart:developer`.
+  `abstract base class` with a no-op default per event, so a subclass overrides only what it wants,
+  plus a `LoggingListSmithObserver` that logs each via `dart:developer`.
 - **Discrete events only.** The seam fires from callbacks outside `build`: the page fetch, a
   reload's start, the debounced-query commit. No-results, empty and end-reached are excluded on
   purpose, since they exist only as a function of paging and filter state *during* `build`, so
@@ -240,8 +237,8 @@ renames.
   it carries no pure resolver of its own and is covered by widget tests driving a
   `RecordingListSmithObserver`.
 - **No-op bodies, not commented ones.** The class dartdoc says once that every default is a no-op,
-  and a file-level `ignore_for_file: no-empty-block` carries the reason. Repeating it in each body
-  was 5 copies of one sentence.
+  and a file-level `ignore_for_file: no-empty-block` carries the reason, rather than a comment in
+  each body.
 
 ---
 
@@ -276,9 +273,9 @@ renames.
   with a debug-only `groupsAreContiguous` assert flagging a key that recurs after its section ended.
 - **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
   passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
-  widget-free and unit-tested (`bucketByGroup`, `isGroupStart`, `groupsAreContiguous`), while the
-  per-build wrapping lives on the type as `Grouping.decorate`. `resolveSyncSearch` returns a lazy
-  view so the grouped sync path buckets with one copy, re-resolving on an items or `grouping`
+  widget-free and unit-tested (`bucketByGroup`, `resolveHeaderFlags`, `groupsAreContiguous`), while
+  the per-build wrapping lives on the type as `Grouping.decorate`. `resolveSyncSearch` returns a
+  lazy view so the grouped sync path buckets with one copy, re-resolving on an items or `grouping`
   identity change. Hence "hold the `Grouping` stable" on a large list.
 
 ---
@@ -288,9 +285,9 @@ renames.
 
 - **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
   methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `decorate(itemBuilder, flatItems:, axis:)` returns
-  the per-build item builder. Same "delegate to the type, keep the shell branch-free" move as the
-  open end-policy ([#explicit-end-signals](#explicit-end-signals)).
+  `arrange(items)` is the sync display ordering, `decorate(itemBuilder, flattenItems:, axis:)`
+  returns the per-build item builder. Same "delegate to the type, keep the shell branch-free" move
+  as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
 - **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
   compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
   Opening it later is a one-line change. `@internal` makes them callable across the package but not
@@ -302,7 +299,7 @@ renames.
   Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
-- **The ungrouped path still does no flatten.** `decorate` takes `flatItems` as a callback
+- **The ungrouped path still does no flatten.** `decorate` takes `flattenItems` as a callback
   `NoGrouping.decorate` never invokes, so an ungrouped async list skips the O(loaded) page flatten.
   Only `KeyedGrouping.decorate` calls it, once per build, for the header flags and the assert.
   Dispatch is per build rather than per item, one virtual call replacing one `is` check, so the
@@ -346,19 +343,16 @@ renames.
 ## Explicit end signals: an open policy plus a fetcher building block
 
 - **Decision:** `PaginationEndPolicy` is an open `abstract class` a consumer can implement, not a
-  sealed set, and the end decision is a public `hasReachedEnd(EndContext)`. list_smith ships 4
-  policies, and a consumer can add their own with no change here.
+  sealed set, and the end decision is a public `hasReachedEnd(EndContext)`. A consumer can add a
+  policy of their own with no change here.
 - **Why open, not sealed.** A sealed policy forced list_smith to enumerate every strategy. Opening
-  it makes the common page-derivable rules a few lines of consumer code, and it deleted a
-  workaround: the decision used to live in an unexported resolver extension so a pure-data policy
-  could be reached from another library. A public method on an open interface needs none of that,
-  so the extension is gone and tests call `hasReachedEnd` directly.
+  it makes the common page-derivable rules a few lines of consumer code, and tests call
+  `hasReachedEnd` directly.
 - **The signal is a fetcher output, orthogonal to the policy.** A `hasMore` flag lives in the
   network response, which only the fetcher sees, so the policy decides and the fetcher supplies.
-  `PageFetcher` and `SearchPageFetcher` became small callable classes, having been bare typedefs,
-  with 2 constructors: `.new` returns items only, `.withSignal` returns `(items, Object? signal)`.
-  The common path pays a one-constructor wrap, so `T` stays the consumer's DTO rather than a
-  `Response<T>` wrapper.
+  `PageFetcher` and `SearchPageFetcher` are small callable classes with 2 constructors: `.new`
+  returns items only, `.withSignal` returns `(items, Object? signal)`. The common path pays a
+  one-constructor wrap, so `T` stays the consumer's DTO rather than a `Response<T>` wrapper.
 - **The signal is erased to `Object?`.** `ExplicitHasMorePolicy` reads it as a bool, a consumer's
   cursor policy as their cursor. Erasure, grouping's key trick, avoids a 2nd `ListSmith` generic.
   A return value beat a mutation channel (a `Completer` or sink): it fits the package's
@@ -369,9 +363,6 @@ renames.
   `KeepCachePolicy` toggle, so every policy is a pure function of its `EndContext` with no
   consumer-side reset wiring. A guard asserts a signal policy is paired with a `.withSignal`
   fetcher.
-- **Scope was an end signal. Cursor-driven paging came later.** The cursor started as a stop signal
-  only, not fed back as the next fetch's input, with the page key staying the 0-based ordinal. See
-  [cursor-driven pagination](#cursor-driven-pagination).
 - **Layout:** `PageFetcher` and `SearchPageFetcher` live under `models/` now that they are classes.
   `typedefs/` keeps only real typedefs.
 
@@ -383,11 +374,9 @@ renames.
 - **Decision:** a cursor drives the next fetch, not just the end. The `withSignal` channel became
   bidirectional, so the `Object?` a page returns reaches the next fetch as `previousSignal`, null
   for the 1st page. `StopOnNullSignalPolicy` ends the list on a null cursor.
-- **No new constructor, fetcher type or generic.** The anticipated page-key change wasn't needed.
-  list_smith keeps `PagingController<int, T>` and the cursor rides `_lastPageSignal`, the field
-  already tracking the signal for end-detection. `_nextPageKey` still returns `pages.length`.
-  `itemIdGetter`, grouping and refresh are item-based, so untouched. The whole new surface is the 3rd
-  `withSignal` argument plus one policy.
+- **No new constructor, fetcher type or generic.** list_smith keeps `PagingController<int, T>` and
+  the cursor rides `_lastPageSignal`, the field already tracking the signal for end-detection, so
+  `_nextPageKey` still returns `pages.length`.
 - **Retry and refresh fall out for free.** `_lastPageSignal` only advances after a fetch succeeds,
   so a retried page re-fetches with the same cursor, and refresh nulls the field so the reload
   restarts from the initial null.
@@ -406,8 +395,7 @@ renames.
   skips hand-rolling the usual matching. `fields` (contains), `prefix` (starts-with), `exact`
   (equals), `allTerms` (every whitespace term must hit some field, the multi-word case `contains`
   misses), plus `any` / `every` to combine. All case-insensitive, all skipping `null` fields. The
-  raw `searchBy` stays the escape hatch for case-sensitive, diacritic or fuzzy matching. Anticipated
-  when `.sync` shipped (see [#sync-search-shape](#sync-search-shape)).
+  raw `searchBy` stays the escape hatch for case-sensitive, diacritic or fuzzy matching.
 - **Knob-free, named factories.** Each is named for what it does rather than taking a `mode:` flag,
   which keeps the primitive's no-baked-in-policy stance: nothing sits inert, you pick a builder or
   drop to `searchBy`. `fields` / `prefix` / `exact` share a private `_anyField(extractors, test)`,
@@ -435,9 +423,8 @@ renames.
   `refresh()`, `invalidate()`, `reset()` and the [edits](#edit-layer). A bounded exception to the
   hidden pager, and the line held is that no `PagingController`, `PagingState` or other ISP type is
   reachable through it.
-- **Only refresh was unreachable.** `scrollToTop` and `jumpTo(index)` were floated too, but a
-  consumer can already scroll via `ListScrollConfig.controller`, so those are sugar where this is
-  capability. Index-scrolling needs fixed extents, which puts it with the sliver and grid work.
+- **No scrolling verbs.** A consumer already scrolls through `ListScrollConfig.controller`, and
+  index-scrolling needs fixed extents, which puts it with the sliver and grid work.
 - **Intents, not state.** No `isRefreshing`, count or `hasMore`. Notification is the observer's job
   ([#observer-seam](#observer-seam)), and a state-bearing handle re-exposes the pager by the back
   door.
@@ -452,9 +439,8 @@ renames.
   [#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1) rejected. The button owns its progress.
 - **Coalesced**, since a button can double-fire where the gesture can't, the indicator having to be
   idle. Not a fix for the in-flight-fetch race.
-- **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the `ReloadContext`
-  shape. A closure was the right size while `refresh()` was the only intent. With more on the way,
-  each new one is a method on the host and a forwarding verb on the handle.
+- **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the
+  `ReloadContext` shape, so each intent is a method on the host and a forwarding verb on the handle.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
   through a controller no list ever received is a wiring mistake.
 
@@ -490,18 +476,10 @@ renames.
 ## Fetchers take a request object, not an argument list
 
 - **Decision:** `PageFetcher` and `SearchPageFetcher` take one `PageRequest` / `SearchPageRequest`
-  instead of 3 and 4 positional arguments. Structure only, no behaviour change, with the whole suite
-  passing unedited either side of it.
-- **Why then.** The next step needed to tell the fetcher *why* it was called, and the positional
-  lists were already at 3 and 4. A 4th and 5th positional argument reads badly at the call site, and
-  the fetch-time fact after that would break the signature again. With an object, every later
-  addition is a field.
-- **Landed before the trigger, not with it.** The request object carries no `trigger` field at all,
-  which keeps the ~60-site mechanical rewrite free of semantics so it reviews as a rename. The
-  trigger came after, adding the field and the resolution and touching no call site, since adding a
-  field is source-compatible for a consumer who only reads the request. Shipping the field hardcoded
-  to one value instead would have put a wrong value through the mechanical diff and exported an enum
-  whose other cases nothing produced.
+  instead of a positional argument list.
+- **Why:** a fetch-time fact like the [trigger](#fetch-trigger) becomes a field, which a consumer who
+  only reads the request never has to change for, where another positional argument breaks every
+  closure.
 - **`base` plus `final`, not a sealed pair.** Consumers only ever read these, so the hierarchy needs
   no exhaustive switch, and the shared base is there to declare the 3 common fields once.
   `SearchPageRequest` keeps `query` non-null rather than the normal path carrying a nullable one
@@ -510,8 +488,6 @@ renames.
   items-plus-signal. That split is about the *output* tuple
   ([#explicit-end-signals](#explicit-end-signals)), and unifying the input convention is no argument
   for reopening it. A `PageResult` wrapper stays rejected for the same reason as the 1st time.
-- **Breaking, deliberately.** Every consumer's fetch closure changes. Taken then because the request
-  object is the last break this axis needs, and a break is cheapest at 0.x.
 - **A bulk rewrite needs a real check, not a green suite.** The 60-site pass silently turned
   `'cursor$pageIndex'` into `'cursor$request.pageIndex'`, interpolating the request and appending a
   literal `.pageIndex`. Analyzer clean, tests green, value wrong, because the cursor was only ever
@@ -522,12 +498,11 @@ renames.
 <a id="fetch-trigger"></a>
 ## Fetchers are told why they were called
 
-- **Decision:** every `PageRequest` carries a `FetchTrigger`: `initialLoad`, `nextPage`, `refresh`,
-  `retry`, `queryChanged`. A caching repository can now bypass its cache for a pull-to-refresh,
-  which the single fetch lane made impossible.
+- **Decision:** every `PageRequest` carries a `FetchTrigger` saying why it was asked for, so a
+  caching repository can bypass its cache for a pull-to-refresh.
 - **A fact, not an instruction.** A `shouldBypassCache` bool was rejected: this package can't know
   whether the right answer is bypass, revalidate or stale-while-revalidate, and a bool can't hold a
-  five-valued fact. A 2nd `onBypassCacheFetchPage` was rejected too: it needs a mirror on
+  many-valued fact. A 2nd `onBypassCacheFetchPage` was rejected too: it needs a mirror on
   `AsyncSearch`, and nothing would keep the two agreeing.
 - **Plain enum.** The one candidate for per-value config is "does this restart the cursor chain",
   and both reset paths already funnel through `_resetPaging()`, so attaching it would restate what
@@ -577,8 +552,6 @@ once met a red gate reformatting files the pull request never touched.
 dartender's Format job runs Flutter's Dart, on the stable channel like the rest of its jobs. It
 doesn't read [`.fvmrc`](.fvmrc), which only picks the SDK FVM gives you locally.
 
-Hit first in [`minted`](https://github.com/LahaLuhem/minted) (commit `1293bbe`) and ported here.
-
 ---
 
 <a id="root-analysis-skips-bench-app"></a>
@@ -597,7 +570,7 @@ analyses every file.
 ## Dependabot's PRs auto-merge through dartender
 
 Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job in
-[dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. 4 things still bite here:
+[dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. What still bites here:
 
 - **The rulesets are the load-bearing half.** Auto-merge only waits on required checks, so it's
   safe only while `main` requires every check in [hard rule 6](.ai/AGENTS.md#hard-rules). Keep
@@ -636,7 +609,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   store, and `void` keeps `Dismissible.onDismissed` plain.
 - **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
   in-flight page's cursor, so the next page repeats. Anything that changes what the edits show
-  bumps `_editStamp` instead, since the display memo keys on it.
+  bumps `_editStampNotifier` instead, since the display memo keys on it.
 - **New items** join the start of their group, else the top, since async groups have to stay
   together. They stay out of search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That

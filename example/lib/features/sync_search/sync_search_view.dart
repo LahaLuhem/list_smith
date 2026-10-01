@@ -26,8 +26,8 @@ class SyncSearchView extends StatelessWidget {
             child: DemoIntro(
               title: 'ListSmith.sync',
               description:
-                  'Filters a fixed in-memory list as you type. Clearing the query shows every item; '
-                  'a query that matches nothing shows the no-results surface.',
+                  'Filters a fixed in-memory list as you type. Clearing the query shows every '
+                  'item, and a query that matches nothing shows the no-results surface.',
             ),
           ),
           Padding(

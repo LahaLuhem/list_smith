@@ -1,16 +1,11 @@
-# .pubignore — exclude maintainer-only / generated / non-consumer files from the
-# published tarball. Syntax is .gitignore-compatible. Patterns are unanchored unless
-# prefixed with `/`, so e.g. `test/` matches both `test/` at the package root AND
-# `example/test/`.
+# Patterns are unanchored unless prefixed with `/`, so `test/` matches `example/test/` too.
 
-# Test sources.
 test/
 
-# Benchmark suite — maintainer-only perf-measurement infra. Imports from lib/ but ships nothing to
-# downstream users; excluded entirely from the published tarball. See benchmark/README.md.
+# Maintainer-only perf measurement. It imports lib/ but ships nothing users need.
 benchmark/
 
-# Local-dev config — consumer machines have their own.
+# Local-dev config. Consumer machines have their own.
 .fvmrc
 analysis_options.yaml
 
@@ -18,7 +13,7 @@ analysis_options.yaml
 build/
 *.iml
 
-# Generated coverage output (from `flutter test --coverage`); regenerated locally, never shipped.
+# `flutter test --coverage` output.
 coverage/
 
 # Maintainer-only tooling.
@@ -27,13 +22,11 @@ tool/
 # dependency_validator config, consumed only by the maintainer's dependency check.
 dart_dependency_validator.yaml
 
-# Context7 doc-indexer config — repo metadata for context7.com, not a consumer file.
+# Context7 doc-indexer config, for context7.com rather than consumers.
 context7.json
 
-# Internal contributor / AI-agent docs — not useful to pub.dev consumers.
-# `AGENTS.md` and `CLAUDE.md` at the package root are symlinks into `.ai/`. `.ai/`
-# itself is auto-excluded by pub's hidden-path rule, but pub follows symlinks before
-# that check, so the symlink targets need explicit entries.
+# Contributor and AI-agent docs. Pub skips the hidden `.ai/`, but it follows the root `AGENTS.md`
+# and `CLAUDE.md` symlinks into it, so those need entries of their own.
 AGENTS.md
 CLAUDE.md
 APPENDIX.md
@@ -41,15 +34,12 @@ CODESTYLE.md
 example/AGENTS.md
 example/CODESTYLE.md
 
-# Example platform scaffolding — pub.dev's "Example" tab only renders example/lib/,
-# example/pubspec.yaml, and example/README.md. Platform dirs add bloat with no
-# pub.dev-side benefit.
+# pub.dev's Example tab shows only example/lib/, its pubspec and its README, so the platform dirs
+# are dead weight.
 example/android/
 example/ios/
 example/devtools_options.yaml
 
-# Demo media. The screenshots are declared in pubspec.yaml's `screenshots:` field, so they
-# must ship in the tarball for pub.dev's gallery to render them (they're also inlined in
-# README.md via absolute GitHub raw URLs). Only the source screen recording is excluded;
-# the shipped `.webp` is generated from it.
+# pubspec.yaml's `screenshots:` have to ship for pub.dev's gallery, so only the source recording
+# stays out. The shipped `.webp` is made from it.
 doc/screenshots/*.webm

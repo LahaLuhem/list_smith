@@ -28,7 +28,7 @@ publishes automatically.
 - **"Small" choices count.** The bar isn't "is this architecturally significant", it's "could a
   reasonable maintainer disagree with my pick". If yes, ask.
 - **Exception:** obvious single-answer fixes (a typo, a clear bug with one correct patch, a lint
-  error). Just do them.
+  error). Do them.
 
 ## Tool preferences
 

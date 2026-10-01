@@ -21,14 +21,14 @@ final class FakeServer<T extends Object> {
   bool asked(int page) => attempts.containsKey(page);
 
   /// Offset paging, reading the store once the request reaches it.
-  PageFetcher<T> get offsetLate => PageFetcher((request) async {
+  PageFetcher<T> get offsetLateFetcher => PageFetcher((request) async {
     await _arrive(request);
 
     return _window(request);
   });
 
   /// Offset paging, answered at call time and delivered late, like a response already on its way.
-  PageFetcher<T> get offsetEarly => PageFetcher((request) async {
+  PageFetcher<T> get offsetEarlyFetcher => PageFetcher((request) async {
     final page = _window(request);
     await _arrive(request);
 
@@ -51,7 +51,7 @@ final class FakeServer<T extends Object> {
 
 extension FakeServerKeyset on FakeServer<int> {
   /// Cursor paging on the last id, so an edit elsewhere can't shift it.
-  PageFetcher<int> get keyset => PageFetcher.withSignal((request) async {
+  PageFetcher<int> get keysetFetcher => PageFetcher.withSignal((request) async {
     await _arrive(request);
     final cursor = request.previousSignal as int?;
     final page = store

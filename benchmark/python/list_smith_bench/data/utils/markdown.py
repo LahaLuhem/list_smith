@@ -1,8 +1,7 @@
 """Markdown renderer for SUMMARY.md.
 
 Sections from this output get dropped into the package README, so the structure is one h2 per chart
-with a summary table above and the image embed below. `value_formatter` keeps both large (43,000
-us) and small (390 us) figures readable in one column.
+with a summary table above and the image embed below.
 """
 
 from __future__ import annotations
@@ -20,11 +19,7 @@ from list_smith_bench.data.utils.meta import summary_metadata
 
 
 def value_formatter(units: str) -> Callable[[float | int | None], str]:
-    """Return a unary fn formatting a numeric value for the requested units.
-
-    Precision tiers for "us"/freeform: >= 1000 rounds to integers with thousands separators. 1-1000
-    gets two decimals. Sub-1 gets three.
-    """
+    """A formatter for `units` that keeps large and small figures readable in one column."""
 
     def _format_number(value: float | int | None) -> str:
         if value is None:

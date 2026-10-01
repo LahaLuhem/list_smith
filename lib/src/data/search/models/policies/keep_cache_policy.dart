@@ -4,7 +4,7 @@ part of '../search_cache_policy.dart';
 /// back is instant.
 ///
 /// For someone scrolling a long feed, searching, then clearing, who should land back where they were.
-/// Each distinct query still starts clean, only the feed is kept. 3 exceptions to "no refetch":
+/// Each distinct query still starts clean, only the feed is kept. The exceptions to "no refetch":
 ///
 /// - a page still loading when the search started is dropped and asked again
 /// - a pull, `refresh()` or `invalidate()` while searching re-reads it in place on the way back

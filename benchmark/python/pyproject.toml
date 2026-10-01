@@ -36,7 +36,6 @@ line-length = 100
 target-version = "py313"
 
 [tool.pytest.ini_options]
-# Tests live under tests/. Pytest auto-discovers test_*.py there.
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 # The project is not pip-installed (run via `uv run python run.py`), so put its root on sys.path for

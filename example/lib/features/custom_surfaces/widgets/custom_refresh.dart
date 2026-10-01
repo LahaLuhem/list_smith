@@ -4,7 +4,6 @@ import 'package:list_smith/list_smith.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
-/// A platform-adaptive pull indicator: an arrow while pulling, a spinner while refreshing.
 class CustomRefresh extends StatelessWidget {
   final ListSmithRefreshState state;
 

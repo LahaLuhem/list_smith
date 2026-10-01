@@ -44,8 +44,8 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // Advanced through the 2 empty pages (0, 1) to the 1st page with data (2) and rendered it. (The
-      // pager may then fetch further on its own to fill the viewport. That tail isn't the point.)
+      // Advanced through the 2 empty pages (0, 1) to the 1st page with data (2) and rendered it. The
+      // pager may fetch more to fill the viewport, which isn't the point here.
       check(fetcher.requested.take(3)).deepEquals(const [0, 1, 2]);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 2').evaluate()).length.equals(1);

@@ -1,7 +1,6 @@
-"""Package-wide constants + the fvm-aware `dart` invocation.
+"""Package-wide constants and the fvm-aware `dart` and `flutter` invocations.
 
-All values are `Final[...]`, so reassignment is a bug. Nothing here imports from other
-`list_smith_bench` modules (would create a cycle).
+Imports nothing from the rest of `list_smith_bench`, which would make a cycle.
 """
 
 from __future__ import annotations
@@ -13,7 +12,6 @@ from typing import Final
 # ---- paths ----------------------------------------------------------------
 
 THIS_FILE: Final[Path] = Path(__file__).resolve()
-# Two levels up from list_smith_bench/config.py.
 PYTHON_DIR: Final[Path] = THIS_FILE.parent.parent
 BENCHMARK_DIR: Final[Path] = PYTHON_DIR.parent
 PROJECT_ROOT: Final[Path] = BENCHMARK_DIR.parent
@@ -42,7 +40,7 @@ DEFAULT_ITERATIONS: Final[int] = 10
 # Window every `measure` call times for, replacing benchmark_harness's hardcoded 2000ms. Report runs
 # keep the long one, since those numbers get published.
 MEASURE_WINDOW_MILLIS: Final[int] = 2000
-# The gate only separates two sides measured back to back, so it buys its wall clock back here.
+# The gate only separates 2 sides measured back to back, so it buys its wall clock back here.
 # ../README.md#ci-regression-gate has the evidence.
 GATE_MEASURE_WINDOW_MILLIS: Final[int] = 500
 
@@ -69,7 +67,7 @@ CHART_PALETTE: Final[str] = "Set2"
 # The reference line on UI-cost charts.
 FRAME_BUDGET_MICROS_60HZ: Final[int] = 16667
 SIGNIFICANCE_THRESHOLD: Final[float] = 0.05
-# `compare --fail-on-regression` trips only when a metric is significant AND slower by more than
+# `compare --fail-on-regression` trips only when a metric is significant and slower by more than
 # this percent, so a merely noise-significant sub-threshold shift doesn't fail CI.
 REGRESSION_THRESHOLD_PCT: Final[float] = 10.0
 FOREST_COLOUR_REGRESSION: Final[str] = "#c0392b"  # red: current significantly slower/higher
@@ -78,11 +76,7 @@ FOREST_COLOUR_NOT_SIG: Final[str] = "#bdc3c7"  # gray: no significant difference
 
 
 def dart_command() -> list[str]:
-    """The `dart` invocation, honouring the project's `.fvmrc` pin when fvm is available.
-
-    Mirrors `scripts/release.sh`, so the benchmark compiles against the same SDK as the rest of the
-    toolchain. Contributors managing the SDK themselves get a plain `dart`.
-    """
+    """The `dart` invocation, honouring the project's `.fvmrc` pin when fvm is available."""
     fvmrc = PROJECT_ROOT / ".fvmrc"
     if fvmrc.exists() and shutil.which("fvm"):
         return ["fvm", "dart"]

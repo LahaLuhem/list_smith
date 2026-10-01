@@ -1,12 +1,12 @@
 /// Parsed CLI arguments for a benchmark entrypoint.
 ///
 /// One flag set across every entrypoint, so the Python orchestrator drives them all the same way.
-/// [ScenarioArgs.parse] is the list. Hand-parsed: the surface is too small for `package:args`.
+/// [ScenarioArguments.parse] is the list. Hand-parsed: the surface is too small for `package:args`.
 library;
 
 import 'dart:io';
 
-final class ScenarioArgs {
+final class ScenarioArguments {
   /// Iterations to run in this one subprocess, so process startup amortises over N runs.
   final int iterations;
 
@@ -25,15 +25,15 @@ final class ScenarioArgs {
     required this.measureMillis,
   });
 
-  /// Parses the standard flags from [argv], exiting non-zero on failure. Benchmarks are non-interactive,
-  /// so a thrown exception would have no handler.
-  factory parse(List<String> argv) {
+  /// Parses the standard flags from [arguments], exiting non-zero on failure. Benchmarks are
+  /// non-interactive, so a thrown exception would have no handler.
+  factory parse(List<String> arguments) {
     final flags = <String, String>{};
-    for (var i = 0; i < argv.length; i++) {
-      final arg = argv[i];
-      if (!arg.startsWith('--')) _die('unexpected positional arg: $arg');
-      if (i + 1 >= argv.length) _die('flag $arg missing value');
-      flags[arg.replaceFirst('--', '')] = argv[++i];
+    for (var i = 0; i < arguments.length; i++) {
+      final argument = arguments[i];
+      if (!argument.startsWith('--')) _die('unexpected positional argument: $argument');
+      if (i + 1 >= arguments.length) _die('flag $argument missing value');
+      flags[argument.replaceFirst('--', '')] = arguments[++i];
     }
 
     final iterations = _requiredInt(flags, 'iterations');
@@ -44,7 +44,7 @@ final class ScenarioArgs {
     final measureMillis = _requiredInt(flags, 'measure-millis');
     if (measureMillis <= 0) _die('--measure-millis must be >= 1, got: $measureMillis');
 
-    return ScenarioArgs._(
+    return ScenarioArguments._(
       iterations: iterations,
       outputPath: outputPath,
       gitSha: gitSha,
@@ -64,15 +64,15 @@ final class ScenarioArgs {
   }
 
   static int _requiredInt(Map<String, String> flags, String name) {
-    final raw = _required(flags, name);
-    final parsed = int.tryParse(raw);
-    if (parsed == null) _die('flag --$name expects an int, got: $raw');
+    final rawValue = _required(flags, name);
+    final parsed = int.tryParse(rawValue);
+    if (parsed == null) _die('flag --$name expects an int, got: $rawValue');
 
     return parsed;
   }
 
   static Never _die(String message) {
-    stderr.writeln('scenario_args: $message');
+    stderr.writeln('scenario_arguments: $message');
     exit(64); // EX_USAGE
   }
 }

@@ -11,12 +11,12 @@ final class NoGrouping<T extends Object> extends Grouping<T> {
   @override
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required Iterable<T> Function() flatItems,
+    required Iterable<T> Function() flattenItems,
     required Axis axis,
   }) => itemBuilder;
 
   @override
-  Object Function(T item)? get groupOf => null;
+  GroupKeyOf<T, Object>? get groupOf => null;
 
   @override
   String toString() => 'NoGrouping()';

@@ -26,7 +26,7 @@ class BasicFeedView extends StatelessWidget {
               title: 'ListSmith.async',
               description:
                   'Paginates a fake source 20 items at a time. '
-                  'Pull to refresh; the list ends on the first empty page.',
+                  'Pull to refresh. The list ends on the 1st empty page.',
             ),
           ),
           Expanded(

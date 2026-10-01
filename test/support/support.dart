@@ -1,5 +1,4 @@
-/// One import for widget-test support: the Gherkin vocabulary, the pump/drain harness, the fake sources
-/// and server, the recording observer and the toggle row. Import this instead of the individual pieces.
+/// Import this rather than the individual support files.
 library;
 
 export 'bdd.dart';

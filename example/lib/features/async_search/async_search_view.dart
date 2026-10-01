@@ -9,8 +9,7 @@ import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'async_search_view_model.dart';
 
-/// `ListSmith.async` plus `AsyncSearch`, with a live `SearchCachePolicy` toggle between Keep and the
-/// default Replace.
+/// `ListSmith.async` plus `AsyncSearch`, switching `SearchCachePolicy` between Keep and Replace.
 class AsyncSearchView extends StatelessWidget {
   const new({super.key});
 
@@ -27,13 +26,13 @@ class AsyncSearchView extends StatelessWidget {
             child: DemoIntro(
               title: 'ListSmith.async + search',
               description:
-                  'Paginates the feed; a query switches to paginated search results and back. Turn on '
-                  '"Keep list across search", scroll the feed, search, then clear to land back where '
-                  'you were; with it off (the default), clearing reloads from the top.',
+                  'Paginates the feed, and a query switches to paginated search results and back. '
+                  'Turn on "Keep list across search", scroll the feed, search, then clear to land '
+                  'back where you were. With it off (the default), clearing reloads from the top.',
             ),
           ),
           _KeepCacheToggle(
-            keepCache: viewModel.keepCacheListenable,
+            shouldKeepCacheListenable: viewModel.shouldKeepCacheListenable,
             onChanged: (value) => viewModel.onKeepCacheToggled(value: value),
           ),
           Padding(
@@ -42,15 +41,17 @@ class AsyncSearchView extends StatelessWidget {
           ),
           Expanded(
             child: ValueListenableBuilder(
-              valueListenable: viewModel.keepCacheListenable,
-              builder: (_, keepCache, _) => ValueListenableBuilder(
+              valueListenable: viewModel.shouldKeepCacheListenable,
+              builder: (_, shouldKeepCache, _) => ValueListenableBuilder(
                 valueListenable: viewModel.queryListenable,
                 builder: (_, query, _) => ListSmith.async(
                   fetchPage: PageFetcher(viewModel.fetchPage),
                   itemIdGetter: (item) => item.id,
                   search: AsyncSearch(
                     fetchPage: SearchPageFetcher(viewModel.searchFetchPage),
-                    cachePolicy: keepCache ? const KeepCachePolicy() : const ReplaceCachePolicy(),
+                    cachePolicy: shouldKeepCache
+                        ? const KeepCachePolicy()
+                        : const ReplaceCachePolicy(),
                   ),
                   query: query,
                   separatorBuilder: (_, _) => const Divider(height: 1),
@@ -66,12 +67,11 @@ class AsyncSearchView extends StatelessWidget {
   );
 }
 
-/// A labelled switch toggling whether the normal feed is kept across a search.
 class _KeepCacheToggle extends StatelessWidget {
-  final ValueListenable<bool> keepCache;
+  final ValueListenable<bool> shouldKeepCacheListenable;
   final ValueChanged<bool> onChanged;
 
-  const new({required this.keepCache, required this.onChanged});
+  const new({required this.shouldKeepCacheListenable, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -80,7 +80,7 @@ class _KeepCacheToggle extends StatelessWidget {
       children: [
         const Expanded(child: Text('Keep list across search')),
         ValueListenableBuilder(
-          valueListenable: keepCache,
+          valueListenable: shouldKeepCacheListenable,
           builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
         ),
       ],

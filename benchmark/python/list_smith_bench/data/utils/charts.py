@@ -1,12 +1,11 @@
 """Chart renderers.
 
-Module-level matplotlib/polars/seaborn imports are intentional, since this module only works with
-the analysis stack installed. Subcommands gate the call site with a `find_spec` check so the import
-error points users at `uv sync`. seaborn takes the polars frames directly (dataframe interchange
-protocol, since 0.13), converting to pandas internally, so there is no pandas import here.
+The imports sit at module level on purpose, since this module only works with the analysis stack
+installed. Subcommands check `find_spec` first, so a missing package points at `uv sync`. seaborn
+takes the polars frames directly and converts to pandas itself, so there's no pandas import here.
 
-Each plot fn returns the `Path` it wrote (threaded into a chart-paths list), or `None` when it has
-no data so the caller can skip the slot in markdown.
+Each plot returns the `Path` it wrote, or `None` when it has no data, so the caller can skip that
+chart in the markdown.
 """
 
 from __future__ import annotations
@@ -46,11 +45,9 @@ def write_empty_chart(out_path: Path, message: str) -> None:
 def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     """Line plot of `microseconds_per_resolve` vs `list_size`, with the 60 Hz frame budget marked.
 
-    From the `sync_search_scaling` micro (choke point #2): the synchronous cost of filtering an
-    in-memory list on each committed query. Where the line crosses the frame-budget rule is the
-    practical ceiling for sync search with the measured predicate.
-
-    Returns None (writes nothing) when the input has no `sync_search_scaling` data.
+    From the `sync_search_scaling` micro: the synchronous cost of filtering an in-memory list on
+    each committed query. Where the line crosses the frame-budget rule is the practical ceiling for
+    sync search with the measured predicate.
     """
     metric = "microseconds_per_resolve"
     if metric not in dataframe.columns or "list_size" not in dataframe.columns:
@@ -99,8 +96,6 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
     From the `bucket_by_group_scaling` micro: the synchronous cost of reordering a filtered
     in-memory list into contiguous sections on each committed query. Where the line crosses the
     frame-budget rule is the practical ceiling for sync grouping.
-
-    Returns None (writes nothing) when the input has no `bucket_by_group_scaling` data.
     """
     metric = "microseconds_per_bucket"
     if metric not in dataframe.columns or "list_size" not in dataframe.columns:
@@ -150,8 +145,6 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
     view over the paging state, re-walking every loaded item on each state change. This is the
     worst case (no real overlap, so nothing collapses). Where the line crosses the frame-budget rule
     is the practical ceiling for de-dup on a single live list.
-
-    Returns None (writes nothing) when the input has no `dedup_scaling` data.
     """
     metric = "microseconds_per_dedup"
     if metric not in dataframe.columns or "item_count" not in dataframe.columns:
@@ -199,7 +192,7 @@ def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
     The dashed 60 Hz budget line is the point of the chart: every bar sits far below it, so
     list_smith's per-frame build work is a small fraction of the 16.67 ms a frame gets. The table in
-    SUMMARY.md carries the exact figures. This is the at-a-glance headroom. Returns None on no data.
+    SUMMARY.md carries the exact figures. This is the at-a-glance headroom.
     """
     return _plot_frame_thread_costs(
         dataframe,
@@ -291,7 +284,7 @@ def plot_observer_latency(dataframe: pl.DataFrame, out_path: Path) -> Path | Non
     list_smith calls the observer synchronously on the page-load path, so each added millisecond of
     observer delay adds ~1 ms of render latency. The measured line runs parallel to the dashed y=x
     reference, offset by the fixed baseline render (the `delay = 0` point). Numeric axes make the
-    ~1:1 slope honest. Returns None with no slow_observer data.
+    ~1:1 slope honest.
     """
     metric = "median_render_latency_micros"
     if metric not in dataframe.columns or "observer_delay_millis" not in dataframe.columns:
@@ -330,7 +323,7 @@ def plot_observer_latency(dataframe: pl.DataFrame, out_path: Path) -> Path | Non
     return out_path
 
 
-# ---- compare charts (two datasets) ----------------------------------------
+# ---- compare charts (2 datasets) ----------------------------------------
 
 
 def plot_compare_forest(rows: list[CompareRow], out_path: Path) -> Path:

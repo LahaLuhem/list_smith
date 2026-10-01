@@ -3,14 +3,11 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A fixed-height panel showing a demo's recorded events, newest first, with a clear button.
-///
-/// Plain widgets-layer, like list_smith's own defaults, so it reads under either shell.
+/// Plain widgets layer, like list_smith's own defaults, so it reads under either shell.
 class EventLogPanel extends StatelessWidget {
-  /// The event lines to show, newest first.
+  /// Newest first.
   final ValueListenable<List<String>> events;
 
-  /// Empties the log.
   final VoidCallback onClear;
 
   const new({required this.events, required this.onClear, super.key});

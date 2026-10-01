@@ -109,7 +109,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   /// [Grouping.decorate] takes it as a callback.
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
-    flatItems: () => state.pages?.expand((page) => page) ?? const Iterable.empty(),
+    flattenItems: () => state.pages?.expand((page) => page) ?? const Iterable.empty(),
     axis: scroll.scrollDirection,
   );
 

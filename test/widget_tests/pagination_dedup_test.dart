@@ -1,5 +1,4 @@
-// `_Item` is a private test fixture (a reference-identity type with no `==`), not this file's subject,
-// so its name intentionally differs from the filename.
+// Test-local fixtures share the file with the scenarios that use them.
 // ignore_for_file: prefer-match-file-name
 
 import 'package:checks/checks.dart';
@@ -11,16 +10,15 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async pagination dedup', () {
-    // Overlapping pages: page 0 ends with ids 3, 4 and page 1 begins with FRESH `_Item(3)`, `_Item(4)`
-    // (the shape an offset-based backend produces when its data shifts between fetches). ISP appends
-    // pages verbatim and never dedups, so ids 3 and 4 land in the list twice. They are different objects
-    // with no `==`, so only an id-based dedup key can collapse them.
+    // Page 1 starts with fresh copies of page 0's last 2 items, the overlap an offset backend gives
+    // when its data shifts between fetches. ISP appends pages as they come, and with no `==` only an
+    // id key can collapse the copies.
     final overlappingPages = pagedFetcher([
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
       [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
     ]);
 
-    // A mid-stream page that is ENTIRELY page 0's ids (fresh objects), followed by a genuinely new page.
+    // A mid-stream page made only of page 0's ids (fresh objects), then a really new page.
     // De-dup collapses page 1 to nothing for display. The end policy must still see that the backend
     // returned a full page there, or it reads the empty result as end-of-data and never fetches page
     // 2. Page 3 is empty, the real end.
@@ -43,7 +41,7 @@ void main() {
       await _pumpPagedList(tester, fetchPage: overlappingPages, itemIdGetter: (item) => item.id);
       await drain(tester, frames: 8);
 
-      // Ids 3 and 4 are returned by BOTH page 0 and page 1. The key collapses each to one.
+      // Ids 3 and 4 are returned by both page 0 and page 1. The key collapses each to one.
       check(find.text('item 3').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).length.equals(1);
       // Non-overlapping ids are unaffected controls.
@@ -90,8 +88,8 @@ void main() {
   });
 }
 
-/// A reference-identity item: 2 `_Item`s with the same [id] are DIFFERENT objects (no `==` override),
-/// modelling a refetch that returns the same data as new instances.
+/// No `==` override, so 2 `_Item`s with the same [id] are different objects, like a refetch that
+/// returns the same data as new instances.
 class _Item {
   new(this.id);
 

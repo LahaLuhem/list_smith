@@ -1,6 +1,6 @@
 """Tests for `list_smith_bench.data.utils.meta`'s report-header metadata.
 
-The capture date is the load-bearing bit: SUMMARY.md says "Captured <date>", and re-rendering an
+The capture date is what matters: SUMMARY.md says "Captured <date>", and re-rendering an
 old capture has to reproduce that date rather than stamp it with today, or a committed report
 silently claims numbers were measured on whatever day someone last ran `report`.
 """

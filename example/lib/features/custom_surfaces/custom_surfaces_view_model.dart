@@ -5,9 +5,6 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// Backs the Custom surfaces demo, wrapping the repository fetch with an optional injected failure so
-/// the error and retry surfaces can be exercised.
-///
 /// The failure flag is a scoped [ValueNotifier], so flipping it rebuilds the toggle, not the list. See
 /// `CODESTYLE.md` *State management*.
 final class CustomSurfacesViewModel extends ViewModel {
@@ -18,7 +15,8 @@ final class CustomSurfacesViewModel extends ViewModel {
 
   // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
-  void onFailureToggled({required bool value}) => _shouldInjectFailuresNotifier.value = value;
+  void onInjectFailuresToggled({required bool value}) =>
+      _shouldInjectFailuresNotifier.value = value;
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     final page = await _repository.fetchPage(request.pageIndex, request.pageSize);

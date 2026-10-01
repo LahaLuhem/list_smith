@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A platform-adaptive empty surface, shown when the source has no items at all.
 class CustomEmpty extends StatelessWidget {
   const new({super.key});
 
