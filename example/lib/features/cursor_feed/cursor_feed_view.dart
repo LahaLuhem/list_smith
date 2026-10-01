@@ -10,9 +10,7 @@ import 'cursor_feed_view_model.dart';
 
 /// `PageFetcher.withSignal` plus `StopOnNullSignalPolicy`, where the end signal doubles as the driving
 /// cursor.
-class CursorFeedView extends StatelessWidget {
-  const new({super.key});
-
+class const CursorFeedView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: CursorFeedViewModel(),

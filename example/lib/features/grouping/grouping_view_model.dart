@@ -6,7 +6,7 @@ import '/features/core/repos/demo_repository.dart';
 
 const _categories = ['Alpha', 'Beta', 'Gamma'];
 
-final class GroupingViewModel extends ViewModel {
+final class GroupingViewModel() extends ViewModel {
   final _repository = DemoRepository();
   final _queryNotifier = ValueNotifier('');
 

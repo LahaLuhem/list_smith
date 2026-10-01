@@ -526,11 +526,8 @@ void main() {
 }
 
 /// Calls `refresh()` back from the reload event, once, as a consumer chaining work off it might.
-final class _ReentrantObserver extends ListSmithObserver {
-  final ListSmithController controller;
+final class _ReentrantObserver(final ListSmithController controller) extends ListSmithObserver {
   var fired = 0;
-
-  new(this.controller);
 
   @override
   void onReload(FetchTrigger trigger) {

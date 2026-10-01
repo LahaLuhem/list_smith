@@ -8,7 +8,7 @@ import 'package:meta/meta.dart';
 /// One per reload, so it can read depth, fetch, and commit or reset without ever touching the paging
 /// controller.
 @internal
-abstract interface class ReloadContext<T extends Object> {
+abstract interface class ReloadContext<T extends Object>() {
   /// The pages loaded when the reload began, in order. Its length is the depth to reload to, and a
   /// best-effort reload reuses an entry whose re-fetch failed. Hand that entry back as is, not a copy,
   /// so it keeps its read stamp.

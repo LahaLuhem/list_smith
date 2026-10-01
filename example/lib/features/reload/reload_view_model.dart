@@ -8,7 +8,7 @@ import '/features/core/data/models/demo_item.dart';
 ///
 /// The config knobs all feed `PullToRefresh`, so they take `notifyListeners()`. The failure toggle is
 /// read only inside [fetchPage], so it is a scoped `ValueNotifier`. See `CODESTYLE.md` *State management*.
-final class ReloadViewModel extends ViewModel {
+final class ReloadViewModel() extends ViewModel {
   static const _dataPages = 6;
   static const _failPage = 1;
   static const _latency = Duration(milliseconds: 500);

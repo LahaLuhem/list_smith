@@ -90,11 +90,7 @@ void main() {
 
 /// No `==` override, so 2 `_Item`s with the same [id] are different objects, like a refetch that
 /// returns the same data as new instances.
-class _Item {
-  new(this.id);
-
-  final int id;
-}
+class _Item(final int id);
 
 Future<void> _pumpPagedList(
   WidgetTester tester, {

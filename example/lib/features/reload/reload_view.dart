@@ -12,9 +12,7 @@ import 'reload_view_model.dart';
 
 /// The `Reload` strategies on `PullToRefresh`, plus a `ListSmithController` driving the same reload
 /// with no gesture.
-class ReloadView extends StatelessWidget {
-  const new({super.key});
-
+class const ReloadView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: ReloadViewModel(),

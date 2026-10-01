@@ -4,7 +4,7 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-final class SyncSearchViewModel extends ViewModel {
+final class SyncSearchViewModel() extends ViewModel {
   final _repository = DemoRepository();
   final _queryNotifier = ValueNotifier('');
 

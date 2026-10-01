@@ -10,9 +10,9 @@ part 'policies/stop_on_null_signal_policy.dart';
 /// Open on purpose: implement [hasReachedEnd] for a rule of your own (ending on a short last page, say)
 /// with no change here. Ships [StopOnEmptyPagesPolicy] (the default), [FixedPageCountPolicy], [ExplicitHasMorePolicy]
 /// and [StopOnNullSignalPolicy].
-abstract class PaginationEndPolicy {
+abstract class const PaginationEndPolicy() {
   /// Const base constructor.
-  const new();
+  this;
 
   /// Whether pagination has reached its end, given [context] over the pages loaded so far.
   bool hasReachedEnd(EndContext context);

@@ -8,7 +8,7 @@ import '/features/core/repos/demo_repository.dart';
 
 /// The cache lives here, not in [DemoRepository], which every other demo shares. Items carry the
 /// fetch number that produced them, so a cached page is visibly the same one.
-final class CacheRoutingViewModel extends ViewModel {
+final class CacheRoutingViewModel() extends ViewModel {
   static const _maxLoggedFetches = 50;
 
   final _repository = DemoRepository(latency: const Duration(milliseconds: 400));

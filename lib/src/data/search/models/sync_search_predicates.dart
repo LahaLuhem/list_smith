@@ -12,7 +12,7 @@ import '../typedefs/sync_search_predicate.dart';
 /// Pin the item type on the list, `ListSmith<City>.sync(...)`. Inline, the list's element type and a
 /// builder's type parameter resolve together and the extractor closures come out nullable. Naming it
 /// once covers every builder.
-abstract final class SyncSearchPredicates {
+abstract final class SyncSearchPredicates() {
   /// Keeps an item when any field from [extractors] *contains* the query, case-insensitively.
   ///
   /// What nearly every sync list wants. A `null` field never matches, so nullable fields need no `??

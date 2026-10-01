@@ -4,11 +4,8 @@ import 'package:list_smith/list_smith.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
-class CustomRefresh extends StatelessWidget {
-  final ListSmithRefreshState state;
-
-  const new({required this.state, super.key});
-
+class const CustomRefresh({required final ListSmithRefreshState state, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final indicator = switch (state.phase) {
@@ -25,11 +22,7 @@ class CustomRefresh extends StatelessWidget {
 }
 
 /// One glyph turned to point any way, since a left or right arrow icon gets mirrored under RTL.
-class _Arrow extends StatelessWidget {
-  final AxisDirection pointing;
-
-  const new({required this.pointing});
-
+class const _Arrow({required final AxisDirection pointing}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => RotatedBox(
     quarterTurns: switch (pointing) {

@@ -10,9 +10,7 @@ import 'grouping_view_model.dart';
 
 /// `ListSmith.sync` plus `Grouping.by`. The fixture cycles 3 categories per row, so the raw list is
 /// interleaved and sync bucketing has something to do.
-class GroupingView extends StatelessWidget {
-  const new({super.key});
-
+class const GroupingView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: GroupingViewModel(),
@@ -58,11 +56,7 @@ class GroupingView extends StatelessWidget {
   );
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String label;
-
-  const new({required this.label});
-
+class const _SectionHeader({required final String label}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .fromLTRB(16, 16, 16, 4),

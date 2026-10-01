@@ -6,7 +6,7 @@ import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
 /// [DemoRepository] is read-only, so this keeps a store of its own.
-final class EditsViewModel extends ViewModel {
+final class EditsViewModel() extends ViewModel {
   static const _latency = Duration(milliseconds: 500);
 
   /// Sorted by id and read after the last id seen, so a delete can't make the next page skip a row

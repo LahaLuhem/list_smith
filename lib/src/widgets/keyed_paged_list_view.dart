@@ -12,37 +12,31 @@ import '/src/data/presentation/utils/row_lookup.dart';
 /// animates its own inserts and removals:
 /// https://github.com/EdsonBueno/infinite_scroll_pagination/issues/403,
 /// https://github.com/EdsonBueno/infinite_scroll_pagination/issues/21.
-class KeyedPagedListView<T extends Object> extends BoxScrollView {
+class const KeyedPagedListView<T extends Object>({
   /// What renders, edits and de-dup already applied.
-  final PagingState<PageKey, T> state;
+  required final PagingState<PageKey, T> state,
 
   /// Requests the next page.
-  final VoidCallback fetchNextPage;
+  required final VoidCallback fetchNextPage,
 
   /// The item builder and ISP's surface slots.
-  final PagedChildBuilderDelegate<T> builderDelegate;
+  required final PagedChildBuilderDelegate<T> builderDelegate,
 
   /// Keys each row, so the list finds it again after a shift.
-  final ItemIdGetter<T> itemIdGetter;
+  required final ItemIdGetter<T> itemIdGetter,
 
   /// Builds separators between items. Null for none.
-  final IndexedWidgetBuilder? separatorBuilder;
-
+  final IndexedWidgetBuilder? separatorBuilder,
+  super.controller,
+  super.scrollDirection,
+  super.reverse,
+  super.physics,
+  super.padding,
+  super.scrollCacheExtent,
+  super.key,
+}) extends BoxScrollView {
   /// Creates it.
-  const new({
-    required this.state,
-    required this.fetchNextPage,
-    required this.builderDelegate,
-    required this.itemIdGetter,
-    this.separatorBuilder,
-    super.controller,
-    super.scrollDirection,
-    super.reverse,
-    super.physics,
-    super.padding,
-    super.scrollCacheExtent,
-    super.key,
-  });
+  this;
 
   @override
   Widget buildChildLayout(BuildContext context) {
@@ -76,23 +70,14 @@ class KeyedPagedListView<T extends Object> extends BoxScrollView {
 
 /// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too,
 /// as they do in ISP's list.
-class _KeyedRows<T extends Object> extends StatelessWidget {
-  final RowLookup<T> rowLookup;
-  final ItemIdGetter<T> itemIdGetter;
-  final IndexedWidgetBuilder itemBuilder;
-  final int itemCount;
-  final WidgetBuilder? footerBuilder;
-  final IndexedWidgetBuilder? separatorBuilder;
-
-  const new({
-    required this.rowLookup,
-    required this.itemIdGetter,
-    required this.itemBuilder,
-    required this.itemCount,
-    required this.footerBuilder,
-    required this.separatorBuilder,
-  });
-
+class const _KeyedRows<T extends Object>({
+  required final RowLookup<T> rowLookup,
+  required final ItemIdGetter<T> itemIdGetter,
+  required final IndexedWidgetBuilder itemBuilder,
+  required final int itemCount,
+  required final WidgetBuilder? footerBuilder,
+  required final IndexedWidgetBuilder? separatorBuilder,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellCount = itemCount + (footerBuilder == null ? 0 : 1);
@@ -124,12 +109,7 @@ class _KeyedRows<T extends Object> extends StatelessWidget {
 
 /// A row's item id, plus where it was built as a lookup hint. Equal on the id alone, so a row that
 /// moved is still the same row.
-final class _RowKey extends LocalKey {
-  final Object id;
-  final int index;
-
-  const new(this.id, this.index);
-
+final class const _RowKey(final Object id, final int index) extends LocalKey {
   @override
   bool operator ==(Object other) => other is _RowKey && other.id == id;
 

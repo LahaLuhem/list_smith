@@ -14,9 +14,7 @@ import 'widgets/custom_loading.dart';
 import 'widgets/custom_refresh.dart';
 
 /// Every surface slot overridden with a platform-adaptive widget.
-class CustomSurfacesView extends StatelessWidget {
-  const new({super.key});
-
+class const CustomSurfacesView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: CustomSurfacesViewModel(),
@@ -63,12 +61,10 @@ class CustomSurfacesView extends StatelessWidget {
   );
 }
 
-class _FailureToggle extends StatelessWidget {
-  final ValueListenable<bool> shouldInjectFailuresListenable;
-  final ValueChanged<bool> onChanged;
-
-  const new({required this.shouldInjectFailuresListenable, required this.onChanged});
-
+class const _FailureToggle({
+  required final ValueListenable<bool> shouldInjectFailuresListenable,
+  required final ValueChanged<bool> onChanged,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(horizontal: 16),

@@ -20,75 +20,58 @@ import 'keyed_paged_list_view.dart';
 /// overrides, so no Material surface leaks through.
 ///
 /// Internal, built inside a [PagingListener] where [state] and [fetchNextPage] are in scope.
-class PagedView<T extends Object> extends StatelessWidget {
+class const PagedView<T extends Object>({
   /// Drives which surface renders.
-  final PagingState<PageKey, T> state;
+  required final PagingState<PageKey, T> state,
 
   /// Requests the next page. Doubles as the retry action on error surfaces.
-  final VoidCallback fetchNextPage;
+  required final VoidCallback fetchNextPage,
 
   /// Builds each item.
-  final ItemBuilder<T> itemBuilder;
+  required final ItemBuilder<T> itemBuilder,
 
   /// Keys each row by its item.
-  final ItemIdGetter<T> itemIdGetter;
+  required final ItemIdGetter<T> itemIdGetter,
 
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
-  final Grouping<T> grouping;
+  required final Grouping<T> grouping,
 
   /// Scroll and layout configuration.
-  final ListScrollConfig scroll;
+  required final ListScrollConfig scroll,
 
   /// Whether the current results are a search: picks the no-results surface over the empty one.
-  final bool isSearchMode;
+  required final bool isSearchMode,
 
   /// The committed query, handed to [noResultsBuilder] when [isSearchMode] and nothing matched.
-  final String query;
+  required final String query,
 
   /// Builds separators between items. Null for none.
-  final IndexedWidgetBuilder? separatorBuilder;
+  final IndexedWidgetBuilder? separatorBuilder,
 
   /// Overrides for the neutral default surfaces. Null keeps the default.
-  final WidgetBuilder? firstPageLoadingBuilder;
+  final WidgetBuilder? firstPageLoadingBuilder,
 
   /// See [firstPageLoadingBuilder].
-  final WidgetBuilder? newPageLoadingBuilder;
+  final WidgetBuilder? newPageLoadingBuilder,
 
   /// See [firstPageLoadingBuilder].
-  final ErrorBuilder? firstPageErrorBuilder;
+  final ErrorBuilder? firstPageErrorBuilder,
 
   /// See [firstPageLoadingBuilder].
-  final ErrorBuilder? newPageErrorBuilder;
+  final ErrorBuilder? newPageErrorBuilder,
 
   /// See [firstPageLoadingBuilder]. Shown when the source has no items in normal mode.
-  final WidgetBuilder? emptyBuilder;
+  final WidgetBuilder? emptyBuilder,
 
   /// See [firstPageLoadingBuilder]. Shown when a search yields nothing in search mode.
-  final NoResultsBuilder? noResultsBuilder;
+  final NoResultsBuilder? noResultsBuilder,
 
   /// See [firstPageLoadingBuilder].
-  final WidgetBuilder? noMoreItemsBuilder;
-
+  final WidgetBuilder? noMoreItemsBuilder,
+  super.key,
+}) extends StatelessWidget {
   /// Creates it.
-  const new({
-    required this.state,
-    required this.fetchNextPage,
-    required this.itemBuilder,
-    required this.itemIdGetter,
-    required this.grouping,
-    required this.scroll,
-    required this.isSearchMode,
-    required this.query,
-    this.separatorBuilder,
-    this.firstPageLoadingBuilder,
-    this.newPageLoadingBuilder,
-    this.firstPageErrorBuilder,
-    this.newPageErrorBuilder,
-    this.emptyBuilder,
-    this.noResultsBuilder,
-    this.noMoreItemsBuilder,
-    super.key,
-  });
+  this;
 
   @override
   Widget build(BuildContext context) => KeyedPagedListView(
@@ -138,14 +121,12 @@ class PagedView<T extends Object> extends StatelessWidget {
 }
 
 /// The consumer's [ErrorBuilder] if there is one, else the neutral default.
-class _ResolvedError extends StatelessWidget {
-  final Object error;
-  final VoidCallback onRetry;
-  final ErrorBuilder? builder;
-  final bool isCompact;
-
-  const new({required this.error, required this.onRetry, this.builder, this.isCompact = false});
-
+class const _ResolvedError({
+  required final Object error,
+  required final VoidCallback onRetry,
+  final ErrorBuilder? builder,
+  final bool isCompact = false,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final errorBuilder = builder;

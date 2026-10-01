@@ -14,9 +14,7 @@ import '/features/core/widgets/demo_scaffold.dart';
 import 'edits_view_model.dart';
 
 /// `ListSmithController.upsert` and `remove`, behind flutter_slidable's swipe actions.
-class EditsView extends StatelessWidget {
-  const new({super.key});
-
+class const EditsView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: EditsViewModel(),
@@ -74,12 +72,8 @@ class EditsView extends StatelessWidget {
   );
 }
 
-class _EditableRow extends StatelessWidget {
-  final DemoItem item;
-  final EditsViewModel viewModel;
-
-  const new({required this.item, required this.viewModel});
-
+class const _EditableRow({required final DemoItem item, required final EditsViewModel viewModel})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Slidable(
     key: ValueKey(item.id), // DismissiblePane asserts without one

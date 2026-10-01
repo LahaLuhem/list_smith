@@ -19,9 +19,7 @@ import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
 import 'home_view_model.dart';
 
-class HomeView extends StatelessWidget {
-  const new({super.key});
-
+class const HomeView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: HomeViewModel(),
@@ -110,19 +108,12 @@ class HomeView extends StatelessWidget {
   );
 }
 
-class _DemoTile extends StatelessWidget {
-  final Widget icon;
-  final String title;
-  final String description;
-  final WidgetBuilder pageBuilder;
-
-  const new({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.pageBuilder,
-  });
-
+class const _DemoTile({
+  required final Widget icon,
+  required final String title,
+  required final String description,
+  required final WidgetBuilder pageBuilder,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformListTile(
     leading: icon,

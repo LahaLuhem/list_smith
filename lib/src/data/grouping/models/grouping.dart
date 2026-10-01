@@ -18,9 +18,9 @@ part 'groupings/no_grouping.dart';
 ///
 /// [NoGrouping] (the default) is flat, no headers. [Grouping.by] turns sections on. Both [ListSmith]
 /// constructors take one.
-sealed class Grouping<T extends Object> {
+sealed class const Grouping<T extends Object>() {
   /// Const base constructor.
-  const new();
+  this;
 
   /// Orders [items] for display. Sync path only, since async can't reorder across pages.
   @internal

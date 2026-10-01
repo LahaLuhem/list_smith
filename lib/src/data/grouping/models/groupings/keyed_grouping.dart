@@ -4,19 +4,16 @@ part of '../grouping.dart';
 ///
 /// The key is erased to `Object`. The private constructor is what keeps that safe: every key reaching
 /// [headerFor] came from this instance's own [groupOf].
-final class KeyedGrouping<T extends Object> extends Grouping<T> {
+final class const KeyedGrouping<T extends Object>._({
   /// Pulls an item's group key.
-  @override
-  final GroupKeyOf<T, Object> groupOf;
+  @override required final GroupKeyOf<T, Object> groupOf,
 
   /// Builds a group's header from its key.
-  final GroupHeaderBuilder<Object> headerFor;
+  required final GroupHeaderBuilder<Object> headerFor,
 
   /// What to do when async pages don't arrive grouped by key.
-  final GroupOrderPolicy orderPolicy;
-
-  const new _({required this.groupOf, required this.headerFor, required this.orderPolicy});
-
+  required final GroupOrderPolicy orderPolicy,
+}) extends Grouping<T> {
   @override
   List<T> arrange(Iterable<T> items) => bucketByGroup(items, groupOf);
 

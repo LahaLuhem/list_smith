@@ -8,14 +8,12 @@ import 'features/core/views/home_view.dart';
 
 void main() => runApp(const ListSmithExampleApp());
 
-class ListSmithExampleApp extends StatefulWidget {
-  const new({super.key});
-
+class const ListSmithExampleApp({super.key}) extends StatefulWidget {
   @override
   State<ListSmithExampleApp> createState() => _ListSmithExampleAppState();
 }
 
-class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
+class _ListSmithExampleAppState() extends State<ListSmithExampleApp> {
   final _themeModeNotifier = ValueNotifier(ThemeMode.system);
 
   @override

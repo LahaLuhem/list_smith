@@ -12,10 +12,8 @@ import '../harness/measure.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_arguments.dart';
 
-final class _ObserverDispatch extends BenchmarkBase {
-  new(this._observer) : super('observer_dispatch');
-
-  final ListSmithObserver? _observer;
+final class _ObserverDispatch(final ListSmithObserver? _observer) extends BenchmarkBase {
+  this : super('observer_dispatch');
 
   @override
   void run() => _observer?.onPageLoaded(0, 20, isSearchMode: false);
@@ -23,9 +21,7 @@ final class _ObserverDispatch extends BenchmarkBase {
 
 /// Counts page-load callbacks and does nothing else, mirroring an observer with no expensive side effect
 /// on the hot path.
-final class _CountingObserver extends ListSmithObserver {
-  new();
-
+final class _CountingObserver() extends ListSmithObserver {
   var count = 0;
 
   @override

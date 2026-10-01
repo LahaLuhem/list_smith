@@ -9,18 +9,17 @@ part of '../reload.dart';
 ///
 /// A page still loading when the pull happens is dropped and asked again, so stale data can't land on
 /// top of the fresh pages.
-final class ReloadToCurrentDepth extends Reload {
+final class const ReloadToCurrentDepth({
   /// How many page fetches may run at once: `1` (the default) sequential, `null` all together, `K` at
   /// most `K` in flight. Ignored for `withSignal` sources.
-  final int? concurrency;
+  final int? concurrency = 1,
 
   /// How the reload settles when a page fetch fails. Best-effort by default. Ignored for `withSignal`
   /// sources, which are always atomic.
-  final ReloadOnError onError;
-
+  final ReloadOnError onError = .commitSucceeded,
+}) extends Reload {
   /// Creates it.
-  const new({this.concurrency = 1, this.onError = .commitSucceeded})
-    : assert(concurrency == null || concurrency > 0, 'concurrency must be positive or null.');
+  this : assert(concurrency == null || concurrency > 0, 'concurrency must be positive or null.');
 
   @override
   Future<void> run<T extends Object>(ReloadContext<T> context) {

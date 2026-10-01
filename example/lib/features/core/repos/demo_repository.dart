@@ -1,13 +1,11 @@
 import '../data/models/demo_item.dart';
 
-class DemoRepository {
-  final Duration latency;
+class DemoRepository({
+  final Duration latency = const Duration(milliseconds: 600),
 
   /// Not a round multiple of a typical page size, so the last page is partial.
-  final int totalItems;
-
-  new({this.latency = const Duration(milliseconds: 600), this.totalItems = 137});
-
+  final int totalItems = 137,
+}) {
   late final _items = List.generate(
     totalItems,
     (index) => DemoItem(

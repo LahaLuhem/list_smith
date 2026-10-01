@@ -4,42 +4,33 @@ part of '../list_source.dart';
 /// out.
 ///
 /// Everything async-only lives here rather than on the widget, so the sync path carries no inert fields.
-final class AsyncSource<T extends Object> extends ListSource<T> {
+final class const AsyncSource<T extends Object>({
   /// Fetches each page in normal (non-search) mode.
-  final PageFetcher<T> fetchPage;
+  required final PageFetcher<T> fetchPage,
 
   /// How many items per page, passed to [fetchPage] and any search fetcher.
-  final int pageSize;
+  required final int pageSize,
 
   /// Says when pagination has reached the end, in either mode.
-  final PaginationEndPolicy endPolicy;
+  required final PaginationEndPolicy endPolicy,
 
   /// What to do when a page has no items but [endPolicy] reports more pages left.
-  final EmptyPageBehaviour onEmptyPage;
+  required final EmptyPageBehaviour onEmptyPage,
 
   /// Whether the list has pull-to-refresh, and how its indicator is drawn.
-  final Refresh refresh;
+  required final Refresh refresh,
 
   /// Whether the list is searchable, and how: [NoSearch] for none, [AsyncSearch] for a search mode.
-  final Search<T> search;
+  required final Search<T> search,
 
   /// Tells items apart, for de-dup, edits and keeping each row with its item.
-  final ItemIdGetter<T> itemIdGetter;
+  required final ItemIdGetter<T> itemIdGetter,
 
   /// Whether the rows edits add and take animate.
-  final EditTransition editTransition;
-
+  required final EditTransition editTransition,
+}) extends ListSource<T> {
   /// Creates it.
-  const new({
-    required this.fetchPage,
-    required this.pageSize,
-    required this.endPolicy,
-    required this.onEmptyPage,
-    required this.refresh,
-    required this.search,
-    required this.itemIdGetter,
-    required this.editTransition,
-  });
+  this;
 
   /// Whether [search] is an [AsyncSearch].
   bool get supportsSearch => search is AsyncSearch<T>;

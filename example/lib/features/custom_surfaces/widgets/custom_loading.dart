@@ -2,11 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 /// [isCompact] picks the new-page footer over the full-viewport first-page form.
-class CustomLoading extends StatelessWidget {
-  final bool isCompact;
-
-  const new({this.isCompact = false, super.key});
-
+class const CustomLoading({final bool isCompact = false, super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => isCompact
       ? const Padding(

@@ -10,17 +10,15 @@ import 'search_page_request.dart';
 /// for items only, [SearchPageFetcher.withSignal] to return an end signal too. The end policy reads
 /// that signal as [EndContext.lastPageSignal] and the next fetch gets it as [SearchPageRequest.previousSignal],
 /// so a cursor-driven search works the same way.
-final class SearchPageFetcher<T extends Object> {
-  final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch;
+final class const SearchPageFetcher<T extends Object>._(
+  final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch, {
 
   /// Whether this fetcher came from [SearchPageFetcher.withSignal].
-  final bool reportsSignal;
-
+  required final bool reportsSignal,
+}) {
   /// Wraps a function returning one page of results for the request's query and page.
   factory(Future<Iterable<T>> Function(SearchPageRequest request) fetch) =>
       SearchPageFetcher._((request) async => (await fetch(request), null), reportsSignal: false);
-
-  const new _(this._fetch, {required this.reportsSignal});
 
   /// Wraps a function returning one page of results plus an end signal.
   factory withSignal(Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) fetch) =>

@@ -10,9 +10,7 @@ import '/features/core/widgets/demo_scaffold.dart';
 import 'sync_search_view_model.dart';
 
 /// `ListSmith.sync` with `SyncSearchPredicates.fields` over title and subtitle.
-class SyncSearchView extends StatelessWidget {
-  const new({super.key});
-
+class const SyncSearchView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: SyncSearchViewModel(),

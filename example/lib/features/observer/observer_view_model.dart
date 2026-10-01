@@ -6,7 +6,7 @@ import 'package:pmvvm/pmvvm.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/repos/demo_repository.dart';
 
-final class ObserverViewModel extends ViewModel {
+final class ObserverViewModel() extends ViewModel {
   static const _maxLoggedEvents = 50;
 
   final _repository = DemoRepository();
@@ -66,11 +66,7 @@ final class ObserverViewModel extends ViewModel {
   }
 }
 
-final class _EventLogObserver extends ListSmithObserver {
-  final void Function(String event) _record;
-
-  new(this._record);
-
+final class _EventLogObserver(final void Function(String event) _record) extends ListSmithObserver {
   @override
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) =>
       _record('onPageLoaded  page $pageIndex · $itemCount items${isSearchMode ? ' · search' : ''}');

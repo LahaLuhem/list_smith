@@ -6,14 +6,12 @@ import 'package:list_smith/list_smith.dart';
 import 'list_smith_harness.dart';
 
 /// A store behind the fetchers, with holds and failures keyed by page and attempt.
-final class FakeServer<T extends Object> {
-  final List<T> store;
+final class FakeServer<T extends Object>(Iterable<T> items) {
+  final store = <T>[...items];
   final requests = <PageRequest>[];
   final attempts = <int, int>{};
   final failing = <(int, int)>{};
   final _holds = <(int, int), Completer<void>>{};
-
-  new(Iterable<T> items) : store = [...items];
 
   Completer<void> hold(int page, {required int attempt}) =>
       _holds[(page, attempt)] = Completer<void>();

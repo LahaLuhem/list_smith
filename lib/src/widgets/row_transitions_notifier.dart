@@ -10,18 +10,18 @@ import '/src/data/presentation/typedefs/item_builder.dart';
 ///
 /// An exit holds its removal back until it ends, so the leaving row stays in the display, exactly where
 /// it was, and a later edit on the same id turns it round.
-final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
+final class RowTransitionsNotifier<T extends Object>({
   /// Ticks the controllers.
-  final TickerProvider vsync;
+  required final TickerProvider vsync,
 
   /// Removes an item once its row has gone.
-  final void Function(T item) bookRemoval;
-
+  required final void Function(T item) bookRemoval,
+}) extends ChangeNotifier {
   final _transitions = <Object, _Transition<T>>{};
   final _rows = <Object, _TransitionRowState<T>>{};
 
   /// Creates it.
-  new({required this.vsync, required this.bookRemoval});
+  this;
 
   /// [itemBuilder] for one build, each row wrapped in [transitionBuilder] while it animates.
   ItemBuilder<T> decorate(
@@ -167,36 +167,25 @@ final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
 }
 
 /// One row's animation. [leavingItem] is set while the row goes out.
-final class _Transition<T extends Object> {
-  final AnimationController controller;
-
+final class _Transition<T extends Object>(final AnimationController controller) {
   /// False for an exit waiting its frame, so the row isn't wrapped before it moves.
   var hasStarted = false;
 
   T? leavingItem;
   Widget? leavingChild;
-
-  new(this.controller);
 }
 
-class _TransitionRow<T extends Object> extends StatefulWidget {
-  final RowTransitionsNotifier<T> rowTransitionsNotifier;
-  final Object id;
-  final AnimatedSwitcherTransitionBuilder transitionBuilder;
-  final WidgetBuilder buildChild;
-
-  const new({
-    required this.rowTransitionsNotifier,
-    required this.id,
-    required this.transitionBuilder,
-    required this.buildChild,
-  });
-
+class const _TransitionRow<T extends Object>({
+  required final RowTransitionsNotifier<T> rowTransitionsNotifier,
+  required final Object id,
+  required final AnimatedSwitcherTransitionBuilder transitionBuilder,
+  required final WidgetBuilder buildChild,
+}) extends StatefulWidget {
   @override
   State<_TransitionRow<T>> createState() => _TransitionRowState<T>();
 }
 
-class _TransitionRowState<T extends Object> extends State<_TransitionRow<T>> {
+class _TransitionRowState<T extends Object>() extends State<_TransitionRow<T>> {
   /// Keeps the item's state while the wrapper comes and goes around it.
   final _childKey = GlobalKey();
 

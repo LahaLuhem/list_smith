@@ -6,9 +6,9 @@ import '/src/utils/neutral_theme.dart';
 ///
 /// The query is deliberately not echoed, to stay overflow- and translation-safe. Override `noResultsBuilder`
 /// to replace it.
-class NeutralNoResultsIndicator extends StatelessWidget {
+class const NeutralNoResultsIndicator({super.key}) extends StatelessWidget {
   /// Creates it.
-  const new({super.key});
+  this;
 
   @override
   Widget build(BuildContext context) => Center(

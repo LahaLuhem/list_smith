@@ -5,7 +5,7 @@ part 'policies/repair_headers_policy.dart';
 ///
 /// Async pages can't be reordered, so the fetcher has to send all of one group before the next. The
 /// sync path reorders for you and ignores this.
-sealed class GroupOrderPolicy {
+sealed class const GroupOrderPolicy() {
   /// Const base constructor.
-  const new();
+  this;
 }

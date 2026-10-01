@@ -6,12 +6,8 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import '/app/theme_scope.dart';
 
 /// Every demo's shell. Its brightness toggle shows the neutral surfaces light and dark from any screen.
-class DemoScaffold extends StatelessWidget {
-  final String title;
-  final Widget body;
-
-  const new({required this.title, required this.body, super.key});
-
+class const DemoScaffold({required final String title, required final Widget body, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformScaffold(
     appBarData: PlatformAppBar(
@@ -23,9 +19,7 @@ class DemoScaffold extends StatelessWidget {
   );
 }
 
-class _BrightnessToggle extends StatelessWidget {
-  const new();
-
+class const _BrightnessToggle() extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeModeNotifier = ThemeScope.of(context);

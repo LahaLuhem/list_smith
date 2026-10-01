@@ -4,9 +4,9 @@ part of '../group_order_policy.dart';
 ///
 /// Pick it when a wrong-looking list is worse than a crash. Costs an order check every build, where
 /// [RepairHeadersPolicy] only pays that in debug.
-final class FailOnUnorderedPolicy extends GroupOrderPolicy {
+final class const FailOnUnorderedPolicy() extends GroupOrderPolicy {
   /// Creates it.
-  const new();
+  this;
 
   @override
   String toString() => 'FailOnUnorderedPolicy()';

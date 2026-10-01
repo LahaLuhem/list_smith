@@ -12,7 +12,7 @@ part 'searches/no_search.dart';
 /// [NoSearch] (the default) is a plain paginated list. [AsyncSearch] turns search on and carries the
 /// fetcher and cache policy together, so neither can be set on a list that doesn't search. [ListSmith.async]
 /// only: a `.sync` list is search by definition and takes its predicate directly.
-sealed class Search<T extends Object> {
+sealed class const Search<T extends Object>() {
   /// Const base constructor.
-  const new();
+  this;
 }

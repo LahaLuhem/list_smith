@@ -4,14 +4,12 @@ import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 /// Plain widgets layer, like list_smith's own defaults, so it reads under either shell.
-class EventLogPanel extends StatelessWidget {
+class const EventLogPanel({
   /// Newest first.
-  final ValueListenable<List<String>> events;
-
-  final VoidCallback onClear;
-
-  const new({required this.events, required this.onClear, super.key});
-
+  required final ValueListenable<List<String>> events,
+  required final VoidCallback onClear,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 184,

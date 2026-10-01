@@ -11,9 +11,7 @@ import '/features/core/widgets/event_log_panel.dart';
 import 'observer_view_model.dart';
 
 /// `ListSmith.async` wired to a `ListSmithObserver` whose events stream into an `EventLogPanel`.
-class ObserverView extends StatelessWidget {
-  const new({super.key});
-
+class const ObserverView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: ObserverViewModel(),
@@ -62,12 +60,10 @@ class ObserverView extends StatelessWidget {
   );
 }
 
-class _InjectFailureToggle extends StatelessWidget {
-  final ValueListenable<bool> shouldInjectFailuresListenable;
-  final ValueChanged<bool> onChanged;
-
-  const new({required this.shouldInjectFailuresListenable, required this.onChanged});
-
+class const _InjectFailureToggle({
+  required final ValueListenable<bool> shouldInjectFailuresListenable,
+  required final ValueChanged<bool> onChanged,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(horizontal: 16),

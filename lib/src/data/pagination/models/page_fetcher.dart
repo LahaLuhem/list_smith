@@ -13,17 +13,15 @@ import 'page_request.dart';
 /// [PageFetcher.new] returns items only and leaves the end to [PaginationEndPolicy]. [PageFetcher.withSignal]
 /// returns a signal too, which the policy reads as [EndContext.lastPageSignal] and the next fetch gets
 /// as [PageRequest.previousSignal]. That's the cursor channel, so pair it with [StopOnNullSignalPolicy].
-final class PageFetcher<T extends Object> {
-  final Future<(Iterable<T>, Object?)> Function(PageRequest request) _fetch;
+final class const PageFetcher<T extends Object>._(
+  final Future<(Iterable<T>, Object?)> Function(PageRequest request) _fetch, {
 
   /// Whether this fetcher came from [PageFetcher.withSignal].
-  final bool reportsSignal;
-
+  required final bool reportsSignal,
+}) {
   /// Wraps a function returning one page of items, leaving the end to [PaginationEndPolicy].
   factory(Future<Iterable<T>> Function(PageRequest request) fetch) =>
       PageFetcher._((request) async => (await fetch(request), null), reportsSignal: false);
-
-  const new _(this._fetch, {required this.reportsSignal});
 
   /// Wraps a function returning one page plus an end signal: a `hasMore` flag, a next cursor.
   factory withSignal(Future<(Iterable<T>, Object?)> Function(PageRequest request) fetch) =>

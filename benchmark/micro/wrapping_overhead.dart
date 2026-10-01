@@ -16,10 +16,9 @@ import '../harness/scenario_arguments.dart';
 const _pageCounts = <int>[1, 10, 100];
 const _itemsPerPage = 20;
 
-final class _WrappingOverhead extends BenchmarkBase {
-  new(this.pageCount) : super('wrapping_overhead_p$pageCount');
+final class _WrappingOverhead(final int pageCount) extends BenchmarkBase {
+  this : super('wrapping_overhead_p$pageCount');
 
-  final int pageCount;
   late final List<List<int>> _pages;
   var lastKey = 0;
 

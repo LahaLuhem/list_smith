@@ -19,10 +19,9 @@ const _groupSize = 100;
 const _newItemCount = 10;
 
 /// Resolves the display pages and re-wraps them, as `copyWith` does in the engine.
-final class _EditLayerScaling extends BenchmarkBase {
-  new(this.itemCount) : super('edit_layer_scaling_n$itemCount');
+final class _EditLayerScaling(final int itemCount) extends BenchmarkBase {
+  this : super('edit_layer_scaling_n$itemCount');
 
-  final int itemCount;
   late final List<List<_Item>> _pages;
   late final List<int> _keys;
   late final List<int> _readStamps;
@@ -70,13 +69,8 @@ final class _EditLayerScaling extends BenchmarkBase {
 }
 
 /// A reference-identity item, the shape `itemIdGetter` keys on, in groups of [_groupSize].
-final class _Item {
-  const new(this.id, this.group);
-
+final class const _Item(final int id, final int group) {
   const new at(int id) : this(id, id ~/ _groupSize);
-
-  final int id;
-  final int group;
 }
 
 Future<void> main(List<String> arguments) async {
