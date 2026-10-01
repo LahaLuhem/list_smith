@@ -2,11 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// The list item shared by both scroll scenarios, so their per-frame build cost is measured over identical
 /// widgets.
-class ScrollBenchItem extends StatelessWidget {
-  const new({required this.index, super.key});
-
-  final int index;
-
+class const ScrollBenchItem({required final int index, super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 56,

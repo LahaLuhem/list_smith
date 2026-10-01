@@ -4,10 +4,8 @@ import 'package:list_smith/list_smith.dart';
 
 /// Blocks for [delay] on every callback, like a slow logger or analytics flush. Callbacks fire
 /// synchronously on list_smith's fetch, reload and query paths, so the [sleep] blocks the UI isolate.
-final class SlowListSmithObserver extends ListSmithObserver {
-  new({this.delay = const Duration(milliseconds: 50)});
-
-  final Duration delay;
+final class SlowListSmithObserver({final Duration delay = const Duration(milliseconds: 50)})
+    extends ListSmithObserver {
   final callCounts = <String, int>{};
 
   @override
