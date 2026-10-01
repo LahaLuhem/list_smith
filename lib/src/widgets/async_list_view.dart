@@ -295,7 +295,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per change, memoised in
   /// [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
   _Display<T> _displayFor(PagingState<PageKey, T> state) {
-    final itemId = widget.source.itemId;
+    final itemIdGetter = widget.source.itemIdGetter;
     final pages = state.pages;
     final keys = state.keys;
     if (pages == null || keys == null) return (state: state, shownIds: const {});
@@ -314,13 +314,16 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     if (_edits.isEmpty) {
       // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
       final seenIds = <Object>{};
-      display = (state: state.filterItems((item) => seenIds.add(itemId(item))), shownIds: seenIds);
+      display = (
+        state: state.filterItems((item) => seenIds.add(itemIdGetter(item))),
+        shownIds: seenIds,
+      );
     } else {
       final (pages: displayPages, :shownIds) = resolveDisplayPages(
         pages: pages,
         readStamps: keys.map((key) => key.readStamp).toList(growable: false),
         edits: _edits,
-        itemId: itemId,
+        itemIdGetter: itemIdGetter,
         groupOf: widget.grouping.groupOf,
         acceptsNewItems: !isSearchMode, // only the server knows what matches the query
       );
@@ -505,12 +508,12 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
             itemBuilder: switch (widget.source.editTransition) {
               AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
                 widget.itemBuilder,
-                itemId: widget.source.itemId,
+                itemIdGetter: widget.source.itemIdGetter,
                 transitionBuilder: transitionBuilder,
               ),
               NoEditTransition() => widget.itemBuilder,
             },
-            itemId: widget.source.itemId,
+            itemIdGetter: widget.source.itemIdGetter,
             grouping: widget.grouping,
             scroll: widget.scroll,
             isSearchMode: isSearchMode,
@@ -564,7 +567,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       return;
     }
 
-    final id = widget.source.itemId(item);
+    final id = widget.source.itemIdGetter(item);
     final wasShown = _isShown(id);
     _edit(item, item);
     _rowTransitionsNotifier.upsert(
@@ -577,7 +580,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   @override
   void remove(T item) {
     final animation = _editAnimation;
-    final id = widget.source.itemId(item);
+    final id = widget.source.itemIdGetter(item);
     if (animation == null || !_isShown(id)) {
       _edit(item, null);
 
@@ -605,7 +608,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// Books [edited] against [item]'s id, null for a removal.
   void _edit(T item, T? edited) {
-    final id = widget.source.itemId(item);
+    final id = widget.source.itemIdGetter(item);
     final stamp = _editStamp.value + 1;
     _edits
       ..remove(id) // re-booked at the end, so the newest new item lands on top

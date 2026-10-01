@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '../typedefs/item_edit.dart';
 
 /// The start given to a group that isn't loaded, whose items open on top instead.
@@ -11,7 +12,7 @@ const _opensOnTop = -1;
   required List<List<T>> pages,
   required List<int> readStamps,
   required Map<Object, ItemEdit<T>> edits,
-  required Object Function(T item) itemId,
+  required ItemIdGetter<T> itemIdGetter,
   required Object Function(T item)? groupOf,
   required bool acceptsNewItems,
 }) {
@@ -24,7 +25,7 @@ const _opensOnTop = -1;
     final readStamp = readStamps[pageIndex];
     final displayPage = <T>[];
     for (final item in pages[pageIndex]) {
-      final id = itemId(item);
+      final id = itemIdGetter(item);
       final edit = edits[id];
       if (edit == null || edit.stamp <= readStamp) {
         if (shownIds.add(id)) displayPage.add(item);
@@ -54,7 +55,7 @@ const _opensOnTop = -1;
       .toList(growable: false);
   if (toPlace.isNotEmpty) {
     _placeAll(displayPages, toPlace, groupOf);
-    shownIds.addAll(toPlace.map(itemId)); // the new ones weren't on a page
+    shownIds.addAll(toPlace.map(itemIdGetter)); // the new ones weren't on a page
   }
 
   return (pages: displayPages, shownIds: shownIds);

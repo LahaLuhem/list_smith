@@ -31,7 +31,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -57,7 +57,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -82,7 +82,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           refresh: const PullToRefresh(
             reload: ReloadToCurrentDepth(concurrency: null, onError: .allOrNothing),
@@ -121,7 +121,7 @@ void main() {
           // A plain index-based normal fetcher, so only the search side reports a signal. If the reload
           // asked the normal fetcher instead, it would take the parallel path, not this one.
           fetchPage: PageFetcher((request) async => [request.pageIndex]),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           search: AsyncSearch(fetchPage: searchFetchPage),
           query: 'q',
           searchDebounce: const Duration(milliseconds: 20),
@@ -164,7 +164,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnNullSignalPolicy(),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -206,7 +206,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const FixedPageCountPolicy(pageCount: 4),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -244,7 +244,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnNullSignalPolicy(),
           // concurrency is ignored for a signal source. The reload is sequential regardless.
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),

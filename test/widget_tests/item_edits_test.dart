@@ -19,7 +19,7 @@ void main() {
     ) async {
       final server = FakeServer(_range(0, 8));
       final hold = server.hold(1, attempt: 1);
-      final controller = await _pumpList(tester, fetchPage: server.keyset, itemId: _byValue);
+      final controller = await _pumpList(tester, fetchPage: server.keyset, itemIdGetter: _byValue);
       await drain(tester);
 
       controller.remove(0);
@@ -43,7 +43,7 @@ void main() {
         final controller = await _pumpList<_Row>(
           tester,
           fetchPage: server.offsetEarly,
-          itemId: _byRowId,
+          itemIdGetter: _byRowId,
           label: _rowLabel,
           endPolicy: const FixedPageCountPolicy(pageCount: 1),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
@@ -73,7 +73,7 @@ void main() {
         final controller = await _pumpList(
           tester,
           fetchPage: server.offsetEarly,
-          itemId: _byValue,
+          itemIdGetter: _byValue,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
         );
@@ -112,7 +112,7 @@ void main() {
         final controller = await _pumpList(
           tester,
           fetchPage: server.keyset,
-          itemId: _byValue,
+          itemIdGetter: _byValue,
           pageSize: 5,
           rowHeight: 300, // tall enough that page 2 waits for a scroll
           endPolicy: example.policy,
@@ -147,7 +147,7 @@ void main() {
         final controller = await _pumpList(
           tester,
           fetchPage: server.keyset,
-          itemId: _byValue,
+          itemIdGetter: _byValue,
           pageSize: 20,
           rowHeight: 60, // tall enough that page 1 waits
           onEmptyPage: behaviour,
@@ -176,7 +176,7 @@ void main() {
           [1, 2, 3],
           [3, 4, 5],
         ]),
-        itemId: _byValue,
+        itemIdGetter: _byValue,
         endPolicy: const FixedPageCountPolicy(pageCount: 2),
         itemBuilder: (_, item, _) => Dismissible(
           key: ValueKey(item),
@@ -203,7 +203,7 @@ void main() {
         fetchPage: pagedFetcher(const [
           [0, 1, 10, 11],
         ]),
-        itemId: _byValue,
+        itemIdGetter: _byValue,
         pageSize: 4,
         endPolicy: const FixedPageCountPolicy(pageCount: 1),
         grouping: Grouping.by(
@@ -294,7 +294,7 @@ void main() {
         final controller = await _pumpList<_Row>(
           tester,
           fetchPage: server.offsetLate,
-          itemId: _byRowId,
+          itemIdGetter: _byRowId,
           label: _rowLabel,
           endPolicy: const FixedPageCountPolicy(pageCount: 1),
           refresh: PullToRefresh(reload: reload),
@@ -318,7 +318,7 @@ void main() {
 Future<ListSmithController<T>> _pumpList<T extends Object>(
   WidgetTester tester, {
   required PageFetcher<T> fetchPage,
-  required ItemId<T> itemId,
+  required ItemIdGetter<T> itemIdGetter,
   ListSmithController<T>? controller,
   String Function(T item)? label,
   int pageSize = 3,
@@ -341,7 +341,7 @@ Future<ListSmithController<T>> _pumpList<T extends Object>(
       endPolicy: endPolicy,
       onEmptyPage: onEmptyPage,
       refresh: refresh,
-      itemId: itemId,
+      itemIdGetter: itemIdGetter,
       grouping: grouping,
       search: search,
       query: query,
@@ -368,7 +368,7 @@ Future<void> _pumpKept(
   tester,
   controller: controller,
   fetchPage: feed ?? pagedFetcher([_range(1, 6)]),
-  itemId: _byValue,
+  itemIdGetter: _byValue,
   pageSize: 6,
   endPolicy: const FixedPageCountPolicy(pageCount: 1),
   query: query,

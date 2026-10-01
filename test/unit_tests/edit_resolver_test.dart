@@ -19,7 +19,7 @@ void main() {
     pages: pages,
     readStamps: readStamps,
     edits: edits,
-    itemId: (item) => item.id,
+    itemIdGetter: (item) => item.id,
     groupOf: null,
     acceptsNewItems: acceptsNewItems,
   ).pages.flattened.map((item) => item.label).toList(growable: false);
@@ -142,7 +142,7 @@ void main() {
         pages: pages,
         readStamps: List.filled(pages.length, 0),
         edits: edits,
-        itemId: (item) => item,
+        itemIdGetter: (item) => item,
         groupOf: (item) => item ~/ 10,
         acceptsNewItems: true,
       ).pages.flattened.toList(growable: false);
@@ -207,7 +207,7 @@ void main() {
           ],
           readStamps: const [0],
           edits: {0: (item: (id: 0, group: 1), stamp: 1)},
-          itemId: (item) => item.id,
+          itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: true,
         ).pages;
@@ -296,7 +296,7 @@ void main() {
           ],
           readStamps: const [0],
           edits: ctx.example.val(editsKey) as Map<Object, ItemEdit<_Placed>>,
-          itemId: (item) => item.id,
+          itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: ctx.example.val(acceptsNewItemsKey) as bool,
         );

@@ -35,7 +35,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
           onEmptyPage: const AdvanceToFirstNonEmpty(),
           refresh: const NoRefresh(),
@@ -63,7 +63,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
           onEmptyPage: const AdvanceToFirstNonEmpty(),
           refresh: const NoRefresh(),
@@ -94,7 +94,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
           // onEmptyPage omitted: defaults to ShowEmptySurface.
           refresh: const NoRefresh(),
@@ -120,7 +120,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 10),
           onEmptyPage: const AdvanceToFirstNonEmpty(maxPages: 2),
           refresh: const NoRefresh(),
@@ -144,7 +144,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetcher.fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           // The default policy ends on the 1st empty page, so there is no next page to advance to.
           onEmptyPage: const AdvanceToFirstNonEmpty(),
           refresh: const NoRefresh(),

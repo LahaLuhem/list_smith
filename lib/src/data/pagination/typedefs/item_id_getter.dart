@@ -4,4 +4,4 @@
 /// Keys compare by `==` / `hashCode`, so an `int`, a `String`, or a composite like `'${item.a}:${item.b}'`.
 /// Anything with its own `==`, a record included, can key itself with `(item) => item`. A class without
 /// one can't: an edited copy is a new object, so it would show as a 2nd row.
-typedef ItemId<T extends Object> = Object Function(T item);
+typedef ItemIdGetter<T extends Object> = Object Function(T item);

@@ -16,7 +16,7 @@ export 'src/data/pagination/models/end_context.dart';
 export 'src/data/pagination/models/page_fetcher.dart';
 export 'src/data/pagination/models/page_request.dart';
 export 'src/data/pagination/models/pagination_end_policy.dart';
-export 'src/data/pagination/typedefs/item_id.dart';
+export 'src/data/pagination/typedefs/item_id_getter.dart';
 export 'src/data/presentation/models/async_list_surfaces.dart';
 export 'src/data/presentation/models/list_scroll_config.dart';
 export 'src/data/presentation/typedefs/error_builder.dart';

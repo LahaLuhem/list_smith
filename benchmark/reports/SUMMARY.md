@@ -46,7 +46,7 @@ From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync groupi
 
 ## Overlap de-dup cost vs loaded list size
 
-From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dups overlapping pages by `itemId` as a computed view over the paging state, re-walking every loaded item on each change so the stored pages stay raw and the end policy can't read an all-duplicate page as the end. Measured at its worst case: no actual overlap, so nothing collapses and every item is retained. Off the scroll path, since it runs per page-load rather than per frame. Sub-millisecond for a few thousand loaded items and climbing from there, past the frame budget at tens of thousands in one live list.
+From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dups overlapping pages by id as a computed view over the paging state, re-walking every loaded item on each change so the stored pages stay raw and the end policy can't read an all-duplicate page as the end. Measured at its worst case: no actual overlap, so nothing collapses and every item is retained. Off the scroll path, since it runs per page-load rather than per frame. Sub-millisecond for a few thousand loaded items and climbing from there, past the frame budget at tens of thousands in one live list.
 
 | Loaded items | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
@@ -55,7 +55,7 @@ From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dup
 | 100,000 | 10 | 40,114 | 988.92 | 40.11 |
 
 
-![itemId de-dup scaling](dedup_scaling.png)
+![De-dup scaling](dedup_scaling.png)
 
 ## Wrapping overhead: list_smith on top of ISP
 

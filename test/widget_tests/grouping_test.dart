@@ -53,7 +53,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
@@ -76,7 +76,7 @@ void main() {
             [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
             [(group: 'B', label: 'b2'), (group: 'B', label: 'b3'), (group: 'C', label: 'c1')],
           ]),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -102,7 +102,7 @@ void main() {
             [(group: 'B', label: 'b2'), (group: 'B', label: 'b3')],
             [(group: 'B', label: 'b4'), (group: 'C', label: 'c1')],
           ]),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -118,7 +118,7 @@ void main() {
       check(find.text('section C').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('an itemId duplicate inside a straddling group keeps the header single', (
+    scenarioWidgets('a duplicate id inside a straddling group keeps the header single', (
       tester,
     ) async {
       await pumpListSmith(
@@ -128,7 +128,7 @@ void main() {
             [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
             [(group: 'B', label: 'b1'), (group: 'B', label: 'b2'), (group: 'C', label: 'c1')],
           ]),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -145,7 +145,7 @@ void main() {
       check(find.text('section C').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('an itemId keeps groups contiguous when pages overlap across a boundary', (
+    scenarioWidgets('de-dup by id keeps groups contiguous when pages overlap a boundary', (
       tester,
     ) async {
       await pumpListSmith(
@@ -155,7 +155,7 @@ void main() {
             [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
             [(group: 'A', label: 'a2'), (group: 'B', label: 'b1'), (group: 'B', label: 'b2')],
           ]),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const NoRefresh(),
           grouping: byGroup(),
@@ -165,7 +165,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the overlap
-      // first, so grouping never sees it. itemId is load-bearing for grouping here.
+      // first, so grouping never sees it. De-dup is load-bearing for grouping here.
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('a2').evaluate()).length.equals(1);
@@ -178,7 +178,7 @@ void main() {
           fetchPage: pagedFetcher(const [
             [(group: 'A', label: 'a1'), (group: 'B', label: 'b1'), (group: 'A', label: 'a2')],
           ]),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(orderPolicy: const FailOnUnorderedPolicy()),
           itemBuilder: (_, item, _) => Text(item.label),
@@ -203,7 +203,7 @@ void main() {
                   ]
                 : const <_Item>[],
           ),
-          itemId: (item) => item.label,
+          itemIdGetter: (item) => item.label,
           refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),

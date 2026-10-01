@@ -37,10 +37,10 @@ void main() {
       [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
     ]);
 
-    scenarioWidgets('an itemId key collapses an item repeated across a page boundary to one', (
+    scenarioWidgets('de-dup by id collapses an item repeated across a page boundary to one', (
       tester,
     ) async {
-      await _pumpPagedList(tester, fetchPage: overlappingPages, itemId: (item) => item.id);
+      await _pumpPagedList(tester, fetchPage: overlappingPages, itemIdGetter: (item) => item.id);
       await drain(tester, frames: 8);
 
       // Ids 3 and 4 are returned by BOTH page 0 and page 1. The key collapses each to one.
@@ -57,7 +57,7 @@ void main() {
       await _pumpPagedList(
         tester,
         fetchPage: allDuplicateMidStreamPages,
-        itemId: (item) => item.id,
+        itemIdGetter: (item) => item.id,
       );
       await drain(tester, frames: 16);
 
@@ -71,13 +71,13 @@ void main() {
       check(find.text('item 4').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('an itemId key collapses a search overlap across a page boundary to one', (
+    scenarioWidgets('de-dup by id collapses a search overlap across a page boundary to one', (
       tester,
     ) async {
       await _pumpPagedSearch(
         tester,
         searchFetchPage: overlappingSearchPages,
-        itemId: (item) => item.id,
+        itemIdGetter: (item) => item.id,
       );
       await drain(tester, frames: 8);
 
@@ -101,12 +101,12 @@ class _Item {
 Future<void> _pumpPagedList(
   WidgetTester tester, {
   required PageFetcher<_Item> fetchPage,
-  required ItemId<_Item> itemId,
+  required ItemIdGetter<_Item> itemIdGetter,
 }) => pumpListSmith(
   tester,
   ListSmith.async(
     fetchPage: fetchPage,
-    itemId: itemId,
+    itemIdGetter: itemIdGetter,
     pageSize: 5,
     refresh: const NoRefresh(),
     itemBuilder: (_, item, _) => Text('item ${item.id}'),
@@ -118,13 +118,13 @@ Future<void> _pumpPagedList(
 Future<void> _pumpPagedSearch(
   WidgetTester tester, {
   required SearchPageFetcher<_Item> searchFetchPage,
-  required ItemId<_Item> itemId,
+  required ItemIdGetter<_Item> itemIdGetter,
 }) => pumpListSmith(
   tester,
   ListSmith.async(
     fetchPage: PageFetcher((_) async => const <_Item>[]),
     search: AsyncSearch(fetchPage: searchFetchPage),
-    itemId: itemId,
+    itemIdGetter: itemIdGetter,
     pageSize: 5,
     refresh: const NoRefresh(),
     query: 'q',

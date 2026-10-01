@@ -8,8 +8,8 @@ library;
 enum ReloadOnError {
   /// Keep every page that reloaded and leave the rest as they were. Best-effort, the default.
   ///
-  /// A stale page beside fresh neighbours can seam: `itemId` de-dups the duplicates, gaps heal on the
-  /// next refresh.
+  /// A stale page beside fresh neighbours can seam: de-dup by id drops the duplicates, gaps heal on
+  /// the next refresh.
   commitSucceeded,
 
   /// Commit only if every page reloads. On any failure keep the old data and report the error, so the

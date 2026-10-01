@@ -186,7 +186,7 @@ void main() {
       .run((_) {
         final plain = AsyncSource<int>(
           fetchPage: PageFetcher((_) async => const <int>[]),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           editTransition: const NoEditTransition(),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),
@@ -196,7 +196,7 @@ void main() {
         );
         final searchable = AsyncSource<int>(
           fetchPage: PageFetcher((_) async => const <int>[]),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           editTransition: const NoEditTransition(),
           pageSize: 20,
           endPolicy: const StopOnEmptyPagesPolicy(),

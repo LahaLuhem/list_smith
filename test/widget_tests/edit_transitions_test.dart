@@ -385,7 +385,7 @@ Future<ListSmithController<int>> _pumpRows(
   final axis = scroll.scrollDirection;
   final list = ListSmith.async(
     fetchPage: fetchPage ?? pagedFetcher([items]),
-    itemId: (item) => item,
+    itemIdGetter: (item) => item,
     endPolicy: FixedPageCountPolicy(pageCount: pageCount),
     refresh: refresh,
     grouping: grouping,

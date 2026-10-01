@@ -255,7 +255,7 @@ def render_summary_markdown(
         [
             "## Overlap de-dup cost vs loaded list size\n",
             "From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dups "
-            "overlapping pages by `itemId` as a computed view over the paging state, "
+            "overlapping pages by id as a computed view over the paging state, "
             "re-walking every loaded item on each change so the stored pages stay raw and the end "
             "policy can't read an all-duplicate page as the end. Measured at its worst case: no "
             "actual overlap, so nothing collapses and every item is retained. Off the scroll "
@@ -273,7 +273,7 @@ def render_summary_markdown(
     )
 
     if "dedup_scaling.png" in chart_names:
-        parts.append("\n![itemId de-dup scaling](dedup_scaling.png)\n")
+        parts.append("\n![De-dup scaling](dedup_scaling.png)\n")
 
     parts.extend(
         [

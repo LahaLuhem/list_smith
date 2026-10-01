@@ -33,7 +33,7 @@ renames.
 - [Dependabot's PRs auto-merge through dartender](#dependabot-automerge)
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
-- [`itemId` is required](#item-id-required)
+- [`itemIdGetter` is required](#item-id-required)
 - [Async rows follow their item, not their index](#row-identity)
 - [Edit transitions animate the rows edits add and take](#edit-transitions)
 
@@ -318,7 +318,7 @@ renames.
 <a id="overlap-dedup"></a>
 ## Overlap de-dup runs at the display layer, not before storage
 
-- **Decision:** `itemId` de-dup is a computed view over the paging state, `_displayFor`
+- **Decision:** de-dup by id is a computed view over the paging state, `_displayFor`
   running ISP's `PagingState.filterItems` in the build, not a filter on the stored pages. The
   controller keeps the raw pages, and only what renders is de-duped.
 - **Why not de-dup before storage:** the end policy reads each stored page's item count. De-dup
@@ -386,7 +386,7 @@ renames.
 - **No new constructor, fetcher type or generic.** The anticipated page-key change wasn't needed.
   list_smith keeps `PagingController<int, T>` and the cursor rides `_lastPageSignal`, the field
   already tracking the signal for end-detection. `_nextPageKey` still returns `pages.length`.
-  `itemId`, grouping and refresh are item-based, so untouched. The whole new surface is the 3rd
+  `itemIdGetter`, grouping and refresh are item-based, so untouched. The whole new surface is the 3rd
   `withSignal` argument plus one policy.
 - **Retry and refresh fall out for free.** `_lastPageSignal` only advances after a fetch succeeds,
   so a retried page re-fetches with the same cursor, and refresh nulls the field so the reload
@@ -663,9 +663,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 ---
 
 <a id="item-id-required"></a>
-## `itemId` is required
+## `itemIdGetter` is required
 
-- **Decision:** `ListSmith.async` takes an `itemId`, with no default, because de-dup, edits and
+- **Decision:** `ListSmith.async` takes an `itemIdGetter`, with no default, because de-dup, edits and
   [row identity](#row-identity) all find items by it. It's there for correctness, not speed.
 - **Why not `(item) => item` as the default:** most JSON models have no `==`, so an upserted copy
   never matches the loaded one and shows as a 2nd row, and a re-read hands every row a new identity,
@@ -678,7 +678,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="row-identity"></a>
 ## Async rows follow their item, not their index
 
-- **Decision:** each async row is keyed by its `itemId`, and the list finds a row that moved through
+- **Decision:** each async row is keyed by its item's id, and the list finds a row that moved through
   `findChildIndexCallback`. So a row keeps its state, and anything it's animating, while rows above
   it come and go.
 - **Our own list:** ISP's `PagedListView` can't take that callback, so `KeyedPagedListView` is a

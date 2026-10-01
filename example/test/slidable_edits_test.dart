@@ -22,7 +22,7 @@ void main() {
                   fetchPage: PageFetcher(
                     (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
                   ),
-                  itemId: (item) => item,
+                  itemIdGetter: (item) => item,
                   refresh: const NoRefresh(),
                   controller: controller,
                   // Long, so a list exit would still be running when the rows are read.

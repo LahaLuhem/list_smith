@@ -13,7 +13,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 2),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -32,7 +32,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 2),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -57,7 +57,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 1),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           controller: controller,
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -80,7 +80,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 3),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           controller: controller,
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -106,7 +106,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 3),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           controller: controller,
           refresh: const NoRefresh(), // no pull config to lean on, the re-read keeps depth anyway
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -132,7 +132,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: _recording(triggers, pages: 3),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           controller: controller,
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
           itemBuilder: (_, item, _) => Text('item $item'),
@@ -162,7 +162,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
@@ -189,7 +189,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: _recording(normalTriggers, pages: 1),
-        itemId: (item) => item,
+        itemIdGetter: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
@@ -231,7 +231,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: fetchPage,
-        itemId: (item) => item,
+        itemIdGetter: (item) => item,
         search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
         query: query,
         searchDebounce: const Duration(milliseconds: 20),
@@ -268,7 +268,7 @@ void main() {
 
       Widget build(String query) => ListSmith.async(
         fetchPage: _recording(normalTriggers, pages: 20),
-        itemId: (item) => item,
+        itemIdGetter: (item) => item,
         search: AsyncSearch(
           fetchPage: SearchPageFetcher((_) async => const [99]),
           cachePolicy: const KeepCachePolicy(),
@@ -312,7 +312,7 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: fetchPage,
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),
           onEmptyPage: const AdvanceToFirstNonEmpty(),
           refresh: const NoRefresh(),

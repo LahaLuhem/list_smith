@@ -34,7 +34,7 @@ void main() {
       HostFrame(
         child: ListSmith<int>.async(
           fetchPage: PageFetcher(fetchPage),
-          itemId: (item) => item,
+          itemIdGetter: (item) => item,
           pageSize: _pageSize,
           refresh: const NoRefresh(),
           itemBuilder: (_, item, _) => ScrollBenchItem(index: item),

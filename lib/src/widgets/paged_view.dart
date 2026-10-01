@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
-import '/src/data/pagination/typedefs/item_id.dart';
+import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -31,7 +31,7 @@ class PagedView<T extends Object> extends StatelessWidget {
   final ItemBuilder<T> itemBuilder;
 
   /// Keys each row by its item.
-  final ItemId<T> itemId;
+  final ItemIdGetter<T> itemIdGetter;
 
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   final Grouping<T> grouping;
@@ -74,7 +74,7 @@ class PagedView<T extends Object> extends StatelessWidget {
     required this.state,
     required this.fetchNextPage,
     required this.itemBuilder,
-    required this.itemId,
+    required this.itemIdGetter,
     required this.grouping,
     required this.scroll,
     required this.isSearchMode,
@@ -95,7 +95,7 @@ class PagedView<T extends Object> extends StatelessWidget {
     state: state,
     fetchNextPage: fetchNextPage,
     builderDelegate: _buildDelegate(),
-    itemId: itemId,
+    itemIdGetter: itemIdGetter,
     separatorBuilder: separatorBuilder,
     controller: scroll.controller,
     scrollDirection: scroll.scrollDirection,

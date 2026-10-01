@@ -75,7 +75,7 @@ final class _RowLookupScaling extends BenchmarkBase {
   }
 }
 
-/// A reference-identity item with an [id], the shape `itemId` keys on.
+/// A reference-identity item with an [id], the shape `itemIdGetter` keys on.
 final class _Item {
   const new(this.id);
 
