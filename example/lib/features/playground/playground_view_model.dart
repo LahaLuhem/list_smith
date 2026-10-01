@@ -8,7 +8,7 @@ import '/features/core/data/models/demo_item.dart';
 ///
 /// The preview depends on every knob at once, so `notifyListeners()` beats per-field notifiers here.
 /// See `CODESTYLE.md` *State management*.
-final class PlaygroundViewModel extends ViewModel {
+final class PlaygroundViewModel() extends ViewModel {
   static const _dataPages = {1, 2, 4, 5};
 
   var _pageSize = 20;

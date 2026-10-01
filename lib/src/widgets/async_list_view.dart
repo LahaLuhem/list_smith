@@ -43,69 +43,56 @@ import 'row_transitions_notifier.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
 /// runs feed and search as 2 views on that one controller.
-class AsyncListView<T extends Object> extends StatefulWidget {
+class const AsyncListView<T extends Object>({
   /// The fetchers, end policy and search cache policy.
-  final AsyncSource<T> source;
+  required final AsyncSource<T> source,
 
   /// Builds the widget for each item.
-  final ItemBuilder<T> itemBuilder;
+  required final ItemBuilder<T> itemBuilder,
 
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
-  final Grouping<T> grouping;
-
-  /// Builds the separator between items. Null for none.
-  final IndexedWidgetBuilder? separatorBuilder;
+  required final Grouping<T> grouping,
 
   /// The current search query. Empty runs the feed, non-empty runs search.
-  final String query;
+  required final String query,
 
   /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
-  final int minSearchLength;
+  required final int minSearchLength,
 
   /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate.
-  final Duration searchDebounce;
-
-  /// Builds the surface shown when the source yields no items. Null uses the neutral default.
-  final WidgetBuilder? emptyBuilder;
-
-  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
-  final NoResultsBuilder? noResultsBuilder;
+  required final Duration searchDebounce,
 
   /// The async-only override surfaces: page loading and error, end-of-list footer.
-  final AsyncListSurfaces surfaces;
+  required final AsyncListSurfaces surfaces,
 
   /// Scroll and layout configuration for the underlying scrollable.
-  final ListScrollConfig scroll;
+  required final ListScrollConfig scroll,
+
+  /// Builds the separator between items. Null for none.
+  final IndexedWidgetBuilder? separatorBuilder,
+
+  /// Builds the surface shown when the source yields no items. Null uses the neutral default.
+  final WidgetBuilder? emptyBuilder,
+
+  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
+  final NoResultsBuilder? noResultsBuilder,
 
   /// Lifecycle events for logging or telemetry. Null is silent.
-  final ListSmithObserver? observer;
+  final ListSmithObserver? observer,
 
   /// Refreshes this list from code. Null leaves refresh gesture-only.
-  final ListSmithController<T>? controller;
-
+  final ListSmithController<T>? controller,
+  super.key,
+}) extends StatefulWidget {
   /// Creates it.
-  const new({
-    required this.source,
-    required this.itemBuilder,
-    required this.grouping,
-    required this.query,
-    required this.minSearchLength,
-    required this.searchDebounce,
-    required this.surfaces,
-    required this.scroll,
-    this.separatorBuilder,
-    this.emptyBuilder,
-    this.noResultsBuilder,
-    this.observer,
-    this.controller,
-    super.key,
-  });
+  this;
 
   @override
   State<AsyncListView<T>> createState() => _AsyncListViewState<T>();
 }
 
-class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
+class _AsyncListViewState<T extends Object>()
+    extends State<AsyncListView<T>>
     with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
@@ -650,22 +637,20 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 ///
 /// One per run rather than the State itself, so a reload knows its own facts: the trigger its pages
 /// report, and whether the list moved on since it began.
-final class _ReloadRun<T extends Object> implements ReloadContext<T> {
-  final _AsyncListViewState<T> _engine;
+final class _ReloadRun<T extends Object>(
+  final _AsyncListViewState<T> _engine,
 
   /// What every page fetched through this run reports.
-  final FetchTrigger trigger;
-
+  final FetchTrigger trigger,
+) implements ReloadContext<T> {
   final _doneCompleter = Completer<void>();
 
   /// The generation this run belongs to. Its own writes move it along, so only another writer can make
   /// it stale.
-  int _epoch;
+  int _epoch = _engine._generation;
 
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
   FetchTrigger? rerunTrigger;
-
-  new(this._engine, this.trigger) : _epoch = _engine._generation;
 
   /// Completes once the reload finishes, committed or not, after the engine has let go of the run.
   Future<void> get done => _doneCompleter.future;
@@ -721,17 +706,15 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
 }
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
-final class _NormalSnapshot<T extends Object> {
-  final PagingState<PageKey, T> state;
+final class _NormalSnapshot<T extends Object>({
+  required final PagingState<PageKey, T> state,
 
   /// The stream's last end signal, restored with [state] so a signal policy reads its own.
-  final Object? signal;
+  required final Object? signal,
 
   /// An ask made while the feed sat here, paid by a re-read once it is put back.
-  FetchTrigger? debt;
-
-  new({required this.state, required this.signal, this.debt});
-
+  var FetchTrigger? debt,
+}) {
   /// Books [trigger] against the feed. A refresh is never downgraded to a re-read.
   void owe(FetchTrigger trigger) => debt = _stronger(debt, trigger);
 }

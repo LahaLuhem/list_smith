@@ -16,10 +16,9 @@ import '../harness/scenario_arguments.dart';
 /// In-memory list sizes the resolver is measured against. The pivot for the scaling curve.
 const _listSizes = <int>[1000, 10000, 100000];
 
-final class _SyncSearchScaling extends BenchmarkBase {
-  new(this.listSize) : super('sync_search_scaling_n$listSize');
+final class _SyncSearchScaling(final int listSize) extends BenchmarkBase {
+  this : super('sync_search_scaling_n$listSize');
 
-  final int listSize;
   late final List<String> _items;
   var lastMatchCount = 0;
 

@@ -1,13 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-class BoolKnob extends StatelessWidget {
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const new({required this.label, required this.value, required this.onChanged, super.key});
-
+class const BoolKnob({
+  required final String label,
+  required final bool value,
+  required final ValueChanged<bool> onChanged,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [

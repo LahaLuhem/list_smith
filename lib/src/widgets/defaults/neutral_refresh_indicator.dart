@@ -5,12 +5,13 @@ import '/src/data/refresh/models/list_smith_refresh_state.dart';
 import 'neutral_progress_indicator.dart';
 
 /// The neutral pull indicator. Override `indicatorBuilder` to replace it.
-class NeutralRefreshIndicator extends StatelessWidget {
+class const NeutralRefreshIndicator({
   /// The pull it follows.
-  final ListSmithRefreshState state;
-
+  required final ListSmithRefreshState state,
+  super.key,
+}) extends StatelessWidget {
   /// Creates it.
-  const new({required this.state, super.key});
+  this;
 
   @override
   Widget build(BuildContext context) => Opacity(

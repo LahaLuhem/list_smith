@@ -11,9 +11,7 @@ import '/features/core/widgets/event_log_panel.dart';
 import 'cache_routing_view_model.dart';
 
 /// A caching repository in front of `ListSmith.async`, routed on `PageRequest.trigger`.
-class CacheRoutingView extends StatelessWidget {
-  const new({super.key});
-
+class const CacheRoutingView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: CacheRoutingViewModel(),
@@ -61,11 +59,7 @@ class CacheRoutingView extends StatelessWidget {
   );
 }
 
-class _ClearCacheButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const new({required this.onPressed});
-
+class const _ClearCacheButton({required final VoidCallback onPressed}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(horizontal: 16),

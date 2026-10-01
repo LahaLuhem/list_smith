@@ -8,18 +8,20 @@ import '/src/utils/neutral_theme.dart';
 ///
 /// The widgets layer ships no progress indicator, so this hand-rolls one. Picks up the ambient foreground
 /// colour via [neutralForegroundOf], so it drops into any app unchanged.
-class NeutralProgressIndicator extends StatefulWidget {
+class const NeutralProgressIndicator({
   /// Diameter, in logical pixels.
-  final double size;
-
+  final double size = 24,
+  super.key,
+}) extends StatefulWidget {
   /// Creates it.
-  const new({this.size = 24, super.key});
+  this;
 
   @override
   State<NeutralProgressIndicator> createState() => _NeutralProgressIndicatorState();
 }
 
-class _NeutralProgressIndicatorState extends State<NeutralProgressIndicator>
+class _NeutralProgressIndicatorState()
+    extends State<NeutralProgressIndicator>
     with SingleTickerProviderStateMixin {
   static const _rotationPeriod = Duration(milliseconds: 900);
 
@@ -41,16 +43,12 @@ class _NeutralProgressIndicatorState extends State<NeutralProgressIndicator>
   );
 }
 
-class _ArcPainter extends CustomPainter {
+class const _ArcPainter({required final Color colour}) extends CustomPainter {
   static const double _strokeFraction = 1 / 10;
   static const double _sweepFraction = 3 / 4;
 
   static const _startAngle = -math.pi / 2;
   static const _sweepAngle = _sweepFraction * 2 * math.pi;
-
-  final Color colour;
-
-  const new({required this.colour});
 
   @override
   void paint(Canvas canvas, Size size) {

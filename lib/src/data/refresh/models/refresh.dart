@@ -11,7 +11,7 @@ part 'refreshes/pull_to_refresh.dart';
 ///
 /// [PullToRefresh] (the default) is on, [NoRefresh] is off. The indicator rides the on-case, so it can't
 /// be set on a list that never refreshes. [ListSmith.async] only.
-sealed class Refresh {
+sealed class const Refresh() {
   /// Const base constructor.
-  const new();
+  this;
 }

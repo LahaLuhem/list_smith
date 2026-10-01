@@ -7,7 +7,7 @@ import '/features/core/repos/demo_repository.dart';
 
 /// The failure flag is a scoped [ValueNotifier], so flipping it rebuilds the toggle, not the list. See
 /// `CODESTYLE.md` *State management*.
-final class CustomSurfacesViewModel extends ViewModel {
+final class CustomSurfacesViewModel() extends ViewModel {
   final _repository = DemoRepository();
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
 

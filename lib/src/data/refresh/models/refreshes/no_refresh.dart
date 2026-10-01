@@ -1,9 +1,9 @@
 part of '../refresh.dart';
 
 /// Pull-to-refresh off: no gesture, no indicator. Pass it to `.async`'s `refresh` to opt out.
-final class NoRefresh extends Refresh {
+final class const NoRefresh() extends Refresh {
   /// Creates it.
-  const new();
+  this;
 
   @override
   String toString() => 'NoRefresh()';

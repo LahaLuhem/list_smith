@@ -6,16 +6,17 @@ import 'neutral_progress_indicator.dart';
 ///
 /// A [NeutralProgressIndicator], centred and larger for the 1st page. Pass [isCompact] for the smaller
 /// padded footer form.
-class NeutralLoadingIndicator extends StatelessWidget {
+class const NeutralLoadingIndicator({
+  /// Render the compact footer form rather than the full-viewport one.
+  final bool isCompact = false,
+  super.key,
+}) extends StatelessWidget {
   static const double _firstPageSize = 32;
   static const double _newPageSize = 20;
   static const double _newPagePadding = 16;
 
-  /// Render the compact footer form rather than the full-viewport one.
-  final bool isCompact;
-
   /// Creates it.
-  const new({this.isCompact = false, super.key});
+  this;
 
   @override
   Widget build(BuildContext context) => isCompact

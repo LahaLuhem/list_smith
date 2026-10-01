@@ -403,9 +403,7 @@ Object _byRowId(_Row item) => item.id;
 
 String _rowLabel(_Row item) => '${item.id} ${item.label}';
 
-final class _ShortLastPagePolicy extends PaginationEndPolicy {
-  const new();
-
+final class const _ShortLastPagePolicy() extends PaginationEndPolicy {
   @override
   bool hasReachedEnd(EndContext context) =>
       context.pageCount > 0 && context.lastPageItemCount < context.pageSize;

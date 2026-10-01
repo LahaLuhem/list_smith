@@ -18,57 +18,46 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// and renders it with a plain `ListView`.
 ///
 /// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
-class SyncListView<T extends Object> extends StatefulWidget {
+class const SyncListView<T extends Object>({
   /// The items and the predicate that filters them.
-  final SyncSource<T> source;
+  required final SyncSource<T> source,
 
   /// The current search query, yours to own and pass in.
-  final String query;
+  required final String query,
 
   /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
-  final int minSearchLength;
+  required final int minSearchLength,
 
   /// How long to wait after [query] changes before filtering. [Duration.zero] filters at once.
-  final Duration searchDebounce;
+  required final Duration searchDebounce,
 
   /// Builds the widget for each item.
-  final ItemBuilder<T> itemBuilder;
+  required final ItemBuilder<T> itemBuilder,
 
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
-  final Grouping<T> grouping;
-
-  /// Builds the separator between items. Null for none.
-  final IndexedWidgetBuilder? separatorBuilder;
-
-  /// Builds the surface shown when the source has no items. Null uses the neutral default.
-  final WidgetBuilder? emptyBuilder;
-
-  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
-  final NoResultsBuilder? noResultsBuilder;
+  required final Grouping<T> grouping,
 
   /// Scroll and layout configuration for the underlying scrollable.
-  final ListScrollConfig scroll;
+  required final ListScrollConfig scroll,
 
+  /// Builds the separator between items. Null for none.
+  final IndexedWidgetBuilder? separatorBuilder,
+
+  /// Builds the surface shown when the source has no items. Null uses the neutral default.
+  final WidgetBuilder? emptyBuilder,
+
+  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
+  final NoResultsBuilder? noResultsBuilder,
+  super.key,
+}) extends StatefulWidget {
   /// Creates it.
-  const new({
-    required this.source,
-    required this.query,
-    required this.minSearchLength,
-    required this.searchDebounce,
-    required this.itemBuilder,
-    required this.grouping,
-    required this.scroll,
-    this.separatorBuilder,
-    this.emptyBuilder,
-    this.noResultsBuilder,
-    super.key,
-  });
+  this;
 
   @override
   State<SyncListView<T>> createState() => _SyncListViewState<T>();
 }
 
-class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
+class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final ValueNotifier<({List<T> visibleItems, bool isSearching})> _resultNotifier;
   late List<T> _items;

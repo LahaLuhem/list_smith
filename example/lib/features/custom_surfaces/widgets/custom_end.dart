@@ -1,8 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-class CustomEnd extends StatelessWidget {
-  const new({super.key});
-
+class const CustomEnd({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Padding(
     padding: .all(16),

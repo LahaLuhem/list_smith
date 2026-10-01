@@ -10,9 +10,7 @@ import '/features/core/widgets/demo_scaffold.dart';
 import 'async_search_view_model.dart';
 
 /// `ListSmith.async` plus `AsyncSearch`, switching `SearchCachePolicy` between Keep and Replace.
-class AsyncSearchView extends StatelessWidget {
-  const new({super.key});
-
+class const AsyncSearchView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: AsyncSearchViewModel(),
@@ -67,12 +65,10 @@ class AsyncSearchView extends StatelessWidget {
   );
 }
 
-class _KeepCacheToggle extends StatelessWidget {
-  final ValueListenable<bool> shouldKeepCacheListenable;
-  final ValueChanged<bool> onChanged;
-
-  const new({required this.shouldKeepCacheListenable, required this.onChanged});
-
+class const _KeepCacheToggle({
+  required final ValueListenable<bool> shouldKeepCacheListenable,
+  required final ValueChanged<bool> onChanged,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(horizontal: 16),

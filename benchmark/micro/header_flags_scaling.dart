@@ -20,10 +20,9 @@ const _pageSize = 100;
 /// Items per group. Every 10th item opens a run.
 const _groupSize = 10;
 
-final class _HeaderFlagsScaling extends BenchmarkBase {
-  new(this.itemCount) : super('header_flags_scaling_n$itemCount');
+final class _HeaderFlagsScaling(final int itemCount) extends BenchmarkBase {
+  this : super('header_flags_scaling_n$itemCount');
 
-  final int itemCount;
   late final List<List<int>> _pages;
   var lastFlagCount = 0;
 

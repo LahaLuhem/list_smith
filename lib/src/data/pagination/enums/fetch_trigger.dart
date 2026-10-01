@@ -5,7 +5,7 @@ library;
 /// Why list_smith asked for a page, carried on every [PageRequest].
 ///
 /// A fact to route on, not an instruction: what a cache should do about it is your call.
-enum FetchTrigger {
+enum FetchTrigger() {
   /// The 1st page of a cold list.
   initialLoad,
 

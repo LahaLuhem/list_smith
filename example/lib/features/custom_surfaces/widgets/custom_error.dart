@@ -5,13 +5,12 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformIcons;
 
 /// [isCompact] picks the new-page footer over the full-viewport first-page form.
-class CustomError extends StatelessWidget {
-  final Object error;
-  final VoidCallback onRetry;
-  final bool isCompact;
-
-  const new({required this.error, required this.onRetry, this.isCompact = false, super.key});
-
+class const CustomError({
+  required final Object error,
+  required final VoidCallback onRetry,
+  final bool isCompact = false,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => isCompact
       ? Padding(

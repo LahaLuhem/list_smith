@@ -5,15 +5,14 @@ import 'dart:io';
 ///
 /// One object per iteration, matching the schema in [`benchmark/README.md`](../README.md). One writer
 /// per invocation: [open], one [writeRecord] per iteration, then [close].
-final class ResultWriter {
-  final String _scenario;
-  final String _sdkVersion;
-  final String _packageVersion;
-  final String _gitSha;
-  final IOSink _sink;
+final class ResultWriter._(
+  final String _scenario,
+  final String _sdkVersion,
+  final String _packageVersion,
+  final String _gitSha,
+  final IOSink _sink,
+) {
   var _firstRecord = true;
-
-  new _(this._scenario, this._sdkVersion, this._packageVersion, this._gitSha, this._sink);
 
   static Future<ResultWriter> open({
     required String outputPath,

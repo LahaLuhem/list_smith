@@ -13,33 +13,28 @@ import 'defaults/neutral_refresh_indicator.dart';
 /// Decides when the indicator exists and where it sits, so [indicatorBuilder] or [NeutralRefreshIndicator]
 /// only draws it. The controller type never leaks past here, so the mechanism stays swappable. Whether
 /// refresh happens at all is the engine's call: it leaves this wrapper out when refresh is off.
-class RefreshBinding extends StatefulWidget {
+class const RefreshBinding({
   /// The scrollable the gesture drives.
-  final Widget child;
+  required final Widget child,
 
   /// Runs when a pull crosses the threshold and is let go. Completes when the refresh is done.
-  final Future<void> Function() onRefresh;
-
-  /// Draws the indicator, or `null` to use the neutral default.
-  final RefreshIndicatorBuilder? indicatorBuilder;
+  required final Future<void> Function() onRefresh,
 
   /// The room the indicator gets along the scroll axis.
-  final double indicatorExtent;
+  required final double indicatorExtent,
 
+  /// Draws the indicator, or `null` to use the neutral default.
+  final RefreshIndicatorBuilder? indicatorBuilder,
+  super.key,
+}) extends StatefulWidget {
   /// Creates it.
-  const new({
-    required this.child,
-    required this.onRefresh,
-    required this.indicatorExtent,
-    this.indicatorBuilder,
-    super.key,
-  });
+  this;
 
   @override
   State<RefreshBinding> createState() => _RefreshBindingState();
 }
 
-class _RefreshBindingState extends State<RefreshBinding> {
+class _RefreshBindingState() extends State<RefreshBinding> {
   /// How far the list has overshot its start on its own, which only bouncing physics allow.
   final _bounceDistanceNotifier = ValueNotifier<double>(0);
 

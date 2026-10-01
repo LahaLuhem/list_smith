@@ -4,9 +4,9 @@ part of '../group_order_policy.dart';
 ///
 /// Out-of-order pages still assert in debug so you catch them early. In release the header just doesn't
 /// repeat.
-final class RepairHeadersPolicy extends GroupOrderPolicy {
+final class const RepairHeadersPolicy() extends GroupOrderPolicy {
   /// Creates it.
-  const new();
+  this;
 
   @override
   String toString() => 'RepairHeadersPolicy()';

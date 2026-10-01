@@ -122,9 +122,7 @@ void main() {
 }
 
 /// Ends when the last page held fewer than a full page, a common REST idiom.
-final class _ShortLastPagePolicy extends PaginationEndPolicy {
-  const new();
-
+final class const _ShortLastPagePolicy() extends PaginationEndPolicy {
   @override
   bool hasReachedEnd(EndContext context) => context.lastPageItemCount < context.pageSize;
 }

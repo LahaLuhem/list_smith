@@ -19,11 +19,10 @@ const _itemsPerPage = 20;
 const _builtRows = 30;
 
 /// One rebuild: a fresh [RowLookup] over the new pages, then every built row found again and re-keyed.
-final class _RowLookupScaling extends BenchmarkBase {
-  new(this.itemCount, {required this.isItemOnTop}) : super('row_lookup_scaling_n$itemCount');
+final class _RowLookupScaling(final int itemCount, {required final bool isItemOnTop})
+    extends BenchmarkBase {
+  this : super('row_lookup_scaling_n$itemCount');
 
-  final int itemCount;
-  final bool isItemOnTop;
   late final List<List<_Item>> _pages;
   late final List<({int id, int lastIndex})> _rows;
   var lastFoundCount = 0;
@@ -75,11 +74,7 @@ final class _RowLookupScaling extends BenchmarkBase {
 }
 
 /// A reference-identity item with an [id], the shape `itemIdGetter` keys on.
-final class _Item {
-  const new(this.id);
-
-  final int id;
-}
+final class const _Item(final int id);
 
 Future<void> main(List<String> arguments) async {
   final scenarioArguments = ScenarioArguments.parse(arguments);

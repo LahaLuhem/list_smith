@@ -1,27 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-class SliderKnob extends StatelessWidget {
-  final String label;
-  final String valueText;
-  final double value;
-  final double min;
-  final double max;
-  final int divisions;
-
-  final ValueChanged<double> onChanged;
-
-  const new({
-    required this.label,
-    required this.valueText,
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.onChanged,
-    super.key,
-  });
-
+class const SliderKnob({
+  required final String label,
+  required final String valueText,
+  required final double value,
+  required final double min,
+  required final double max,
+  required final int divisions,
+  required final ValueChanged<double> onChanged,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: .start,

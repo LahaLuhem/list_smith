@@ -421,24 +421,19 @@ double _startEdge(Rect rect, AxisDirection pull) => switch (pull) {
   .left => rect.right,
 };
 
-class _Row extends StatelessWidget {
-  final int item;
-
-  const new(this.item);
-
+class const _Row(final int item) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox.square(dimension: 100, child: Text('item $item'));
 }
 
 /// Spins for as long as it's mounted, so one left behind at rest keeps asking for frames.
-class _SpinningIndicator extends StatefulWidget {
-  const new();
-
+class const _SpinningIndicator() extends StatefulWidget {
   @override
   State<_SpinningIndicator> createState() => _SpinningIndicatorState();
 }
 
-class _SpinningIndicatorState extends State<_SpinningIndicator>
+class _SpinningIndicatorState()
+    extends State<_SpinningIndicator>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))
     ..repeat();

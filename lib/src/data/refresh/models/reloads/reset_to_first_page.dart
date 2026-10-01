@@ -4,9 +4,9 @@ part of '../reload.dart';
 /// the start with fresh data.
 ///
 /// A page still loading when the pull happens is dropped, so it can't land on the fresh list.
-final class ResetToFirstPage extends Reload {
+final class const ResetToFirstPage() extends Reload {
   /// Creates it.
-  const new();
+  this;
 
   @override
   Future<void> run<T extends Object>(ReloadContext<T> context) => Future.syncValue(context.reset());

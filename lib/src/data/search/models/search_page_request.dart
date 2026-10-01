@@ -5,17 +5,15 @@ import '/src/data/pagination/models/page_request.dart';
 
 /// The inputs of one search-page fetch, handed to a [SearchPageFetcher]. A [PageRequest] plus the committed
 /// [query].
-final class SearchPageRequest extends PageRequest {
+final class const SearchPageRequest({
   /// The query to search. Trimmed, past the min-length gate, and never empty: an empty query drives
   /// the normal [PageRequest] path instead.
-  final String query;
-
+  required final String query,
+  required super.pageIndex,
+  required super.pageSize,
+  required super.trigger,
+  super.previousSignal,
+}) extends PageRequest {
   /// Creates it.
-  const new({
-    required this.query,
-    required super.pageIndex,
-    required super.pageSize,
-    required super.trigger,
-    super.previousSignal,
-  });
+  this;
 }

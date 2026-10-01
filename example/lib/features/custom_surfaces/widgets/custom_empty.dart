@@ -3,9 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-class CustomEmpty extends StatelessWidget {
-  const new({super.key});
-
+class const CustomEmpty({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(

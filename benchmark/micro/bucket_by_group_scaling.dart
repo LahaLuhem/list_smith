@@ -19,10 +19,9 @@ const _listSizes = <int>[1000, 10000, 100000];
 /// The number of groups the key buckets into. A realistic small section count.
 const _groupCount = 8;
 
-final class _BucketByGroupScaling extends BenchmarkBase {
-  new(this.listSize) : super('bucket_by_group_scaling_n$listSize');
+final class _BucketByGroupScaling(final int listSize) extends BenchmarkBase {
+  this : super('bucket_by_group_scaling_n$listSize');
 
-  final int listSize;
   late final List<int> _items;
   var lastBucketedCount = 0;
 

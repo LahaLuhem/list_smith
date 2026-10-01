@@ -24,9 +24,9 @@ import '/src/data/pagination/enums/fetch_trigger.dart';
 ///
 /// Callbacks run synchronously on the fetch, reload and query-commit paths, never during `build`, so
 /// keep them cheap or you stall the list. Async only: a `.sync` list has nothing to watch.
-abstract base class ListSmithObserver {
+abstract base class const ListSmithObserver() {
   /// Const default constructor.
-  const new();
+  this;
 
   /// A page came back, before it reaches the list. [pageIndex] is 0-based.
   ///

@@ -6,25 +6,16 @@ library;
 
 import 'dart:io';
 
-final class ScenarioArguments {
+final class const ScenarioArguments._({
   /// Iterations to run in this one subprocess, so process startup amortises over N runs.
-  final int iterations;
-
-  final String outputPath;
-  final String gitSha;
-  final String packageVersion;
+  required final int iterations,
+  required final String outputPath,
+  required final String gitSha,
+  required final String packageVersion,
 
   /// Milliseconds each `measure` call times for. Required, so it cannot drift from the orchestrator.
-  final int measureMillis;
-
-  const new _({
-    required this.iterations,
-    required this.outputPath,
-    required this.gitSha,
-    required this.packageVersion,
-    required this.measureMillis,
-  });
-
+  required final int measureMillis,
+}) {
   /// Parses the standard flags from [arguments], exiting non-zero on failure. Benchmarks are
   /// non-interactive, so a thrown exception would have no handler.
   factory parse(List<String> arguments) {

@@ -12,9 +12,7 @@ import 'playground_view_model.dart';
 
 /// `pageSize` and the end policy are read once at construction, so the preview is keyed on them to
 /// force a fresh list. The rest update in place.
-class PlaygroundView extends StatelessWidget {
-  const new({super.key});
-
+class const PlaygroundView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: PlaygroundViewModel(),

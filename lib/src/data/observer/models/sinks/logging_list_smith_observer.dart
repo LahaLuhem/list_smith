@@ -8,7 +8,7 @@ import '../list_smith_observer.dart';
 /// Pass `observer: const LoggingListSmithObserver()` and events show up in the console and DevTools'
 /// logging view, filterable by that name. Want your own name, structured records or filtered telemetry?
 /// Subclass [ListSmithObserver] instead.
-final class LoggingListSmithObserver extends ListSmithObserver {
+final class const LoggingListSmithObserver() extends ListSmithObserver {
   /// The logger name on every record. Filter DevTools by it.
   static const _name = 'list_smith';
 
@@ -16,7 +16,7 @@ final class LoggingListSmithObserver extends ListSmithObserver {
   static const _severeLevel = 900;
 
   /// Creates it.
-  const new();
+  this;
 
   @override
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) => developer.log(

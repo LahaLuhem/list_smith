@@ -50,6 +50,4 @@ void main() {
 }
 
 /// A bare observer that overrides nothing, so each call runs [ListSmithObserver]'s no-op default body.
-final class _SilentObserver extends ListSmithObserver {
-  const new();
-}
+final class const _SilentObserver() extends ListSmithObserver;

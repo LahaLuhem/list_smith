@@ -5,7 +5,7 @@ library;
 ///
 /// Enough for a custom indicator to follow the pull without seeing the state machine underneath. There's
 /// no resting phase, since nothing is built at rest.
-enum ListSmithRefreshPhase {
+enum ListSmithRefreshPhase() {
   /// Being pulled, but not yet far enough to arm a refresh on release.
   dragging,
 
