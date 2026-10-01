@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// A subset of [ScrollView] / [BoxScrollView], each field keeping the framework's own default.
 @immutable
-class const ListScrollConfig({
+final class const ListScrollConfig({
   /// Maps to [BoxScrollView.padding].
   final EdgeInsetsGeometry? padding,
 
