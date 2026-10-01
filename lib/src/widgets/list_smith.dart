@@ -75,9 +75,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Creates an async, paginated list driven by [fetchPage], searchable via [search].
   ///
   /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemIdGetter] tells them
-  /// apart. Those 2 and [itemBuilder] are required. The rest default to a 20-item page, pull-to-refresh
-  /// on, pagination ending at the 1st empty page, no search, no grouping, no edit transitions and the
-  /// neutral surfaces.
+  /// apart.
   ///
   /// 2 pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading end policy
   /// needs `withSignal` fetchers on both the feed and the search.

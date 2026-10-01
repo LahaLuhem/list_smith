@@ -18,7 +18,8 @@ final class CustomSurfacesViewModel extends ViewModel {
 
   // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
-  void onFailureToggled({required bool value}) => _shouldInjectFailuresNotifier.value = value;
+  void onInjectFailuresToggled({required bool value}) =>
+      _shouldInjectFailuresNotifier.value = value;
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     final page = await _repository.fetchPage(request.pageIndex, request.pageSize);

@@ -7,14 +7,14 @@ import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
 void main() {
-  final endDetection = BddFeature('Pagination end detection');
+  final endDetectionFeature = BddFeature('Pagination end detection');
 
   const thresholdKey = 'threshold';
   const pageItemCountsKey = 'pageItemCounts';
   const endedKey = 'ended';
   const pageSizeKey = 'pageSize';
 
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('StopOnEmptyPages ends only after a run of consecutive trailing empty pages')
       .given('a StopOnEmptyPages policy with emptyRunBeforeEnd = <$thresholdKey>')
       .when('it inspects the per-page item counts <$pageItemCountsKey>')
@@ -27,18 +27,18 @@ void main() {
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[3, 0, 0]), val(endedKey, true))
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[0, 3, 0]), val(endedKey, false))
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[0, 3, 0, 0]), val(endedKey, true))
-      .run((ctx) {
+      .run((context) {
         final policy = StopOnEmptyPagesPolicy(
-          emptyRunBeforeEnd: ctx.example.val(thresholdKey) as int,
+          emptyRunBeforeEnd: context.example.val(thresholdKey) as int,
         );
-        final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
+        final pageItemCounts = context.example.val(pageItemCountsKey) as List<int>;
 
         check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)))
-            .equals(ctx.example.val(endedKey) as bool);
+            .equals(context.example.val(endedKey) as bool);
       });
 
   const countKey = 'count';
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('FixedPageCount ends once the given number of pages has been fetched')
       .given('a FixedPageCount policy with pageCount = <$countKey>')
       .when('it inspects the per-page item counts <$pageItemCountsKey>')
@@ -49,18 +49,18 @@ void main() {
       .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 0, 5]), val(endedKey, true))
       .example(val(countKey, 1), val(pageItemCountsKey, <int>[5]), val(endedKey, true))
       .example(val(countKey, 2), val(pageItemCountsKey, <int>[5]), val(endedKey, false))
-      .run((ctx) {
-        final policy = FixedPageCountPolicy(pageCount: ctx.example.val(countKey) as int);
-        final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
+      .run((context) {
+        final policy = FixedPageCountPolicy(pageCount: context.example.val(countKey) as int);
+        final pageItemCounts = context.example.val(pageItemCountsKey) as List<int>;
 
         check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: 20)))
-            .equals(ctx.example.val(endedKey) as bool);
+            .equals(context.example.val(endedKey) as bool);
       });
 
   // The end policy is an open contract: a consumer can supply their own without a change to list_smith.
   // This one ends when the last page came back shorter than the page size (a common REST idiom), proving
   // the seam is usable from outside via EndContext alone.
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('a custom policy can end on a short last page')
       .given('a ShortLastPage policy over a list with pageSize = <$pageSizeKey>')
       .when('it inspects the per-page item counts <$pageItemCountsKey>')
@@ -68,16 +68,16 @@ void main() {
       .example(val(pageSizeKey, 5), val(pageItemCountsKey, <int>[5, 5]), val(endedKey, false))
       .example(val(pageSizeKey, 5), val(pageItemCountsKey, <int>[5, 3]), val(endedKey, true))
       .example(val(pageSizeKey, 5), val(pageItemCountsKey, <int>[5, 5, 0]), val(endedKey, true))
-      .run((ctx) {
+      .run((context) {
         const policy = _ShortLastPagePolicy();
-        final pageItemCounts = ctx.example.val(pageItemCountsKey) as List<int>;
-        final pageSize = ctx.example.val(pageSizeKey) as int;
+        final pageItemCounts = context.example.val(pageItemCountsKey) as List<int>;
+        final pageSize = context.example.val(pageSizeKey) as int;
 
         check(policy.hasReachedEnd(EndContext(pageItemCounts: pageItemCounts, pageSize: pageSize)))
-            .equals(ctx.example.val(endedKey) as bool);
+            .equals(context.example.val(endedKey) as bool);
       });
 
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('ExplicitHasMore ends only when the fetcher reports no more data')
       .given('an ExplicitHasMore policy')
       .when('it inspects the last page signal (a hasMore flag)')
@@ -92,7 +92,7 @@ void main() {
         check(policy.hasReachedEnd(contextWith(null))).isFalse();
       });
 
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('StopOnNullSignal ends once a page reports a null signal, after the first page')
       .given('a StopOnNullSignal policy')
       .when('it inspects the last page signal (a next-cursor)')
@@ -110,7 +110,7 @@ void main() {
         check(policy.hasReachedEnd(contextWith(pageCount: 0, signal: null))).isFalse();
       });
 
-  Bdd(endDetection)
+  Bdd(endDetectionFeature)
       .scenario('a policy declares whether it needs the fetcher end signal')
       .given('the built-in end policies and a custom one')
       .when('requiresSignal is read')

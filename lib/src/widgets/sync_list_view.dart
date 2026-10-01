@@ -17,10 +17,7 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and renders it with a plain `ListView`.
 ///
-/// Unexported. No paging controller and no pull-to-refresh, since in-memory data has nothing to page
-/// or refresh. The only moving part is the query: trimmed, gated, debounced, then filtered. The items
-/// are turned into a list once, again only when they change, and the result lives in a [ValueNotifier]
-/// so only the list subtree rebuilds.
+/// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
 class SyncListView<T extends Object> extends StatefulWidget {
   /// The items and the predicate that filters them.
   final SyncSource<T> source;
@@ -141,7 +138,7 @@ class _SyncListViewState<T extends Object> extends State<SyncListView<T>> {
 
       final effectiveItemBuilder = widget.grouping.decorate(
         widget.itemBuilder,
-        flatItems: () => visibleItems,
+        flattenItems: () => visibleItems,
         axis: scroll.scrollDirection,
       );
 

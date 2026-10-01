@@ -33,7 +33,7 @@ class ObserverView extends StatelessWidget {
             ),
           ),
           _InjectFailureToggle(
-            shouldInjectFailures: viewModel.shouldInjectFailuresListenable,
+            shouldInjectFailuresListenable: viewModel.shouldInjectFailuresListenable,
             onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
           ),
           Padding(
@@ -64,10 +64,10 @@ class ObserverView extends StatelessWidget {
 
 /// A labelled switch that makes the next fetch fail, so the observer's error event can be seen.
 class _InjectFailureToggle extends StatelessWidget {
-  final ValueListenable<bool> shouldInjectFailures;
+  final ValueListenable<bool> shouldInjectFailuresListenable;
   final ValueChanged<bool> onChanged;
 
-  const new({required this.shouldInjectFailures, required this.onChanged});
+  const new({required this.shouldInjectFailuresListenable, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -76,7 +76,7 @@ class _InjectFailureToggle extends StatelessWidget {
       children: [
         const Expanded(child: Text('Inject failures')),
         ValueListenableBuilder(
-          valueListenable: shouldInjectFailures,
+          valueListenable: shouldInjectFailuresListenable,
           builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
         ),
       ],

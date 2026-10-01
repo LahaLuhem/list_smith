@@ -21,17 +21,17 @@ class ListSmithExampleApp extends StatefulWidget {
 }
 
 class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
-  final _themeMode = ValueNotifier(ThemeMode.system);
+  final _themeModeNotifier = ValueNotifier(ThemeMode.system);
 
   @override
   void dispose() {
-    _themeMode.dispose();
+    _themeModeNotifier.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: _themeMode,
+    valueListenable: _themeModeNotifier,
     builder: (context, themeMode, _) => PlatformApp(
       title: 'list_smith example',
       debugShowCheckedModeBanner: false,
@@ -43,7 +43,7 @@ class _ListSmithExampleAppState extends State<ListSmithExampleApp> {
       cupertinoAppData: CupertinoAppData(
         theme: ConstTheme.cupertino(_cupertinoBrightness(themeMode)),
       ),
-      builder: (_, child) => ThemeScope(notifier: _themeMode, child: child!),
+      builder: (_, child) => ThemeScope(notifier: _themeModeNotifier, child: child!),
       home: const HomeView(),
     ),
   );

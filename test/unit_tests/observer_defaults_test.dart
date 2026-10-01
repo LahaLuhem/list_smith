@@ -6,9 +6,9 @@ import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
 void main() {
-  final observerDefaults = BddFeature('Observer defaults');
+  final observerDefaultsFeature = BddFeature('Observer defaults');
 
-  Bdd(observerDefaults)
+  Bdd(observerDefaultsFeature)
       .scenario('the no-op base bodies accept every event without effect')
       .given('an observer that overrides no events')
       .when('each lifecycle event fires')
@@ -26,7 +26,7 @@ void main() {
         }).returnsNormally();
       });
 
-  Bdd(observerDefaults)
+  Bdd(observerDefaultsFeature)
       .scenario('the logging sink logs every event across both value branches without error')
       .given('the ready-made LoggingListSmithObserver')
       .when('each event fires, covering the search and empty-query branches')

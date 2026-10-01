@@ -5,14 +5,14 @@ import 'package:list_smith/src/data/search/models/sync_search_predicates.dart';
 typedef _City = ({String name, String? country});
 
 void main() {
-  final predicates = BddFeature('SyncSearchPredicates');
+  final predicatesFeature = BddFeature('SyncSearchPredicates');
 
   const nameKey = 'name';
   const countryKey = 'country';
   const queryKey = 'query';
   const matchesKey = 'matches';
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('fields keeps an item when any field contains the query, case-insensitively')
       .given('a fields predicate over an item name and a nullable country')
       .when('it tests an item <$nameKey>/<$countryKey> against query <$queryKey>')
@@ -57,22 +57,22 @@ void main() {
         val(queryKey, 'ance'),
         val(matchesKey, false),
       )
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.fields<_City>([
           (city) => city.name,
           (city) => city.country,
         ]);
 
         final item = (
-          name: ctx.example.val(nameKey) as String,
-          country: ctx.example.val(countryKey) as String?,
+          name: context.example.val(nameKey) as String,
+          country: context.example.val(countryKey) as String?,
         );
 
-        check(searchBy(item, ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('prefix keeps an item when any field starts with the query, case-insensitively')
       .given('a prefix predicate over an item name and a nullable country')
       .when('it tests an item <$nameKey>/<$countryKey> against query <$queryKey>')
@@ -117,22 +117,22 @@ void main() {
         val(queryKey, 'fra'),
         val(matchesKey, false),
       )
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.prefix<_City>([
           (city) => city.name,
           (city) => city.country,
         ]);
 
         final item = (
-          name: ctx.example.val(nameKey) as String,
-          country: ctx.example.val(countryKey) as String?,
+          name: context.example.val(nameKey) as String,
+          country: context.example.val(countryKey) as String?,
         );
 
-        check(searchBy(item, ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('exact keeps an item only on a full, case-insensitive field equality')
       .given('an exact predicate over an item name and a nullable country')
       .when('it tests an item <$nameKey>/<$countryKey> against query <$queryKey>')
@@ -177,22 +177,22 @@ void main() {
         val(queryKey, 'france'),
         val(matchesKey, false),
       )
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.exact<_City>([
           (city) => city.name,
           (city) => city.country,
         ]);
 
         final item = (
-          name: ctx.example.val(nameKey) as String,
-          country: ctx.example.val(countryKey) as String?,
+          name: context.example.val(nameKey) as String,
+          country: context.example.val(countryKey) as String?,
         );
 
-        check(searchBy(item, ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('allTerms requires every whitespace term to hit some field, in any order')
       .given('an allTerms predicate over an item name and a nullable country')
       .when('it tests an item <$nameKey>/<$countryKey> against query <$queryKey>')
@@ -239,22 +239,22 @@ void main() {
         val(queryKey, 'john usa'),
         val(matchesKey, false),
       )
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.allTerms<_City>([
           (city) => city.name,
           (city) => city.country,
         ]);
 
         final item = (
-          name: ctx.example.val(nameKey) as String,
-          country: ctx.example.val(countryKey) as String?,
+          name: context.example.val(nameKey) as String,
+          country: context.example.val(countryKey) as String?,
         );
 
-        check(searchBy(item, ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('any matches when at least one combined predicate matches')
       .given('any of a name-prefix predicate or an exact-country predicate')
       .when('it tests a Paris/France item against query <$queryKey>')
@@ -265,17 +265,17 @@ void main() {
       .example(val(queryKey, 'france'), val(matchesKey, true))
       // Neither arm matches.
       .example(val(queryKey, 'xyz'), val(matchesKey, false))
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.any<_City>([
           SyncSearchPredicates.prefix([(city) => city.name]),
           SyncSearchPredicates.exact([(city) => city.country]),
         ]);
 
-        check(searchBy((name: 'Paris', country: 'France'), ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy((name: 'Paris', country: 'France'), context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('every matches only when all combined predicates match')
       .given('every of a name-contains predicate and a country-contains predicate')
       .when('it tests an item <$nameKey>/<$countryKey> against query <$queryKey>')
@@ -301,22 +301,22 @@ void main() {
         val(queryKey, 'xyz'),
         val(matchesKey, false),
       )
-      .run((ctx) {
+      .run((context) {
         final searchBy = SyncSearchPredicates.every<_City>([
           SyncSearchPredicates.fields([(city) => city.name]),
           SyncSearchPredicates.fields([(city) => city.country]),
         ]);
 
         final item = (
-          name: ctx.example.val(nameKey) as String,
-          country: ctx.example.val(countryKey) as String?,
+          name: context.example.val(nameKey) as String,
+          country: context.example.val(countryKey) as String?,
         );
 
-        check(searchBy(item, ctx.example.val(queryKey) as String))
-            .equals(ctx.example.val(matchesKey) as bool);
+        check(searchBy(item, context.example.val(queryKey) as String))
+            .equals(context.example.val(matchesKey) as bool);
       });
 
-  Bdd(predicates)
+  Bdd(predicatesFeature)
       .scenario('every builder rejects empty input at construction')
       .given('no extractors or predicates')
       .when('a builder is called')

@@ -153,8 +153,8 @@ void main() {
 
         final gesture = await _pullAndHold(tester, orientation.pull);
 
-        final unit = _unit(orientation.pull);
-        double along(Offset offset) => offset.dx * unit.dx + offset.dy * unit.dy;
+        final unitOffset = _unit(orientation.pull);
+        double along(Offset offset) => offset.dx * unitOffset.dx + offset.dy * unitOffset.dy;
 
         final indicator = tester.getRect(find.byKey(_indicatorKey));
         check(_startEdge(indicator, orientation.pull))

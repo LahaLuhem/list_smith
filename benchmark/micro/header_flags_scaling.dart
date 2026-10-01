@@ -9,7 +9,7 @@ import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
-import '../harness/scenario_args.dart';
+import '../harness/scenario_arguments.dart';
 
 /// Loaded-item counts the scan is measured against. The pivot for the scaling curve.
 const _itemCounts = <int>[1000, 10000, 100000];
@@ -43,22 +43,22 @@ final class _HeaderFlagsScaling extends BenchmarkBase {
   static Object _groupKey(int item) => item ~/ _groupSize;
 }
 
-Future<void> main(List<String> argv) async {
-  final args = ScenarioArgs.parse(argv);
+Future<void> main(List<String> arguments) async {
+  final scenarioArguments = ScenarioArguments.parse(arguments);
 
   final writer = await ResultWriter.open(
-    outputPath: args.outputPath,
+    outputPath: scenarioArguments.outputPath,
     scenario: 'header_flags_scaling',
-    sdkVersion: ScenarioArgs.sdkVersion,
-    packageVersion: args.packageVersion,
-    gitSha: args.gitSha,
+    sdkVersion: ScenarioArguments.sdkVersion,
+    packageVersion: scenarioArguments.packageVersion,
+    gitSha: scenarioArguments.gitSha,
   );
 
-  for (var i = 0; i < args.iterations; i++) {
+  for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final itemCount in _itemCounts) {
       final benchmark = _HeaderFlagsScaling(itemCount);
 
-      final microseconds = measureWindowed(benchmark, millis: args.measureMillis);
+      final microseconds = measureWindowed(benchmark, millis: scenarioArguments.measureMillis);
 
       writer.writeRecord(
         iteration: i,

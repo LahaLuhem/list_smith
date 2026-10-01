@@ -86,11 +86,14 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   This binds *every* identifier: fields, locals, parameters, pattern bindings. The carve-outs are
   the genre conventions: loop counters (`i`, `j`), `e` in `catch (e)`, `(a, b)` in comparator pairs,
   `x`/`y` for coordinates.
-- **Local-variable names carry a concise type-suffix.** Without IDE inlay-hints an inferred type is
-  invisible, so the name does that work. Where a domain type exists, the suffix is its name
-  (`pageResult`, not `result`, `filteredItems`, not `filtered`). Callback parameters are exempt and
-  stay single-word (`value`, `query`, `items`), since the call site already pins the type. Generic
-  suffixes (`Data`, `Info`, `Result`) lose exactly the disambiguation the rule is for.
+- **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
+  inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
+  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name that
+  already says what it holds is enough (`fetchPage`, `_pager`, a plural for a collection), but not
+  one that reads as another kind of thing (`rows` for a `RowLookup`, `_running` for a run). Callback
+  parameters are exempt and stay single-word (`value`, `query`, `items`), since the call site
+  already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
+  disambiguation the rule is for.
 - **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
   `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
   (`reverse` on `ListScrollConfig`), which keeps the framework's name.
@@ -678,7 +681,7 @@ Tests split by kind under `test/`:
 
 - **`test/unit_tests/`** holds pure-logic units in `bdd_framework` + `checks`. Frame behaviour as a
   `BddFeature` with `Bdd(...).scenario().given().when().then()`, and keep the parameter matrix in
-  one place as `.example(val(...), ...)` rows read via `ctx.example.val('name')`, never literals
+  one place as `.example(val(...), ...)` rows read via `context.example.val('name')`, never literals
   scattered through the body.
 - **`test/widget_tests/`** holds widget behaviour, framed with the local Gherkin helper in
   `test/support/bdd.dart`: `feature`, `scenarioWidgets`, `scenarioOutlineWidgets`. The helper is

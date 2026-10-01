@@ -5,9 +5,9 @@ import 'package:list_smith/list_smith.dart';
 import 'package:list_smith/src/data/source/list_source.dart';
 
 void main() {
-  final refreshState = BddFeature('ListSmithRefreshState value semantics');
+  final refreshStateFeature = BddFeature('ListSmithRefreshState value semantics');
 
-  Bdd(refreshState)
+  Bdd(refreshStateFeature)
       .scenario('equal phase, value and direction compare equal and share a hashCode')
       .given('two refresh states with the same phase, value and direction')
       .when('they are compared')
@@ -24,7 +24,7 @@ void main() {
           ..contains('up');
       });
 
-  Bdd(refreshState)
+  Bdd(refreshStateFeature)
       .scenario('a difference in phase, value or direction compares unequal')
       .given('a base refresh state')
       .when('it is compared to states differing in phase, value or direction')
@@ -48,9 +48,9 @@ void main() {
         check(base == otherDirection).isFalse();
       });
 
-  final scrollConfig = BddFeature('ListScrollConfig string form');
+  final scrollConfigFeature = BddFeature('ListScrollConfig string form');
 
-  Bdd(scrollConfig)
+  Bdd(scrollConfigFeature)
       .scenario('toString names each configured knob')
       .given('a config with padding, reverse, direction, and cache extent set')
       .when('it is converted to a string')
@@ -69,9 +69,9 @@ void main() {
           ..contains('250');
       });
 
-  final endPolicies = BddFeature('End policy string form');
+  final endPoliciesFeature = BddFeature('End policy string form');
 
-  Bdd(endPolicies)
+  Bdd(endPoliciesFeature)
       .scenario('each end policy names its configuration in toString')
       .given('a StopOnEmptyPages policy and a FixedPageCount policy')
       .when('each is converted to a string')
@@ -87,9 +87,9 @@ void main() {
         check(const StopOnNullSignalPolicy().toString()).contains('StopOnNullSignalPolicy');
       });
 
-  final refreshes = BddFeature('Refresh string form');
+  final refreshesFeature = BddFeature('Refresh string form');
 
-  Bdd(refreshes)
+  Bdd(refreshesFeature)
       .scenario('each refresh case names itself in toString')
       .given('a PullToRefresh and a NoRefresh')
       .when('each is converted to a string')
@@ -99,9 +99,9 @@ void main() {
         check(const NoRefresh().toString()).equals('NoRefresh()');
       });
 
-  final reloads = BddFeature('Reload string form');
+  final reloadsFeature = BddFeature('Reload string form');
 
-  Bdd(reloads)
+  Bdd(reloadsFeature)
       .scenario('each reload case names itself in toString')
       .given('a ResetToFirstPage and a ReloadToCurrentDepth (default and uncapped)')
       .when('each is converted to a string')
@@ -117,9 +117,9 @@ void main() {
           ..contains('allOrNothing');
       });
 
-  final searches = BddFeature('Search string form');
+  final searchesFeature = BddFeature('Search string form');
 
-  Bdd(searches)
+  Bdd(searchesFeature)
       .scenario('each search case names itself in toString')
       .given('a NoSearch and an AsyncSearch')
       .when('each is converted to a string')
@@ -130,9 +130,9 @@ void main() {
             .equals('AsyncSearch(cachePolicy: ReplaceCachePolicy())');
       });
 
-  final groupings = BddFeature('Grouping string form');
+  final groupingsFeature = BddFeature('Grouping string form');
 
-  Bdd(groupings)
+  Bdd(groupingsFeature)
       .scenario('each grouping case names itself in toString')
       .given('a NoGrouping and a Grouping.by')
       .when('each is converted to a string')
@@ -147,9 +147,9 @@ void main() {
         ).equals('KeyedGrouping(orderPolicy: RepairHeadersPolicy())');
       });
 
-  final groupOrderPolicies = BddFeature('GroupOrderPolicy string form');
+  final groupOrderPoliciesFeature = BddFeature('GroupOrderPolicy string form');
 
-  Bdd(groupOrderPolicies)
+  Bdd(groupOrderPoliciesFeature)
       .scenario('each group-order policy names itself in toString')
       .given('a RepairHeadersPolicy and a FailOnUnorderedPolicy')
       .when('each is converted to a string')
@@ -159,9 +159,9 @@ void main() {
         check(const FailOnUnorderedPolicy().toString()).equals('FailOnUnorderedPolicy()');
       });
 
-  final emptyPageBehaviours = BddFeature('EmptyPageBehaviour string form');
+  final emptyPageBehavioursFeature = BddFeature('EmptyPageBehaviour string form');
 
-  Bdd(emptyPageBehaviours)
+  Bdd(emptyPageBehavioursFeature)
       .scenario('each empty-page behaviour names itself in toString')
       .given('a ShowEmptySurface and AdvanceToFirstNonEmpty (capped and uncapped)')
       .when('each is converted to a string')
@@ -176,15 +176,15 @@ void main() {
           ..contains('7');
       });
 
-  final sources = BddFeature('List source string form and search support');
+  final sourcesFeature = BddFeature('List source string form and search support');
 
-  Bdd(sources)
+  Bdd(sourcesFeature)
       .scenario('an async source reports its config and whether it supports search')
       .given('async sources with and without a search fetcher')
       .when('each is inspected')
       .then('supportsSearch reflects the fetcher and toString names the config')
       .run((_) {
-        final plain = AsyncSource<int>(
+        final plainSource = AsyncSource<int>(
           fetchPage: PageFetcher((_) async => const <int>[]),
           itemIdGetter: (item) => item,
           editTransition: const NoEditTransition(),
@@ -194,7 +194,7 @@ void main() {
           refresh: const PullToRefresh(),
           search: const NoSearch(),
         );
-        final searchable = AsyncSource<int>(
+        final searchableSource = AsyncSource<int>(
           fetchPage: PageFetcher((_) async => const <int>[]),
           itemIdGetter: (item) => item,
           editTransition: const NoEditTransition(),
@@ -205,14 +205,14 @@ void main() {
           search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const <int>[])),
         );
 
-        check(plain.supportsSearch).isFalse();
-        check(searchable.supportsSearch).isTrue();
-        check(plain.toString())
+        check(plainSource.supportsSearch).isFalse();
+        check(searchableSource.supportsSearch).isTrue();
+        check(plainSource.toString())
           ..contains('AsyncSource')
           ..contains('pageSize: 20');
       });
 
-  Bdd(sources)
+  Bdd(sourcesFeature)
       .scenario('a sync source has a compact string form')
       .given('a sync source over some items')
       .when('it is converted to a string')

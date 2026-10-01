@@ -8,7 +8,7 @@ typedef _Row = ({int id, String label});
 typedef _Placed = ({int id, int group});
 
 void main() {
-  final resolution = BddFeature('Edit resolution');
+  final resolutionFeature = BddFeature('Edit resolution');
 
   List<String> resolveLabels(
     List<List<_Row>> pages, {
@@ -27,15 +27,15 @@ void main() {
   const editKey = 'edit';
   const shownKey = 'shown';
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('an edit covers a page read before it, never one read after')
       .given('page 0 read before the edits and page 1 read after')
       .when('rows 1 and 3 get <$editKey>')
       .then('the list shows <$shownKey>')
       .example(val(editKey, 'an update'), val(shownKey, const ['mine', 'b', 'c']))
       .example(val(editKey, 'a removal'), val(shownKey, const ['b', 'c']))
-      .run((ctx) {
-        final isRemoval = ctx.example.val(editKey) == 'a removal';
+      .run((context) {
+        final isRemoval = context.example.val(editKey) == 'a removal';
         ItemEdit<_Row> editOf(int id) =>
             (item: isRemoval ? null : (id: id, label: 'mine'), stamp: 3);
 
@@ -48,10 +48,10 @@ void main() {
           edits: {1: editOf(1), 3: editOf(3)},
         );
 
-        check(labels).deepEquals(ctx.example.val(shownKey) as List<String>);
+        check(labels).deepEquals(context.example.val(shownKey) as List<String>);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('a removal hides every copy of the item, overlap duplicates included')
       .given('2 pages that both carry row 2')
       .when('row 2 is removed')
@@ -69,7 +69,7 @@ void main() {
         check(labels).deepEquals(const ['a', 'c']);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('new items stack on top, newest first')
       .given('a loaded page')
       .when('2 new items are added, one after the other')
@@ -91,7 +91,7 @@ void main() {
 
   const pagesKey = 'pages';
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('a new item shows on top until a page has it, or every page was read after it')
       .given('a new row 9, added at edit 2')
       .when('the pages are <$pagesKey>')
@@ -99,8 +99,8 @@ void main() {
       .example(val(pagesKey, 'read before it'), val(shownKey, const ['mine', 'a']))
       .example(val(pagesKey, 'read after it'), val(shownKey, const ['a']))
       .example(val(pagesKey, 'partly read after it, with it'), val(shownKey, const ['a', 'server']))
-      .run((ctx) {
-        final (pages, readStamps) = switch (ctx.example.val(pagesKey)) {
+      .run((context) {
+        final (pages, readStamps) = switch (context.example.val(pagesKey)) {
           'read before it' => (
             [
               [(id: 1, label: 'a')],
@@ -128,7 +128,7 @@ void main() {
           edits: {9: (item: (id: 9, label: 'mine'), stamp: 2)},
         );
 
-        check(labels).deepEquals(ctx.example.val(shownKey) as List<String>);
+        check(labels).deepEquals(context.example.val(shownKey) as List<String>);
       });
 
   /// Adds [items] one after another, each newer than every page.
@@ -150,7 +150,7 @@ void main() {
   const loadedKey = 'loaded';
   const addedKey = 'added';
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('a new item goes to the start of its group, or on top when its group is not loaded')
       .given('<$loadedKey> loaded, grouped by the tens digit')
       .when('<$addedKey> are added in turn')
@@ -172,15 +172,15 @@ void main() {
         val(addedKey, const [12, 22]),
         val(shownKey, const [0, 1, 12, 10, 11, 22, 20, 21]),
       )
-      .run((ctx) {
-        final shown = resolveByTens([
-          ctx.example.val(loadedKey) as List<int>,
-        ], addedInTurn(ctx.example.val(addedKey) as List<int>));
+      .run((context) {
+        final shownItems = resolveByTens([
+          context.example.val(loadedKey) as List<int>,
+        ], addedInTurn(context.example.val(addedKey) as List<int>));
 
-        check(shown).deepEquals(ctx.example.val(shownKey) as List<int>);
+        check(shownItems).deepEquals(context.example.val(shownKey) as List<int>);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario(
         'new items of a group that is not loaded yet stay together, the newest group on top',
       )
@@ -188,14 +188,14 @@ void main() {
       .when('30, 40 and then 31 are added')
       .then('31 joins 30 under the newer group 4')
       .run((_) {
-        final shown = resolveByTens(const [
+        final shownItems = resolveByTens(const [
           [0, 1, 10, 11],
         ], addedInTurn(const [30, 40, 31]));
 
-        check(shown).deepEquals(const [40, 31, 30, 0, 1, 10, 11]);
+        check(shownItems).deepEquals(const [40, 31, 30, 0, 1, 10, 11]);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario("an edit that changes an item's group moves it to the start of that group")
       .given('items 0 and 1 in group 0, items 10 and 11 in group 1')
       .when('item 0 is edited into group 1')
@@ -215,7 +215,7 @@ void main() {
         check(pages.flattened.map((item) => item.id).toList()).deepEquals(const [1, 0, 10, 11]);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('while searching, a new item stays out but edits to results still apply')
       .given('search results, rows 1 and 2')
       .when('row 1 is edited, row 2 removed and a new row 9 added')
@@ -237,7 +237,7 @@ void main() {
         check(labels).deepEquals(const ['mine']);
       });
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('overlap duplicates stay hidden while edits are in play')
       .given('2 pages that both carry row 2')
       .when('row 1 is edited')
@@ -260,7 +260,7 @@ void main() {
   const acceptsNewItemsKey = 'acceptsNewItems';
   const shownIdsKey = 'shownIds';
 
-  Bdd(resolution)
+  Bdd(resolutionFeature)
       .scenario('the ids it reports are the ids it shows')
       .given('items 0 and 1 in group 0, items 10 and 11 in group 1, read before the edits')
       .when('<$changeKey> comes in')
@@ -289,19 +289,19 @@ void main() {
         val(acceptsNewItemsKey, true),
         val(shownIdsKey, const [0, 1, 10, 11]),
       )
-      .run((ctx) {
+      .run((context) {
         final (:pages, :shownIds) = resolveDisplayPages<_Placed>(
           pages: const [
             [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
           ],
           readStamps: const [0],
-          edits: ctx.example.val(editsKey) as Map<Object, ItemEdit<_Placed>>,
+          edits: context.example.val(editsKey) as Map<Object, ItemEdit<_Placed>>,
           itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
-          acceptsNewItems: ctx.example.val(acceptsNewItemsKey) as bool,
+          acceptsNewItems: context.example.val(acceptsNewItemsKey) as bool,
         );
 
         check(shownIds).unorderedEquals(pages.flattened.map((item) => item.id));
-        check(shownIds).unorderedEquals(ctx.example.val(shownIdsKey) as List<int>);
+        check(shownIds).unorderedEquals(context.example.val(shownIdsKey) as List<int>);
       });
 }

@@ -16,11 +16,11 @@ final class EditsViewModel extends ViewModel {
   /// Below every existing id, so the store sorts new items on top too.
   var _nextNewId = -1;
 
-  final _deletesFail = ValueNotifier(false);
+  final _shouldFailDeletesNotifier = ValueNotifier(false);
 
   final controller = ListSmithController<DemoItem>();
 
-  ValueListenable<bool> get deletesFail => _deletesFail;
+  ValueListenable<bool> get shouldFailDeletesListenable => _shouldFailDeletesNotifier;
 
   Future<(List<DemoItem>, Object?)> fetchPage(PageRequest request) async {
     await Future<void>.delayed(_latency);
@@ -62,11 +62,11 @@ final class EditsViewModel extends ViewModel {
 
   // A handler named like the rest, called from the switch's onChanged.
   // ignore: use_setters_to_change_properties
-  void onDeletesFailToggled({required bool value}) => _deletesFail.value = value;
+  void onDeletesFailToggled({required bool value}) => _shouldFailDeletesNotifier.value = value;
 
   /// Whether the store let the delete through.
   bool _deleteFromStore(DemoItem item) {
-    if (_deletesFail.value) return false;
+    if (_shouldFailDeletesNotifier.value) return false;
     _store.removeWhere((storedItem) => storedItem.id == item.id);
 
     return true;
@@ -74,7 +74,7 @@ final class EditsViewModel extends ViewModel {
 
   @override
   void dispose() {
-    _deletesFail.dispose();
+    _shouldFailDeletesNotifier.dispose();
 
     super.dispose();
   }

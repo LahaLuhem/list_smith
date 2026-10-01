@@ -52,10 +52,10 @@ class ReloadView extends StatelessWidget {
                   onChanged: viewModel.onConcurrencyChanged,
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.injectFailures,
-                  builder: (context, injectFailures, _) => BoolKnob(
+                  valueListenable: viewModel.shouldInjectFailuresListenable,
+                  builder: (context, shouldInjectFailures, _) => BoolKnob(
                     label: 'Inject a failure on reload',
-                    value: injectFailures,
+                    value: shouldInjectFailures,
                     onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
                   ),
                 ),
@@ -65,11 +65,11 @@ class ReloadView extends StatelessWidget {
                   onChanged: (value) => viewModel.onAtomicToggled(value: value),
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.refreshing,
-                  builder: (context, refreshing, _) => PlatformButton(
+                  valueListenable: viewModel.isRefreshingListenable,
+                  builder: (context, isRefreshing, _) => PlatformButton(
                     onPressed: viewModel.onRefreshPressed,
-                    isEnabled: !refreshing,
-                    child: Text(refreshing ? 'Refreshing…' : 'Refresh from code'),
+                    isEnabled: !isRefreshing,
+                    child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
                   ),
                 ),
               ],

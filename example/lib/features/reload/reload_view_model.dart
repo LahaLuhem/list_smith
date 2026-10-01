@@ -16,8 +16,8 @@ final class ReloadViewModel extends ViewModel {
 
   /// Per-page fetch count, stamped onto each item so reloads are visible. Not reactive state.
   final _attempts = <int, int>{};
-  final _injectFailures = ValueNotifier(false);
-  final _refreshing = ValueNotifier(false);
+  final _shouldInjectFailuresNotifier = ValueNotifier(false);
+  final _isRefreshingNotifier = ValueNotifier(false);
 
   /// Drives the list from the "Refresh from code" button, running whatever [reload] describes.
   final controller = ListSmithController<DemoItem>();
@@ -33,10 +33,10 @@ final class ReloadViewModel extends ViewModel {
   bool get atomic => _atomic;
 
   /// Whether the next reload fails one page, to exercise the error policy. Read live by [fetchPage].
-  ValueListenable<bool> get injectFailures => _injectFailures;
+  ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
-  ValueListenable<bool> get refreshing => _refreshing;
+  ValueListenable<bool> get isRefreshingListenable => _isRefreshingNotifier;
 
   /// The reload strategy the current knobs describe, handed to `PullToRefresh`.
   Reload get reload => _keepDepth
@@ -52,7 +52,7 @@ final class ReloadViewModel extends ViewModel {
     await Future<void>.delayed(_latency);
 
     final attempt = _attempts[pageIndex] = (_attempts[pageIndex] ?? 0) + 1;
-    if (_injectFailures.value && pageIndex == _failPage && attempt > 1) {
+    if (_shouldInjectFailuresNotifier.value && pageIndex == _failPage && attempt > 1) {
       throw Exception('Simulated reload failure on page $pageIndex');
     }
     if (pageIndex >= _dataPages) return const [];
@@ -85,25 +85,26 @@ final class ReloadViewModel extends ViewModel {
 
   // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
-  void onInjectFailuresToggled({required bool value}) => _injectFailures.value = value;
+  void onInjectFailuresToggled({required bool value}) =>
+      _shouldInjectFailuresNotifier.value = value;
 
   /// Refreshes without a pull, holding the button busy until `refresh()` completes. Under [ReloadToCurrentDepth]
   /// that's when the refetch lands, under [ResetToFirstPage] only when the list clears and its own first-page
   /// loader takes over.
   Future<void> onRefreshPressed() async {
-    _refreshing.value = true;
+    _isRefreshingNotifier.value = true;
 
     try {
       await controller.refresh();
     } finally {
-      if (!disposed) _refreshing.value = false;
+      if (!disposed) _isRefreshingNotifier.value = false;
     }
   }
 
   @override
   void dispose() {
-    _injectFailures.dispose();
-    _refreshing.dispose();
+    _shouldInjectFailuresNotifier.dispose();
+    _isRefreshingNotifier.dispose();
 
     super.dispose();
   }

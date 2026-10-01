@@ -288,9 +288,9 @@ renames.
 
 - **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
   methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `decorate(itemBuilder, flatItems:, axis:)` returns
-  the per-build item builder. Same "delegate to the type, keep the shell branch-free" move as the
-  open end-policy ([#explicit-end-signals](#explicit-end-signals)).
+  `arrange(items)` is the sync display ordering, `decorate(itemBuilder, flattenItems:, axis:)`
+  returns the per-build item builder. Same "delegate to the type, keep the shell branch-free" move
+  as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
 - **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
   compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
   Opening it later is a one-line change. `@internal` makes them callable across the package but not
@@ -302,7 +302,7 @@ renames.
   Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
-- **The ungrouped path still does no flatten.** `decorate` takes `flatItems` as a callback
+- **The ungrouped path still does no flatten.** `decorate` takes `flattenItems` as a callback
   `NoGrouping.decorate` never invokes, so an ungrouped async list skips the O(loaded) page flatten.
   Only `KeyedGrouping.decorate` calls it, once per build, for the header flags and the assert.
   Dispatch is per build rather than per item, one virtual call replacing one `is` check, so the
@@ -636,7 +636,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   store, and `void` keeps `Dismissible.onDismissed` plain.
 - **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
   in-flight page's cursor, so the next page repeats. Anything that changes what the edits show
-  bumps `_editStamp` instead, since the display memo keys on it.
+  bumps `_editStampNotifier` instead, since the display memo keys on it.
 - **New items** join the start of their group, else the top, since async groups have to stay
   together. They stay out of search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That

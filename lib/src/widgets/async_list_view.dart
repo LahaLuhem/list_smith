@@ -43,10 +43,6 @@ import 'row_transitions_notifier.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
 /// runs feed and search as 2 views on that one controller.
-///
-/// Unexported. The fetch closure reads the debounced committed query: empty runs [AsyncSource.fetchPage],
-/// non-empty runs the [AsyncSearch] fetcher. A change of query runs that search's cache policy against
-/// the controller.
 class AsyncListView<T extends Object> extends StatefulWidget {
   /// The fetchers, end policy and search cache policy.
   final AsyncSource<T> source;
@@ -147,13 +143,13 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   final _edits = <Object, ItemEdit<T>>{};
 
   /// Counts local edits.
-  final _editStamp = ValueNotifier<int>(0);
+  final _editStampNotifier = ValueNotifier<int>(0);
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
 
   /// The reload running now, null when none is in flight.
-  _ReloadRun<T>? _running;
+  _ReloadRun<T>? _runningReload;
 
   /// The rows edits are animating. Idle unless the source has an [EditTransition].
   late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(
@@ -170,7 +166,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _pager
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
-    _editStamp.addListener(_maybeAdvancePastEmptyPage);
+    _editStampNotifier.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
   }
 
@@ -194,7 +190,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     _debouncer.dispose();
     _pager.dispose();
     _searchModeNotifier.dispose();
-    _editStamp.dispose();
+    _editStampNotifier.dispose();
     _rowTransitionsNotifier.dispose();
 
     super.dispose();
@@ -274,7 +270,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// right before it fetches.
   PageKey? _nextPageKey(PagingState<PageKey, T> state) {
     final pages = state.pages;
-    final readStamp = _editStamp.value;
+    final readStamp = _editStampNotifier.value;
     if (pages == null || pages.isEmpty) return (index: 0, readStamp: readStamp);
 
     final endContext = EndContext(
@@ -289,18 +285,14 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   }
 
   /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
-  /// in it.
-  ///
-  /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
-  /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per change, memoised in
-  /// [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
+  /// in it. The controller's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
   _Display<T> _displayFor(PagingState<PageKey, T> state) {
     final itemIdGetter = widget.source.itemIdGetter;
     final pages = state.pages;
     final keys = state.keys;
     if (pages == null || keys == null) return (state: state, shownIds: const {});
 
-    final editStamp = _editStamp.value;
+    final editStamp = _editStampNotifier.value;
     final isSearchMode = _searchModeNotifier.value;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
@@ -346,26 +338,24 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
     if (readStamps.isEmpty) return;
 
     final oldestRead = readStamps.min;
-    // Nothing dropped here still shows, so no [_editStamp] bump, which the display memo keys on.
+    // Nothing dropped here still shows, so no [_editStampNotifier] bump, which the display memo keys on.
     _edits.removeWhere((_, edit) => edit.stamp <= oldestRead);
   }
 
   /// Pages the controller past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since
   /// the pager parks there with nothing on screen to scroll.
-  ///
-  /// Runs on every controller change, deferred to a microtask so it never re-enters the controller's
-  /// own notification, and re-checked on arrival because the state can move in between.
   void _maybeAdvancePastEmptyPage() {
     if (!_shouldAdvancePastEmpty(_pager.value)) return;
 
+    // Deferred so it never re-enters the controller's own notification, re-checked since the state
+    // can move in between.
     scheduleMicrotask(() {
       if (mounted && _shouldAdvancePastEmpty(_pager.value)) _pager.fetchNextPage();
     });
   }
 
-  /// Gathers the [EmptyPageContext] and lets [EmptyPageBehaviour.shouldAdvance] decide, unless edits
-  /// emptied the screen. Emptiness comes off what the user sees, more-available off the raw pages. Gates
-  /// both the auto-fetch and the loading surface meanwhile, so the two can't disagree.
+  /// Whether to page past an empty screen. Emptiness comes off what the user sees, more-available off
+  /// the raw pages. Gates both the auto-fetch and the loading surface, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) {
     // No page yet isn't an empty list.
     final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
@@ -422,9 +412,9 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         return snapshot;
       case (.snapshotThenRefresh, _):
         // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
-        final running = _running;
-        final strandedTrigger = running != null && !running.isStale
-            ? _stronger(running.rerun, running.trigger)
+        final runningReload = _runningReload;
+        final strandedTrigger = runningReload != null && !runningReload.isStale
+            ? _stronger(runningReload.rerunTrigger, runningReload.trigger)
             : null;
         _normalSnapshot = _NormalSnapshot(
           state: _pager.value.copyWith(isLoading: false, error: null),
@@ -493,7 +483,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       controller: _pager,
       builder: (_, state, fetchNextPage) => DualValueListenableBuilder(
         firstListenable: _searchModeNotifier,
-        secondListenable: _editStamp, // an edit only needs the rebuild, _displayFor reads the edits
+        secondListenable:
+            _editStampNotifier, // an edit only needs the rebuild, _displayFor reads the edits
         builder: (context, isSearchMode, _, _) {
           // AdvanceToFirstNonEmpty pages past an empty page itself, so show loading while it does and
           // keep the empty surface for the true end (or the maxPages give-up).
@@ -606,38 +597,38 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// Whether the item with [id] has a row in what renders now.
   bool _isShown(Object id) => _displayFor(_pager.value).shownIds.contains(id);
 
-  /// Books [edited] against [item]'s id, null for a removal.
-  void _edit(T item, T? edited) {
+  /// Books [editedItem] against [item]'s id, null for a removal.
+  void _edit(T item, T? editedItem) {
     final id = widget.source.itemIdGetter(item);
-    final stamp = _editStamp.value + 1;
+    final stamp = _editStampNotifier.value + 1;
     _edits
       ..remove(id) // re-booked at the end, so the newest new item lands on top
-      ..[id] = (item: edited, stamp: stamp);
-    _editStamp.value = stamp;
+      ..[id] = (item: editedItem, stamp: stamp);
+    _editStampNotifier.value = stamp;
   }
 
   /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run. [reload]
   /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
   Future<void> _runReload(FetchTrigger trigger, {Reload? reload}) {
     _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
-    final running = _running;
-    if (running != null && !running.isStale) {
-      if (running.trigger != .refresh || trigger != .refresh) {
-        running.rerun = _stronger(running.rerun, trigger);
+    final runningReload = _runningReload;
+    if (runningReload != null && !runningReload.isStale) {
+      if (runningReload.trigger != .refresh || trigger != .refresh) {
+        runningReload.rerunTrigger = _stronger(runningReload.rerunTrigger, trigger);
       }
 
-      return running.done;
+      return runningReload.done;
     }
 
     final run = _ReloadRun(this, trigger);
-    _running = run;
+    _runningReload = run;
     widget.observer?.onReload(trigger);
     unawaited(
       (reload ?? _reloadFor(trigger)).run(run).whenComplete(() {
-        if (identical(_running, run)) _running = null;
+        if (identical(_runningReload, run)) _runningReload = null;
         run.finish();
-        final rerun = run.rerun;
-        if (rerun != null && !run.isStale) unawaited(_runReload(rerun));
+        final rerunTrigger = run.rerunTrigger;
+        if (rerunTrigger != null && !run.isStale) unawaited(_runReload(rerunTrigger));
       }),
     );
 
@@ -665,19 +656,19 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   /// What every page fetched through this run reports.
   final FetchTrigger trigger;
 
-  final _done = Completer<void>();
+  final _doneCompleter = Completer<void>();
 
   /// The generation this run belongs to. Its own writes move it along, so only another writer can make
   /// it stale.
   int _epoch;
 
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
-  FetchTrigger? rerun;
+  FetchTrigger? rerunTrigger;
 
   new(this._engine, this.trigger) : _epoch = _engine._generation;
 
   /// Completes once the reload finishes, committed or not, after the engine has let go of the run.
-  Future<void> get done => _done.future;
+  Future<void> get done => _doneCompleter.future;
 
   @override
   bool get isStale => _engine._generation != _epoch;
@@ -696,7 +687,7 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
 
   @override
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
-    _readStamps[index] = _engine._editStamp.value;
+    _readStamps[index] = _engine._editStampNotifier.value;
 
     return _engine._fetchPageRaw(index, previousSignal, trigger);
   }
@@ -726,7 +717,7 @@ final class _ReloadRun<T extends Object> implements ReloadContext<T> {
   }
 
   /// Marks the run finished. The engine calls it once it has let go of the run.
-  void finish() => _done.complete();
+  void finish() => _doneCompleter.complete();
 }
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.

@@ -15,7 +15,7 @@ final class ObserverViewModel extends ViewModel {
   final _repository = DemoRepository();
   final _queryNotifier = ValueNotifier('');
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
-  final _events = ListNotifier<String>();
+  final _eventsNotifier = ListNotifier<String>();
 
   /// The observer handed to `ListSmith.async`. Records each event into [eventsListenable].
   late final observer = _EventLogObserver(_record);
@@ -27,7 +27,7 @@ final class ObserverViewModel extends ViewModel {
   ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
   /// The recorded observer events, newest first.
-  ValueListenable<List<String>> get eventsListenable => _events;
+  ValueListenable<List<String>> get eventsListenable => _eventsNotifier;
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     final page = await _repository.fetchPage(request.pageIndex, request.pageSize);
@@ -57,18 +57,18 @@ final class ObserverViewModel extends ViewModel {
       _shouldInjectFailuresNotifier.value = value;
 
   /// Empties the event log.
-  void clearLog() => _events.clear();
+  void clearLog() => _eventsNotifier.clear();
 
   void _record(String event) {
-    _events.insert(0, event);
-    if (_events.length > _maxLoggedEvents) _events.removeLast();
+    _eventsNotifier.insert(0, event);
+    if (_eventsNotifier.length > _maxLoggedEvents) _eventsNotifier.removeLast();
   }
 
   @override
   void dispose() {
     _queryNotifier.dispose();
     _shouldInjectFailuresNotifier.dispose();
-    _events.dispose();
+    _eventsNotifier.dispose();
 
     super.dispose();
   }

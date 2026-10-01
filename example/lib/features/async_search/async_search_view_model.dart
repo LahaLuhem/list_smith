@@ -10,13 +10,13 @@ import '/features/core/repos/demo_repository.dart';
 final class AsyncSearchViewModel extends ViewModel {
   final _repository = DemoRepository();
   final _queryNotifier = ValueNotifier('');
-  final _keepCacheNotifier = ValueNotifier(false);
+  final _shouldKeepCacheNotifier = ValueNotifier(false);
 
   /// The live search query, driven by the search field.
   ValueListenable<String> get queryListenable => _queryNotifier;
 
   /// Keep and restore the feed across a search (`KeepCachePolicy`) rather than reload it.
-  ValueListenable<bool> get keepCacheListenable => _keepCacheNotifier;
+  ValueListenable<bool> get shouldKeepCacheListenable => _shouldKeepCacheNotifier;
 
   Future<List<DemoItem>> fetchPage(PageRequest request) =>
       _repository.fetchPage(request.pageIndex, request.pageSize);
@@ -30,12 +30,12 @@ final class AsyncSearchViewModel extends ViewModel {
 
   // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
-  void onKeepCacheToggled({required bool value}) => _keepCacheNotifier.value = value;
+  void onKeepCacheToggled({required bool value}) => _shouldKeepCacheNotifier.value = value;
 
   @override
   void dispose() {
     _queryNotifier.dispose();
-    _keepCacheNotifier.dispose();
+    _shouldKeepCacheNotifier.dispose();
 
     super.dispose();
   }

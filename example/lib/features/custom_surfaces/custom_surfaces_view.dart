@@ -35,8 +35,8 @@ class CustomSurfacesView extends StatelessWidget {
             ),
           ),
           _FailureToggle(
-            injectFailures: viewModel.shouldInjectFailuresListenable,
-            onChanged: (value) => viewModel.onFailureToggled(value: value),
+            shouldInjectFailuresListenable: viewModel.shouldInjectFailuresListenable,
+            onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
           ),
           Expanded(
             child: ListSmith.async(
@@ -65,10 +65,10 @@ class CustomSurfacesView extends StatelessWidget {
 
 /// A labelled switch that toggles injected fetch failures.
 class _FailureToggle extends StatelessWidget {
-  final ValueListenable<bool> injectFailures;
+  final ValueListenable<bool> shouldInjectFailuresListenable;
   final ValueChanged<bool> onChanged;
 
-  const new({required this.injectFailures, required this.onChanged});
+  const new({required this.shouldInjectFailuresListenable, required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -77,7 +77,7 @@ class _FailureToggle extends StatelessWidget {
       children: [
         const Expanded(child: Text('Inject fetch failures')),
         ValueListenableBuilder(
-          valueListenable: injectFailures,
+          valueListenable: shouldInjectFailuresListenable,
           builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
         ),
       ],

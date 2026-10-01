@@ -297,12 +297,12 @@ void main() {
       await tester.pump();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
-      final leaving = find.ancestor(
+      final leavingFinder = find.ancestor(
         of: find.text('Item 2', skipOffstage: false),
         matching: find.byType(SizeTransition, skipOffstage: false),
       );
 
-      check(tester.getSize(leaving.first).height)
+      check(tester.getSize(leavingFinder.first).height)
         ..isGreaterThan(0)
         ..isLessThan(fullHeight);
       for (var frame = 0; frame < 4; frame++) {

@@ -42,10 +42,10 @@ class EditsView extends StatelessWidget {
                       'and it comes back.',
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.deletesFail,
-                  builder: (context, deletesFail, _) => BoolKnob(
+                  valueListenable: viewModel.shouldFailDeletesListenable,
+                  builder: (context, shouldFailDeletes, _) => BoolKnob(
                     label: 'Deletes fail',
-                    value: deletesFail,
+                    value: shouldFailDeletes,
                     onChanged: (value) => viewModel.onDeletesFailToggled(value: value),
                   ),
                 ),

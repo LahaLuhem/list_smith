@@ -70,7 +70,7 @@ then override. list_smith does neither.
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
 | **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
-| **Swap behaviour, not widgets**    | 9 sealed seams: refresh, reload, search, cache policy, end detection, empty pages, grouping, group order, edit transitions. Built-ins for each, or write your own.                       |
+| **Swap behaviour, not widgets**    | Sealed seams for refresh, reload, search, cache policy, end detection, empty pages, grouping, group order, edit transitions. Built-ins for each, or write your own.                      |
 | **Perf is measured, not claimed**  | A committed [benchmark suite](#performance) with numbers and charts, so a regression shows up as a number.                                                                               |
 
 ## A quick taste
@@ -362,7 +362,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 ## Editing loaded items
 
 A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
-re-read: just notify the list, and it shows the change at once, keeping the scroll position.
+re-read. Notify the list and it shows the change at once, keeping the scroll position.
 
 ```dart
 ListSmith.async(

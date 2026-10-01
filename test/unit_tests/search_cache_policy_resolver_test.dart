@@ -5,14 +5,14 @@ import 'package:list_smith/src/data/search/enums/cache_action.dart';
 import 'package:list_smith/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
 
 void main() {
-  final cacheTransition = BddFeature('Search cache transition');
+  final cacheTransitionFeature = BddFeature('Search cache transition');
 
   const policyKey = 'policy';
   const wasKey = 'wasSearching';
   const isKey = 'isSearching';
   const actionKey = 'action';
 
-  Bdd(cacheTransition)
+  Bdd(cacheTransitionFeature)
       .scenario('maps a mode transition to the cache action for the policy')
       .given('a <$policyKey> and a transition from wasSearching <$wasKey> to isSearching <$isKey>')
       .when('it resolves the cache action')
@@ -55,12 +55,12 @@ void main() {
         val(isKey, true),
         val(actionKey, CacheAction.refresh),
       )
-      .run((ctx) {
-        final action = (ctx.example.val(policyKey) as SearchCachePolicy).actionFor(
-          wasSearching: ctx.example.val(wasKey) as bool,
-          isSearching: ctx.example.val(isKey) as bool,
+      .run((context) {
+        final action = (context.example.val(policyKey) as SearchCachePolicy).actionFor(
+          wasSearching: context.example.val(wasKey) as bool,
+          isSearching: context.example.val(isKey) as bool,
         );
 
-        check(action).equals(ctx.example.val(actionKey) as CacheAction);
+        check(action).equals(context.example.val(actionKey) as CacheAction);
       });
 }

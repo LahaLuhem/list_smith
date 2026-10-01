@@ -64,10 +64,10 @@ abstract final class SyncSearchPredicates {
 
   /// Matches when *any* of [predicates] matches. Each gets the same item and query.
   static SyncSearchPredicate<T> any<T extends Object>(Iterable<SyncSearchPredicate<T>> predicates) {
-    final options = predicates.toList(growable: false);
-    assert(options.isNotEmpty, 'Pass at least one predicate to combine.');
+    final predicateList = predicates.toList(growable: false);
+    assert(predicateList.isNotEmpty, 'Pass at least one predicate to combine.');
 
-    return (item, query) => options.any((predicate) => predicate(item, query));
+    return (item, query) => predicateList.any((predicate) => predicate(item, query));
   }
 
   /// Matches only when *every* one of [predicates] matches. Each gets the same item and query.
@@ -83,7 +83,7 @@ abstract final class SyncSearchPredicates {
   // Keeps an item when `test` holds for any extracted field against the query, both lower-cased.
   static SyncSearchPredicate<T> _anyField<T extends Object>(
     Iterable<String? Function(T item)> extractors,
-    bool Function(String value, String query) test,
+    SyncSearchPredicate<String> test,
   ) {
     final fieldExtractors = extractors.toList(growable: false);
     assert(fieldExtractors.isNotEmpty, 'Pass at least one field extractor to match against.');

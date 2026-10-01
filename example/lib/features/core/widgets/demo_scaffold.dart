@@ -30,14 +30,14 @@ class _BrightnessToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ThemeScope.of(context);
+    final themeModeNotifier = ThemeScope.of(context);
 
     return GestureDetector(
-      onTap: () => themeMode.value = _nextThemeMode(themeMode.value),
+      onTap: () => themeModeNotifier.value = _nextThemeMode(themeModeNotifier.value),
       behavior: .opaque,
       child: Padding(
         padding: const .all(12),
-        child: Icon(_brightnessIcon(themeMode.value), size: 22),
+        child: Icon(_brightnessIcon(themeModeNotifier.value), size: 22),
       ),
     );
   }

@@ -3,7 +3,7 @@ import 'package:checks/checks.dart';
 import 'package:list_smith/src/data/search/utils/sync_search_resolver.dart';
 
 void main() {
-  final syncSearch = BddFeature('Sync search resolution');
+  final syncSearchFeature = BddFeature('Sync search resolution');
 
   const items = ['apple', 'banana', 'cherry'];
   bool contains(String item, String query) => item.toLowerCase().contains(query.toLowerCase());
@@ -13,7 +13,7 @@ void main() {
   const searchingKey = 'searching';
   const visibleKey = 'visible';
 
-  Bdd(syncSearch)
+  Bdd(syncSearchFeature)
       .scenario('gates the query by trim and min-length, then filters by the predicate')
       .given('items $items and a case-insensitive contains predicate')
       .when('it resolves query <$queryKey> with minSearchLength <$minLengthKey>')
@@ -62,15 +62,16 @@ void main() {
         val(searchingKey, true),
         val(visibleKey, const <String>[]),
       )
-      .run((ctx) {
-        final result = resolveSyncSearch(
+      .run((context) {
+        final searchResult = resolveSyncSearch(
           items,
           contains,
-          ctx.example.val(queryKey) as String,
-          ctx.example.val(minLengthKey) as int,
+          context.example.val(queryKey) as String,
+          context.example.val(minLengthKey) as int,
         );
 
-        check(result.isSearching).equals(ctx.example.val(searchingKey) as bool);
-        check(result.visibleItems).deepEquals(ctx.example.val(visibleKey) as List<String>);
+        check(searchResult.isSearching).equals(context.example.val(searchingKey) as bool);
+        check(searchResult.visibleItems)
+            .deepEquals(context.example.val(visibleKey) as List<String>);
       });
 }

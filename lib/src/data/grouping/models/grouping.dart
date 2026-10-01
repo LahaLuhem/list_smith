@@ -28,18 +28,18 @@ sealed class Grouping<T extends Object> {
 
   /// Wraps [itemBuilder] into the builder for one build. Once per build, not per item.
   ///
-  /// [flatItems] is a callback because the ungrouped path never flattens and shouldn't pay for it.
+  /// [flattenItems] is a callback because the ungrouped path never flattens and shouldn't pay for it.
   @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required Iterable<T> Function() flatItems,
+    required Iterable<T> Function() flattenItems,
     required Axis axis,
   });
 
   /// Pulls an item's group key, null when there are no groups. The edit layer reads it to keep a new or
   /// moved item inside its group.
   @internal
-  Object Function(T item)? get groupOf;
+  GroupKeyOf<T, Object>? get groupOf;
 
   /// Groups items by the key from [groupBy], drawing each section's header with [headerBuilder].
   ///
