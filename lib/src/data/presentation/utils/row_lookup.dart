@@ -15,7 +15,7 @@ final class RowLookup<T extends Object>(
 
   late final Map<Object, int> _indexById = _mapIds();
 
-  /// Creates it over one build's [pages].
+  /// Creates it over one build's pages.
   this;
 
   /// The item at flat [index].

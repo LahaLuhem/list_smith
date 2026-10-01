@@ -2,11 +2,7 @@ import 'package:flutter/widgets.dart';
 
 /// [Directionality], [MediaQuery] and bounded constraints, so a scenario can host a `ListSmith` without
 /// a full app shell.
-class HostFrame extends StatelessWidget {
-  const new({required this.child, super.key});
-
-  final Widget child;
-
+class const HostFrame({required final Widget child, super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.ltr,

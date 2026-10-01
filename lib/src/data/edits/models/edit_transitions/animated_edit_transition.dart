@@ -8,6 +8,7 @@ final class const AnimatedEditTransition._({
   /// Wraps a row while it animates.
   required final AnimatedSwitcherTransitionBuilder transitionBuilder,
 }) extends EditTransition {
+  /// Creates it.
   this : super._();
 
   @override

@@ -18,6 +18,9 @@ class ListSmithController<T extends Object>() {
   ListSmithControllerHost<T>? _host;
   var _wasEverAttached = false;
 
+  /// Creates it.
+  this;
+
   /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] when the list
   /// has no pull). While searching, it reloads the search.
   ///
