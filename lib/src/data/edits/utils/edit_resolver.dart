@@ -5,9 +5,9 @@ import '../typedefs/item_edit.dart';
 /// The start given to a group that isn't loaded, whose items open on top instead.
 const _opensOnTop = -1;
 
-/// The pages as they render, edits applied. An edit only covers a page read before it, since a page
-/// read after already has the server's answer. [edits] runs oldest to newest.
-List<List<T>> resolveDisplayPages<T extends Object>({
+/// The pages as they render, edits applied, and the ids in them. An edit only covers a page read
+/// before it, since a page read after already has the server's answer. [edits] runs oldest to newest.
+({List<List<T>> pages, Set<Object> shownIds}) resolveDisplayPages<T extends Object>({
   required List<List<T>> pages,
   required List<int> readStamps,
   required Map<Object, ItemEdit<T>> edits,
@@ -41,7 +41,7 @@ List<List<T>> resolveDisplayPages<T extends Object>({
     }
     displayPages.add(displayPage);
   }
-  if (displayPages.isEmpty) return displayPages;
+  if (displayPages.isEmpty) return (pages: displayPages, shownIds: shownIds);
 
   // A new item shows while some page predates it. Once none does, the server's answer is in.
   final oldestRead = readStamps.min;
@@ -52,9 +52,12 @@ List<List<T>> resolveDisplayPages<T extends Object>({
       .map((entry) => entry.value.item)
       .nonNulls // a removal has nothing to place
       .toList(growable: false);
-  if (toPlace.isNotEmpty) _placeAll(displayPages, toPlace, groupOf);
+  if (toPlace.isNotEmpty) {
+    _placeAll(displayPages, toPlace, groupOf);
+    shownIds.addAll(toPlace.map(itemId)); // the new ones weren't on a page
+  }
 
-  return displayPages;
+  return (pages: displayPages, shownIds: shownIds);
 }
 
 /// Puts [items], oldest first, where inserting them one by one would: each at the start of its group,

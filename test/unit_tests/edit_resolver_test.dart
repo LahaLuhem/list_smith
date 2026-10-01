@@ -22,7 +22,7 @@ void main() {
     itemId: (item) => item.id,
     groupOf: null,
     acceptsNewItems: acceptsNewItems,
-  ).flattened.map((item) => item.label).toList(growable: false);
+  ).pages.flattened.map((item) => item.label).toList(growable: false);
 
   const editKey = 'edit';
   const shownKey = 'shown';
@@ -145,7 +145,7 @@ void main() {
         itemId: (item) => item,
         groupOf: (item) => item ~/ 10,
         acceptsNewItems: true,
-      ).flattened.toList(growable: false);
+      ).pages.flattened.toList(growable: false);
 
   const loadedKey = 'loaded';
   const addedKey = 'added';
@@ -210,7 +210,7 @@ void main() {
           itemId: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: true,
-        );
+        ).pages;
 
         check(pages.flattened.map((item) => item.id).toList()).deepEquals(const [1, 0, 10, 11]);
       });
@@ -253,5 +253,55 @@ void main() {
         );
 
         check(labels).deepEquals(const ['mine', 'b', 'c']);
+      });
+
+  const changeKey = 'change';
+  const editsKey = 'edits';
+  const acceptsNewItemsKey = 'acceptsNewItems';
+  const shownIdsKey = 'shownIds';
+
+  Bdd(resolution)
+      .scenario('the ids it reports are the ids it shows')
+      .given('items 0 and 1 in group 0, items 10 and 11 in group 1, read before the edits')
+      .when('<$changeKey> comes in')
+      .then('it reports <$shownIdsKey>, the ids on its pages')
+      .example(
+        val(changeKey, 'a new item'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{12: (item: (id: 12, group: 1), stamp: 1)}),
+        val(acceptsNewItemsKey, true),
+        val(shownIdsKey, const [0, 1, 10, 11, 12]),
+      )
+      .example(
+        val(changeKey, 'a new item while searching'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{12: (item: (id: 12, group: 1), stamp: 1)}),
+        val(acceptsNewItemsKey, false),
+        val(shownIdsKey, const [0, 1, 10, 11]),
+      )
+      .example(
+        val(changeKey, 'a removal'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{1: (item: null, stamp: 1)}),
+        val(acceptsNewItemsKey, true),
+        val(shownIdsKey, const [0, 10, 11]),
+      )
+      .example(
+        val(changeKey, 'a move to another group'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{0: (item: (id: 0, group: 1), stamp: 1)}),
+        val(acceptsNewItemsKey, true),
+        val(shownIdsKey, const [0, 1, 10, 11]),
+      )
+      .run((ctx) {
+        final (:pages, :shownIds) = resolveDisplayPages<_Placed>(
+          pages: const [
+            [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
+          ],
+          readStamps: const [0],
+          edits: ctx.example.val(editsKey) as Map<Object, ItemEdit<_Placed>>,
+          itemId: (item) => item.id,
+          groupOf: (item) => item.group,
+          acceptsNewItems: ctx.example.val(acceptsNewItemsKey) as bool,
+        );
+
+        check(shownIds).unorderedEquals(pages.flattened.map((item) => item.id));
+        check(shownIds).unorderedEquals(ctx.example.val(shownIdsKey) as List<int>);
       });
 }
