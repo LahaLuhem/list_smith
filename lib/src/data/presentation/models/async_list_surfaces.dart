@@ -11,7 +11,7 @@ import '../typedefs/error_builder.dart';
 /// for a house style. The pull indicator lives on [PullToRefresh] instead, and the empty state sits
 /// on the constructor, since every list has one.
 @immutable
-class const AsyncListSurfaces({
+final class const AsyncListSurfaces({
   /// Builds the first-page loading surface.
   final WidgetBuilder? firstPageLoadingBuilder,
 

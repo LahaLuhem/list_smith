@@ -7,7 +7,7 @@ import '../enums/list_smith_refresh_phase.dart';
 /// Just the [phase], drag [value] and [pullDirection] a custom indicator needs, so the mechanism underneath
 /// stays swappable.
 @immutable
-class const ListSmithRefreshState({
+final class const ListSmithRefreshState({
   /// Where the gesture currently is.
   required final ListSmithRefreshPhase phase,
 

@@ -256,6 +256,12 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   builder callbacks) whose `.toString()` is just `Closure: …`: they add noise, and interpolating a
   callable bare trips DCM's `avoid-missed-calls`. Widget subclasses are exempt, since Flutter's
   diagnostics already wire theirs.
+- **Pick a public class's modifier by how an app tests against it.** A value an app builds or
+  receives (a config, the state handed to a builder) is `final`, since a test builds a real one. A
+  class an app calls and stubs in its tests stays open, because `final` and `base` block the
+  `implements` that mocktail and mockito mocks need. `ListSmithController` is one: an unattached
+  real one asserts on `refresh()`. Adding a method to an open class keeps those mocks compiling, and
+  only breaks a hand-written fake.
 
 ---
 
