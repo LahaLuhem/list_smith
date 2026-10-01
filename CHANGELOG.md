@@ -4,14 +4,15 @@
 - \[#75\] Rows follow their item, and edits can animate them in and out
 
 ### Changed
-- \[#74\] Pull indicator follows the pull's side and physics, adds pullDirection and indicatorExtent
-- \[#75\] **BREAKING:** ListSmith.async now requires itemIdGetter, which replaces the optional itemId.
-- \[#75\] **BREAKING:** the ItemId typedef is now ItemIdGetter.
-- \[#69\] **BREAKING:** PullToRefresh's refreshBuilder is now indicatorBuilder (RefreshIndicatorBuilder), with no child argument. ListSmithRefreshPhase drops idle.
-- \[#24\] **BREAKING:** ListSmithController is now typed by its list's items. Add the type where you declare one.
+- \[#74\] Pull indicator follows the pull's side and physics, adds `pullDirection` and `indicatorExtent`
+- \[#75\] **BREAKING:** ListSmith.async now requires `itemIdGetter`, which replaces the optional `itemId`.
+- \[#75\] **BREAKING:** the `ItemId` typedef is now `ItemIdGetter`.
+- \[#69\] **BREAKING:** PullToRefresh's `refreshBuilder` is now `indicatorBuilder` (RefreshIndicatorBuilder), with no child argument. ListSmithRefreshPhase drops `.idle`.
+- \[#24\] **BREAKING:** ListSmithController is now typed by its list's items.
+- **BREAKING:** AsyncListSurfaces, ListScrollConfig and ListSmithRefreshState are `final`
 
 ### Fixed
-- \[#69\] Idle lists stop drawing frames: indicatorBuilder replaces refreshBuilder
+- \[#69\] Idle lists stop drawing frames: `indicatorBuilder` replaces `refreshBuilder`
 - \[#72\] A row keeps its state, and a swipe in progress, when rows above it come or go
 
 ## [1.0.0] - 2026-09-11
