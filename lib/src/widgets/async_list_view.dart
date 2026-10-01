@@ -139,12 +139,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
 
   /// Memo for [_displayFor], keyed on paging-state identity, the edit counter and the mode, so a rebuild
   /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
-  ({
-    PagingState<PageKey, T> raw,
-    int editStamp,
-    bool isSearchMode,
-    PagingState<PageKey, T> display,
-  })?
+  ({PagingState<PageKey, T> raw, int editStamp, bool isSearchMode, _Display<T> display})?
   _displayMemo;
 
   /// The latest local edit per item id, oldest first. Beside the pages rather than in them, so the end
@@ -293,16 +288,17 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
         : (index: pages.length, readStamp: readStamp);
   }
 
-  /// What renders: [state] with the local edits applied and overlap duplicates dropped.
+  /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
+  /// in it.
   ///
   /// The controller's own pages stay raw, so [_nextPageKey] feeds the end policy what the backend actually
   /// returned and a fully-duplicate page isn't read as end-of-data. O(loaded) per change, memoised in
   /// [_displayMemo]. Rationale in APPENDIX.md, `overlap-dedup`.
-  PagingState<PageKey, T> _displayFor(PagingState<PageKey, T> state) {
+  _Display<T> _displayFor(PagingState<PageKey, T> state) {
     final itemId = widget.source.itemId;
     final pages = state.pages;
     final keys = state.keys;
-    if (pages == null || keys == null) return state;
+    if (pages == null || keys == null) return (state: state, shownIds: const {});
 
     final editStamp = _editStamp.value;
     final isSearchMode = _searchModeNotifier.value;
@@ -314,28 +310,25 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
       return displayMemo.display;
     }
 
-    final seenIds = <Object>{};
-    // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
-    final displayState = _edits.isEmpty
-        ? state.filterItems((item) => seenIds.add(itemId(item)))
-        : state.copyWith(
-            pages: resolveDisplayPages(
-              pages: pages,
-              readStamps: keys.map((key) => key.readStamp).toList(growable: false),
-              edits: _edits,
-              itemId: itemId,
-              groupOf: widget.grouping.groupOf,
-              acceptsNewItems: !isSearchMode, // only the server knows what matches the query
-            ),
-          );
-    _displayMemo = (
-      raw: state,
-      editStamp: editStamp,
-      isSearchMode: isSearchMode,
-      display: displayState,
-    );
+    final _Display<T> display;
+    if (_edits.isEmpty) {
+      // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
+      final seenIds = <Object>{};
+      display = (state: state.filterItems((item) => seenIds.add(itemId(item))), shownIds: seenIds);
+    } else {
+      final (pages: displayPages, :shownIds) = resolveDisplayPages(
+        pages: pages,
+        readStamps: keys.map((key) => key.readStamp).toList(growable: false),
+        edits: _edits,
+        itemId: itemId,
+        groupOf: widget.grouping.groupOf,
+        acceptsNewItems: !isSearchMode, // only the server knows what matches the query
+      );
+      display = (state: state.copyWith(pages: displayPages), shownIds: shownIds);
+    }
+    _displayMemo = (raw: state, editStamp: editStamp, isSearchMode: isSearchMode, display: display);
 
-    return displayState;
+    return display;
   }
 
   /// Forgets edits that every loaded and parked page was read after, since the server's copy has
@@ -371,7 +364,8 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   /// emptied the screen. Emptiness comes off what the user sees, more-available off the raw pages. Gates
   /// both the auto-fetch and the loading surface meanwhile, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) {
-    final isEmpty = _displayFor(state).items?.isEmpty ?? false;
+    // No page yet isn't an empty list.
+    final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
     final isMoreAvailable = _nextPageKey(state) != null;
     // The user emptied it, not the server, so there's more to show.
     final wasEmptiedByEdits = isEmpty && (state.pages?.any((page) => page.isNotEmpty) ?? false);
@@ -506,7 +500,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
           }
 
           return PagedView(
-            state: _displayFor(state),
+            state: _displayFor(state).state,
             fetchNextPage: fetchNextPage,
             itemBuilder: switch (widget.source.editTransition) {
               AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
@@ -607,12 +601,7 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
   };
 
   /// Whether the item with [id] has a row in what renders now.
-  bool _isShown(Object id) {
-    final itemId = widget.source.itemId;
-
-    return _displayFor(_pager.value).pages?.any((page) => page.any((item) => itemId(item) == id)) ??
-        false;
-  }
+  bool _isShown(Object id) => _displayFor(_pager.value).shownIds.contains(id);
 
   /// Books [edited] against [item]'s id, null for a removal.
   void _edit(T item, T? edited) {
@@ -752,6 +741,9 @@ final class _NormalSnapshot<T extends Object> {
   /// Books [trigger] against the feed. A refresh is never downgraded to a re-read.
   void owe(FetchTrigger trigger) => debt = _stronger(debt, trigger);
 }
+
+/// What renders, and the ids in it.
+typedef _Display<T extends Object> = ({PagingState<PageKey, T> state, Set<Object> shownIds});
 
 /// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
 FetchTrigger _stronger(FetchTrigger? pending, FetchTrigger next) =>
