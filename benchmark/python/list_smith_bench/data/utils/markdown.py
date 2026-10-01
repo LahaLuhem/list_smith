@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import polars as pl
 
@@ -38,111 +39,38 @@ def value_formatter(units: str) -> Callable[[float | int | None], str]:
     return _format_number
 
 
-def sync_search_scaling_table(dataframe: pl.DataFrame) -> str:
-    """Markdown table of resolve cost per `list_size` for the `sync_search_scaling` micro."""
-    metric = "microseconds_per_resolve"
-    if metric not in dataframe.columns or "list_size" not in dataframe.columns:
-        return "_(no sync_search_scaling data in input)_\n"
+def scaling_table(
+    dataframe: pl.DataFrame, *, micro: str, metric: str, pivot: str, pivot_header: str
+) -> str:
+    """Markdown table of one scaling micro's `metric` per `pivot` value."""
+    if metric not in dataframe.columns or pivot not in dataframe.columns:
+        return f"_(no {micro} data in input)_\n"
 
-    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col("list_size").is_not_null())
+    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col(pivot).is_not_null())
     if df.is_empty():
-        return "_(no sync_search_scaling data in input)_\n"
+        return f"_(no {micro} data in input)_\n"
 
     agg = (
-        df.group_by("list_size")
+        df.group_by(pivot)
         .agg(
             pl.col(metric).count().alias("n"),
             pl.col(metric).median().alias("median"),
             pl.col(metric).quantile(0.25).alias("q25"),
             pl.col(metric).quantile(0.75).alias("q75"),
         )
-        .sort("list_size")
+        .sort(pivot)
     )
 
     fmt = value_formatter("us")
     rows = [
-        "| List size | N | Median (us) | IQR (us) | Median (ms) |",
+        f"| {pivot_header} | N | Median (us) | IQR (us) | Median (ms) |",
         "|---:|---:|---:|---:|---:|",
+        *(
+            f"| {row[pivot]:,} | {row['n']} | {fmt(row['median'])} "
+            f"| {fmt(row['q75'] - row['q25'])} | {row['median'] / 1000.0:,.2f} |"
+            for row in agg.iter_rows(named=True)
+        ),
     ]
-    for row in agg.iter_rows(named=True):
-        iqr = row["q75"] - row["q25"]
-        median_ms = row["median"] / 1000.0
-        rows.append(
-            f"| {row['list_size']:,} | {row['n']} | {fmt(row['median'])} "
-            f"| {fmt(iqr)} | {median_ms:,.2f} |"
-        )
-    return "\n".join(rows) + "\n"
-
-
-def bucket_by_group_scaling_table(dataframe: pl.DataFrame) -> str:
-    """Markdown table of bucketing cost per `list_size` for the `bucket_by_group_scaling` micro."""
-    metric = "microseconds_per_bucket"
-    if metric not in dataframe.columns or "list_size" not in dataframe.columns:
-        return "_(no bucket_by_group_scaling data in input)_\n"
-
-    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col("list_size").is_not_null())
-    if df.is_empty():
-        return "_(no bucket_by_group_scaling data in input)_\n"
-
-    agg = (
-        df.group_by("list_size")
-        .agg(
-            pl.col(metric).count().alias("n"),
-            pl.col(metric).median().alias("median"),
-            pl.col(metric).quantile(0.25).alias("q25"),
-            pl.col(metric).quantile(0.75).alias("q75"),
-        )
-        .sort("list_size")
-    )
-
-    fmt = value_formatter("us")
-    rows = [
-        "| List size | N | Median (us) | IQR (us) | Median (ms) |",
-        "|---:|---:|---:|---:|---:|",
-    ]
-    for row in agg.iter_rows(named=True):
-        iqr = row["q75"] - row["q25"]
-        median_ms = row["median"] / 1000.0
-        rows.append(
-            f"| {row['list_size']:,} | {row['n']} | {fmt(row['median'])} "
-            f"| {fmt(iqr)} | {median_ms:,.2f} |"
-        )
-    return "\n".join(rows) + "\n"
-
-
-def dedup_scaling_table(dataframe: pl.DataFrame) -> str:
-    """Markdown table of de-dup cost per `item_count` for the `dedup_scaling` micro."""
-    metric = "microseconds_per_dedup"
-    if metric not in dataframe.columns or "item_count" not in dataframe.columns:
-        return "_(no dedup_scaling data in input)_\n"
-
-    df = dataframe.filter(pl.col(metric).is_not_null()).filter(pl.col("item_count").is_not_null())
-    if df.is_empty():
-        return "_(no dedup_scaling data in input)_\n"
-
-    agg = (
-        df.group_by("item_count")
-        .agg(
-            pl.col(metric).count().alias("n"),
-            pl.col(metric).median().alias("median"),
-            pl.col(metric).quantile(0.25).alias("q25"),
-            pl.col(metric).quantile(0.75).alias("q75"),
-        )
-        .sort("item_count")
-    )
-
-    fmt = value_formatter("us")
-    rows = [
-        "| Loaded items | N | Median (us) | IQR (us) | Median (ms) |",
-        "|---:|---:|---:|---:|---:|",
-    ]
-    for row in agg.iter_rows(named=True):
-        iqr = row["q75"] - row["q25"]
-        median_ms = row["median"] / 1000.0
-        rows.append(
-            f"| {row['item_count']:,} | {row['n']} | {fmt(row['median'])} "
-            f"| {fmt(iqr)} | {median_ms:,.2f} |"
-        )
     return "\n".join(rows) + "\n"
 
 
@@ -168,12 +96,11 @@ def overhead_table(dataframe: pl.DataFrame) -> str:
             .agg(pl.col("microseconds_per_key_computation").median().alias("median"))
             .sort("page_count")
         )
-        for row in wrap.iter_rows(named=True):
-            plural = "s" if row["page_count"] != 1 else ""
-            rows.append(
-                f"| `wrapping_overhead` ({row['page_count']} page{plural}) "
-                f"| us / key | {fmt(row['median'])} |"
-            )
+        rows.extend(
+            f"| `wrapping_overhead` ({row['page_count']} "
+            f"page{'s' if row['page_count'] != 1 else ''}) | us / key | {fmt(row['median'])} |"
+            for row in wrap.iter_rows(named=True)
+        )
 
     if len(rows) == 2:
         return "_(no wrapping-overhead micro data in input)_\n"
@@ -208,12 +135,12 @@ def frame_scenarios_table(dataframe: pl.DataFrame, thread: FrameThread) -> str:
         f"| Scenario | Frames | Avg {thread} (ms) | Worst {thread} (ms) | p99 {thread} (ms) "
         "| Missed |",
         "|---|---:|---:|---:|---:|---:|",
-    ]
-    for row in agg.iter_rows(named=True):
-        rows.append(
+        *(
             f"| `{row['scenario']}` | {row['frames']:.0f} | {row['avg']:.2f} "
             f"| {row['worst']:.2f} | {row['p99']:.2f} | {row['missed']:.0f} |"
-        )
+            for row in agg.iter_rows(named=True)
+        ),
+    ]
     return "\n".join(rows) + "\n"
 
 
@@ -241,14 +168,17 @@ def render_latency_table(dataframe: pl.DataFrame) -> str:
     rows = [
         "| Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |",
         "|---:|---:|---:|---:|",
+        *map(_latency_row, agg.iter_rows(named=True)),
     ]
-    for row in agg.iter_rows(named=True):
-        delay = row["observer_delay_millis"]
-        latency_ms = row["median"] / 1000.0
-        # Render latency minus the observer's own block: the list_smith render the observer sits on.
-        baseline_ms = latency_ms - delay
-        rows.append(f"| {delay:.0f} | {latency_ms:,.1f} | {baseline_ms:,.1f} | {row['n']} |")
     return "\n".join(rows) + "\n"
+
+
+def _latency_row(row: dict[str, Any]) -> str:
+    delay = row["observer_delay_millis"]
+    latency_ms = row["median"] / 1000.0
+    # Render latency minus the observer's own block: the list_smith render the observer sits on.
+    baseline_ms = latency_ms - delay
+    return f"| {delay:.0f} | {latency_ms:,.1f} | {baseline_ms:,.1f} | {row['n']} |"
 
 
 def render_summary_markdown(
@@ -288,7 +218,13 @@ def render_summary_markdown(
             "re-runs `resolveSyncSearch` synchronously on every committed query, so this is that "
             "cost as the in-memory list grows, under a naive case-insensitive `contains`. Where "
             "the median crosses the frame budget is the practical ceiling for that predicate.\n",
-            sync_search_scaling_table(dataframe),
+            scaling_table(
+                dataframe,
+                micro="sync_search_scaling",
+                metric="microseconds_per_resolve",
+                pivot="list_size",
+                pivot_header="List size",
+            ),
         ]
     )
 
@@ -302,7 +238,13 @@ def render_summary_markdown(
             "reorders the filtered items into contiguous sections on every committed query, so "
             "this is that cost as the list grows, over fully interleaved input for worst-case "
             "reordering. It stacks on the search-filter cost above when a list does both.\n",
-            bucket_by_group_scaling_table(dataframe),
+            scaling_table(
+                dataframe,
+                micro="bucket_by_group_scaling",
+                metric="microseconds_per_bucket",
+                pivot="list_size",
+                pivot_header="List size",
+            ),
         ]
     )
 
@@ -320,7 +262,13 @@ def render_summary_markdown(
             "path, since it runs per page-load rather than per frame. Sub-millisecond for a few "
             "thousand loaded items and climbing from there, past the frame budget at tens of "
             "thousands in one live list.\n",
-            dedup_scaling_table(dataframe),
+            scaling_table(
+                dataframe,
+                micro="dedup_scaling",
+                metric="microseconds_per_dedup",
+                pivot="item_count",
+                pivot_header="Loaded items",
+            ),
         ]
     )
 
@@ -380,18 +328,21 @@ def compare_table(rows: list[CompareRow]) -> str:
         "| Scenario | Metric | Baseline median | Current median | Delta | Spread | x noise "
         "| p-value | Sig? |",
         "|---|---|---:|---:|---:|---:|---:|---:|:---:|",
+        *(_compare_row(row, fmt) for row in sorted(rows, key=lambda r: (r.scenario, r.metric))),
     ]
-    for row in sorted(rows, key=lambda r: (r.scenario, r.metric)):
-        delta = f"{row.delta_pct:+.1f}%" if row.delta_finite else "n/a"
-        noise = row.delta_over_spread
-        noise_str = f"{noise:.1f}x" if math.isfinite(noise) else "n/a"
-        sig = "**Yes**" if row.significant else ""
-        out.append(
-            f"| `{row.scenario}` | `{row.metric}` | {fmt(row.baseline_median)} "
-            f"| {fmt(row.current_median)} | {delta} | {row.spread_pct:.2f}% | {noise_str} "
-            f"| {row.p_value:.4f} | {sig} |"
-        )
     return "\n".join(out) + "\n"
+
+
+def _compare_row(row: CompareRow, fmt: Callable[[float | int | None], str]) -> str:
+    delta = f"{row.delta_pct:+.1f}%" if row.delta_finite else "n/a"
+    noise = row.delta_over_spread
+    noise_str = f"{noise:.1f}x" if math.isfinite(noise) else "n/a"
+    sig = "**Yes**" if row.significant else ""
+    return (
+        f"| `{row.scenario}` | `{row.metric}` | {fmt(row.baseline_median)} "
+        f"| {fmt(row.current_median)} | {delta} | {row.spread_pct:.2f}% | {noise_str} "
+        f"| {row.p_value:.4f} | {sig} |"
+    )
 
 
 def render_compare_markdown(
