@@ -695,10 +695,10 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="edit-transitions"></a>
 ## Edit transitions animate the rows edits add and take
 
-- **Decision:** an `EditTransition(duration:, builder:)` seam, `NoEditTransition()` by default. The
-  builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming in and in
-  reverse for one going out. list_smith brings the timing, never a look of its own. Only an `upsert`
-  of a new, shown id and a `remove` of a shown one start one, so page loads can't.
+- **Decision:** an `EditTransition(duration:, transitionBuilder:)` seam, `NoEditTransition()` by
+  default. The builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming
+  in and in reverse for one going out. list_smith brings the timing, never a look of its own. Only
+  an `upsert` of a new, shown id and a `remove` of a shown one start one, so page loads can't.
 - **A removal lands when its exit ends.** Until then the row is still in the display, exactly where
   it was, so there's no leaving copy to keep in step, and an upsert meanwhile turns the same
   controller round.

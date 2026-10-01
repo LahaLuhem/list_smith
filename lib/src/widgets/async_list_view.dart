@@ -512,12 +512,11 @@ class _AsyncListViewState<T extends Object> extends State<AsyncListView<T>>
             state: _displayFor(state),
             fetchNextPage: fetchNextPage,
             itemBuilder: switch (widget.source.editTransition) {
-              AnimatedEditTransition(transitionBuilder: final builder) =>
-                _rowTransitionsNotifier.decorate(
-                  widget.itemBuilder,
-                  itemId: widget.source.itemId,
-                  builder: builder,
-                ),
+              AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
+                widget.itemBuilder,
+                itemId: widget.source.itemId,
+                transitionBuilder: transitionBuilder,
+              ),
               NoEditTransition() => widget.itemBuilder,
             },
             itemId: widget.source.itemId,
