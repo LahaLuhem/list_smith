@@ -22,6 +22,7 @@ final class const ReloadToCurrentDepth({
   this : assert(concurrency == null || concurrency > 0, 'concurrency must be positive or null.');
 
   @override
+  @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) {
     final oldPages = context.loadedPages;
     if (oldPages.isEmpty) return Future.sync(context.reset);

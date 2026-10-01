@@ -6,7 +6,7 @@ part of '../grouping.dart';
 /// [headerFor] came from this instance's own [groupOf].
 final class const KeyedGrouping<T extends Object>._({
   /// Pulls an item's group key.
-  @override required final GroupKeyOf<T, Object> groupOf,
+  @override @internal required final GroupKeyOf<T, Object> groupOf,
 
   /// Builds a group's header from its key.
   required final GroupHeaderBuilder<Object> headerFor,
@@ -15,9 +15,11 @@ final class const KeyedGrouping<T extends Object>._({
   required final GroupOrderPolicy orderPolicy,
 }) extends Grouping<T> {
   @override
+  @internal
   List<T> arrange(Iterable<T> items) => bucketByGroup(items, groupOf);
 
   @override
+  @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
     required Iterable<T> Function() flattenItems,

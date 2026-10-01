@@ -9,6 +9,7 @@ final class const ResetToFirstPage() extends Reload {
   this;
 
   @override
+  @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) => Future.syncValue(context.reset());
 
   @override

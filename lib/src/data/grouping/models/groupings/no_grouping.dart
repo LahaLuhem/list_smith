@@ -6,9 +6,11 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
   this;
 
   @override
+  @internal
   List<T> arrange(Iterable<T> items) => items is List<T> ? items : items.toList(growable: false);
 
   @override
+  @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
     required Iterable<T> Function() flattenItems,
@@ -16,6 +18,7 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
   }) => itemBuilder;
 
   @override
+  @internal
   GroupKeyOf<T, Object>? get groupOf => null;
 
   @override
