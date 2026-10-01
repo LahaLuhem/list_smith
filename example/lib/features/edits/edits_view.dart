@@ -36,10 +36,10 @@ class EditsView extends StatelessWidget {
                   description:
                       'Swipe a row left for Rename and Delete, or all the way to delete it in one go. '
                       '"Add an item" puts a new one on top. Each change goes through upsert() or '
-                      'remove(), with no refetch, and a row they add or take slides in or out. With '
-                      'deletes failing, Delete leaves the row alone, but a full swipe still removes it, '
-                      'since the row has to go before the store answers. Pull to refresh and it comes '
-                      'back.',
+                      'remove(), with no refetch, and a row they add or take grows in or shrinks '
+                      'out. With deletes failing, Delete leaves the row alone, but a full swipe still '
+                      'removes it, since the row has to go before the store answers. Pull to refresh '
+                      'and it comes back.',
                 ),
                 ValueListenableBuilder(
                   valueListenable: viewModel.deletesFail,
@@ -61,7 +61,8 @@ class EditsView extends StatelessWidget {
               controller: viewModel.controller,
               editTransition: EditTransition(
                 duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
+                transitionBuilder: (child, animation) =>
+                    SizeTransition(sizeFactor: animation, child: child),
               ),
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) => _EditableRow(item: item, viewModel: viewModel),

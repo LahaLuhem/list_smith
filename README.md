@@ -431,7 +431,7 @@ ListSmith.async(
 )
 ```
 
-The transitionBuilder runs forward for a row coming in and backwards for one going out, so any
+The `transitionBuilder` runs forward for a row coming in and backwards for one going out, so any
 transition works, `AnimatedSwitcher.defaultTransitionBuilder` included. list_smith brings the timing,
 not a look.
 

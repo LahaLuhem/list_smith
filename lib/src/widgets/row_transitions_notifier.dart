@@ -23,16 +23,16 @@ final class RowTransitionsNotifier<T extends Object> extends ChangeNotifier {
   /// Creates it.
   new({required this.vsync, required this.bookRemoval});
 
-  /// [itemBuilder] for one build, each row wrapped in [builder] while it animates.
+  /// [itemBuilder] for one build, each row wrapped in [transitionBuilder] while it animates.
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
     required ItemId<T> itemId,
-    required AnimatedSwitcherTransitionBuilder builder,
+    required AnimatedSwitcherTransitionBuilder transitionBuilder,
   }) =>
       (_, item, index) => _TransitionRow(
         rowTransitionsNotifier: this,
         id: itemId(item),
-        builder: builder,
+        transitionBuilder: transitionBuilder,
         buildChild: (context) => itemBuilder(context, item, index),
       );
 
@@ -182,13 +182,13 @@ final class _Transition<T extends Object> {
 class _TransitionRow<T extends Object> extends StatefulWidget {
   final RowTransitionsNotifier<T> rowTransitionsNotifier;
   final Object id;
-  final AnimatedSwitcherTransitionBuilder builder;
+  final AnimatedSwitcherTransitionBuilder transitionBuilder;
   final WidgetBuilder buildChild;
 
   const new({
     required this.rowTransitionsNotifier,
     required this.id,
-    required this.builder,
+    required this.transitionBuilder,
     required this.buildChild,
   });
 
@@ -249,7 +249,7 @@ class _TransitionRowState<T extends Object> extends State<_TransitionRow<T>> {
           ignoring: isLeaving,
           child: ExcludeSemantics(
             excluding: isLeaving,
-            child: widget.builder(keyedChild, animation),
+            child: widget.transitionBuilder(keyedChild, animation),
           ),
         );
       },
