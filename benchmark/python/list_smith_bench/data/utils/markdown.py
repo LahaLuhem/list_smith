@@ -324,7 +324,8 @@ def render_summary_markdown(
         [
             "## UI scenarios: per-frame raster cost\n",
             "The same frames on the raster thread, which draws what the build produced. `missed` "
-            "counts frames over the same budget.\n",
+            "counts frames over the same budget. `worst` is usually the 1st captured frame, so it "
+            "swings between runs.\n",
             frame_scenarios_table(dataframe, "raster"),
         ]
     )
