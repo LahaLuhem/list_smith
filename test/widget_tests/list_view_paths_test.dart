@@ -29,6 +29,63 @@ void main() {
       check(find.text('later failed').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets(
+      "a loader taller than the list gets the list's height, so none of it is out of reach",
+      (tester) async {
+        final holdCompleter = Completer<List<int>>();
+        await _pumpAsync(
+          tester,
+          fetchPage: PageFetcher((_) => holdCompleter.future),
+          surfaces: AsyncListSurfaces(
+            firstPageLoadingBuilder: (_) => const SizedBox(key: _loaderKey, height: 2000),
+          ),
+        );
+        await drain(tester);
+
+        check(tester.getSize(find.byKey(_loaderKey)).height)
+            .equals(tester.getSize(find.byType(Scrollable)).height);
+        holdCompleter.complete(const []);
+      },
+    );
+
+    scenarioWidgets('a loader built with a LayoutBuilder renders', (tester) async {
+      final holdCompleter = Completer<List<int>>();
+      await _pumpAsync(
+        tester,
+        fetchPage: PageFetcher((_) => holdCompleter.future),
+        surfaces: AsyncListSurfaces(
+          firstPageLoadingBuilder: (_) => LayoutBuilder(
+            builder: (_, constraints) => Text('loading at ${constraints.maxWidth}'),
+          ),
+        ),
+      );
+      await drain(tester);
+
+      check(find.textContaining('loading at').evaluate()).length.equals(1);
+      holdCompleter.complete(const []);
+    });
+
+    scenarioWidgets('a 1st-page error taller than the list still scrolls to its end', (
+      tester,
+    ) async {
+      await _pumpAsync(
+        tester,
+        fetchPage: PageFetcher((_) async => throw Exception('down')),
+        surfaces: AsyncListSurfaces(
+          firstPageErrorBuilder: (_, _, _) =>
+              const Column(children: [SizedBox(height: 2000), Text('end of error')]),
+        ),
+      );
+      await drain(tester);
+
+      await tester.dragUntilVisible(
+        find.text('end of error').hitTestable(),
+        find.byType(Scrollable),
+        const Offset(0, -300),
+      );
+      check(find.text('end of error').hitTestable().evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('a separator builder renders the separated list', (tester) async {
       await _pumpAsync(
         tester,
@@ -391,6 +448,8 @@ Future<void> _pumpSync(
 typedef _Orientation = ({ListScrollConfig scroll, TextDirection text, AxisDirection pull});
 
 const _indicatorKey = ValueKey('indicator');
+
+const _loaderKey = ValueKey('loader');
 
 /// Enough rows to overfill the viewport along either axis, so every orientation can scroll.
 final _items = List<int>.generate(30, (index) => index);

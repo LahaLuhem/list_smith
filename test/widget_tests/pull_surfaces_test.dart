@@ -56,6 +56,36 @@ void main() {
       check(server.attempts[0]).equals(2);
     });
 
+    scenarioOutlineWidgets<({Refresh refresh, Axis axis})>(
+      'the loader stays still under a drag, where the rows follow it',
+      examples: const {
+        'pull-to-refresh on': (refresh: PullToRefresh(), axis: .vertical),
+        'pull-to-refresh off': (refresh: NoRefresh(), axis: .vertical),
+        'a horizontal list': (refresh: PullToRefresh(), axis: .horizontal),
+      },
+      outline: (tester, example) async {
+        final server = FakeServer<int>([1, 2, 3]);
+        final firstLoadHoldCompleter = server.hold(0, attempt: 1);
+        // Bouncing physics, so whatever takes the drag visibly moves.
+        await pumpListSmith(
+          tester,
+          ScrollConfiguration(
+            behavior: const ScrollBehavior().copyWith(physics: const BouncingScrollPhysics()),
+            child: list(
+              server,
+              scroll: ListScrollConfig(scrollDirection: example.axis),
+              refresh: example.refresh,
+            ),
+          ),
+        );
+        await drain(tester);
+
+        check(await _dragDistance(tester, example.axis)).equals(0);
+        await release(tester, [firstLoadHoldCompleter]);
+        check(await _dragDistance(tester, example.axis)).isGreaterThan(0);
+      },
+    );
+
     scenarioOutlineWidgets<_PullSetup>(
       'a surface that takes a pull takes it whatever the scroll setup',
       examples: {
@@ -184,3 +214,22 @@ typedef _PullSetup = ({
 const _pullDownOffset = Offset(0, 300);
 
 const _indicatorKey = ValueKey('indicator');
+
+/// How far a held drag along [axis] moves the list. Starts in a corner, clear of a centred loader.
+Future<double> _dragDistance(WidgetTester tester, Axis axis) async {
+  final gesture = await tester.startGesture(
+    tester.getTopLeft(find.byType(Scrollable)) + const Offset(20, 20),
+  );
+  for (var step = 0; step < 6; step++) {
+    await gesture.moveBy(axis == .vertical ? const Offset(0, 30) : const Offset(30, 0));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  final distance = -tester.state<ScrollableState>(find.byType(Scrollable)).position.pixels;
+  await gesture.up();
+  // Timed frames, so the list springs back before the next drag.
+  for (var frame = 0; frame < 10; frame++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  return distance;
+}
