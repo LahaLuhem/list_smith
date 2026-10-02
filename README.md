@@ -765,13 +765,13 @@ Measured on one machine (yours will differ), from the committed
 
 | What                                                 | Cost                                                                          |
 |------------------------------------------------------|-------------------------------------------------------------------------------|
-| Scrolling                                            | within ~0.05 ms/frame of a plain `ListView.builder`, neither dropping a frame |
+| Scrolling                                            | within ~0.07 ms/frame of a plain `ListView.builder`, neither dropping a frame |
 | Per-page bookkeeping (end policy, observer dispatch) | sub-microsecond to a few microseconds                                         |
 | A full pull-to-refresh cycle                         | ~0.4 ms/frame to build, none over the 16.67 ms budget                         |
-| Animating edits (size, fade or slide)                | +0.1 to 0.3 ms/frame over the same edits unanimated, none over budget         |
+| Animating edits (size, fade or slide)                | +0.05 to 0.2 ms/frame over the same edits unanimated, none over budget        |
 | Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                             |
 | Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~26 ms at 100k                                 |
-| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~40 ms at 100k                          |
+| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.4 ms at 10k, ~40 ms at 100k                          |
 | A 50 ms observer callback                            | pushes render latency to ~68 ms                                               |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
