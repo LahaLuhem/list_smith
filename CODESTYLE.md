@@ -88,11 +88,12 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   `x`/`y` for coordinates.
 - **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
   inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
-  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name that
-  already says what it holds is enough (`fetchPage`, `_pager`, a plural for a collection), but not
-  one that reads as another kind of thing (`rows` for a `RowLookup`, `_running` for a run). Callback
-  parameters are exempt and stay single-word (`value`, `query`, `items`), since the call site
-  already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
+  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name goes
+  in front of the suffix, not instead of it (`firstLoadHoldCompleter`, not `firstLoadHold`), so the
+  name says what a thing is for and what it is. A plural is enough for a collection. A public
+  parameter keeps its API name (`fetchPage`), since that's the name every caller reads and types.
+  Callback parameters are exempt and stay single-word (`value`, `query`, `items`), since the call
+  site already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
   disambiguation the rule is for.
 - **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
   `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror

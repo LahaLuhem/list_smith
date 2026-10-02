@@ -67,7 +67,7 @@ void main() {
     });
 
     scenarioWidgets('a custom indicator is built only while a pull is in progress', (tester) async {
-      final hold = Completer<List<int>>();
+      final holdCompleter = Completer<List<int>>();
       var firstPageFetches = 0;
       await pumpListSmith(
         tester,
@@ -76,7 +76,7 @@ void main() {
             if (request.pageIndex > 0) return Future.value(const <int>[]);
             firstPageFetches++;
 
-            return firstPageFetches == 1 ? Future.value(const [1, 2, 3]) : hold.future;
+            return firstPageFetches == 1 ? Future.value(const [1, 2, 3]) : holdCompleter.future;
           }),
           itemIdGetter: (item) => item,
           refresh: PullToRefresh(
@@ -95,7 +95,7 @@ void main() {
       check(firstPageFetches).equals(2);
       check(find.byType(_SpinningIndicator).evaluate()).length.equals(1);
 
-      hold.complete(const [1, 2, 3]);
+      holdCompleter.complete(const [1, 2, 3]);
       // Timed frames, so the indicator's animation back to rest actually runs.
       for (var frame = 0; frame < 5; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -200,7 +200,7 @@ void main() {
         'bouncing physics': ListScrollConfig(physics: BouncingScrollPhysics()),
       },
       outline: (tester, scroll) async {
-        final hold = Completer<List<int>>();
+        final holdCompleter = Completer<List<int>>();
         var firstPageFetches = 0;
         await pumpListSmith(
           tester,
@@ -209,7 +209,7 @@ void main() {
               if (request.pageIndex > 0) return Future.value(const <int>[]);
               firstPageFetches++;
 
-              return firstPageFetches == 1 ? Future.value(_items) : hold.future;
+              return firstPageFetches == 1 ? Future.value(_items) : holdCompleter.future;
             }),
             itemIdGetter: (item) => item,
             scroll: scroll,
@@ -229,7 +229,7 @@ void main() {
         final indicator = tester.getRect(find.byKey(_indicatorKey));
         check(indicator.overlaps(tester.getRect(find.text('item 0')))).isFalse();
 
-        hold.complete(_items);
+        holdCompleter.complete(_items);
       },
     );
 
@@ -263,12 +263,13 @@ void main() {
     );
 
     scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
-      final hold = Completer<List<int>>();
+      final holdCompleter = Completer<List<int>>();
       Widget build(Color colour) => DefaultTextStyle(
         style: TextStyle(color: colour),
         child: ListSmith.async(
           fetchPage: PageFetcher(
-            (request) => request.pageIndex == 0 ? hold.future : Future.value(const <int>[]),
+            (request) =>
+                request.pageIndex == 0 ? holdCompleter.future : Future.value(const <int>[]),
           ),
           itemIdGetter: (item) => item,
           refresh: const NoRefresh(),
@@ -286,7 +287,7 @@ void main() {
       await drain(tester);
       check(find.byType(CustomPaint).evaluate()).isNotEmpty();
 
-      hold.complete(const [1]);
+      holdCompleter.complete(const [1]);
       await tester.idle();
       await drain(tester);
       check(find.text('item 1').evaluate()).length.equals(1);

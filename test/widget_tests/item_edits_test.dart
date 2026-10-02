@@ -18,7 +18,7 @@ void main() {
       tester,
     ) async {
       final server = FakeServer(_range(0, 8));
-      final hold = server.hold(1, attempt: 1);
+      final holdCompleter = server.hold(1, attempt: 1);
       final controller = await _pumpList(
         tester,
         fetchPage: server.keysetFetcher,
@@ -28,7 +28,7 @@ void main() {
 
       controller.remove(0);
       await tester.pump();
-      await release(tester, [hold]);
+      await release(tester, [holdCompleter]);
 
       check(_shownRows()).deepEquals(_rows(_range(1, 8)));
       // Each page picks up where the one before it ended, so none is asked for twice.
@@ -53,7 +53,7 @@ void main() {
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
         );
         await drain(tester);
-        final hold = server.hold(0, attempt: 2);
+        final holdCompleter = server.hold(0, attempt: 2);
 
         unawaited(controller.refresh());
         await drain(tester);
@@ -62,7 +62,7 @@ void main() {
         await tester.pump();
         final afterEdit = _shownRows();
         check(afterEdit).not((it) => it.deepEquals(beforeEdit));
-        await release(tester, [hold]);
+        await release(tester, [holdCompleter]);
 
         check(server.attempts[0]).equals(2); // the reload did commit
         check(_shownRows()).deepEquals(afterEdit);
@@ -82,7 +82,7 @@ void main() {
           refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
         );
         await drain(tester, frames: 12);
-        final hold = server.hold(0, attempt: 2);
+        final holdCompleter = server.hold(0, attempt: 2);
         server.failing.add((0, 2));
 
         if (isBefore) controller.remove(1);
@@ -90,7 +90,7 @@ void main() {
         await drain(tester);
         if (!isBefore) controller.remove(1);
         await tester.pump();
-        await release(tester, [hold]);
+        await release(tester, [holdCompleter]);
 
         check(server.attempts[1]).equals(2); // the page after it did reload
         check(_shownRows()).deepEquals(_rows([0, 2, 3, 4, 5]));
@@ -251,7 +251,7 @@ void main() {
       tester,
     ) async {
       final server = FakeServer(_range(1, 6));
-      final feedCatchUp = server.hold(0, attempt: 2);
+      final feedCatchUpHoldCompleter = server.hold(0, attempt: 2);
       final controller = ListSmithController<int>();
       await _pumpKept(tester, controller, query: '', feed: server.offsetLateFetcher);
       await drain(tester);
@@ -267,7 +267,7 @@ void main() {
 
       check(server.attempts[0]).equals(2); // the feed's re-read is still in flight
       check(_shownRows()).deepEquals(_rows([1, 2, 3, 5, 6]));
-      await release(tester, [feedCatchUp]);
+      await release(tester, [feedCatchUpHoldCompleter]);
       check(_shownRows()).deepEquals(_rows([1, 2, 3, 5, 6]));
     });
 

@@ -190,13 +190,13 @@ void main() {
     });
 
     scenarioWidgets('a withSignal commit drops a page still in flight', (tester) async {
-      final hold = Completer<void>();
+      final holdCompleter = Completer<void>();
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>.withSignal((request) async {
         final pageIndex = request.pageIndex;
         final attempt = attempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
         // Page 3 is held on its 1st attempt only, so the reload's own walk never blocks.
-        if (pageIndex == 3 && attempt == 1) await hold.future;
+        if (pageIndex == 3 && attempt == 1) await holdCompleter.future;
 
         return ([pageIndex * 1000 + attempt], 'cursor$pageIndex');
       });
@@ -218,7 +218,7 @@ void main() {
       check(find.text('item 3001').evaluate()).length.equals(0);
 
       await pullToRefresh(tester, find.text('item 1'));
-      hold.complete();
+      holdCompleter.complete();
       await tester.idle();
       await drain(tester, frames: 16);
 
