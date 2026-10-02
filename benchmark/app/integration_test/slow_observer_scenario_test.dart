@@ -1,8 +1,8 @@
 /// Scenario: a slow synchronous observer delays list_smith rendering its own 1st page.
 ///
-/// `onPageLoaded` fires synchronously inside `_fetchPage`, before the page reaches ISP, so a slow observer
-/// delays the list appearing, not just the consumer's side effect. Measured as wall-clock from the
-/// page's data being ready to the 1st item landing in the tree.
+/// `onPageLoaded` fires synchronously inside the page fetch, before the page reaches the list, so a slow
+/// observer delays the list appearing, not just the consumer's side effect. Measured as wall-clock from
+/// the page's data being ready to the 1st item landing in the tree.
 ///
 /// The live binding in profile mode makes the `sleep()` really block the UI isolate, so these numbers
 /// are faithful, not just directional.
@@ -30,7 +30,7 @@ const _observerDelaysMillis = <int>[0, 25, 50, 100];
 // Bound on the pump loop waiting for the 1st item, so a stalled fetch can't hang the run.
 const _maxPumpsPerIteration = 2000;
 
-// One page overflows the 800px viewport, so ISP won't prefetch a 2nd and the latency window isolates
+// One page overflows the 800px viewport, so the list won't ask for a 2nd and the latency window isolates
 // a single observer callback.
 const _itemExtentPixels = 100.0;
 

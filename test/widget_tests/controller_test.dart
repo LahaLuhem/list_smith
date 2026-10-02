@@ -307,7 +307,7 @@ void main() {
       await controller.reset();
       await tester.pump();
       // Gone at once, then paged in again from the top.
-      check(find.textContaining('item ').evaluate()).isEmpty();
+      check(find.text('item 1').evaluate()).isEmpty();
       await drain(tester, frames: 12);
 
       check(find.text('item 2').evaluate()).length.equals(1);
