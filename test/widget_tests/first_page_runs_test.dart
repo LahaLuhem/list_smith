@@ -92,22 +92,28 @@ void main() {
           .deepEquals([FetchTrigger.initialLoad, FetchTrigger.invalidated]);
     });
 
-    scenarioOutlineWidgets<Future<void> Function(ListSmithController<int> controller)>(
-      'a verb from code completes once its fresh page has landed',
+    scenarioOutlineWidgets<
+      ({Future<void> Function(ListSmithController<int> controller) verb, bool isFailing})
+    >(
+      'a verb from code completes once its fresh page has landed or failed',
       examples: {
-        'refresh()': (controller) => controller.refresh(),
-        'invalidate()': (controller) => controller.invalidate(),
-        'reset()': (controller) => controller.reset(),
+        'refresh(), landing': (verb: (controller) => controller.refresh(), isFailing: false),
+        'refresh(), failing': (verb: (controller) => controller.refresh(), isFailing: true),
+        'invalidate(), landing': (verb: (controller) => controller.invalidate(), isFailing: false),
+        'invalidate(), failing': (verb: (controller) => controller.invalidate(), isFailing: true),
+        'reset(), landing': (verb: (controller) => controller.reset(), isFailing: false),
+        'reset(), failing': (verb: (controller) => controller.reset(), isFailing: true),
       },
-      outline: (tester, verb) async {
+      outline: (tester, example) async {
         final server = FakeServer<int>([1, 2, 3]);
+        if (example.isFailing) server.failing.add((0, 2));
         final controller = ListSmithController<int>();
         await pumpList(tester, server, controller: controller);
         await drain(tester);
         final holdCompleter = server.hold(0, attempt: 2);
 
         var isDone = false;
-        unawaited(verb(controller).then((_) => isDone = true));
+        unawaited(example.verb(controller).then((_) => isDone = true));
         await drain(tester);
         check(server.attempts[0]).equals(2); // the fresh page is out, and held
         check(isDone).isFalse();

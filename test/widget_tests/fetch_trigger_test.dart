@@ -261,7 +261,7 @@ void main() {
       check(normal.toSet()).deepEquals(const {FetchTrigger.nextPage});
     });
 
-    scenarioWidgets('leaving search under KeepCachePolicy latches nothing for the next page', (
+    scenarioWidgets('leaving search under KeepCachePolicy leaves no trigger for the next page', (
       tester,
     ) async {
       final normalTriggers = <FetchTrigger>[];
@@ -285,7 +285,7 @@ void main() {
       await pumpListSmith(tester, build('x'));
       await settle(tester);
       // Cleared before the restore, so the fetches it causes are the ones under assertion. Clearing
-      // afterwards would throw away the viewport top-up, which is where a leaked latch shows up.
+      // afterwards would throw away the viewport top-up, which is where a leftover trigger shows up.
       normalTriggers.clear();
 
       await pumpListSmith(tester, build(''));
@@ -294,7 +294,7 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
       await drain(tester, frames: 12);
 
-      // A latch left behind by the restore would have mislabelled one of these as queryChanged.
+      // A trigger left over from the restore would have mislabelled one of these as queryChanged.
       check(normalTriggers).isNotEmpty();
       check(normalTriggers.toSet()).deepEquals(const {FetchTrigger.nextPage});
     });

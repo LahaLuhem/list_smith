@@ -2,7 +2,9 @@
 
 Claude-Code-specific guidance. Project facts, stack, hard rules and AI-agent guidelines live in
 [AGENTS.md](AGENTS.md), the code-style guide in [`CODESTYLE.md`](CODESTYLE.md), design rationale in
-[`APPENDIX.md`](APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
+[`APPENDIX.md`](APPENDIX.md), the map of parts and seams in
+[`doc/how-it-works.md`](doc/how-it-works.md). Read AGENTS.md and CODESTYLE.md first, and the map
+before changing the async engine.
 
 ## Role & context
 

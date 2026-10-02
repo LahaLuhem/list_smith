@@ -305,7 +305,7 @@ on/off decides whether to wrap the subtree in `RefreshBinding`. No type can own 
 ### A consumer handle carries intents, never engine state
 
 A handle the consumer constructs and passes in (`ListSmithController`) exposes verbs, not
-machinery. No `PagingController`, no `PagingState`, no read-back of paging internals.
+machinery. No paging state, no read-back of paging internals.
 
 **Why:** the pager is hidden on purpose, and a handle that hands state back re-exposes it by the
 back door. Watching the list is the observer's job. Full rationale:

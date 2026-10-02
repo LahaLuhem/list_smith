@@ -1,7 +1,8 @@
 /// Micro-benchmark: list_smith's per-page end check.
 ///
 /// Each time the engine asks for the next page's index, `_nextPageIndex` rebuilds the per-page item
-/// counts into an `EndContext` and runs the end policy over it. This measures that core as the loaded-page count grows.
+/// counts into an `EndContext` and runs the end policy over it. This measures that core as the
+/// loaded-page count grows.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';

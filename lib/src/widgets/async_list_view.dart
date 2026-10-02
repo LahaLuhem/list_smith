@@ -435,7 +435,6 @@ class _AsyncListViewState<T extends Object>()
   _NormalSnapshot<T>? _applyCacheAction(CacheAction cacheAction) {
     switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
-        // Nothing to latch: a debt reload carries its own trigger.
         _rowTransitionsNotifier.settle();
         _generation++;
         _lastFailedPageIndex = null;
