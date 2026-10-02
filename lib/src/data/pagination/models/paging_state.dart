@@ -1,10 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '../enums/paging_status.dart';
-
-/// One loaded page: the items the server sent, and the edit counter when its fetch went out, so an
-/// edit can tell pages read before it from pages read after.
-typedef LoadedPage<T extends Object> = ({List<T> items, int readStamp});
+import 'loaded_page.dart';
 
 /// What an async list holds: the pages loaded so far, and where its stream stands.
 ///
@@ -62,7 +59,7 @@ final class const PagingState<T extends Object>({
   PagingState<T> filterItems(bool Function(T item) predicate) => copyWith(
     pages: pages
         ?.map(
-          (page) => (
+          (page) => LoadedPage(
             items: page.items.where(predicate).toList(growable: false),
             readStamp: page.readStamp,
           ),

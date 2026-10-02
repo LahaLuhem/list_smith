@@ -3,6 +3,7 @@ import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
 import 'package:list_smith/src/data/edits/typedefs/item_edit.dart';
 import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
+import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 
 typedef _Row = ({int id, String label});
 typedef _Placed = ({int id, int group});
@@ -17,7 +18,7 @@ void main() {
     bool acceptsNewItems = true,
   }) => resolveDisplayPages(
     pages: pages
-        .mapIndexed((index, items) => (items: items, readStamp: readStamps[index]))
+        .mapIndexed((index, items) => LoadedPage(items: items, readStamp: readStamps[index]))
         .toList(growable: false),
     edits: edits,
     itemIdGetter: (item) => item.id,
@@ -140,7 +141,7 @@ void main() {
   /// Resolves int pages grouped by the tens digit, every page read before the edits.
   List<int> resolveByTens(List<List<int>> pages, Map<Object, ItemEdit<int>> edits) =>
       resolveDisplayPages<int>(
-        pages: pages.map((items) => (items: items, readStamp: 0)).toList(growable: false),
+        pages: pages.map((items) => LoadedPage(items: items, readStamp: 0)).toList(growable: false),
         edits: edits,
         itemIdGetter: (item) => item,
         groupOf: (item) => item ~/ 10,
@@ -203,7 +204,7 @@ void main() {
       .run((_) {
         final pages = resolveDisplayPages<_Placed>(
           pages: const [
-            (
+            LoadedPage(
               items: [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
               readStamp: 0,
             ),
@@ -295,7 +296,7 @@ void main() {
       .run((context) {
         final (:pages, :shownIds) = resolveDisplayPages<_Placed>(
           pages: const [
-            (
+            LoadedPage(
               items: [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
               readStamp: 0,
             ),

@@ -1,7 +1,7 @@
 import 'package:collection/collection.dart';
 
 import '/src/data/grouping/typedefs/group_key_of.dart';
-import '/src/data/pagination/models/paging_state.dart';
+import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '../typedefs/item_edit.dart';
 
@@ -22,12 +22,12 @@ const _opensOnTop = -1;
   final displayPages = <LoadedPage<T>>[];
 
   // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
-  for (final (:items, :readStamp) in pages) {
+  for (final page in pages) {
     final displayPage = <T>[];
-    for (final item in items) {
+    for (final item in page.items) {
       final id = itemIdGetter(item);
       final edit = edits[id];
-      if (edit == null || edit.stamp <= readStamp) {
+      if (edit == null || edit.stamp <= page.readStamp) {
         if (shownIds.add(id)) displayPage.add(item);
         continue;
       }
@@ -41,7 +41,7 @@ const _opensOnTop = -1;
         movedIds.add(id);
       }
     }
-    displayPages.add((items: displayPage, readStamp: readStamp));
+    displayPages.add(LoadedPage(items: displayPage, readStamp: page.readStamp));
   }
   if (displayPages.isEmpty) return (pages: displayPages, shownIds: shownIds);
 
