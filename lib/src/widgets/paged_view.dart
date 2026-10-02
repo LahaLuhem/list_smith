@@ -121,7 +121,7 @@ class const PagedView<T extends Object>({
 
 /// The consumer's [ErrorBuilder] if there is one, else the neutral default.
 class const _ResolvedError({
-  required final Object error,
+  required final Exception error,
   required final VoidCallback onRetry,
   final ErrorBuilder? builder,
   final bool isCompact = false,

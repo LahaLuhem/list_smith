@@ -9,7 +9,7 @@ import 'neutral_retry_button.dart';
 /// or pass [isCompact] for the tighter footer used when a later page fails below the items already loaded.
 class const NeutralErrorIndicator({
   /// What the load failed with.
-  required final Object error,
+  required final Exception error,
 
   /// Re-attempts the failed load.
   required final VoidCallback onRetry,

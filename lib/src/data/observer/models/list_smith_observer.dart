@@ -18,7 +18,7 @@ import '/src/data/pagination/enums/fetch_trigger.dart';
 ///   final void Function(String) _log;
 ///
 ///   @override
-///   void onError(Object error, StackTrace stackTrace) => _log('list load failed: $error');
+///   void onError(Exception error, StackTrace stackTrace) => _log('list load failed: $error');
 /// }
 /// ```
 ///
@@ -33,8 +33,9 @@ abstract base class const ListSmithObserver() {
   /// An empty page still fires. Whether that's the end is the end policy's call.
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) {}
 
-  /// A page fetch threw. Nothing is swallowed, the list still shows its error surface.
-  void onError(Object error, StackTrace stackTrace) {}
+  /// A page fetch threw [error], and the list shows its error surface. An [Error] never comes here:
+  /// it's a bug, so it goes on to the app.
+  void onError(Exception error, StackTrace stackTrace) {}
 
   /// A reload started, before any of its pages is asked for. [trigger] is what those pages report.
   ///

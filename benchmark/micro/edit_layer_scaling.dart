@@ -7,6 +7,7 @@ library;
 import 'package:benchmark_harness/benchmark_harness.dart';
 import 'package:list_smith/src/data/edits/typedefs/item_edit.dart';
 import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
+import 'package:list_smith/src/data/pagination/models/paging_state.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
@@ -22,25 +23,26 @@ const _newItemCount = 10;
 final class _EditLayerScaling(final int itemCount) extends BenchmarkBase {
   this : super('edit_layer_scaling_n$itemCount');
 
-  late final List<List<_Item>> _pages;
+  late final List<LoadedPage<_Item>> _pages;
   late final List<int> _keys;
-  late final List<int> _readStamps;
   late final Map<Object, ItemEdit<_Item>> _edits;
   var lastRowCount = 0;
 
   @override
   void setup() {
-    _pages = List<List<_Item>>.generate(
+    _pages = List.generate(
       itemCount ~/ _itemsPerPage,
-      (page) => List<_Item>.generate(
-        _itemsPerPage,
-        (index) => _Item.at(page * _itemsPerPage + index),
-        growable: false,
+      (page) => (
+        items: List<_Item>.generate(
+          _itemsPerPage,
+          (index) => _Item.at(page * _itemsPerPage + index),
+          growable: false,
+        ),
+        readStamp: 0,
       ),
       growable: false,
     );
     _keys = List.generate(_pages.length, (index) => index, growable: false);
-    _readStamps = List.filled(_pages.length, 0);
     final groupStride = itemCount ~/ (_newItemCount * _groupSize);
     _edits = Map.fromEntries(
       Iterable.generate(_newItemCount, (index) {
@@ -55,13 +57,14 @@ final class _EditLayerScaling(final int itemCount) extends BenchmarkBase {
   void run() {
     final displayPages = resolveDisplayPages(
       pages: _pages,
-      readStamps: _readStamps,
       edits: _edits,
       itemIdGetter: (item) => item.id,
       groupOf: (item) => item.group,
       acceptsNewItems: true,
     ).pages;
-    final wrappedPages = List<List<_Item>>.unmodifiable(displayPages.map(List<_Item>.unmodifiable));
+    final wrappedPages = List<List<_Item>>.unmodifiable(
+      displayPages.map((page) => List<_Item>.unmodifiable(page.items)),
+    );
     List<int>.unmodifiable(_keys);
 
     lastRowCount = wrappedPages.fold(0, (total, page) => total + page.length);

@@ -16,13 +16,14 @@ void main() {
     required Map<Object, ItemEdit<_Row>> edits,
     bool acceptsNewItems = true,
   }) => resolveDisplayPages(
-    pages: pages,
-    readStamps: readStamps,
+    pages: pages
+        .mapIndexed((index, items) => (items: items, readStamp: readStamps[index]))
+        .toList(growable: false),
     edits: edits,
     itemIdGetter: (item) => item.id,
     groupOf: null,
     acceptsNewItems: acceptsNewItems,
-  ).pages.flattened.map((item) => item.label).toList(growable: false);
+  ).pages.expand((page) => page.items).map((item) => item.label).toList(growable: false);
 
   const editKey = 'edit';
   const shownKey = 'shown';
@@ -139,13 +140,12 @@ void main() {
   /// Resolves int pages grouped by the tens digit, every page read before the edits.
   List<int> resolveByTens(List<List<int>> pages, Map<Object, ItemEdit<int>> edits) =>
       resolveDisplayPages<int>(
-        pages: pages,
-        readStamps: List.filled(pages.length, 0),
+        pages: pages.map((items) => (items: items, readStamp: 0)).toList(growable: false),
         edits: edits,
         itemIdGetter: (item) => item,
         groupOf: (item) => item ~/ 10,
         acceptsNewItems: true,
-      ).pages.flattened.toList(growable: false);
+      ).pages.expand((page) => page.items).toList(growable: false);
 
   const loadedKey = 'loaded';
   const addedKey = 'added';
@@ -203,16 +203,19 @@ void main() {
       .run((_) {
         final pages = resolveDisplayPages<_Placed>(
           pages: const [
-            [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
+            (
+              items: [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
+              readStamp: 0,
+            ),
           ],
-          readStamps: const [0],
           edits: {0: (item: (id: 0, group: 1), stamp: 1)},
           itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: true,
         ).pages;
 
-        check(pages.flattened.map((item) => item.id).toList()).deepEquals(const [1, 0, 10, 11]);
+        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+            .deepEquals(const [1, 0, 10, 11]);
       });
 
   Bdd(resolutionFeature)
@@ -292,16 +295,18 @@ void main() {
       .run((context) {
         final (:pages, :shownIds) = resolveDisplayPages<_Placed>(
           pages: const [
-            [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
+            (
+              items: [(id: 0, group: 0), (id: 1, group: 0), (id: 10, group: 1), (id: 11, group: 1)],
+              readStamp: 0,
+            ),
           ],
-          readStamps: const [0],
           edits: context.example.val(editsKey) as Map<Object, ItemEdit<_Placed>>,
           itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: context.example.val(acceptsNewItemsKey) as bool,
         );
 
-        check(shownIds).unorderedEquals(pages.flattened.map((item) => item.id));
+        check(shownIds).unorderedEquals(pages.expand((page) => page.items).map((item) => item.id));
         check(shownIds).unorderedEquals(context.example.val(shownIdsKey) as List<int>);
       });
 }

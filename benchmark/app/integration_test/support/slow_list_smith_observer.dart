@@ -15,7 +15,7 @@ final class SlowListSmithObserver({final Duration delay = const Duration(millise
   }
 
   @override
-  void onError(Object error, StackTrace stackTrace) {
+  void onError(Exception error, StackTrace stackTrace) {
     _tally('onError');
     sleep(delay);
   }

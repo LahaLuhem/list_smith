@@ -29,10 +29,10 @@ final class _DedupScaling(final int itemCount) extends BenchmarkBase {
 
   @override
   void setup() {
-    final pages = _pagesOf(itemCount);
     _state = PagingState(
-      pages: pages,
-      keys: List.generate(pages.length, (index) => (index: index, readStamp: 0), growable: false),
+      pages: _pagesOf(itemCount)
+          .map((items) => (items: items, readStamp: 0))
+          .toList(growable: false),
     );
   }
 
@@ -41,7 +41,7 @@ final class _DedupScaling(final int itemCount) extends BenchmarkBase {
     final seenIds = <Object>{};
     final filtered = _state.filterItems((item) => seenIds.add(_idOf(item)));
 
-    lastCount = filtered.pages!.fold(0, (total, page) => total + page.length);
+    lastCount = filtered.pages!.fold(0, (total, page) => total + page.items.length);
   }
 }
 
