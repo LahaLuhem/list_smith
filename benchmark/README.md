@@ -1,7 +1,7 @@
 # list_smith benchmarks
 
 Reproducible benchmarks for `list_smith`: proving performance claims before they ship, and catching
-regressions in the wrapped dependencies (`infinite_scroll_pagination`, `custom_refresh_indicator`).
+regressions in its own paging and in the wrapped `custom_refresh_indicator`.
 Modelled on the maintainer's `better_internet_connectivity_checker` suite, adapted for a widget
 wrapper.
 
@@ -161,7 +161,7 @@ capture reproduces it rather than restamping it with today.
 | `edit_layer_scaling` | the edit layer's pass as the loaded list grows, with 10 new items joining groups spread across it |
 | `row_lookup_scaling` | finding each built row again on a rebuild, after a page lands at the end and after an item lands on top |
 | `observer_dispatch` | one no-op observer callback through list_smith's wrapping |
-| `wrapping_overhead` | the per-`getNextPageKey` end-policy work as loaded pages grow |
+| `wrapping_overhead` | the per-page end-policy work as loaded pages grow |
 
 | Scenario (`app/integration_test/`) | Measures |
 |---|---|

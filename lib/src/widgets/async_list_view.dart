@@ -7,7 +7,6 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
@@ -21,7 +20,7 @@ import '/src/data/pagination/enums/fetch_trigger.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/pagination/models/page_request.dart';
-import '/src/data/pagination/typedefs/page_key.dart';
+import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/utils/fetch_trigger_resolver.dart';
 import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
@@ -41,8 +40,8 @@ import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
 
-/// The async engine behind [ListSmith.async]: owns the paging controller, wires pull-to-refresh, and
-/// runs feed and search as 2 views on that one controller.
+/// The async engine behind [ListSmith.async]: owns the paging state and every fetch into it, wires
+/// pull-to-refresh, and runs feed and search as 2 views on that one state.
 class const AsyncListView<T extends Object>({
   /// The fetchers, end policy and search cache policy.
   required final AsyncSource<T> source,
@@ -96,10 +95,10 @@ class _AsyncListViewState<T extends Object>()
     with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
-  late final _pager = PagingController<PageKey, T>(
-    getNextPageKey: _nextPageKey,
-    fetchPage: _fetchPage,
-  );
+
+  /// The pages and where the stream stands. Only the engine writes it, so a fetch starts only when the
+  /// engine asks for one.
+  final _pagingStateNotifier = ValueNotifier(PagingState<T>());
 
   /// The normal-mode stream kept aside while searching, for [KeepCachePolicy].
   _NormalSnapshot<T>? _normalSnapshot;
@@ -109,21 +108,19 @@ class _AsyncListViewState<T extends Object>()
   Object? _lastPageSignal;
 
   /// Bumped by everything that makes in-flight work stale: a reset, a query change, a commit, dispose.
-  /// ISP's token covers its own fetch, the post-await writes here compare against this.
+  /// Every write after an await compares against it.
   var _generation = 0;
 
-  /// The trigger the next paging-controller fetch reports, latched by a reset because the re-fetch it
-  /// causes arrives later, from the view. One-shot, so the page after it is derived again.
-  FetchTrigger? _pendingTrigger;
-
-  /// The page whose last attempt threw, so its re-fetch reports [FetchTrigger.retry]. Not derivable
-  /// from paging state: ISP clears `error` before re-invoking the fetch.
+  /// The page whose last attempt threw, so its re-fetch reports [FetchTrigger.retry]. Outlives the
+  /// error on the paging state: a depth reload's commit clears that, and the page is still a retry.
   int? _lastFailedPageIndex;
+
+  /// Whether a row near the end already booked the next page this frame.
+  var _isNextPageBooked = false;
 
   /// Memo for [_displayFor], keyed on paging-state identity, the edit counter and the mode, so a rebuild
   /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
-  ({PagingState<PageKey, T> raw, int editStamp, bool isSearchMode, _Display<T> display})?
-  _displayMemo;
+  ({PagingState<T> raw, int editStamp, bool isSearchMode, _Display<T> display})? _displayMemo;
 
   /// The latest local edit per item id, oldest first. Beside the pages rather than in them, so the end
   /// policy and the reloads keep reading what the server sent.
@@ -150,11 +147,12 @@ class _AsyncListViewState<T extends Object>()
 
     _debouncer.seed(widget.query);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
-    _pager
+    _pagingStateNotifier
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
     _editStampNotifier.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
+    _fetchFirstPage(null);
   }
 
   @override
@@ -175,7 +173,7 @@ class _AsyncListViewState<T extends Object>()
     _generation++; // a reload outliving the list must not write into it
     widget.controller?.detach();
     _debouncer.dispose();
-    _pager.dispose();
+    _pagingStateNotifier.dispose();
     _searchModeNotifier.dispose();
     _editStampNotifier.dispose();
     _rowTransitionsNotifier.dispose();
@@ -185,27 +183,68 @@ class _AsyncListViewState<T extends Object>()
 
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
-  /// The paging controller's fetch: consumes any latched trigger, then threads the signal forward.
-  Future<List<T>> _fetchPage(PageKey pageKey) async {
+  /// Fetches the next page into the current stream, unless one is already on its way or the stream has
+  /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
+  Future<void> _fetchNextPage({FetchTrigger? trigger}) async {
+    final state = _pagingStateNotifier.value;
+    if (!mounted || state.isLoading || !state.hasNextPage) return;
+
     final generation = _generation;
-    final trigger = resolveTrigger(
-      pageIndex: pageKey.index,
-      pending: _pendingTrigger,
-      lastFailedPageIndex: _lastFailedPageIndex,
-    );
-    _pendingTrigger = null;
+    final loadingState = state.loading();
+    _pagingStateNotifier.value = loadingState;
+    final pageIndex = _nextPageIndex(loadingState.pages);
+    if (pageIndex == null) {
+      _pagingStateNotifier.value = loadingState.copyWith(hasNextPage: false, isLoading: false);
 
-    final (items, signal) = await _fetchPageRaw(pageKey.index, _lastPageSignal, trigger);
-    if (generation == _generation) _lastPageSignal = signal;
+      return;
+    }
+    final readStamp = _editStampNotifier.value; // before the await, so a later edit is newer
 
-    return items;
+    try {
+      final (items, signal) = await _fetchPageRaw(
+        pageIndex,
+        _lastPageSignal,
+        resolveTrigger(
+          pageIndex: pageIndex,
+          pending: trigger,
+          lastFailedPageIndex: _lastFailedPageIndex,
+        ),
+      );
+      if (generation != _generation) return;
+
+      _lastPageSignal = signal;
+      final latestState = _pagingStateNotifier.value;
+      _pagingStateNotifier.value = latestState.copyWith(
+        pages: [...?latestState.pages, (items: items, readStamp: readStamp)],
+        isLoading: false,
+      );
+    } on Exception catch (error) {
+      // Only Exceptions: an Error is a bug in the fetcher, so it goes on to the app and the list waits.
+      if (generation == _generation) {
+        _pagingStateNotifier.value = _pagingStateNotifier.value.failed(error);
+      }
+    }
   }
 
-  /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchPage] threads
-  /// it forward, a reload threads its own and commits via [_commit].
+  /// Books the next page for after this frame, since a row's build is what asks. Once per frame.
+  void _onNearEnd() {
+    if (_isNextPageBooked) return;
+
+    _isNextPageBooked = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isNextPageBooked = false;
+      unawaited(_fetchNextPage());
+    });
+  }
+
+  /// Asks again for the page that failed, from an error surface.
+  void _retryPage() => unawaited(_fetchNextPage());
+
+  /// Fetches one page in the current mode, leaving [_lastPageSignal] to the caller: [_fetchNextPage]
+  /// threads it forward, a reload threads its own and commits via [_commit].
   ///
-  /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An error
-  /// still fires `onError`: the request did fail, whoever was waiting.
+  /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
+  /// exception still fires `onError`: the request did fail, whoever was waiting.
   Future<(List<T>, Object?)> _fetchPageRaw(
     int pageKey,
     Object? previousSignal,
@@ -244,7 +283,7 @@ class _AsyncListViewState<T extends Object>()
       }
 
       return (pageItems, signal);
-    } on Object catch (error, stackTrace) {
+    } on Exception catch (error, stackTrace) {
       if (generation == _generation) _lastFailedPageIndex = pageKey;
       widget.observer?.onError(error, stackTrace);
 
@@ -252,32 +291,26 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
-  /// The next 0-based page key for [state], or `null` once [AsyncSource.endPolicy] reports the end.
-  /// Keys are the page count so far, so they stay sequential. Stamped here because ISP asks for the key
-  /// right before it fetches.
-  PageKey? _nextPageKey(PagingState<PageKey, T> state) {
-    final pages = state.pages;
-    final readStamp = _editStampNotifier.value;
-    if (pages == null || pages.isEmpty) return (index: 0, readStamp: readStamp);
+  /// The index of the page after [pages], which is their count, or null once [AsyncSource.endPolicy]
+  /// reports the end.
+  int? _nextPageIndex(List<LoadedPage<T>>? pages) {
+    if (pages == null || pages.isEmpty) return 0;
 
     final endContext = EndContext(
-      pageItemCounts: pages.map((page) => page.length).toList(growable: false),
+      pageItemCounts: pages.map((page) => page.items.length).toList(growable: false),
       pageSize: widget.source.pageSize,
       lastPageSignal: _lastPageSignal,
     );
 
-    return widget.source.endPolicy.hasReachedEnd(endContext)
-        ? null
-        : (index: pages.length, readStamp: readStamp);
+    return widget.source.endPolicy.hasReachedEnd(endContext) ? null : pages.length;
   }
 
   /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
-  /// in it. The controller's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
-  _Display<T> _displayFor(PagingState<PageKey, T> state) {
+  /// in it. The paging state's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
+  _Display<T> _displayFor(PagingState<T> state) {
     final itemIdGetter = widget.source.itemIdGetter;
     final pages = state.pages;
-    final keys = state.keys;
-    if (pages == null || keys == null) return (state: state, shownIds: const {});
+    if (pages == null) return (state: state, shownIds: const {});
 
     final editStamp = _editStampNotifier.value;
     final isSearchMode = _searchModeNotifier.value;
@@ -300,7 +333,6 @@ class _AsyncListViewState<T extends Object>()
     } else {
       final (pages: displayPages, :shownIds) = resolveDisplayPages(
         pages: pages,
-        readStamps: keys.map((key) => key.readStamp).toList(growable: false),
         edits: _edits,
         itemIdGetter: itemIdGetter,
         groupOf: widget.grouping.groupOf,
@@ -319,9 +351,9 @@ class _AsyncListViewState<T extends Object>()
     if (_edits.isEmpty) return;
 
     final readStamps = [
-      ...?_pager.value.keys,
-      ...?_normalSnapshot?.state.keys,
-    ].map((key) => key.readStamp);
+      ...?_pagingStateNotifier.value.pages,
+      ...?_normalSnapshot?.state.pages,
+    ].map((page) => page.readStamp);
     if (readStamps.isEmpty) return;
 
     final oldestRead = readStamps.min;
@@ -329,26 +361,29 @@ class _AsyncListViewState<T extends Object>()
     _edits.removeWhere((_, edit) => edit.stamp <= oldestRead);
   }
 
-  /// Pages the controller past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since
-  /// the pager parks there with nothing on screen to scroll.
+  /// Pages past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since with no rows on
+  /// screen no row near the end ever asks for the next one.
   void _maybeAdvancePastEmptyPage() {
-    if (!_shouldAdvancePastEmpty(_pager.value)) return;
+    if (!_shouldAdvancePastEmpty(_pagingStateNotifier.value)) return;
 
-    // Deferred so it never re-enters the controller's own notification, re-checked since the state
-    // can move in between.
+    // Deferred so it never re-enters the state's own notification, re-checked since the state can move
+    // in between.
     scheduleMicrotask(() {
-      if (mounted && _shouldAdvancePastEmpty(_pager.value)) _pager.fetchNextPage();
+      if (mounted && _shouldAdvancePastEmpty(_pagingStateNotifier.value)) {
+        unawaited(_fetchNextPage());
+      }
     });
   }
 
   /// Whether to page past an empty screen. Emptiness comes off what the user sees, more-available off
   /// the raw pages. Gates both the auto-fetch and the loading surface, so the two can't disagree.
-  bool _shouldAdvancePastEmpty(PagingState<PageKey, T> state) {
+  bool _shouldAdvancePastEmpty(PagingState<T> state) {
     // No page yet isn't an empty list.
     final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
-    final isMoreAvailable = _nextPageKey(state) != null;
+    final isMoreAvailable = _nextPageIndex(state.pages) != null;
     // The user emptied it, not the server, so there's more to show.
-    final wasEmptiedByEdits = isEmpty && (state.pages?.any((page) => page.isNotEmpty) ?? false);
+    final wasEmptiedByEdits =
+        isEmpty && (state.pages?.any((page) => page.items.isNotEmpty) ?? false);
     if (wasEmptiedByEdits && isMoreAvailable) return true;
 
     return widget.source.onEmptyPage.shouldAdvance(
@@ -392,9 +427,11 @@ class _AsyncListViewState<T extends Object>()
         _rowTransitionsNotifier.settle();
         _generation++;
         _lastFailedPageIndex = null;
-        _replacePagingState(snapshot.state);
         _lastPageSignal = snapshot.signal;
         _normalSnapshot = null;
+        _pagingStateNotifier.value = snapshot.state;
+        // Parked before its 1st page landed, so that page is still owed.
+        if (snapshot.state.status == .loadingFirstPage) _fetchFirstPage(null);
 
         return snapshot;
       case (.snapshotThenRefresh, _):
@@ -404,7 +441,7 @@ class _AsyncListViewState<T extends Object>()
             ? _stronger(runningReload.rerunTrigger, runningReload.trigger)
             : null;
         _normalSnapshot = _NormalSnapshot(
-          state: _pager.value.copyWith(isLoading: false, error: null),
+          state: _pagingStateNotifier.value.settled(),
           signal: _lastPageSignal,
           debt: strandedTrigger, // the reset below strands a live run, so the feed inherits its ask
         );
@@ -416,22 +453,24 @@ class _AsyncListViewState<T extends Object>()
     return null;
   }
 
-  /// Swaps the whole paging state and drops any fetch still in flight. A bare `value =` wouldn't move
-  /// the pager's token, so a landed fetch would still apply. Every direct write comes through here.
-  void _replacePagingState(PagingState<PageKey, T> next) {
-    _pager.cancel();
-    _pager.value = next;
-  }
-
-  /// Restarts the stream: invalidates in-flight writes, latches [nextTrigger] for the re-fetch this
-  /// drives, and clears the end signal so a signal policy can't read the old stream's last one.
-  void _resetPaging(FetchTrigger nextTrigger) {
+  /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
+  /// read the old stream's last one, and asks for the new 1st page, which reports [trigger].
+  void _resetPaging(FetchTrigger trigger) {
     _rowTransitionsNotifier.settle();
     _generation++;
     _lastFailedPageIndex = null;
-    _pendingTrigger = nextTrigger;
     _lastPageSignal = null;
-    _pager.refresh();
+    _pagingStateNotifier.value = PagingState();
+    _fetchFirstPage(trigger);
+  }
+
+  /// Asks for the stream's 1st page once the current work is done, so the events announcing a reload
+  /// fire before it, and resets made in one go send one request.
+  void _fetchFirstPage(FetchTrigger? trigger) {
+    final generation = _generation;
+    scheduleMicrotask(() {
+      if (generation == _generation) unawaited(_fetchNextPage(trigger: trigger));
+    });
   }
 
   // The engine side of a reload, reached through a [_ReloadRun].
@@ -445,20 +484,12 @@ class _AsyncListViewState<T extends Object>()
   };
 
   /// Replaces the loaded pages with [pages] atomically, recording [lastSignal] as the new end signal.
-  void _commit(List<List<T>> pages, {required List<int> readStamps, Object? lastSignal}) {
+  void _commit(List<LoadedPage<T>> pages, {Object? lastSignal}) {
     _generation++;
     _lastPageSignal = lastSignal;
-    final pageKeys = readStamps
-        .mapIndexed((index, readStamp) => (index: index, readStamp: readStamp))
-        .toList(growable: false);
-    final probeState = PagingState<PageKey, T>(pages: pages, keys: pageKeys);
-
-    _replacePagingState(
-      PagingState<PageKey, T>(
-        pages: pages,
-        keys: pageKeys,
-        hasNextPage: _nextPageKey(probeState) != null,
-      ),
+    _pagingStateNotifier.value = PagingState(
+      pages: pages,
+      hasNextPage: _nextPageIndex(pages) != null,
     );
   }
 
@@ -466,9 +497,9 @@ class _AsyncListViewState<T extends Object>()
   Widget build(BuildContext context) {
     final surfaces = widget.surfaces;
 
-    final pagedList = PagingListener(
-      controller: _pager,
-      builder: (_, state, fetchNextPage) => DualValueListenableBuilder(
+    final pagedList = ValueListenableBuilder(
+      valueListenable: _pagingStateNotifier,
+      builder: (_, state, _) => DualValueListenableBuilder(
         firstListenable: _searchModeNotifier,
         secondListenable:
             _editStampNotifier, // an edit only needs the rebuild, _displayFor reads the edits
@@ -482,7 +513,8 @@ class _AsyncListViewState<T extends Object>()
 
           return PagedView(
             state: _displayFor(state).state,
-            fetchNextPage: fetchNextPage,
+            onNearEnd: _onNearEnd,
+            onRetry: _retryPage,
             itemBuilder: switch (widget.source.editTransition) {
               AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
                 widget.itemBuilder,
@@ -582,7 +614,7 @@ class _AsyncListViewState<T extends Object>()
   };
 
   /// Whether the item with [id] has a row in what renders now.
-  bool _isShown(Object id) => _displayFor(_pager.value).shownIds.contains(id);
+  bool _isShown(Object id) => _displayFor(_pagingStateNotifier.value).shownIds.contains(id);
 
   /// Books [editedItem] against [item]'s id, null for a removal.
   void _edit(T item, T? editedItem) {
@@ -659,13 +691,16 @@ final class _ReloadRun<T extends Object>(
   bool get isStale => _engine._generation != _epoch;
 
   /// What this run started from, for the pages a best-effort commit keeps.
-  PagingState<PageKey, T>? _startState;
+  PagingState<T>? _startState;
 
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
   @override
-  List<List<T>> get loadedPages => (_startState ??= _engine._pager.value).pages ?? [];
+  List<List<T>> get loadedPages =>
+      ((_startState ??= _engine._pagingStateNotifier.value).pages ?? const [])
+          .map((page) => page.items)
+          .toList(growable: false);
 
   @override
   bool get isSignalBased => _engine._isSignalBased;
@@ -681,17 +716,16 @@ final class _ReloadRun<T extends Object>(
   void commit(List<List<T>> pages, {Object? lastSignal}) {
     if (isStale) return;
     final startPages = _startState?.pages ?? const [];
-    final startKeys = _startState?.keys ?? const [];
     // A page whose re-fetch failed is the old one, handed back as is, so it keeps its old stamp. Every
     // other page came through [fetch].
-    final readStamps = pages
+    final committedPages = pages
         .mapIndexed(
-          (index, page) => index < startPages.length && identical(page, startPages[index])
-              ? startKeys[index].readStamp
-              : _readStamps[index]!,
+          (index, items) => index < startPages.length && identical(items, startPages[index].items)
+              ? startPages[index]
+              : (items: items, readStamp: _readStamps[index]!),
         )
         .toList(growable: false);
-    _engine._commit(pages, readStamps: readStamps, lastSignal: lastSignal);
+    _engine._commit(committedPages, lastSignal: lastSignal);
     _epoch = _engine._generation;
   }
 
@@ -707,7 +741,7 @@ final class _ReloadRun<T extends Object>(
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
 final class _NormalSnapshot<T extends Object>({
-  required final PagingState<PageKey, T> state,
+  required final PagingState<T> state,
 
   /// The stream's last end signal, restored with [state] so a signal policy reads its own.
   required final Object? signal,
@@ -720,7 +754,7 @@ final class _NormalSnapshot<T extends Object>({
 }
 
 /// What renders, and the ids in it.
-typedef _Display<T extends Object> = ({PagingState<PageKey, T> state, Set<Object> shownIds});
+typedef _Display<T extends Object> = ({PagingState<T> state, Set<Object> shownIds});
 
 /// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
 FetchTrigger _stronger(FetchTrigger? pending, FetchTrigger next) =>

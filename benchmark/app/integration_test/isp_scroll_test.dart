@@ -1,8 +1,8 @@
-/// Scenario: scrolling a list_smith async list (ISP under the hood).
+/// Scenario: scrolling a list_smith async list.
 ///
-/// Per-frame build and raster timing while flinging through many pages, so ISP's index-triggered load-more
-/// plus our wrapping shows up as real frames. This minus `bare_listview`, minus the ~0 micro overhead,
-/// is ISP's own share.
+/// Per-frame build and raster timing while flinging through many pages, so the near-end load-more and
+/// the rest of the paging show up as real frames. This minus `bare_listview` is list_smith's share. The
+/// id keeps its `isp_scroll` name from before list_smith paged on its own, so the history lines up.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -24,7 +24,7 @@ const _warmupPumps = 10;
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('scrolling a list_smith async list (ISP)', (tester) async {
+  testWidgets('scrolling a list_smith async list', (tester) async {
     Future<List<int>> fetchPage(PageRequest request) async => List<int>.generate(
       request.pageSize,
       (index) => request.pageIndex * request.pageSize + index,
