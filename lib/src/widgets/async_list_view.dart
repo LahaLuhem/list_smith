@@ -19,6 +19,7 @@ import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
+import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/models/page_request.dart';
 import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/utils/fetch_trigger_resolver.dart';
@@ -215,7 +216,10 @@ class _AsyncListViewState<T extends Object>()
       _lastPageSignal = signal;
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
-        pages: [...?latestState.pages, (items: items, readStamp: readStamp)],
+        pages: [
+          ...?latestState.pages,
+          LoadedPage(items: items, readStamp: readStamp),
+        ],
         isLoading: false,
       );
     } on Exception catch (error) {
@@ -722,7 +726,7 @@ final class _ReloadRun<T extends Object>(
         .mapIndexed(
           (index, items) => index < startPages.length && identical(items, startPages[index].items)
               ? startPages[index]
-              : (items: items, readStamp: _readStamps[index]!),
+              : LoadedPage(items: items, readStamp: _readStamps[index]!),
         )
         .toList(growable: false);
     _engine._commit(committedPages, lastSignal: lastSignal);

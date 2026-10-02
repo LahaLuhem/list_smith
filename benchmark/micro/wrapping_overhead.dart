@@ -6,8 +6,8 @@ library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
 import 'package:list_smith/src/data/pagination/models/end_context.dart';
+import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 import 'package:list_smith/src/data/pagination/models/pagination_end_policy.dart';
-import 'package:list_smith/src/data/pagination/models/paging_state.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
@@ -28,7 +28,7 @@ final class _WrappingOverhead(final int pageCount) extends BenchmarkBase {
   @override
   void setup() => _pages = List.generate(
     pageCount,
-    (_) => (items: List<int>.filled(_itemsPerPage, 0), readStamp: 0),
+    (_) => LoadedPage(items: List<int>.filled(_itemsPerPage, 0), readStamp: 0),
     growable: false,
   );
 

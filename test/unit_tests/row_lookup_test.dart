@@ -1,5 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
+import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
 
 void main() {
@@ -7,7 +8,7 @@ void main() {
 
   // The ids are the items themselves. Read stamps don't matter to a lookup.
   RowLookup<int> lookupOver(List<List<int>> pages) => RowLookup(
-    pages.map((items) => (items: items, readStamp: 0)).toList(growable: false),
+    pages.map((items) => LoadedPage(items: items, readStamp: 0)).toList(growable: false),
     (item) => item,
   );
 
