@@ -52,11 +52,11 @@ void main() {
     });
 
     scenarioWidgets('a custom first-page loading surface covers the advance', (tester) async {
-      final hold = Completer<List<int>>();
+      final holdCompleter = Completer<List<int>>();
       final fetchPage = PageFetcher<int>((request) {
         if (request.pageIndex == 0) return Future.value(const <int>[]);
 
-        return request.pageIndex == 1 ? hold.future : Future.value(const <int>[]);
+        return request.pageIndex == 1 ? holdCompleter.future : Future.value(const <int>[]);
       });
 
       await pumpListSmith(
@@ -77,7 +77,7 @@ void main() {
       // and the consumer's override is what gets drawn there, not the neutral default.
       check(find.text('my loader').evaluate()).length.equals(1);
 
-      hold.complete(const [1, 2]);
+      holdCompleter.complete(const [1, 2]);
       await tester.idle();
       await drain(tester, frames: 12);
       check(find.text('my loader').evaluate()).length.equals(0);

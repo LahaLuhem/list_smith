@@ -85,8 +85,6 @@ final class ReloadViewModel() extends ViewModel {
   void onInjectFailuresToggled({required bool value}) =>
       _shouldInjectFailuresNotifier.value = value;
 
-  /// `refresh()` completes when the refetch lands under [ReloadToCurrentDepth], but under
-  /// [ResetToFirstPage] as soon as the list clears and its first-page loader takes over.
   Future<void> onRefreshPressed() async {
     _isRefreshingNotifier.value = true;
 

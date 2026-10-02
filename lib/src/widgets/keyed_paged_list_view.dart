@@ -1,29 +1,39 @@
-import 'package:flutter/widgets.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart';
+
+import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/pagination/typedefs/page_key.dart';
+import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/utils/row_lookup.dart';
 
-/// ISP's `PagedListView`, except a row follows its item: when rows above it come or go, it keeps its
-/// state and anything it's animating.
-///
-/// Ours only because ISP's list can't take a `findChildIndexCallback`. It can go once ISP's does, or
-/// animates its own inserts and removals:
-/// https://github.com/EdsonBueno/infinite_scroll_pagination/issues/403,
-/// https://github.com/EdsonBueno/infinite_scroll_pagination/issues/21.
+/// What the list shows instead of its rows, or after them, defaults already filled in.
+typedef PagedSurfaces = ({
+  WidgetBuilder firstPageLoading,
+  WidgetBuilder firstPageError,
+  WidgetBuilder noItemsFound,
+  WidgetBuilder newPageLoading,
+  WidgetBuilder newPageError,
+  WidgetBuilder noMoreItems,
+});
+
+/// The async list: [state]'s rows, or the surface its status calls for. A row follows its item, so
+/// when rows above it come or go, it keeps its state and anything it's animating.
 class const KeyedPagedListView<T extends Object>({
   /// What renders, edits and de-dup already applied.
-  required final PagingState<PageKey, T> state,
+  required final PagingState<T> state,
 
-  /// Requests the next page.
-  required final VoidCallback fetchNextPage,
-
-  /// The item builder and ISP's surface slots.
-  required final PagedChildBuilderDelegate<T> builderDelegate,
+  /// Builds each row.
+  required final ItemBuilder<T> itemBuilder,
 
   /// Keys each row, so the list finds it again after a shift.
   required final ItemIdGetter<T> itemIdGetter,
+
+  /// What shows instead of the rows, or after them.
+  required final PagedSurfaces surfaces,
+
+  /// Asks for the next page. Called while a row near the end builds.
+  required final VoidCallback onNearEnd,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -40,47 +50,72 @@ class const KeyedPagedListView<T extends Object>({
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    final rowLookup = RowLookup<T>(state.pages ?? const [], itemIdGetter);
-    // One shape whatever the footer shows: the end, a new page loading, or its error.
-    Widget listing(
-      BuildContext _,
-      IndexedWidgetBuilder itemBuilder,
-      int itemCount,
-      WidgetBuilder? footerBuilder,
-    ) => _KeyedRows(
-      rowLookup: rowLookup,
-      itemIdGetter: itemIdGetter,
-      itemBuilder: itemBuilder,
-      itemCount: itemCount,
-      footerBuilder: footerBuilder,
-      separatorBuilder: separatorBuilder,
-    );
+    final status = state.status;
+    final firstPageBuilder = switch (status) {
+      .loadingFirstPage => surfaces.firstPageLoading,
+      .firstPageError => surfaces.firstPageError,
+      .noItemsFound => surfaces.noItemsFound,
+      .ongoing || .subsequentPageError || .completed => null,
+    };
+    final isLoader = status == .loadingFirstPage;
 
-    return PagedLayoutBuilder<PageKey, T>(
-      layoutProtocol: .sliver,
-      state: state,
-      fetchNextPage: fetchNextPage,
-      builderDelegate: builderDelegate,
-      completedListingBuilder: listing,
-      loadingListingBuilder: listing,
-      errorListingBuilder: listing,
-    );
+    return firstPageBuilder != null
+        ? SliverFillRemaining(
+            key: ValueKey(status), // so one surface replacing another starts fresh
+            // Only the loader skips measuring, so its LayoutBuilder works and a tall error still scrolls.
+            hasScrollBody: isLoader,
+            child: !isLoader
+                ? firstPageBuilder(context)
+                : _DragAbsorber(axis: scrollDirection, child: firstPageBuilder(context)),
+          )
+        // One shape whatever the footer shows: the end, a new page loading, or its error.
+        : _KeyedRows(
+            rowLookup: RowLookup<T>(state.pages ?? const [], itemIdGetter),
+            itemIdGetter: itemIdGetter,
+            itemBuilder: itemBuilder,
+            footerBuilder: switch (status) {
+              .subsequentPageError => surfaces.newPageError,
+              .completed => surfaces.noMoreItems,
+              _ => surfaces.newPageLoading,
+            },
+            separatorBuilder: separatorBuilder,
+            // Only here does scrolling ask for more, so a failed page waits for Retry.
+            onNearEnd: status != .ongoing ? null : onNearEnd,
+          );
   }
 }
 
-/// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too,
-/// as they do in ISP's list.
+/// Wins drags along [axis] that start on [child], so the list stays still. Only works inside the list.
+class const _DragAbsorber({required final Axis axis, required final Widget child})
+    extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onVerticalDragStart: axis != .vertical ? null : _ignore,
+    onHorizontalDragStart: axis != .horizontal ? null : _ignore,
+    // Opaque, so the gaps around a small loader count too.
+    behavior: .opaque,
+    // So a screen reader doesn't offer to scroll it.
+    excludeFromSemantics: true,
+    child: child,
+  );
+
+  // Winning the drag is the whole job.
+  // ignore: no-empty-block
+  static void _ignore(DragStartDetails _) {}
+}
+
+/// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too.
 class const _KeyedRows<T extends Object>({
   required final RowLookup<T> rowLookup,
   required final ItemIdGetter<T> itemIdGetter,
-  required final IndexedWidgetBuilder itemBuilder,
-  required final int itemCount,
-  required final WidgetBuilder? footerBuilder,
+  required final ItemBuilder<T> itemBuilder,
+  required final WidgetBuilder footerBuilder,
   required final IndexedWidgetBuilder? separatorBuilder,
+  required final VoidCallback? onNearEnd,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final cellCount = itemCount + (footerBuilder == null ? 0 : 1);
+    final cellCount = rowLookup.itemCount + 1;
     final separatorBuilder = this.separatorBuilder;
 
     return separatorBuilder == null
@@ -97,14 +132,23 @@ class const _KeyedRows<T extends Object>({
           );
   }
 
-  Widget? _buildCell(BuildContext context, int index) => index < itemCount
-      ? KeyedSubtree(
-          key: _RowKey(itemIdGetter(rowLookup.itemAt(index)), index),
-          child: itemBuilder(context, index),
-        )
-      : footerBuilder?.call(context);
+  Widget _buildCell(BuildContext context, int index) {
+    final itemCount = rowLookup.itemCount;
+    if (index >= itemCount) return footerBuilder(context);
 
-  int? _indexOf(Key key) => key is _RowKey ? rowLookup.indexOf(key.id, key.index) : null;
+    if (index >= math.max(0, itemCount - 1 - _nearEndRows)) onNearEnd?.call();
+    final item = rowLookup.itemAt(index);
+
+    return KeyedSubtree(
+      key: _RowKey(itemIdGetter(item), index),
+      child: itemBuilder(context, item, index),
+    );
+  }
+
+  int? _indexOf(Key key) => key is! _RowKey ? null : rowLookup.indexOf(key.id, key.index);
+
+  /// How many rows from the end a row's build asks for the next page.
+  static const _nearEndRows = 3;
 }
 
 /// A row's item id, plus where it was built as a lookup hint. Equal on the id alone, so a row that

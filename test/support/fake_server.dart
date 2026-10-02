@@ -11,10 +11,10 @@ final class FakeServer<T extends Object>(Iterable<T> items) {
   final requests = <PageRequest>[];
   final attempts = <int, int>{};
   final failing = <(int, int)>{};
-  final _holds = <(int, int), Completer<void>>{};
+  final _holdCompleters = <(int, int), Completer<void>>{};
 
   Completer<void> hold(int page, {required int attempt}) =>
-      _holds[(page, attempt)] = Completer<void>();
+      _holdCompleters[(page, attempt)] = Completer<void>();
 
   bool asked(int page) => attempts.containsKey(page);
 
@@ -42,7 +42,7 @@ final class FakeServer<T extends Object>(Iterable<T> items) {
     requests.add(request);
     final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
     final key = (request.pageIndex, attempt);
-    await _holds[key]?.future;
+    await _holdCompleters[key]?.future;
     if (failing.contains(key)) throw Exception('page ${request.pageIndex} failed');
   }
 }
@@ -61,10 +61,10 @@ extension FakeServerKeyset on FakeServer<int> {
   });
 }
 
-/// Lets [holds] through, then drains the frames their pages bring.
-Future<void> release(WidgetTester tester, Iterable<Completer<void>> holds) async {
-  for (final hold in holds) {
-    hold.complete();
+/// Lets [holdCompleters] through, then drains the frames their pages bring.
+Future<void> release(WidgetTester tester, Iterable<Completer<void>> holdCompleters) async {
+  for (final holdCompleter in holdCompleters) {
+    holdCompleter.complete();
   }
   await tester.idle();
   await drain(tester, frames: 12);

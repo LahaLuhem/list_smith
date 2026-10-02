@@ -1,6 +1,10 @@
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
+import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
+
+import '../enums/pullable_surface.dart';
 import 'list_smith_refresh_state.dart';
 import 'reload.dart';
 
@@ -14,4 +18,8 @@ part 'refreshes/pull_to_refresh.dart';
 sealed class const Refresh() {
   /// Const base constructor.
   this;
+
+  /// The same on every surface, since swapping physics mid-drag cancels the drag.
+  @internal
+  ScrollPhysics? scrollPhysics(ScrollPhysics? physics);
 }

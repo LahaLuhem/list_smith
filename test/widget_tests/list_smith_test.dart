@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,6 +58,31 @@ void main() {
 
       check(find.text('item 1').evaluate()).length.equals(1);
     });
+
+    scenarioWidgets(
+      "a fetcher's Error isn't caught, so it reaches the app instead of the error surface",
+      (tester) async {
+        final observer = RecordingListSmithObserver();
+        final uncaught = <Object>[];
+        // An uncaught Error lands in the app's zone handler, so this test plays that part.
+        await runZonedGuarded(() async {
+          await pumpListSmith(
+            tester,
+            ListSmith.async(
+              fetchPage: PageFetcher((_) async => throw StateError('a bug in the fetcher')),
+              itemIdGetter: (item) => item,
+              observer: observer,
+              itemBuilder: (_, item, _) => Text('item $item'),
+            ),
+          );
+          await drain(tester);
+        }, (error, _) => uncaught.add(error));
+
+        check(uncaught).single.isA<StateError>();
+        check(find.text('Something went wrong').evaluate()).isEmpty();
+        check(observer.events.contains('error')).isFalse();
+      },
+    );
   });
 
   feature('ListSmith.sync surfaces', () {

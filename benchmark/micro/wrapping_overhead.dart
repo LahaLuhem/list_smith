@@ -1,11 +1,13 @@
-/// Micro-benchmark: list_smith's per-`getNextPageKey` overhead on top of ISP.
+/// Micro-benchmark: list_smith's per-page end check.
 ///
-/// Each time ISP asks for the next page key, `_nextPageKey` rebuilds the per-page item counts into an
-/// `EndContext` and runs the end policy over it. This measures that core as the loaded-page count grows.
+/// Each time the engine asks for the next page's index, `_nextPageIndex` rebuilds the per-page item
+/// counts into an `EndContext` and runs the end policy over it. This measures that core as the
+/// loaded-page count grows.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
 import 'package:list_smith/src/data/pagination/models/end_context.dart';
+import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 import 'package:list_smith/src/data/pagination/models/pagination_end_policy.dart';
 
 import '../harness/measure.dart';
@@ -19,23 +21,23 @@ const _itemsPerPage = 20;
 final class _WrappingOverhead(final int pageCount) extends BenchmarkBase {
   this : super('wrapping_overhead_p$pageCount');
 
-  late final List<List<int>> _pages;
+  late final List<LoadedPage<int>> _pages;
   var lastKey = 0;
 
   static const _endPolicy = StopOnEmptyPagesPolicy();
 
   @override
-  void setup() => _pages = List<List<int>>.generate(
+  void setup() => _pages = List.generate(
     pageCount,
-    (_) => List<int>.filled(_itemsPerPage, 0),
+    (_) => LoadedPage(items: List<int>.filled(_itemsPerPage, 0), readStamp: 0),
     growable: false,
   );
 
   @override
   void run() {
-    // Mirror _nextPageKey's per-call work: rebuild the page-item-counts, wrap them in an EndContext,
+    // Mirror _nextPageIndex's per-call work: rebuild the page-item-counts, wrap them in an EndContext,
     // then run the end policy.
-    final pageItemCounts = _pages.map((page) => page.length).toList(growable: false);
+    final pageItemCounts = _pages.map((page) => page.items.length).toList(growable: false);
     final context = EndContext(pageItemCounts: pageItemCounts, pageSize: _itemsPerPage);
     lastKey = _endPolicy.hasReachedEnd(context) ? -1 : _pages.length;
   }

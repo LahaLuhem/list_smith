@@ -179,14 +179,14 @@ void main() {
         fetchPage: server.offsetEarlyFetcher,
         refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
       );
-      final hold = server.hold(0, attempt: 2);
+      final holdCompleter = server.hold(0, attempt: 2);
 
       controller.remove(2);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 100));
       unawaited(controller.refresh());
       await tester.pump();
-      await release(tester, [hold]);
+      await release(tester, [holdCompleter]);
       check(server.attempts[0]).equals(2); // the re-read committed while row 2 was leaving
       check(_heightOf(2)).isLessThan(50);
       await tester.pump(const Duration(milliseconds: 300));

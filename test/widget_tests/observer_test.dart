@@ -143,6 +143,41 @@ void main() {
       check(observer.events.last).equals('searchModeChanged(false)');
     });
 
+    scenarioWidgets('a feed cut off in its 1st load comes back from search without a reload', (
+      tester,
+    ) async {
+      final observer = RecordingListSmithObserver();
+      final server = FakeServer<int>([1, 2, 3]);
+      final firstLoadHoldCompleter = server.hold(0, attempt: 1);
+      final search = AsyncSearch(
+        fetchPage: SearchPageFetcher(
+          (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
+        ),
+        cachePolicy: const KeepCachePolicy(),
+      );
+      Future<void> pump(String query) => _pumpObserved(
+        tester,
+        observer,
+        fetchPage: server.offsetLateFetcher,
+        search: search,
+        query: query,
+      );
+
+      await pump('');
+      await drain(tester);
+      // Search starts while the feed's 1st page is still out, and ends before it lands.
+      await pump('ab');
+      await settle(tester);
+      await pump('');
+      await settle(tester);
+      await release(tester, [firstLoadHoldCompleter]);
+
+      // Only entering search was a reload. The feed's own 1st load was nobody's ask.
+      check(observer.events.where((event) => event.startsWith('reload')))
+          .deepEquals(['reload(queryChanged)']);
+      check(find.text('item 1').evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('a KeepCache restore owing a refresh fires it, after the query facts', (
       tester,
     ) async {

@@ -139,19 +139,19 @@ def frame_scenarios_table(dataframe: pl.DataFrame, thread: FrameThread) -> str:
     return "\n".join(rows) + "\n"
 
 
-def render_latency_table(dataframe: pl.DataFrame) -> str:
-    """Median render latency per observer delay for the `slow_observer` scenario (the headline)."""
+def _latency_by_delay(dataframe: pl.DataFrame) -> pl.DataFrame | None:
+    """Median render latency per observer delay, or None without `slow_observer` data."""
     metric = "median_render_latency_micros"
     if metric not in dataframe.columns or "observer_delay_millis" not in dataframe.columns:
-        return "_(no slow_observer data in input)_\n"
+        return None
 
     df = dataframe.filter(pl.col(metric).is_not_null()).filter(
         pl.col("observer_delay_millis").is_not_null()
     )
     if df.is_empty():
-        return "_(no slow_observer data in input)_\n"
+        return None
 
-    agg = (
+    return (
         df.group_by("observer_delay_millis")
         .agg(
             pl.col(metric).median().alias("median"),
@@ -160,12 +160,33 @@ def render_latency_table(dataframe: pl.DataFrame) -> str:
         .sort("observer_delay_millis")
     )
 
+
+def render_latency_table(dataframe: pl.DataFrame) -> str:
+    """Median render latency per observer delay for the `slow_observer` scenario (the headline)."""
+    agg = _latency_by_delay(dataframe)
+    if agg is None:
+        return "_(no slow_observer data in input)_\n"
+
     rows = [
         "| Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |",
         "|---:|---:|---:|---:|",
         *map(_latency_row, agg.iter_rows(named=True)),
     ]
     return "\n".join(rows) + "\n"
+
+
+def _observer_example(dataframe: pl.DataFrame, *, delay_ms: int = 50) -> str:
+    """The headline's example, read off the capture. Empty when nothing ran at `delay_ms`."""
+    agg = _latency_by_delay(dataframe)
+    row = None if agg is None else agg.filter(pl.col("observer_delay_millis") == delay_ms)
+    if row is None or row.is_empty():
+        return ""
+
+    latency_ms = row["median"][0] / 1000.0
+    return (
+        f", so a {delay_ms} ms observer pushes ~{latency_ms - delay_ms:.0f} ms to "
+        f"~{latency_ms:.0f} ms"
+    )
 
 
 def _latency_row(row: dict[str, Any]) -> str:
@@ -198,8 +219,9 @@ def render_summary_markdown(
         "The headline finding. list_smith invokes your observer *synchronously* on the page-load "
         "path, so a slow callback lands almost fully on the critical path. `slow_observer` blocks "
         "for a set delay on each callback and measures render latency across a sweep of delays: "
-        "latency tracks the delay ~1:1 on top of a fixed baseline render, so a 50 ms observer "
-        "pushes ~18 ms to ~68 ms. Keep observer callbacks cheap and do heavy work elsewhere.\n",
+        "latency tracks the delay ~1:1 on top of a fixed baseline render"
+        f"{_observer_example(dataframe)}. Keep observer callbacks cheap and do heavy work "
+        "elsewhere.\n",
         render_latency_table(dataframe),
     ]
 
@@ -272,11 +294,11 @@ def render_summary_markdown(
 
     parts.extend(
         [
-            "## Wrapping overhead: list_smith on top of ISP\n",
-            "Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer "
-            "callback, the null-check plus virtual call made in `_fetchPage`. "
-            "`wrapping_overhead` is the per-`getNextPageKey` cost, rebuilding the page-item-counts "
-            "and running the end policy, as loaded pages grow. Any real fetch dwarfs both.\n",
+            "## Per-page bookkeeping\n",
+            "Confirms the bookkeeping costs ~nothing. `observer_dispatch` is one no-op observer "
+            "callback, the null-check plus virtual call made on each page fetch. "
+            "`wrapping_overhead` is the end-policy check before each page, rebuilding the "
+            "page-item-counts as loaded pages grow. Any real fetch dwarfs both.\n",
             overhead_table(dataframe),
         ]
     )
@@ -288,7 +310,7 @@ def render_summary_markdown(
             "`avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is "
             "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
             "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
-            "attribution: that small delta is what the wrapper adds to a plain list. "
+            "attribution: that small delta is what list_smith adds to a plain list. "
             "`edit_transitions_none` makes the same edits as `_size`, `_fade` and `_slide` with no "
             "transition, so the gap is what animating them adds.\n",
             frame_scenarios_table(dataframe, "build"),
@@ -302,7 +324,8 @@ def render_summary_markdown(
         [
             "## UI scenarios: per-frame raster cost\n",
             "The same frames on the raster thread, which draws what the build produced. `missed` "
-            "counts frames over the same budget.\n",
+            "counts frames over the same budget. `worst` is usually the 1st captured frame, so it "
+            "swings between runs.\n",
             frame_scenarios_table(dataframe, "raster"),
         ]
     )

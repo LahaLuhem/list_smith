@@ -40,7 +40,7 @@
 **list_smith** wraps `ListView.builder` for the lists you actually ship: async pagination,
 pull-to-refresh, and search, sync or async. Hand it a data source, an item builder, and a bit of
 config. It owns the scrollable, the controller, and every fiddly loading, error and empty state in
-between. No `ScrollController`, no `PagingController`, nothing to wire up.
+between. No `ScrollController`, no paging controller, nothing to wire up.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/1-overview.webp" width="260" alt="list_smith in action: pagination, pull-to-refresh, search, and grouping">
@@ -61,12 +61,10 @@ flutter pub add list_smith
 
 ## Why list_smith?
 
-Plenty of packages page a list. Most build their own paging engine and ship Material widgets you
-then override. list_smith does neither.
+Plenty of packages page a list. Most ship Material widgets you then override. list_smith doesn't.
 
 |                                    |                                                                                                                                                                                          |
 |------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Runs on a proven paging engine** | Paging runs on [infinite_scroll_pagination](https://pub.dev/packages/infinite_scroll_pagination), not a custom-made one. list_smith adds the seams around it and hides the controller.   |
 | **No design system**               | Nothing in `lib/` imports `material.dart` or `cupertino.dart`. Every surface it draws is a plain `widgets`-layer default, so it looks at home in Material, Cupertino, or your own thing. |
 | **1 widget, not 3**                | Paging, search and grouping in the same list. Search in memory or paged, and a group split across a page boundary still gets one header.                                                 |
 | **Your fetcher knows why it ran**  | Each call carries a `PageRequest.trigger`: first load, next page, pull, retry, query change, `invalidate()`. Serve cache or hit the network per reason, in one closure.                  |
@@ -268,6 +266,15 @@ De-dup runs when a page arrives, never per scroll frame. What it costs is in
 On by default for `ListSmith.async`. Pull from the list's start (the top of a plain vertical list)
 and it resets and reloads from the 1st page. Switch it off with `refresh: NoRefresh()`.
 
+A pull works on the rows, and on the error and empty screens unless you leave them out. Never on the
+1st-page loader, whose page is already on its way. A short list takes a pull too, whatever your
+`ScrollController`, physics or scroll direction, unless its physics are
+`NeverScrollableScrollPhysics`.
+
+```dart
+refresh: const PullToRefresh(pullableSurfaces: {.error}), // the empty screen takes no pull
+```
+
 Want your own indicator? Give `PullToRefresh` an `indicatorBuilder`. It gets a small snapshot of the
 pull (its phase, drag value and `pullDirection`) and returns just the indicator. list_smith places
 it on the edge the pull comes from and only builds it mid-pull, so a spinner inside it can't keep
@@ -337,7 +344,7 @@ await controller.invalidate();  // my data changed: re-read every loaded page, k
 await controller.reset();       // start over from page 1: logout, account switch, a filter
 ```
 
-| Verb           | Runs                                                      | Pages report  | Meets a running reload                             |
+| Verb           | Runs                                                      | Pages report  | Meets a load already running                       |
 |----------------|-----------------------------------------------------------|---------------|----------------------------------------------------|
 | `refresh()`    | the pull's `Reload`, `ResetToFirstPage` under `NoRefresh` | `refresh`     | joins a refresh, otherwise runs once more after it |
 | `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does            | `invalidated` | joins it, then runs once more                      |
@@ -348,10 +355,9 @@ so the search restarts. `invalidate()` keeps the user's place on purpose: a pull
 top is a convention, a local write doing it is a bug. A feed kept by `KeepCachePolicy` catches up
 once you come back.
 
-No indicator: that belongs to the pull, and your button owns its progress, hence the futures.
-Awaiting follows the reload, so `ResetToFirstPage` completes as the list clears, not when fresh data
-lands, while `ReloadToCurrentDepth` waits for the refetch. A call that joins a running reload
-completes with that reload, not with the run after it.
+No indicator: that belongs to the pull, and your button owns its progress, hence the futures. Each
+completes once its fresh data shows or its fetch fails. A call that meets a load already running
+completes with that load, not with the run after it.
 
 `invalidate()` and `reset()` are no-ops before any list has attached, since a view-model often hears
 a store event before its view builds. `refresh()` there asserts: only wiring can cause it.
@@ -649,7 +655,8 @@ In `AsyncListSurfaces` (async lists only):
 
 The pull indicator is set separately, on `PullToRefresh`. The error builders get
 `(context, error, onRetry)`, so a custom error view can offer retry without you reaching for a
-controller. Leave any slot out and its neutral default fills in.
+controller. Only an `Exception` from your fetcher gets there: an `Error` is a bug, so it goes on to
+your app's error handler instead. Leave any slot out and its neutral default fills in.
 
 </details>
 
@@ -676,6 +683,9 @@ ListSmith.async(
 The shading is yours: list_smith ships none. If the row needs something from the enclosing scope,
 hoist the builder to a local and call it from both slots.
 
+The 1st-page loader gets exactly the list's visible space, so make it fit: a taller `Column`
+overflows.
+
 ## Watching what it does
 
 Log a load, report an error to your crash tool, count how often people search. Pass an `observer`
@@ -687,7 +697,7 @@ final class MyObserver extends ListSmithObserver {
   const MyObserver();
 
   @override
-  void onError(Object error, StackTrace stackTrace) => crashReporter.record(error, stackTrace);
+  void onError(Exception error, StackTrace stackTrace) => crashReporter.record(error, stackTrace);
 }
 
 ListSmith.async(
@@ -739,6 +749,9 @@ gets one header, and isn't split. For out-of-order pages see [Grouping](#groupin
 the pull can't land after it and duplicate rows or leave a hole. It's asked again, so you keep what
 the refresh committed. Same when the feed returns after a search.
 
+**Asking twice doesn't fetch twice.** A refresh asked while one runs, page 0 included, joins it, so
+a double-tapped button sends 1 request.
+
 **An edit outlives a reload already in flight.** A page fetched before your edit shows the edit when
 it lands, and so does one whose re-fetch failed. Otherwise a row you just deleted would come back
 mid-reload.
@@ -747,20 +760,19 @@ mid-reload.
 
 ## Performance
 
-list_smith is a thin wrapper over `infinite_scroll_pagination` and `custom_refresh_indicator`, and
-the wrapping is close to free. Measured on one machine (yours will differ), from the committed
+Measured on one machine (yours will differ), from the committed
 [benchmark report](benchmark/reports/SUMMARY.md):
 
 | What                                                 | Cost                                                                          |
 |------------------------------------------------------|-------------------------------------------------------------------------------|
-| Scrolling                                            | within ~0.05 ms/frame of a plain `ListView.builder`, neither dropping a frame |
+| Scrolling                                            | within ~0.07 ms/frame of a plain `ListView.builder`, neither dropping a frame |
 | Per-page bookkeeping (end policy, observer dispatch) | sub-microsecond to a few microseconds                                         |
 | A full pull-to-refresh cycle                         | ~0.4 ms/frame to build, none over the 16.67 ms budget                         |
-| Animating edits (size, fade or slide)                | +0.1 to 0.3 ms/frame over the same edits unanimated, none over budget         |
+| Animating edits (size, fade or slide)                | +0.05 to 0.2 ms/frame over the same edits unanimated, none over budget        |
 | Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                             |
 | Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~26 ms at 100k                                 |
-| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~40 ms at 100k                          |
-| A 50 ms observer callback                            | pushes render latency to ~68 ms                                               |
+| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.4 ms at 10k, ~40 ms at 100k                          |
+| A 50 ms observer callback                            | pushes render latency to ~69 ms                                               |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
 on the debounce or go async. De-dup is off the scroll path, and only crosses the budget past tens of
@@ -791,5 +803,6 @@ demos.
 ## Contributing
 
 Issues and pull requests are welcome. Have a look at [`AGENTS.md`](.ai/AGENTS.md) for the
-conventions and [`CODESTYLE.md`](CODESTYLE.md) for the code style before you start. The reasoning
-behind the bigger design decisions lives in [`APPENDIX.md`](APPENDIX.md).
+conventions and [`CODESTYLE.md`](CODESTYLE.md) for the code style before you start. How the parts
+fit is mapped in [`doc/how-it-works.md`](doc/how-it-works.md), and the reasoning behind the bigger
+design decisions lives in [`APPENDIX.md`](APPENDIX.md).

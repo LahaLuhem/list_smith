@@ -56,6 +56,7 @@ list_smith/
 ├── README.md                       pub.dev landing page
 ├── APPENDIX.md                     Design rationale (anchor-keyed)
 ├── CODESTYLE.md
+├── doc/                            Screenshots, and how-it-works.md: the parts and their seams
 └── .ai/                            This file + CLAUDE.md (symlinked to repo root)
 ```
 
@@ -150,6 +151,8 @@ people out most often:
   (an API shape, public vs `lib/src/`, a new dependency, a widget's parameter model) stops and
   asks: options, trade-offs, the one you'd pick and why, then wait. Small choices compound. Mark
   your recommendation `★` so the user can reply by echoing or overriding it.
+- **A report's "expected behaviour" is one user's case, not the spec.** Design what's best for the
+  package, and keep the reporter's case reachable through config where it's legitimate.
 - **Refactor first when a change needs a better shape.** The enabling, behaviour-preserving
   refactor is its own step, before the feature. Get sign-off first for anything touching the public
   API or the dependency set, since both are slow to walk back once published.

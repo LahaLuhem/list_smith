@@ -23,6 +23,7 @@ export 'src/data/presentation/typedefs/error_builder.dart';
 export 'src/data/presentation/typedefs/item_builder.dart';
 export 'src/data/presentation/typedefs/no_results_builder.dart';
 export 'src/data/refresh/enums/list_smith_refresh_phase.dart';
+export 'src/data/refresh/enums/pullable_surface.dart';
 export 'src/data/refresh/enums/reload_on_error.dart';
 export 'src/data/refresh/models/list_smith_refresh_state.dart';
 export 'src/data/refresh/models/refresh.dart' show NoRefresh, PullToRefresh, Refresh;

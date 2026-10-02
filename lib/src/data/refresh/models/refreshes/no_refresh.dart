@@ -5,6 +5,10 @@ final class const NoRefresh() extends Refresh {
   /// Creates it.
   this;
 
+  @internal
+  @override
+  ScrollPhysics? scrollPhysics(ScrollPhysics? physics) => physics;
+
   @override
   String toString() => 'NoRefresh()';
 }

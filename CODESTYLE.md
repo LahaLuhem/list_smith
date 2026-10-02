@@ -88,11 +88,12 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   `x`/`y` for coordinates.
 - **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
   inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
-  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name that
-  already says what it holds is enough (`fetchPage`, `_pager`, a plural for a collection), but not
-  one that reads as another kind of thing (`rows` for a `RowLookup`, `_running` for a run). Callback
-  parameters are exempt and stay single-word (`value`, `query`, `items`), since the call site
-  already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
+  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name goes
+  in front of the suffix, not instead of it (`firstLoadHoldCompleter`, not `firstLoadHold`), so the
+  name says what a thing is for and what it is. A plural is enough for a collection. A public
+  parameter keeps its API name (`fetchPage`), since that's the name every caller reads and types.
+  Callback parameters are exempt and stay single-word (`value`, `query`, `items`), since the call
+  site already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
   disambiguation the rule is for.
 - **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
   `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
@@ -304,7 +305,7 @@ on/off decides whether to wrap the subtree in `RefreshBinding`. No type can own 
 ### A consumer handle carries intents, never engine state
 
 A handle the consumer constructs and passes in (`ListSmithController`) exposes verbs, not
-machinery. No `PagingController`, no `PagingState`, no read-back of paging internals.
+machinery. No paging state, no read-back of paging internals.
 
 **Why:** the pager is hidden on purpose, and a handle that hands state back re-exposes it by the
 back door. Watching the list is the observer's job. Full rationale:
@@ -588,6 +589,27 @@ switch (snapshot) {
 **Why:** 2 null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
 type dispatch that isn't there.
 
+<a id="idioms-catch-exceptions"></a>
+### Catch `Exception`, let `Error` through
+
+An `Exception` is a failure the code can handle, so catch it, and type whatever holds it as one. An
+`Error` is a bug: let it reach the app, where development shows it.
+
+```dart
+// Prefer:
+} on Exception catch (error) {
+  state = state.failed(error);
+}
+
+// Over: handles a bug as if it were a failure.
+} on Object catch (error) {
+  state = state.copyWith(error: error);
+  if (error is! Exception) rethrow;
+}
+```
+
+**Why:** `avoid_catching_errors` only flags `on Error`, so an `on Object` catch gets past it.
+
 ---
 
 <a id="prose"></a>
@@ -711,11 +733,11 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pumpListSmith(tester, child)` | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs |
 | `drain(tester, {frames})` | pumps a fixed number of frames |
 | `settle(tester, {debounce})` | advances past a search debounce, then drains |
-| `pullToRefresh(tester, anchor)` | pulls down from `anchor` far enough to refresh, then pumps timed frames so it runs |
+| `pullToRefresh(tester, anchor, {offset})` | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
 | `containsIgnoreCase` | sync-search predicate |
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
 | `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |
-| `release(tester, holds)` | lets held fetches through, then drains |
+| `release(tester, holdCompleters)` | lets held fetches through, then drains |
 | `ToggleRow(item)`, `shownToggleRows()` | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin

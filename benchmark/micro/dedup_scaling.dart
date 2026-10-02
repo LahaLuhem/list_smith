@@ -5,12 +5,12 @@
 /// for not having the problem.
 ///
 /// The cost scales with the whole loaded list, not the incoming page: `filterItems` re-walks every loaded
-/// page and `copyWith` re-wraps each in `List.unmodifiable`. Mirrored in pure Dart here because the
-/// real code is a widget method over an ISP `PagingState`, which won't AOT-compile as a plain exe. Keep
-/// the mirror in step with `_displayFor`'s no-edit path.
+/// page. It runs the real `PagingState.filterItems`, the call `_displayFor`'s no-edit path makes.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
+import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
+import 'package:list_smith/src/data/pagination/models/paging_state.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';
@@ -21,32 +21,28 @@ import '../harness/scenario_arguments.dart';
 const _itemCounts = [1000, 10000, 100000];
 const _itemsPerPage = 20;
 
-/// Re-de-dup every loaded page and re-wrap, mirroring `filterItems` + `copyWith`.
+/// Re-de-dup every loaded page through `filterItems`.
 final class _DedupScaling(final int itemCount) extends BenchmarkBase {
   this : super('dedup_scaling_n$itemCount');
 
-  late final List<List<_Item>> _pages;
-  late final List<int> _keys;
+  late final PagingState<_Item> _state;
   var lastCount = 0;
 
   @override
   void setup() {
-    _pages = _pagesOf(itemCount);
-    _keys = List.generate(_pages.length, (index) => index, growable: false);
+    _state = PagingState(
+      pages: _pagesOf(itemCount)
+          .map((items) => LoadedPage(items: items, readStamp: 0))
+          .toList(growable: false),
+    );
   }
 
   @override
   void run() {
     final seenIds = <Object>{};
-    // filterItems: pages.map((page) => page.where(predicate).toList()).toList().
-    final filtered = _pages
-        .map((page) => page.where((item) => seenIds.add(_idOf(item))).toList())
-        .toList();
-    // copyWith -> PagingStateBase: List.unmodifiable(pages.map(List.unmodifiable)), keys re-wrapped.
-    final wrappedPages = List<List<_Item>>.unmodifiable(filtered.map(List<_Item>.unmodifiable));
-    List<int>.unmodifiable(_keys);
+    final filtered = _state.filterItems((item) => seenIds.add(_idOf(item)));
 
-    lastCount = wrappedPages.fold(0, (total, page) => total + page.length);
+    lastCount = filtered.pages!.fold(0, (total, page) => total + page.items.length);
   }
 }
 

@@ -6,7 +6,7 @@ import 'package:platform_icons/platform_icons.dart' show PlatformIcon, PlatformI
 
 /// [isCompact] picks the new-page footer over the full-viewport first-page form.
 class const CustomError({
-  required final Object error,
+  required final Exception error,
   required final VoidCallback onRetry,
   final bool isCompact = false,
   super.key,

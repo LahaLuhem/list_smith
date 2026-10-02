@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 
+import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 
 /// Where each row's item sits in one build of the async list, for its `findChildIndexCallback`.
@@ -7,7 +8,7 @@ import '/src/data/pagination/typedefs/item_id_getter.dart';
 /// A row is looked for at the index it was last built at, so rows that didn't move cost a check each.
 /// The 1st row that did move builds an id-to-index map, and the rest of the build reuses it.
 final class RowLookup<T extends Object>(
-  final List<List<T>> _pages,
+  final List<LoadedPage<T>> _pages,
   final ItemIdGetter<T> _itemIdGetter,
 ) {
   /// Where each page starts in the flat list, then the total, so reading by index needs no flatten.
@@ -18,12 +19,15 @@ final class RowLookup<T extends Object>(
   /// Creates it over one build's pages.
   this;
 
+  /// How many items the pages hold.
+  int get itemCount => _pageStarts.last;
+
   /// The item at flat [index].
   T itemAt(int index) {
     final pageIndex =
         lowerBound(_pageStarts, index + 1) - 1; // the last page starting at or before it
 
-    return _pages[pageIndex][index - _pageStarts[pageIndex]];
+    return _pages[pageIndex].items[index - _pageStarts[pageIndex]];
   }
 
   /// Where the item with [id] sits now, or null once it's gone. [lastIndex] is where its row was last
@@ -34,14 +38,14 @@ final class RowLookup<T extends Object>(
       : _indexById[id];
 
   List<int> _startsOfPages() =>
-      _pages.fold([0], (starts, page) => starts..add(starts.last + page.length));
+      _pages.fold([0], (starts, page) => starts..add(starts.last + page.items.length));
 
   Map<Object, int> _mapIds() {
     final indexById = <Object, int>{};
     var index = 0;
     // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
     for (final page in _pages) {
-      for (final item in page) {
+      for (final item in page.items) {
         indexById[_itemIdGetter(item)] = index++;
       }
     }

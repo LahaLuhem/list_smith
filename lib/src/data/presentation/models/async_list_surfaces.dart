@@ -12,7 +12,7 @@ import '../typedefs/error_builder.dart';
 /// on the constructor, since every list has one.
 @immutable
 final class const AsyncListSurfaces({
-  /// Builds the first-page loading surface.
+  /// Builds the first-page loading surface. It fills the visible list and never scrolls.
   final WidgetBuilder? firstPageLoadingBuilder,
 
   /// Builds the loading footer shown while a further page loads.

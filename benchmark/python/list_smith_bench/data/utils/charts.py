@@ -188,7 +188,7 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
 
 def plot_frame_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
-    """Grouped bars of per-frame build cost (avg / worst / p99) per frame scenario.
+    """Grouped bars of per-frame build cost (avg / p99) per frame scenario.
 
     The dashed 60 Hz budget line is the point of the chart: every bar sits far below it, so
     list_smith's per-frame build work is a small fraction of the 16.67 ms a frame gets. The table in
@@ -215,7 +215,8 @@ def plot_frame_raster_costs(dataframe: pl.DataFrame, out_path: Path) -> Path | N
 def _plot_frame_thread_costs(
     dataframe: pl.DataFrame, out_path: Path, *, thread: FrameThread, title: str
 ) -> Path | None:
-    stat_labels = {f"{stat}_frame_{thread}_millis": stat for stat in ("avg", "worst", "p99")}
+    # No worst: it's one frame, on raster nearly always the 1st, so it swings per run.
+    stat_labels = {f"{stat}_frame_{thread}_millis": stat for stat in ("avg", "p99")}
     # Captures from before the raster p99 was recorded get no raster chart.
     if not set(stat_labels) <= set(dataframe.columns):
         return None
@@ -240,7 +241,7 @@ def _plot_frame_thread_costs(
         hue="stat",
         ax=ax,
         order=sorted(long["scenario"].unique()),
-        hue_order=["avg", "worst", "p99"],
+        hue_order=["avg", "p99"],
         errorbar=None,
     )
     ax.axhline(

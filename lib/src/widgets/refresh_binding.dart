@@ -23,6 +23,9 @@ class const RefreshBinding({
   /// The room the indicator gets along the scroll axis.
   required final double indicatorExtent,
 
+  /// Whether a pull may start on what the list shows now, asked as each drag starts.
+  required final ValueGetter<bool> takesPull,
+
   /// Draws the indicator, or `null` to use the neutral default.
   final RefreshIndicatorBuilder? indicatorBuilder,
   super.key,
@@ -53,9 +56,16 @@ class _RefreshBindingState() extends State<RefreshBinding> {
     return false;
   }
 
+  /// Refuses only a drag's start where no pull is taken, so a pull the list changes under still sees
+  /// its end and lets go.
+  bool _isForIndicator(ScrollNotification notification) =>
+      CustomRefreshIndicator.defaultScrollNotificationPredicate(notification) &&
+      (notification is! ScrollStartNotification || widget.takesPull());
+
   @override
   Widget build(BuildContext context) => CustomRefreshIndicator(
     onRefresh: widget.onRefresh,
+    notificationPredicate: _isForIndicator,
     child: NotificationListener(onNotification: _trackBounce, child: widget.child),
     builder: (context, child, controller) {
       final state = _stateOf(controller);

@@ -11,7 +11,7 @@ import '../support/support.dart';
 void main() {
   feature('ListSmith.async pagination dedup', () {
     // Page 1 starts with fresh copies of page 0's last 2 items, the overlap an offset backend gives
-    // when its data shifts between fetches. ISP appends pages as they come, and with no `==` only an
+    // when its data shifts between fetches. Pages are stored as they come, and with no `==` only an
     // id key can collapse the copies.
     final overlappingPages = pagedFetcher([
       [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],

@@ -1,14 +1,14 @@
 import 'package:flutter/widgets.dart';
-import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 
 import '/src/data/grouping/models/grouping.dart';
+import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/pagination/typedefs/page_key.dart';
 import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/refresh/models/refresh.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
@@ -16,16 +16,16 @@ import 'defaults/neutral_no_more_items_indicator.dart';
 import 'defaults/neutral_no_results_indicator.dart';
 import 'keyed_paged_list_view.dart';
 
-/// The async list, with every ISP delegate slot filled by our neutral defaults or the consumer's
-/// overrides, so no Material surface leaks through.
-///
-/// Internal, built inside a [PagingListener] where [state] and [fetchNextPage] are in scope.
+/// The async list, with every surface filled by our neutral default or the consumer's override.
 class const PagedView<T extends Object>({
   /// Drives which surface renders.
-  required final PagingState<PageKey, T> state,
+  required final PagingState<T> state,
 
-  /// Requests the next page. Doubles as the retry action on error surfaces.
-  required final VoidCallback fetchNextPage,
+  /// Asks for the next page, from a row near the end.
+  required final VoidCallback onNearEnd,
+
+  /// Asks again for the page that failed, from an error surface's retry.
+  required final VoidCallback onRetry,
 
   /// Builds each item.
   required final ItemBuilder<T> itemBuilder,
@@ -38,6 +38,9 @@ class const PagedView<T extends Object>({
 
   /// Scroll and layout configuration.
   required final ListScrollConfig scroll,
+
+  /// Whether the list takes a pull, which decides the physics it scrolls with.
+  required final Refresh refresh,
 
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
@@ -76,53 +79,53 @@ class const PagedView<T extends Object>({
   @override
   Widget build(BuildContext context) => KeyedPagedListView(
     state: state,
-    fetchNextPage: fetchNextPage,
-    builderDelegate: _buildDelegate(),
+    itemBuilder: _effectiveItemBuilder(),
     itemIdGetter: itemIdGetter,
+    surfaces: _surfaces(),
+    onNearEnd: onNearEnd,
     separatorBuilder: separatorBuilder,
     controller: scroll.controller,
     scrollDirection: scroll.scrollDirection,
     reverse: scroll.reverse,
-    physics: scroll.physics,
+    physics: refresh.scrollPhysics(scroll.physics),
     padding: scroll.padding,
     scrollCacheExtent: scroll.scrollCacheExtent,
   );
 
-  /// The item builder handed to ISP. The group look-back only walks the pages when grouping is on, since
+  /// The item builder the rows use. The group look-back only walks the pages when grouping is on, since
   /// [Grouping.decorate] takes it as a callback.
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
-    flattenItems: () => state.pages?.expand((page) => page) ?? const Iterable.empty(),
+    flattenItems: () => state.pages?.expand((page) => page.items) ?? const Iterable.empty(),
     axis: scroll.scrollDirection,
   );
 
-  /// Fills every ISP delegate slot. The error slots read `state.error!`, non-null because ISP only builds
-  /// them when there is an error.
-  PagedChildBuilderDelegate<T> _buildDelegate() => PagedChildBuilderDelegate<T>(
-    itemBuilder: _effectiveItemBuilder(),
-    firstPageProgressIndicatorBuilder: (context) =>
+  /// Every surface. The error ones read `state.error!`, non-null because only an error status builds
+  /// them.
+  PagedSurfaces _surfaces() => (
+    firstPageLoading: (context) =>
         firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
-    newPageProgressIndicatorBuilder: (context) =>
+    firstPageError: (_) =>
+        _ResolvedError(error: state.error!, onRetry: onRetry, builder: firstPageErrorBuilder),
+    noItemsFound: (context) => isSearchMode
+        ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
+        : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
+    newPageLoading: (context) =>
         newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
-    firstPageErrorIndicatorBuilder: (_) =>
-        _ResolvedError(error: state.error!, onRetry: fetchNextPage, builder: firstPageErrorBuilder),
-    newPageErrorIndicatorBuilder: (_) => _ResolvedError(
+    newPageError: (_) => _ResolvedError(
       error: state.error!,
-      onRetry: fetchNextPage,
+      onRetry: onRetry,
       builder: newPageErrorBuilder,
       isCompact: true,
     ),
-    noItemsFoundIndicatorBuilder: (context) => isSearchMode
-        ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
-        : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
-    noMoreItemsIndicatorBuilder: (context) =>
+    noMoreItems: (context) =>
         noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
   );
 }
 
 /// The consumer's [ErrorBuilder] if there is one, else the neutral default.
 class const _ResolvedError({
-  required final Object error,
+  required final Exception error,
   required final VoidCallback onRetry,
   final ErrorBuilder? builder,
   final bool isCompact = false,

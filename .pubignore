@@ -40,6 +40,8 @@ example/android/
 example/ios/
 example/devtools_options.yaml
 
-# pubspec.yaml's `screenshots:` have to ship for pub.dev's gallery, so only the source recording
-# stays out. The shipped `.webp` is made from it.
+# doc/ is for contributors, apart from the screenshots pubspec.yaml's `screenshots:` ship for
+# pub.dev's gallery. Their source recording stays out, the shipped `.webp` is made from it.
+doc/*
+!doc/screenshots/
 doc/screenshots/*.webm
