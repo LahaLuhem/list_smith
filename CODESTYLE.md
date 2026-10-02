@@ -733,11 +733,11 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pumpListSmith(tester, child)` | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs |
 | `drain(tester, {frames})` | pumps a fixed number of frames |
 | `settle(tester, {debounce})` | advances past a search debounce, then drains |
-| `pullToRefresh(tester, anchor)` | pulls down from `anchor` far enough to refresh, then pumps timed frames so it runs |
+| `pullToRefresh(tester, anchor, {offset})` | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
 | `containsIgnoreCase` | sync-search predicate |
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
 | `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |
-| `release(tester, holds)` | lets held fetches through, then drains |
+| `release(tester, holdCompleters)` | lets held fetches through, then drains |
 | `ToggleRow(item)`, `shownToggleRows()` | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin

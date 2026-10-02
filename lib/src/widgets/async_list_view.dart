@@ -27,6 +27,7 @@ import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/refresh/enums/pullable_surface.dart';
 import '/src/data/refresh/models/refresh.dart';
 import '/src/data/refresh/models/reload.dart';
 import '/src/data/refresh/models/reload_context.dart';
@@ -536,6 +537,7 @@ class _AsyncListViewState<T extends Object>()
             itemIdGetter: widget.source.itemIdGetter,
             grouping: widget.grouping,
             scroll: widget.scroll,
+            refresh: widget.source.refresh,
             isSearchMode: isSearchMode,
             query: _debouncer.committedQuery,
             separatorBuilder: widget.separatorBuilder,
@@ -553,12 +555,27 @@ class _AsyncListViewState<T extends Object>()
 
     return switch (widget.source.refresh) {
       NoRefresh() => pagedList,
-      PullToRefresh(:final indicatorBuilder, :final indicatorExtent) => RefreshBinding(
-        onRefresh: _refreshFromPull,
-        indicatorExtent: indicatorExtent,
-        indicatorBuilder: indicatorBuilder,
-        child: pagedList,
-      ),
+      PullToRefresh(:final indicatorBuilder, :final indicatorExtent, :final pullableSurfaces) =>
+        RefreshBinding(
+          onRefresh: _refreshFromPull,
+          takesPull: () => _takesPull(pullableSurfaces),
+          indicatorExtent: indicatorExtent,
+          indicatorBuilder: indicatorBuilder,
+          child: pagedList,
+        ),
+    };
+  }
+
+  /// Reads the state as a drag starts, which can be a frame ahead of the screen.
+  bool _takesPull(Set<PullableSurface> pullableSurfaces) {
+    final state = _pagingStateNotifier.value;
+    if (_shouldAdvancePastEmpty(state)) return false; // the loader shows meanwhile
+
+    return switch (_displayFor(state).state.status) {
+      .loadingFirstPage => false,
+      .firstPageError => pullableSurfaces.contains(PullableSurface.error),
+      .noItemsFound => pullableSurfaces.contains(PullableSurface.empty),
+      .ongoing || .subsequentPageError || .completed => true,
     };
   }
 
