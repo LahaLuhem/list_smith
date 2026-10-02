@@ -2,7 +2,8 @@
 
 Design rationale: the "why" behind decisions the code and hard rules don't explain on their own.
 Hard rules and workflow live in [`.ai/AGENTS.md`](.ai/AGENTS.md), code style in
-[`CODESTYLE.md`](CODESTYLE.md). A decision log, appended as decisions land.
+[`CODESTYLE.md`](CODESTYLE.md), the map of parts and seams in
+[`doc/how-it-works.md`](doc/how-it-works.md). A decision log, appended as decisions land.
 
 Every heading carries an `<a id="…">` anchor. Link by anchor and keep anchors stable across
 renames.
@@ -15,7 +16,7 @@ renames.
 - [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
 - [Async override surfaces group, universal ones stay flat](#async-surfaces-holder)
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
-- [Async search: one controller, 2 views](#async-two-view-search)
+- [Async search: one paging state, 2 views](#async-two-view-search)
 - [Unified opt-in idioms: every optional behaviour is a sealed, defaulted seam](#opt-in-idioms)
 - [Observer seam: async-only, no-op-method sink](#observer-seam)
 - [Grouping: erased key, sync buckets, async pre-sorted](#grouping-shape)
@@ -37,6 +38,8 @@ renames.
 - [`itemIdGetter` is required](#item-id-required)
 - [Async rows follow their item, not their index](#row-identity)
 - [Edit transitions animate the rows edits add and take](#edit-transitions)
+- [list_smith pages on its own](#own-paging)
+- [Where a pull can start](#pull-surfaces)
 
 <!-- TOC end -->
 
@@ -61,9 +64,9 @@ renames.
   `package:flutter/widgets.dart` only, never `material.dart` or `cupertino.dart`. Every surface
   stays overridable and the defaults are neutral widgets-layer widgets.
 - **Scope is our surfaces, not what a dependency does inside.** A dependency may import Material
-  internally, as `infinite_scroll_pagination`'s default indicators do. We neutralise it by
-  overriding every default slot it exposes, so no Material appears in our own look. Migrating that
-  dependency's internals once Flutter unbundles Material is its problem, not ours.
+  internally, as `custom_refresh_indicator` does. We neutralise it by filling every slot it draws
+  in, so no Material appears in our own look. Migrating that dependency's internals once Flutter
+  unbundles Material is its problem, not ours.
 - **Why:** developer experience, since list_smith drops into a Material, Cupertino or bespoke app
   without importing a look the consumer never chose. And forward-compatibility, since Flutter is
   decoupling `material` / `cupertino` from core
@@ -96,11 +99,10 @@ renames.
 <a id="pull-to-refresh-resets-v1"></a>
 ## Pull-to-refresh resets the list on V1
 
-- **Decision (V1):** `refresh()` resets the paging state, so the list clears and the first-page
-  loader shows while the fresh page loads. `onRefresh` completes as soon as the refresh triggers, so
-  the pull indicator retracts right away. The standard infinite_scroll_pagination pattern.
-- **Why not hold the indicator until fresh data:** awaiting the reload shows the pull indicator and
-  the first-page loader at once, 2 spinners. Completing immediately keeps it to 1.
+- **Decision (V1):** a pull resets the paging state, so the list clears and the first-page loader
+  shows while the fresh page loads. The pull indicator retracts as the loader shows.
+- **Why not hold the indicator until fresh data:** it would spin beside the loader. A `refresh()`
+  from code still waits for the fresh page, since a button has no loader to hand over to.
 - **Since landed as an option:** `ReloadToCurrentDepth` keeps the old items and holds the indicator
   until the re-fetch is done ([#reload-run](#reload-run)).
 
@@ -154,26 +156,26 @@ renames.
 ---
 
 <a id="async-two-view-search"></a>
-## Async search: one controller, 2 views
+## Async search: one paging state, 2 views
 
-- **Decision:** async search rides a single `PagingController`. A mode-aware fetch closure reads the
-  debounced committed query: empty runs the normal `fetchPage`, non-empty runs the `AsyncSearch`
-  fetcher. Search is opt-in, and search mode needs both a non-empty query and an `AsyncSearch`.
-- **Why one controller:** pagination and pull-to-refresh compose for free, one end policy and one
-  `refresh()` serve both modes, and there is no 2nd controller to keep in sync. `refresh()`
-  re-reads the query, so pulling in search mode reloads the current search.
+- **Decision:** async search rides a single paging state. A mode-aware fetch reads the debounced
+  committed query: empty runs the normal `fetchPage`, non-empty runs the `AsyncSearch` fetcher.
+  Search is opt-in, and search mode needs both a non-empty query and an `AsyncSearch`.
+- **Why one state:** pagination and pull-to-refresh compose for free, one end policy and one
+  `refresh()` serve both modes, and there is no 2nd state to keep in sync. `refresh()` re-reads the
+  query, so pulling in search mode reloads the current search.
 - **Cache policy is a pure decision plus an impure execution.** On a committed-query change,
   `actionFor(wasSearching, isSearching)` returns a `CacheAction` (`refresh` / `snapshotThenRefresh`
-  / `restoreNormal`), unit-tested directly, and the view executes it against the controller. Keep
-  snapshots `controller.value` on the way in and restores on the way out, an instant return with no
-  refetch. Replace always refetches. A search-to-search change refetches under either.
+  / `restoreNormal`), unit-tested directly, and the engine executes it. Keep snapshots the paging
+  state on the way in and restores it on the way out, an instant return with no refetch. Replace
+  always refetches. A search-to-search change refetches under either.
 - **The kept feed carries a debt.** A pull, `refresh()` or `invalidate()` made while searching can't
   reach the parked feed, so the snapshot books the ask (`.refresh` outranks `.invalidated`) and the
   restore pays it: pages back as they were, then a `ReloadToCurrentDepth` over them reporting that
-  trigger. A snapshot taken under a live feed reload is born owing its ask, since the reset that
-  follows strands it. `reset()` drops the snapshot instead, page 0 being the verb.
+  trigger. A snapshot taken under a live feed run is born owing what a caller asked of it, since the
+  reset that follows strands it. `reset()` drops the snapshot instead, page 0 being the verb.
 - **Reading the search case:** search mode is `query.isNotEmpty && source.supportsSearch`, and the
-  closure pattern-matches the `AsyncSearch` case to reach its fetcher, so there is no nullable
+  fetch pattern-matches the `AsyncSearch` case to reach its fetcher, so there is no nullable
   fetcher to bang. A query set without an `AsyncSearch` asserts in debug and degrades to normal
   pagination in release.
 - **Shared `QueryDebouncer`:** the timer, trim and skip-unchanged logic was extracted from
@@ -223,13 +225,13 @@ renames.
   trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too. A
   `KeepCache` restore fires nothing unless it pays a debt
   ([#async-two-view-search](#async-two-view-search)).
-- **Async-only.** The observer earns its place by surfacing what the hidden controller keeps out of
-  reach. A sync list has no controller, fetch or refresh, and the consumer owns the query it filters
+- **Async-only.** The observer earns its place by surfacing what the hidden engine keeps out of
+  reach. A sync list has no paging, fetch or refresh, and the consumer owns the query it filters
   on, so an observer there would be exactly the ghost that the
   [flat-if-universal rule](#async-surfaces-holder) rules out. A `SyncListSmithObserver` stays
   additive if a real use case turns up.
-- **Fully hidden, non-generic.** Every callback takes plain values, never `PagingController`,
-  `PagingState` or the ISP generics, so wiring up diagnostics can't reach an internal handle.
+- **Fully hidden, non-generic.** Every callback takes plain values, never the paging state, so
+  wiring up diagnostics can't reach an internal handle.
   Non-generic because logging and analytics want counts and mode. A generic variant stays open if
   item payloads are ever wanted.
 - **`abstract base`, extend-only,** so a new lifecycle event can ship as a no-op method in a later
@@ -262,7 +264,7 @@ renames.
   widens `T` to `Object`, so type the parameter or pass a typed function.
 - **The header rides the group's 1st item, not a sticky sliver.** `KeyedGrouping.decorate` wraps
   each cell in a `GroupedItem` that stacks the header before the group's 1st item in a `Flex`
-  along the scroll axis, so ISP keeps its flat pager and list_smith keeps owning the scrollable. One
+  along the scroll axis, so the pager stays flat and list_smith keeps owning the scrollable. One
   pass per build flags where each group starts ([#scan-loops](#scan-loops)). Sticky headers would
   need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset tracking, exactly
   the fragility this package rejects. Deferred.
@@ -315,22 +317,21 @@ renames.
 <a id="overlap-dedup"></a>
 ## Overlap de-dup runs at the display layer, not before storage
 
-- **Decision:** de-dup by id is a computed view over the paging state, `_displayFor`
-  running ISP's `PagingState.filterItems` in the build, not a filter on the stored pages. The
-  controller keeps the raw pages, and only what renders is de-duped.
+- **Decision:** de-dup by id is a computed view over the paging state, `_displayFor` running
+  `PagingState.filterItems` in the build, not a filter on the stored pages. The state keeps the raw
+  pages, and only what renders is de-duped.
 - **Why not de-dup before storage:** the end policy reads each stored page's item count. De-dup
   first lets a fully-duplicate page collapse to empty, which `StopOnEmptyPagesPolicy` reads as
   end-of-data even though the backend had more past the overlap. Partial-boundary overlap never hit
   this. A fully-duplicate mid-stream page, reachable with small page sizes, did.
-- **One path covers search for free.** Both fetch modes flow through one controller and one display
-  derivation, so search-mode overlaps de-dup exactly like normal-mode ones.
+- **One path covers search for free.** Both fetch modes flow through one paging state and one
+  display derivation, so search-mode overlaps de-dup exactly like normal-mode ones.
 - **Cost, and why it's acceptable:** O(loaded items), re-run on each state change. There is no
   cheaper seam without storing de-duped pages plus a parallel raw-count side-channel for the end
-  policy, since ISP re-materialises the whole page list on every change anyway. The [benchmark
-  report](benchmark/reports/SUMMARY.md) measures it with no real overlap. Memoised on paging-state
-  identity, so a keystroke before the debounce commits reuses the last view. Sub-millisecond for
-  most lists, with the cliff only at tens of thousands in one live list, which strains widget count
-  and memory regardless.
+  policy. The [benchmark report](benchmark/reports/SUMMARY.md) measures it with no real overlap.
+  Memoised on paging-state identity, so a keystroke before the debounce commits reuses the last
+  view. Sub-millisecond for most lists, with the cliff only at tens of thousands in one live list,
+  which strains widget count and memory regardless.
 - **The side-channel design was rejected, for now.** Incremental de-dup in the fetch plus a
   raw-count side-channel would erase the cost, but that state has to snapshot and restore in
   lockstep with `KeepCachePolicy`, and a bug there corrupts pagination rather than just display.
@@ -374,17 +375,16 @@ renames.
 - **Decision:** a cursor drives the next fetch, not just the end. The `withSignal` channel became
   bidirectional, so the `Object?` a page returns reaches the next fetch as `previousSignal`, null
   for the 1st page. `StopOnNullSignalPolicy` ends the list on a null cursor.
-- **No new constructor, fetcher type or generic.** list_smith keeps `PagingController<int, T>` and
-  the cursor rides `_lastPageSignal`, the field already tracking the signal for end-detection, so
-  `_nextPageKey` still returns `pages.length`.
+- **No new constructor, fetcher type or generic.** A page is still found by its index, and the
+  cursor rides `_lastPageSignal`, the field already tracking the signal for end-detection.
 - **Retry and refresh fall out for free.** `_lastPageSignal` only advances after a fetch succeeds,
   so a retried page re-fetches with the same cursor, and refresh nulls the field so the reload
   restarts from the initial null.
 - **The cursor stays `Object?`,** for the reason the end signal does
   ([#explicit-end-signals](#explicit-end-signals)). The consumer casts `previousSignal as MyCursor?`
   once, in their own closure. `SearchPageFetcher.withSignal` took the same argument, so
-  cursor-driven search needs no separate seam: the two-view controller already snapshots the signal
-  per stream, and the `requiresSignal` guard covers both fetchers.
+  cursor-driven search needs no separate seam: the two-view engine already snapshots the signal per
+  stream, and the `requiresSignal` guard covers both fetchers.
 
 ---
 
@@ -421,8 +421,7 @@ renames.
 
 - **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying intents:
   `refresh()`, `invalidate()`, `reset()` and the [edits](#edit-layer). A bounded exception to the
-  hidden pager, and the line held is that no `PagingController`, `PagingState` or other ISP type is
-  reachable through it.
+  hidden pager, and the line held is that no paging state is reachable through it.
 - **No scrolling verbs.** A consumer already scrolls through `ListScrollConfig.controller`, and
   index-scrolling needs fixed extents, which puts it with the sliver and grid work.
 - **Intents, not state.** No `isRefreshing`, count or `hasMore`. Notification is the observer's job
@@ -437,8 +436,8 @@ renames.
 - **Silent.** Animating the indicator would flash it and then hand straight to the first-page loader
   under the default `ResetToFirstPage`, the two-spinner outcome
   [#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1) rejected. The button owns its progress.
-- **Coalesced**, since a button can double-fire where the gesture can't, the indicator having to be
-  idle. Not a fix for the in-flight-fetch race.
+- **Coalesced.** A 2nd `refresh()` while one runs joins it, page 0 included, so a double-tapped
+  button sends 1 request.
 - **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the
   `ReloadContext` shape, so each intent is a method on the host and a forwarding verb on the handle.
 - **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
@@ -455,12 +454,17 @@ renames.
   it. A reset, a query change, a `KeepCache` restore or a dispose during its awaits was overwritten
   by its late `commit()`. A stale run now drops its commit, skips its remaining fetches, and is never
   joined.
-- **Own writes don't stale a run.** Its commit and its reset move the epoch along, so a double-tapped
-  refresh still coalesces under `ResetToFirstPage`.
+- **Own writes don't stale a run.** Its commit and its reset move the epoch along, so a refresh asked
+  while a `ResetToFirstPage` run fetches its page 0 still joins it.
 - **The join rule.** 2 refreshes coalesce. Any other pair books one more run after the live one,
   `.refresh` winning, because a write landing on a page the run already read would otherwise never
-  be re-read. A joiner's future completes with the run it joined. `reset()` never joins: it bumps the
-  generation and lets the next caller start fresh.
+  be re-read. A joiner's future completes with the run it joined. `reset()` never joins: it takes the
+  slot, so the next caller meets its page 0.
+- **Every page-0 load is a run,** so the join rule sees it: the 1st load, a restart's page 0, a
+  1st-page retry, an owed restore. The engine's own loads are nobody's ask, so a feed parked during
+  one owes nothing for it.
+- **The verbs wait for the fresh page, the pull for the hand-over,** so the indicator retracts as the
+  loader shows ([#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1)).
 - **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping back to
   the start is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull
   config to lean on.
@@ -508,21 +512,14 @@ renames.
   and both reset paths already funnel through `_resetPaging()`, so attaching it would restate what
   that helper enforces. Trip-wire: the 1st trigger needing that reset elsewhere earns an
   enhanced-enum field.
-- **A one-shot latch, because the default reload doesn't fetch through itself.**
-  `PagingController.refresh()` only resets state, and the view drives the re-fetch later, so
-  `_resetPaging` latches the trigger for the next fetch to consume and the page after that is
-  derived again. A flag scoped to the refresh call would be cleared before page 0 was requested.
-  `ReloadToCurrentDepth` fetches through `ReloadContext.fetch` instead, so the engine settles
-  `.refresh` inside its own implementation and the seam keeps its signature.
-- **`retry` costs a field, and the alternative is a lie.** ISP clears `error` before re-invoking the
-  fetch and wires Retry to the same callback as scroll, so it is not derivable from paging state.
+- **`retry` costs a field, and the alternative is a lie.** A fetch clears `error` as it starts, and
+  so does a depth reload's commit, so a retry isn't derivable from paging state.
   One `_lastFailedPageIndex`, cleared on success and on restart. Without it a retry reports
   `nextPage` and the repository serves the cached miss that just failed. `queryChanged` is its own
   value for the same reason, rather than folded into `initialLoad`.
-- **`restoreNormal` latches nothing**, since it restores without fetching and a latch would leak
-  into whatever the user did next. It still drops the retry marker, or a failed search page could
-  mark the restored list's next page as a retry. `commit()` needs neither: a reload commits exactly
-  `depth` pages, so the next fetch is `depth` and can't collide with a lower failed index.
+- **`restoreNormal` drops the retry marker,** or a failed search page could mark the restored list's
+  next page as a retry. `commit()` needn't: a reload commits exactly `depth` pages, so the next fetch
+  is `depth` and can't collide with a lower failed index.
 
 ---
 
@@ -600,7 +597,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   pass de-dup already runs. The pages keep saying what the backend returned, because the end policy
   counts them and a depth reload or `KeepCachePolicy` writes them back. An edit made inside them
   would end the list early, or be undone.
-- **Each page key carries a read stamp,** the edit counter when its fetch went out, and an edit
+- **Each page carries a read stamp,** the edit counter when its fetch went out, and an edit
   covers only pages read before it. A page read after already has the server's answer. Once every
   loaded and parked page was read after an edit, the edit is forgotten.
 - **Values, not transforms.** An edit is re-applied over whatever the server sends until it
@@ -654,9 +651,6 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Decision:** each async row is keyed by its item's id, and the list finds a row that moved through
   `findChildIndexCallback`. So a row keeps its state, and anything it's animating, while rows above
   it come and go.
-- **Our own list:** ISP's `PagedListView` can't take that callback, so `KeyedPagedListView` is a
-  `BoxScrollView` and sliver of our own around ISP's `PagedLayoutBuilder`. The surfaces, the footer
-  and load-on-scroll stay ISP's.
 - **The lookup:** a row's key carries the index it was last built at, and that's checked first. Only
   a row that moved builds the id-to-index map, once per rebuild. The
   [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
@@ -684,6 +678,40 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Restarts settle** (`reset()`, a query change, a pull that starts over, a `KeepCachePolicy`
   restore), booking what the exits held back so nothing animates onto a fresh list. A depth
   reload's commit doesn't, so a pull that keeps depth lets running animations finish.
+
+---
+
+<a id="own-paging"></a>
+## list_smith pages on its own
+
+- **Decision:** the paging state, the next-page fetch and the near-end trigger are list_smith's own.
+  `infinite_scroll_pagination` is gone, its dependencies with it.
+- **Why:** its view asked for page 0 a frame after a reset, and only if the new state differed by
+  value, so 2 restarts a frame apart left the list on its loader for good
+  ([upstream #382](https://github.com/EdsonBueno/infinite_scroll_pagination/issues/382), closed
+  as not planned). A page 0 nobody owned also slipped past the [run slot](#reload-run).
+- **Only the engine fetches,** never a listener reacting to the state, and every write is a new
+  object, compared by identity.
+- **Not leftovers of the old package:** the retry marker ([#fetch-trigger](#fetch-trigger)) and the
+  microtask that pages past an empty page. Both are list_smith's own.
+
+---
+
+<a id="pull-surfaces"></a>
+## Where a pull can start
+
+- **Decision:** on the rows, and on the error and empty surfaces while
+  `PullToRefresh.pullableSurfaces` lists them, as it does by default. Never on the 1st-page loader,
+  whose page is already on its way.
+- **Only a drag's start is refused,** so a pull the list changes under still ends and lets go.
+- **One set of physics for every surface:** always-scrollable under pull-to-refresh, below the app's
+  physics so a `NeverScrollableScrollPhysics` still wins. Swapping them per surface cancels a held
+  drag inside layout, where the indicator's `setState` asserts.
+- **The loader wins its own drags,** since a recognizer inside the list beats the list's. The list's
+  padding around it isn't covered.
+- **The loader gets exactly one screen,** unmeasured, so a `LayoutBuilder` inside it works. The error
+  and empty surfaces still grow, so a tall error scrolls to its Retry, and still can't take a
+  `LayoutBuilder` ([#89](https://github.com/LahaLuhem/list_smith/issues/89)).
 
 ---
 

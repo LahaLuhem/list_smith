@@ -56,6 +56,7 @@ list_smith/
 ├── README.md                       pub.dev landing page
 ├── APPENDIX.md                     Design rationale (anchor-keyed)
 ├── CODESTYLE.md
+├── doc/                            Screenshots, and how-it-works.md: the parts and their seams
 └── .ai/                            This file + CLAUDE.md (symlinked to repo root)
 ```
 

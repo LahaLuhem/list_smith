@@ -12,11 +12,11 @@ void main() {
   const triggerKey = 'trigger';
 
   Bdd(triggerResolutionFeature)
-      .scenario('resolves why a page was fetched from the latch and the page state')
+      .scenario('resolves why a page was fetched from the pending trigger and the page state')
       .given('page <$pageKey>, a pending <$pendingKey>, and a last-failed <$failedKey>')
       .when('the trigger is resolved')
       .then('it is <$triggerKey>')
-      // No latch: page 0 is a cold load, any later page is scroll-driven.
+      // Nothing pending: page 0 is a cold load, any later page is scroll-driven.
       .example(
         val(pageKey, 0),
         val(pendingKey, null),
@@ -49,7 +49,7 @@ void main() {
         val(failedKey, 1),
         val(triggerKey, FetchTrigger.nextPage),
       )
-      // A latched trigger wins over both derivations, retry included.
+      // A pending trigger wins over both derivations, retry included.
       .example(
         val(pageKey, 0),
         val(pendingKey, FetchTrigger.refresh),

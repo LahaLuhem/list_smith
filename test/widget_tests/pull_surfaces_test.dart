@@ -128,14 +128,30 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<({Set<PullableSurface> surfaces, bool isPulled})>(
-      'the 1st-page error takes a pull only while the pull lists it',
-      examples: const {
-        'listed': (surfaces: {.error}, isPulled: true),
-        'left out': (surfaces: {}, isPulled: false),
+    scenarioOutlineWidgets<
+      ({FakeServer<int> Function() makeServer, Set<PullableSurface> surfaces, bool isPulled})
+    >(
+      'a surface takes a pull only while the pull lists it',
+      examples: {
+        'the error, listed': (makeServer: _failingServer, surfaces: const {.error}, isPulled: true),
+        'the error, left out': (
+          makeServer: _failingServer,
+          surfaces: const {.empty},
+          isPulled: false,
+        ),
+        'the empty list, listed': (
+          makeServer: _emptyServer,
+          surfaces: const {.empty},
+          isPulled: true,
+        ),
+        'the empty list, left out': (
+          makeServer: _emptyServer,
+          surfaces: const {.error},
+          isPulled: false,
+        ),
       },
       outline: (tester, example) async {
-        final server = FakeServer<int>([1, 2, 3])..failing.add((0, 1));
+        final server = example.makeServer();
         await pumpListSmith(
           tester,
           list(server, refresh: PullToRefresh(pullableSurfaces: example.surfaces)),
@@ -212,6 +228,10 @@ typedef _PullSetup = ({
 });
 
 const _pullDownOffset = Offset(0, 300);
+
+FakeServer<int> _failingServer() => FakeServer([1, 2, 3])..failing.add((0, 1));
+
+FakeServer<int> _emptyServer() => FakeServer(<int>[]);
 
 const _indicatorKey = ValueKey('indicator');
 
