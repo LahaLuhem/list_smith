@@ -24,8 +24,9 @@ class ListSmithController<T extends Object>() {
   /// Reloads exactly as a pull would, running the configured [Reload] ([ResetToFirstPage] when the list
   /// has no pull). While searching, it reloads the search.
   ///
-  /// Completes when that reload does, which for [ResetToFirstPage] means as the list clears, not when
-  /// fresh data lands. Joins a refresh already running. Asserts if no list ever attached.
+  /// Completes once its fresh data shows or its fetch fails. Joins a refresh already running. During
+  /// another reload or a 1st-page load, it completes with that one and runs once more after. Asserts
+  /// if no list ever attached.
   Future<void> refresh() {
     assert(
       _host != null || _wasEverAttached,
@@ -38,15 +39,16 @@ class ListSmithController<T extends Object>() {
   /// Re-reads every loaded page in place, keeping the user's scroll position, because your data changed
   /// locally. Pages report [FetchTrigger.invalidated].
   ///
-  /// Called during a running reload it joins that one and runs again after, so a write landing mid-read
-  /// isn't missed.
+  /// Completes once the re-read is over. During a reload or a 1st-page load, it completes with that one
+  /// and re-reads once more after, so a write landing mid-read isn't missed.
   Future<void> invalidate() => _host?.invalidate() ?? Future<void>.syncValue(null);
 
   /// Starts the list over from page 0: a logout, an account switch, a filter outside search. That page
   /// reports [FetchTrigger.invalidated].
   ///
-  /// Cuts in on a running reload rather than joining it. Keeps the query, so a search restarts, and
-  /// a feed held by [KeepCachePolicy] starts over once the query clears.
+  /// Cuts in on whatever load is running rather than joining it, and completes once its page 0 is over.
+  /// Keeps the query, so a search restarts, and a feed held by [KeepCachePolicy] starts over once the
+  /// query clears.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
 
   /// Shows [item] wherever a copy with its id is loaded, or at the top of the feed if none is. For

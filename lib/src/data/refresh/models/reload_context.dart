@@ -30,5 +30,6 @@ abstract interface class ReloadContext<T extends Object>._() {
   void commit(List<List<T>> pages, {Object? lastSignal});
 
   /// Throws away the loaded pages and re-fetches only the 1st, the [ResetToFirstPage] behaviour.
-  void reset();
+  /// Completes once that page lands or fails, or the list moves on first.
+  Future<void> reset();
 }

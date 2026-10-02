@@ -261,8 +261,8 @@ void main() {
         'pull keeps depth': PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
       },
       outline: (tester, refresh) async {
-        final hold = Completer<void>();
-        final fetcher = _heldFetcher(hold, holdAttempt: 2);
+        final holdCompleter = Completer<void>();
+        final fetcher = _heldFetcher(holdCompleter, holdAttempt: 2);
         final controller = ListSmithController();
 
         await pumpList(
@@ -274,15 +274,15 @@ void main() {
         );
         await drain(tester, frames: 12);
 
-        final invalidate = controller.invalidate();
+        final invalidateFuture = controller.invalidate();
         await drain(tester);
         // The old rows stay on screen until the re-read commits: nobody's place is lost.
         check(find.text('item 1').evaluate()).length.equals(1);
 
-        hold.complete();
+        holdCompleter.complete();
         await tester.idle();
         await drain(tester, frames: 12);
-        await invalidate;
+        await invalidateFuture;
 
         check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
         check(find.text('item 2002').evaluate()).length.equals(1);
@@ -330,13 +330,13 @@ void main() {
     scenarioWidgets('an invalidate() meeting a live one runs again, so a write mid-read lands', (
       tester,
     ) async {
-      final hold = Completer<void>();
+      final holdCompleter = Completer<void>();
       final store = {0: 10, 1: 20, 2: 30};
       final attempts = <int, int>{};
       final fetchPage = PageFetcher<int>((request) async {
         final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
         // The re-read stalls on page 1.
-        if (request.pageIndex == 1 && attempt == 2) await hold.future;
+        if (request.pageIndex == 1 && attempt == 2) await holdCompleter.future;
 
         return [store[request.pageIndex]!];
       });
@@ -353,16 +353,16 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      final firstReload = controller.invalidate(); // reads page 0 at once, then stalls
+      final firstReloadFuture = controller.invalidate(); // reads page 0 at once, then stalls
       await drain(tester);
       store[0] = 11; // a write lands on a page the run already read
-      final secondReload = controller.invalidate();
+      final secondReloadFuture = controller.invalidate();
       await drain(tester);
 
-      hold.complete();
+      holdCompleter.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (firstReload, secondReload).wait;
+      await (firstReloadFuture, secondReloadFuture).wait;
 
       check(find.text('item 11').evaluate()).length.equals(1);
       check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(2);
@@ -371,31 +371,31 @@ void main() {
     scenarioWidgets('a reset() during a depth re-read wins, and that re-read commits nothing', (
       tester,
     ) async {
-      final hold = Completer<void>();
-      final fetcher = _heldFetcher(hold, holdAttempt: 2);
+      final holdCompleter = Completer<void>();
+      final fetcher = _heldFetcher(holdCompleter, holdAttempt: 2);
       final controller = ListSmithController();
 
       await pumpList(tester, fetchPage: fetcher.fetchPage, controller: controller, pageCount: 3);
       await drain(tester, frames: 12);
 
-      final invalidate = controller.invalidate(); // every page held
+      final invalidateFuture = controller.invalidate(); // every page held
       await drain(tester);
       await controller.reset();
       await drain(tester, frames: 12);
       check(find.text('item 3').evaluate()).length.equals(1); // the reset's stream is in
 
-      hold.complete();
+      holdCompleter.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await invalidate;
+      await invalidateFuture;
 
       check(find.text('item 3').evaluate()).length.equals(1);
       check(find.text('item 2').evaluate()).length.equals(0);
     });
 
     scenarioWidgets('an invalidate() right after a cut-in reset() is not lost', (tester) async {
-      final hold = Completer<void>();
-      final fetcher = _heldFetcher(hold, holdAttempt: 2);
+      final holdCompleter = Completer<void>();
+      final fetcher = _heldFetcher(holdCompleter, holdAttempt: 2);
       final controller = ListSmithController();
       final observer = RecordingListSmithObserver();
 
@@ -408,16 +408,17 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      final firstReload = controller.invalidate(); // held, about to be superseded
+      final firstReloadFuture = controller.invalidate(); // held, about to be superseded
       await drain(tester);
       await controller.reset();
-      final secondReload = controller.invalidate(); // must not join a run that will commit nothing
+      final secondReloadFuture = controller
+          .invalidate(); // must not join a run that will commit nothing
       await drain(tester, frames: 12);
 
-      hold.complete();
+      holdCompleter.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (firstReload, secondReload).wait;
+      await (firstReloadFuture, secondReloadFuture).wait;
 
       // 3 reloads started: the held one, the reset, and the invalidate that refused to join.
       check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(3);
@@ -427,8 +428,8 @@ void main() {
     scenarioWidgets('a refresh() joining a live invalidate() gets its refresh afterwards', (
       tester,
     ) async {
-      final hold = Completer<void>();
-      final fetcher = _heldFetcher(hold, holdAttempt: 2);
+      final holdCompleter = Completer<void>();
+      final fetcher = _heldFetcher(holdCompleter, holdAttempt: 2);
       final controller = ListSmithController();
       final observer = RecordingListSmithObserver();
 
@@ -441,15 +442,15 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      final invalidate = controller.invalidate();
+      final invalidateFuture = controller.invalidate();
       await drain(tester);
-      final refresh = controller.refresh(); // fresh data wanted, a store re-read won't do
+      final refreshFuture = controller.refresh(); // fresh data wanted, a store re-read won't do
       await drain(tester);
 
-      hold.complete();
+      holdCompleter.complete();
       await tester.idle();
       await drain(tester, frames: 12);
-      await (invalidate, refresh).wait;
+      await (invalidateFuture, refreshFuture).wait;
 
       check(observer.events.where((event) => event.startsWith('reload(')))
           .deepEquals(['reload(invalidated)', 'reload(refresh)']);
@@ -458,8 +459,8 @@ void main() {
     scenarioWidgets(
       'a refresh pending behind a live re-read is not downgraded by a later invalidate',
       (tester) async {
-        final hold = Completer<void>();
-        final fetcher = _heldFetcher(hold, holdAttempt: 2);
+        final holdCompleter = Completer<void>();
+        final fetcher = _heldFetcher(holdCompleter, holdAttempt: 2);
         final controller = ListSmithController();
         final observer = RecordingListSmithObserver();
 
@@ -472,16 +473,17 @@ void main() {
         );
         await drain(tester, frames: 12);
 
-        final invalidate = controller.invalidate();
+        final invalidateFuture = controller.invalidate();
         await drain(tester);
-        final refresh = controller.refresh();
-        final again = controller.invalidate(); // both pending: one rerun, and it is the refresh
+        final refreshFuture = controller.refresh();
+        final secondInvalidateFuture = controller
+            .invalidate(); // both pending: one rerun, and it is the refresh
         await drain(tester);
 
-        hold.complete();
+        holdCompleter.complete();
         await tester.idle();
         await drain(tester, frames: 12);
-        await (invalidate, refresh, again).wait;
+        await (invalidateFuture, refreshFuture, secondInvalidateFuture).wait;
 
         check(observer.events.where((event) => event.startsWith('reload(')))
             .deepEquals(['reload(invalidated)', 'reload(refresh)']);
@@ -509,15 +511,15 @@ void main() {
   });
 }
 
-/// A stamped fetcher whose [holdAttempt]-th fetch of every page waits on [hold].
+/// A stamped fetcher whose [holdAttempt]-th fetch of every page waits on [holdCompleter].
 ({PageFetcher<int> fetchPage, Map<int, int> attempts}) _heldFetcher(
-  Completer<void> hold, {
+  Completer<void> holdCompleter, {
   required int holdAttempt,
 }) {
   final attempts = <int, int>{};
   final fetchPage = PageFetcher<int>((request) async {
     final attempt = attempts[request.pageIndex] = (attempts[request.pageIndex] ?? 0) + 1;
-    if (attempt == holdAttempt) await hold.future;
+    if (attempt == holdAttempt) await holdCompleter.future;
 
     return [request.pageIndex * 1000 + attempt];
   });

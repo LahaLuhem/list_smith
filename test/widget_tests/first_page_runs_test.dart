@@ -13,6 +13,7 @@ void main() {
       WidgetTester tester,
       FakeServer<int> server, {
       ListSmithController<int>? controller,
+      Refresh refresh = const PullToRefresh(),
     }) => pumpListSmith(
       tester,
       ListSmith.async(
@@ -20,6 +21,7 @@ void main() {
         itemIdGetter: (item) => item,
         pageSize: 3,
         endPolicy: const FixedPageCountPolicy(pageCount: 1),
+        refresh: refresh,
         controller: controller,
         itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
       ),
@@ -40,7 +42,7 @@ void main() {
       },
       outline: (tester, restarts) async {
         final server = FakeServer<int>([1, 2, 3]);
-        final firstLoad = server.hold(0, attempt: 1);
+        final firstLoadHoldCompleter = server.hold(0, attempt: 1);
         final controller = ListSmithController<int>();
         await pumpList(tester, server, controller: controller);
 
@@ -48,10 +50,96 @@ void main() {
           unawaited(restart(controller));
           await tester.pump();
         }
-        await release(tester, [firstLoad]);
+        await release(tester, [firstLoadHoldCompleter]);
 
         check(find.text('item 1').evaluate()).length.equals(1);
       },
     );
+
+    scenarioWidgets('a refresh tapped twice while its page loads sends 1 request', (tester) async {
+      final server = FakeServer<int>([1, 2, 3]);
+      final controller = ListSmithController<int>();
+      await pumpList(tester, server, controller: controller);
+      await drain(tester);
+      final holdCompleter = server.hold(0, attempt: 2);
+
+      unawaited(controller.refresh());
+      await drain(tester, frames: 9); // a double tap is many frames apart
+      unawaited(controller.refresh());
+      await release(tester, [holdCompleter]);
+
+      check(server.attempts[0]).equals(2);
+    });
+
+    scenarioWidgets('a local write during the 1st load is read once, after it lands', (
+      tester,
+    ) async {
+      final server = FakeServer<int>([1, 2, 3]);
+      final firstLoadHoldCompleter = server.hold(0, attempt: 1);
+      final controller = ListSmithController<int>();
+      await pumpList(tester, server, controller: controller);
+      await drain(tester);
+
+      unawaited(controller.invalidate());
+      await drain(tester);
+      unawaited(controller.invalidate());
+      await drain(tester);
+      // The 1st load's answer may predate the write, so the re-read waits for it.
+      check(server.attempts[0]).equals(1);
+      await release(tester, [firstLoadHoldCompleter]);
+
+      check(server.requests.map((request) => request.trigger))
+          .deepEquals([FetchTrigger.initialLoad, FetchTrigger.invalidated]);
+    });
+
+    scenarioOutlineWidgets<Future<void> Function(ListSmithController<int> controller)>(
+      'a verb from code completes once its fresh page has landed',
+      examples: {
+        'refresh()': (controller) => controller.refresh(),
+        'invalidate()': (controller) => controller.invalidate(),
+        'reset()': (controller) => controller.reset(),
+      },
+      outline: (tester, verb) async {
+        final server = FakeServer<int>([1, 2, 3]);
+        final controller = ListSmithController<int>();
+        await pumpList(tester, server, controller: controller);
+        await drain(tester);
+        final holdCompleter = server.hold(0, attempt: 2);
+
+        var isDone = false;
+        unawaited(verb(controller).then((_) => isDone = true));
+        await drain(tester);
+        check(server.attempts[0]).equals(2); // the fresh page is out, and held
+        check(isDone).isFalse();
+        await release(tester, [holdCompleter]);
+
+        check(isDone).isTrue();
+      },
+    );
+
+    scenarioWidgets('a pull hands over to the 1st-page loader instead of spinning beside it', (
+      tester,
+    ) async {
+      final server = FakeServer<int>([1, 2, 3]);
+      await pumpList(
+        tester,
+        server,
+        refresh: PullToRefresh(
+          indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+        ),
+      );
+      await drain(tester);
+      final holdCompleter = server.hold(0, attempt: 2);
+
+      await pullToRefresh(tester, find.text('item 1'));
+      // Premise: the list is on its loader, its fresh page still held.
+      check(find.textContaining('item ').evaluate()).isEmpty();
+      check(server.attempts[0]).equals(2);
+
+      check(find.byKey(_indicatorKey).evaluate()).isEmpty();
+      await release(tester, [holdCompleter]);
+    });
   });
 }
+
+const _indicatorKey = ValueKey('indicator');

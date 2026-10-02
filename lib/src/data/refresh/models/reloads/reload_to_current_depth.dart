@@ -25,7 +25,7 @@ final class const ReloadToCurrentDepth({
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) {
     final oldPages = context.loadedPages;
-    if (oldPages.isEmpty) return Future.sync(context.reset);
+    if (oldPages.isEmpty) return context.reset();
 
     return context.isSignalBased
         ? _reloadSequential(context, oldPages.length)

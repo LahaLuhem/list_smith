@@ -12,7 +12,8 @@ enum ListSmithRefreshPhase() {
   /// Pulled past the threshold, so letting go now triggers a refresh.
   armed,
 
-  /// A refresh is in flight.
+  /// A refresh is in flight with the rows still up. One that clears the list hands over to its loader at
+  /// once, so it never shows this phase.
   refreshing,
 
   /// Animating back to rest, whether cancelled below the threshold or done after a refresh.
