@@ -8,6 +8,7 @@ import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/error_builder.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
+import '/src/data/refresh/models/refresh.dart';
 import 'defaults/neutral_empty_indicator.dart';
 import 'defaults/neutral_error_indicator.dart';
 import 'defaults/neutral_loading_indicator.dart';
@@ -37,6 +38,9 @@ class const PagedView<T extends Object>({
 
   /// Scroll and layout configuration.
   required final ListScrollConfig scroll,
+
+  /// Whether the list takes a pull, which decides the physics it scrolls with.
+  required final Refresh refresh,
 
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
@@ -83,7 +87,7 @@ class const PagedView<T extends Object>({
     controller: scroll.controller,
     scrollDirection: scroll.scrollDirection,
     reverse: scroll.reverse,
-    physics: scroll.physics,
+    physics: refresh.scrollPhysics(scroll.physics),
     padding: scroll.padding,
     scrollCacheExtent: scroll.scrollCacheExtent,
   );

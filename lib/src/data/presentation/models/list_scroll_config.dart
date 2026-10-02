@@ -8,7 +8,8 @@ final class const ListScrollConfig({
   /// Maps to [BoxScrollView.padding].
   final EdgeInsetsGeometry? padding,
 
-  /// Maps to [ScrollView.physics].
+  /// Maps to [ScrollView.physics]. Under pull-to-refresh the list is always draggable, so short content
+  /// takes a pull, unless these physics refuse drags.
   final ScrollPhysics? physics,
 
   /// Maps to [ScrollView.controller], for a scroll controller you own.

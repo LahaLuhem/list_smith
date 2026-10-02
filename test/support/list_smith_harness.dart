@@ -28,9 +28,14 @@ Future<void> settle(
   await drain(tester);
 }
 
-/// Pulls down from [anchor] far enough to arm a refresh, then pumps long enough for it to run.
-Future<void> pullToRefresh(WidgetTester tester, Finder anchor) async {
-  await tester.fling(anchor, const Offset(0, 300), 1000);
+/// Pulls from [anchor] by [offset], down unless told otherwise, far enough to arm a refresh, then pumps
+/// long enough for it to run.
+Future<void> pullToRefresh(
+  WidgetTester tester,
+  Finder anchor, {
+  Offset offset = const Offset(0, 300),
+}) async {
+  await tester.fling(anchor, offset, 1000);
   // Timed frames, since the indicator only moves as time passes.
   for (var frame = 0; frame < 10; frame++) {
     await tester.pump(const Duration(milliseconds: 100));
