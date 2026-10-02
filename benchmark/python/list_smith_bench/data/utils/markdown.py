@@ -272,11 +272,11 @@ def render_summary_markdown(
 
     parts.extend(
         [
-            "## Wrapping overhead: list_smith on top of ISP\n",
-            "Confirms the wrapping costs ~nothing. `observer_dispatch` is one no-op observer "
-            "callback, the null-check plus virtual call made in `_fetchPage`. "
-            "`wrapping_overhead` is the per-`getNextPageKey` cost, rebuilding the page-item-counts "
-            "and running the end policy, as loaded pages grow. Any real fetch dwarfs both.\n",
+            "## Per-page bookkeeping\n",
+            "Confirms the bookkeeping costs ~nothing. `observer_dispatch` is one no-op observer "
+            "callback, the null-check plus virtual call made on each page fetch. "
+            "`wrapping_overhead` is the end-policy check before each page, rebuilding the "
+            "page-item-counts as loaded pages grow. Any real fetch dwarfs both.\n",
             overhead_table(dataframe),
         ]
     )
@@ -288,7 +288,7 @@ def render_summary_markdown(
             "`avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is "
             "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
             "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
-            "attribution: that small delta is what the wrapper adds to a plain list. "
+            "attribution: that small delta is what list_smith adds to a plain list. "
             "`edit_transitions_none` makes the same edits as `_size`, `_fade` and `_slide` with no "
             "transition, so the gap is what animating them adds.\n",
             frame_scenarios_table(dataframe, "build"),
