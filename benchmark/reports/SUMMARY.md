@@ -87,7 +87,7 @@ From the profile-mode `integration_test` scenarios, real frames on this machine.
 
 ## UI scenarios: per-frame raster cost
 
-The same frames on the raster thread, which draws what the build produced. `missed` counts frames over the same budget.
+The same frames on the raster thread, which draws what the build produced. `missed` counts frames over the same budget. `worst` is usually the 1st captured frame, so it swings between runs.
 
 | Scenario | Frames | Avg raster (ms) | Worst raster (ms) | p99 raster (ms) | Missed |
 |---|---:|---:|---:|---:|---:|
