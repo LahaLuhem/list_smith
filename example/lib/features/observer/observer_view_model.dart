@@ -72,7 +72,7 @@ final class _EventLogObserver(final void Function(String event) _record) extends
       _record('onPageLoaded  page $pageIndex · $itemCount items${isSearchMode ? ' · search' : ''}');
 
   @override
-  void onError(Object error, StackTrace stackTrace) => _record('onError  $error');
+  void onError(Exception error, StackTrace stackTrace) => _record('onError  $error');
 
   @override
   void onReload(FetchTrigger trigger) => _record('onReload  ${trigger.name}');

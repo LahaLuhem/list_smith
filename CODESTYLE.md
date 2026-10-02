@@ -588,6 +588,27 @@ switch (snapshot) {
 **Why:** 2 null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
 type dispatch that isn't there.
 
+<a id="idioms-catch-exceptions"></a>
+### Catch `Exception`, let `Error` through
+
+An `Exception` is a failure the code can handle, so catch it, and type whatever holds it as one. An
+`Error` is a bug: let it reach the app, where development shows it.
+
+```dart
+// Prefer:
+} on Exception catch (error) {
+  state = state.failed(error);
+}
+
+// Over: handles a bug as if it were a failure.
+} on Object catch (error) {
+  state = state.copyWith(error: error);
+  if (error is! Exception) rethrow;
+}
+```
+
+**Why:** `avoid_catching_errors` only flags `on Error`, so an `on Object` catch gets past it.
+
 ---
 
 <a id="prose"></a>
