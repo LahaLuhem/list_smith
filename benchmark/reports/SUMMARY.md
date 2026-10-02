@@ -6,7 +6,7 @@ Captured **2026-10-02** against `1.0.0` at `35b01b5` on Dart SDK 3.13.4. N=10 it
 
 ## Observer on the critical path: a slow observer blocks rendering
 
-The headline finding. list_smith invokes your observer *synchronously* on the page-load path, so a slow callback lands almost fully on the critical path. `slow_observer` blocks for a set delay on each callback and measures render latency across a sweep of delays: latency tracks the delay ~1:1 on top of a fixed baseline render, so a 50 ms observer pushes ~18 ms to ~68 ms. Keep observer callbacks cheap and do heavy work elsewhere.
+The headline finding. list_smith invokes your observer *synchronously* on the page-load path, so a slow callback lands almost fully on the critical path. `slow_observer` blocks for a set delay on each callback and measures render latency across a sweep of delays: latency tracks the delay ~1:1 on top of a fixed baseline render, so a 50 ms observer pushes ~19 ms to ~69 ms. Keep observer callbacks cheap and do heavy work elsewhere.
 
 | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---:|---:|---:|---:|
