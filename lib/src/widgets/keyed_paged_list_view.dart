@@ -57,12 +57,16 @@ class const KeyedPagedListView<T extends Object>({
       .noItemsFound => surfaces.noItemsFound,
       .ongoing || .subsequentPageError || .completed => null,
     };
+    final isLoader = status == .loadingFirstPage;
 
     return firstPageBuilder != null
         ? SliverFillRemaining(
             key: ValueKey(status), // so one surface replacing another starts fresh
-            hasScrollBody: false,
-            child: firstPageBuilder(context),
+            // Only the loader skips measuring, so its LayoutBuilder works and a tall error still scrolls.
+            hasScrollBody: isLoader,
+            child: !isLoader
+                ? firstPageBuilder(context)
+                : _DragAbsorber(axis: scrollDirection, child: firstPageBuilder(context)),
           )
         // One shape whatever the footer shows: the end, a new page loading, or its error.
         : _KeyedRows(
@@ -79,6 +83,25 @@ class const KeyedPagedListView<T extends Object>({
             onNearEnd: status != .ongoing ? null : onNearEnd,
           );
   }
+}
+
+/// Wins drags along [axis] that start on [child], so the list stays still. Only works inside the list.
+class const _DragAbsorber({required final Axis axis, required final Widget child})
+    extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onVerticalDragStart: axis != .vertical ? null : _ignore,
+    onHorizontalDragStart: axis != .horizontal ? null : _ignore,
+    // Opaque, so the gaps around a small loader count too.
+    behavior: .opaque,
+    // So a screen reader doesn't offer to scroll it.
+    excludeFromSemantics: true,
+    child: child,
+  );
+
+  // Winning the drag is the whole job.
+  // ignore: no-empty-block
+  static void _ignore(DragStartDetails _) {}
 }
 
 /// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too.
@@ -122,7 +145,7 @@ class const _KeyedRows<T extends Object>({
     );
   }
 
-  int? _indexOf(Key key) => key is _RowKey ? rowLookup.indexOf(key.id, key.index) : null;
+  int? _indexOf(Key key) => key is! _RowKey ? null : rowLookup.indexOf(key.id, key.index);
 
   /// How many rows from the end a row's build asks for the next page.
   static const _nearEndRows = 3;
