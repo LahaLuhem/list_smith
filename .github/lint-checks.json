@@ -2,7 +2,6 @@
   "_comment": "Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.",
   "image": "ghcr.io/lahaluhem/linterpol:latest",
   "checks": [
-    { "name": "ShellCheck", "cmd": "shellcheck scripts/*.sh" },
     { "name": "actionlint", "cmd": "actionlint" },
     { "name": "rumdl", "cmd": "rumdl check ." },
     { "name": "ryl", "cmd": "ryl ." }

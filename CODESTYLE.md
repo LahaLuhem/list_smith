@@ -24,7 +24,6 @@ don't break callers.
 - [DCM rules (applied by hand)](#dcm-rules)
 - [Test style](#test-style)
 - [Documentation conventions (Markdown)](#documentation-conventions)
-- [Shell scripts](#shell-scripts)
 
 <!-- TOC end -->
 
@@ -761,23 +760,9 @@ class-shaped to mock.
   existing anchor, or you grep the repo and update every caller in the same change.
 - **Bare `flutter` / `dart` in command examples, never `fvm flutter`.** FVM is a local detail
   (`.fvmrc` pins the channel), and docs stay tool-agnostic so an external contributor isn't forced
-  into it. The scripts under `scripts/` resolve FVM-vs-PATH themselves.
+  into it.
 - **British spelling in prose and identifiers** (`normalise`, `behaviour`, `initialise`). The one
   carve-out is names fixed by the SDK or a dependency (`toJson`, `compareTo`, `hashCode`, `color`,
   `center`).
 - **Prose follows [Prose & voice](#prose)**, every Markdown file here included, and that section
   starts by telling you to read the page it links.
-
----
-
-<a id="shell-scripts"></a>
-## Shell scripts
-
-- **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `flutter analyze` for Dart.
-  It runs from the [`linterpol`](https://github.com/LahaLuhem/linterpol) Docker image, so the only
-  local requirement is Docker plus `jq`. The `scripts/release.sh` preflight and dartender's CI both
-  read the check set and image tag from [`lint-checks.json`](.github/lint-checks.json), so neither
-  can drift.
-- **`# shellcheck disable=SC<code>` plus a one-line why beats refactoring for simple cases.**
-  Refactor where the warning points at a real bug. Reach for the directive where the code is
-  correct and ShellCheck is being over-conservative. Always pair it with a comment.

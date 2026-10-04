@@ -29,11 +29,10 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
 - **`dependency_validator`** guards the dependency set, scoped by `dart_dependency_validator.yaml`
   to the published surface.
 - **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
-  Docker image, so the only local requirement is Docker plus `jq`. The check set and image tag live
-  in [`lint-checks.json`](.github/lint-checks.json), which dartender's setup writes and its CI fans a
-  matrix out of. `scripts/release.sh` loops the same file in its preflight, so the 2 can't drift.
-  **A linter only this repo needs goes in a workflow of its own**, since the next setup run rewrites
-  the manifest. Per-tool config sits in `.rumdl.toml` and `.yamllint.yaml`.
+  Docker image, so the only local requirement is Docker. The check set and image tag live in
+  [`lint-checks.json`](.github/lint-checks.json), which dartender's setup writes and its CI fans a
+  matrix out of. **A linter only this repo needs goes in a workflow of its own**, since the next
+  setup run rewrites the manifest. Per-tool config sits in `.rumdl.toml` and `.yamllint.yaml`.
 - **Published to pub.dev.** `.pubignore` controls the tarball, `.editorconfig` is the source of
   truth for text-file conventions (width 100, LF, UTF-8).
 
@@ -67,8 +66,8 @@ list_smith/
 library following the "don't commit your own lockfile" convention. A nested app that *should* commit
 one opts in with a `!pubspec.lock` negation in its **own** `.gitignore`, never by loosening the root
 pattern, which would auto-commit every nested package. `example/` opts in this way: it pins the
-parent via `path: ../`, and [`scripts/release.sh`](scripts/release.sh) resyncs and commits
-`example/pubspec.lock` on each release so the pinned version tracks the bump. A future nested
+parent via `path: ../`, and the release run resyncs and commits `example/pubspec.lock` on each
+release so the pinned version tracks the bump. A future nested
 package stays ignored until it adds its own negation.
 
 ## Hard rules
@@ -93,7 +92,7 @@ These are the general, architecture-independent rules.
    path-filtering its workflow means changing `Protected` in the same pass:
    [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
 7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
-   headers are written by [`scripts/release.sh`](scripts/release.sh), and the `## [Unreleased]`
+   headers and Dependabot's lines are written by the release run, and the `## [Unreleased]`
    buffer is appended to by [`changelog.yml`](.github/workflows/changelog.yml) from the merged PR
    title, governed by its `sem-*` label. Same prohibition on the `version:` field and on running
    `cider` by hand. The `cider:` block in `pubspec.yaml` is static config, hand-editable.
@@ -126,8 +125,9 @@ Enforced by dartender's `conventions.yml`, called from
 - **PR body must not be empty**, **no merge commits in the PR range** (rebase to integrate `main`),
   **commit subjects <= 82 characters**.
 
-Cutting a release is one command: `scripts/release.sh [patch|minor|major]`. Mechanics, preflight and
-the pipeline-owned-files contract are in [`scripts/README.md`](scripts/README.md).
+Cutting a release is one run: **Release** in the Actions tab, then the bump. It runs CI, moves the
+version, the CHANGELOG and `example/pubspec.lock` together, and pushes the tag `publish.yml` picks
+up. [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing) has the rest.
 
 ## Style
 
