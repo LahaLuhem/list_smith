@@ -1,0 +1,39 @@
+# Written by dartender's scripts/setup/callers.sh, whose next run undoes hand edits.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version moves
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      dry-run:
+        description: Show the release without pushing it
+        type: boolean
+        default: false
+
+jobs:
+  # The repo's own CI first, so what gets released passed the checks a PR gets.
+  ci:
+    uses: ./.github/workflows/ci.yml
+    # What its Auto-merge job asks for. A run whose caller grants less won't start.
+    permissions:
+      contents: write
+      pull-requests: write
+
+  release:
+    needs: ci
+    uses: LahaLuhem/dartender/.github/workflows/release.yml@main
+    # For reading Dependabot's PRs. The App's token does the pushing.
+    permissions:
+      contents: read
+      pull-requests: read
+    with:
+      bump: ${{ inputs.bump }}
+      dry-run: ${{ inputs.dry-run }}
+      # The changelog App's, which the rulesets let past to push the release.
+      app-id: ${{ vars.APP_ID }}
+    secrets:
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}

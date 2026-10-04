@@ -88,8 +88,8 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 - **Never** push a semver tag without being told to. The tag authenticates to pub.dev over OIDC
   with no confirmation step on their side.
 - **Never** run `cider` or hand-edit `CHANGELOG.md` / `version:` (hard rule 7 has the why). If the
-  user wants a release, suggest `scripts/release.sh <bump>` but don't run it: it pushes to
-  `origin/main` and triggers the publish.
+  user wants a release, point them at the **Release** workflow in the Actions tab but don't start
+  it: it pushes to `main` and triggers the publish.
 - **Never** edit `pubspec.lock`, which is `flutter pub get`'s output.
 - **Never** delete anything under `.fvm/` or `.dart_tool/` without approval.
 - **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`): ask first.
@@ -104,6 +104,6 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 - Lint clean via the linterpol image for whatever changed, per
   [`lint-checks.json`](.github/lint-checks.json).
 - `flutter pub publish --dry-run` clean if the change is publish-relevant. Never bump the version or
-  edit the CHANGELOG to make it pass, `scripts/release.sh` owns those.
+  edit the CHANGELOG to make it pass, the release run owns those.
 - Public API additions carry `///` dartdoc and show up in the README.
 - **Explicitly call out what you did NOT verify.**

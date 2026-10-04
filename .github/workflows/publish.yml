@@ -3,8 +3,9 @@ name: Publish
 
 on:
   push:
-    # The package's tag pattern on pub.dev, which only takes a publish from a tag push matching it.
-    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+    # pub.dev's tag patterns: a bare version where the repo publishes one package, and
+    # `<package>-<version>` where it publishes more.
+    tags: ["[0-9]+.[0-9]+.[0-9]+", "*-[0-9]+.[0-9]+.[0-9]+"]
 
 jobs:
   publish:

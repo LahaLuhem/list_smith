@@ -17,7 +17,6 @@ build/
 coverage/
 
 # Maintainer-only tooling.
-scripts/
 tool/
 # dependency_validator config, consumed only by the maintainer's dependency check.
 dart_dependency_validator.yaml
