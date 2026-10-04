@@ -2,6 +2,7 @@
 ### Added
 - \[#24\] In-place item edits (upsert / remove) without a refetch
 - \[#75\] Rows follow their item, and edits can animate them in and out
+- \[#80\] `pullableSurfaces` controls conditions for interacting with the RefreshIndicator
 
 ### Changed
 - \[#74\] Pull indicator follows the pull's side and physics, adds `pullDirection` and `indicatorExtent`
@@ -10,10 +11,16 @@
 - \[#69\] **BREAKING:** PullToRefresh's `refreshBuilder` is now `indicatorBuilder` (RefreshIndicatorBuilder), with no child argument. ListSmithRefreshPhase drops `.idle`.
 - \[#24\] **BREAKING:** ListSmithController is now typed by its list's items.
 - **BREAKING:** AsyncListSurfaces, ListScrollConfig and ListSmithRefreshState are `final`
+- \[#80\] **BREAKING:** ErrorBuilder and ListSmithObserver.onError take an Exception. A fetcher's Error now reaches your app instead of the error surface.
 
 ### Fixed
 - \[#69\] Idle lists stop drawing frames: `indicatorBuilder` replaces `refreshBuilder`
 - \[#72\] A row keeps its state, and a swipe in progress, when rows above it come or go
+- \[#80\] No pull or extra request while the 1st page loads, and no list stuck on its loader after quick restarts
+- \[#80\] The 1st-page loader fills one screen and stays still, so a LayoutBuilder in it works
+
+### Removed
+- \[#80\] refresh(), invalidate() and reset() wait for the fresh page. A short list takes a pull with any scroll setup. infinite\_scroll\_pagination is gone.
 
 ## [1.0.0] - 2026-09-11
 ### Added
