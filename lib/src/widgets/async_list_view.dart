@@ -37,7 +37,6 @@ import '/src/data/search/models/search.dart';
 import '/src/data/search/models/search_page_request.dart';
 import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
-import 'defaults/neutral_loading_indicator.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -507,50 +506,39 @@ class _AsyncListViewState<T extends Object>()
   Widget build(BuildContext context) {
     final surfaces = widget.surfaces;
 
-    final pagedList = ValueListenableBuilder(
-      valueListenable: _pagingStateNotifier,
-      builder: (_, state, _) => DualValueListenableBuilder(
-        firstListenable: _searchModeNotifier,
-        secondListenable:
-            _editStampNotifier, // an edit only needs the rebuild, _displayFor reads the edits
-        builder: (context, isSearchMode, _, _) {
-          // AdvanceToFirstNonEmpty pages past an empty page itself, so show loading while it does and
-          // keep the empty surface for the true end (or the maxPages give-up).
-          if (_shouldAdvancePastEmpty(state)) {
-            return surfaces.firstPageLoadingBuilder?.call(context) ??
-                const NeutralLoadingIndicator();
-          }
-
-          return PagedView(
-            state: _displayFor(state).state,
-            onNearEnd: _onNearEnd,
-            onRetry: _retryPage,
-            itemBuilder: switch (widget.source.editTransition) {
-              AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
-                widget.itemBuilder,
-                itemIdGetter: widget.source.itemIdGetter,
-                transitionBuilder: transitionBuilder,
-              ),
-              NoEditTransition() => widget.itemBuilder,
-            },
+    final pagedList = TripleValueListenableBuilder(
+      firstListenable: _pagingStateNotifier,
+      secondListenable: _searchModeNotifier,
+      // An edit only needs the rebuild, _displayFor reads the edits.
+      thirdListenable: _editStampNotifier,
+      builder: (context, state, isSearchMode, _, _) => PagedView(
+        state: _shownStateFor(state),
+        onNearEnd: _onNearEnd,
+        onRetry: _retryPage,
+        itemBuilder: switch (widget.source.editTransition) {
+          NoEditTransition() => widget.itemBuilder,
+          AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
+            widget.itemBuilder,
             itemIdGetter: widget.source.itemIdGetter,
-            grouping: widget.grouping,
-            scrollConfig: widget.scrollConfig,
-            refresh: widget.source.refresh,
-            showsSurfaceGetter: _showsSurface,
-            takesPullGetter: _takesPull,
-            isSearchMode: isSearchMode,
-            query: _debouncer.committedQuery,
-            separatorBuilder: widget.separatorBuilder,
-            firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
-            newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
-            firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
-            newPageErrorBuilder: surfaces.newPageErrorBuilder,
-            emptyBuilder: widget.emptyBuilder,
-            noResultsBuilder: widget.noResultsBuilder,
-            noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
-          );
+            transitionBuilder: transitionBuilder,
+          ),
         },
+        itemIdGetter: widget.source.itemIdGetter,
+        grouping: widget.grouping,
+        scrollConfig: widget.scrollConfig,
+        refresh: widget.source.refresh,
+        showsSurfaceGetter: _showsSurface,
+        takesPullGetter: _takesPull,
+        isSearchMode: isSearchMode,
+        query: _debouncer.committedQuery,
+        separatorBuilder: widget.separatorBuilder,
+        firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
+        newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
+        firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
+        newPageErrorBuilder: surfaces.newPageErrorBuilder,
+        emptyBuilder: widget.emptyBuilder,
+        noResultsBuilder: widget.noResultsBuilder,
+        noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
       ),
     );
 
@@ -574,12 +562,12 @@ class _AsyncListViewState<T extends Object>()
     .ongoing || .subsequentPageError || .completed => false,
   };
 
-  /// What the list shows, the loader included while it pages past an empty page.
-  PagingStatus _shownStatus() {
-    final state = _pagingStateNotifier.value;
+  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).status;
 
-    return _shouldAdvancePastEmpty(state) ? .loadingFirstPage : _displayFor(state).state.status;
-  }
+  /// What the list shows of [state]. While it pages past an empty page, that's the loader, and the
+  /// empty surface waits for the true end (or the maxPages give-up).
+  PagingState<T> _shownStateFor(PagingState<T> state) =>
+      _shouldAdvancePastEmpty(state) ? PagingState() : _displayFor(state).state;
 
   @override
   Future<void> refresh() => _runReload(.refresh).doneFuture;
@@ -602,11 +590,7 @@ class _AsyncListViewState<T extends Object>()
   @override
   void upsert(T item) {
     final animation = _editAnimation;
-    if (animation == null) {
-      _edit(item, item);
-
-      return;
-    }
+    if (animation == null) return _edit(item, item);
 
     final id = widget.source.itemIdGetter(item);
     final wasShown = _isShown(id);
