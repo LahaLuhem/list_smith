@@ -97,15 +97,15 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<({PaginationEndPolicy policy, List<int> removed})>(
+    scenarioOutlineWidgets<({PaginationEndPolicy endPolicy, List<int> removed})>(
       'the end policy still counts what the server sent after items are removed',
       examples: {
         'StopOnEmptyPagesPolicy, the last page emptied': (
-          policy: const StopOnEmptyPagesPolicy(),
+          endPolicy: const StopOnEmptyPagesPolicy(),
           removed: _range(5, 9),
         ),
         'a short-last-page policy, one item removed': (
-          policy: const _ShortLastPagePolicy(),
+          endPolicy: const _ShortLastPagePolicy(),
           removed: const [7],
         ),
       },
@@ -119,7 +119,7 @@ void main() {
           itemIdGetter: _byValue,
           pageSize: 5,
           rowHeight: 300, // tall enough that page 2 waits for a scroll
-          endPolicy: example.policy,
+          endPolicy: example.endPolicy,
           scrollController: scrollController,
         );
         await drain(tester, frames: 12);

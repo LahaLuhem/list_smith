@@ -162,7 +162,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
       emptyBuilder: emptyBuilder,
       noResultsBuilder: noResultsBuilder,
       surfaces: surfaces,
-      scroll: scroll,
+      scrollConfig: scroll,
       observer: observer,
       controller: controller,
     ),
@@ -176,7 +176,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
       separatorBuilder: separatorBuilder,
       emptyBuilder: emptyBuilder,
       noResultsBuilder: noResultsBuilder,
-      scroll: scroll,
+      scrollConfig: scroll,
     ),
   };
 }

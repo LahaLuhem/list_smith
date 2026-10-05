@@ -37,7 +37,7 @@ void main() {
         tester,
         fetchPage: pagedFetcher([_range(0, 19), _range(20, 39)]),
         pageCount: 2,
-        scroll: ListScrollConfig(controller: scrollController),
+        scrollConfig: ListScrollConfig(controller: scrollController),
         isDrained: false,
       );
 
@@ -83,36 +83,38 @@ void main() {
       check(shownToggleRows()).deepEquals(['off 1', 'off 3']);
     });
 
-    scenarioOutlineWidgets<({ListScrollConfig scroll, DismissDirection direction, Offset swipe})>(
+    scenarioOutlineWidgets<
+      ({ListScrollConfig scrollConfig, DismissDirection dismissDirection, Offset swipeOffset})
+    >(
       'a row that shrank itself goes at once, with no list exit',
       examples: {
         'down a list': (
-          scroll: const ListScrollConfig(),
-          direction: .endToStart,
-          swipe: const Offset(-700, 0),
+          scrollConfig: const ListScrollConfig(),
+          dismissDirection: .endToStart,
+          swipeOffset: const Offset(-700, 0),
         ),
         'down a reversed list': (
-          scroll: const ListScrollConfig(reverse: true),
-          direction: .endToStart,
-          swipe: const Offset(-700, 0),
+          scrollConfig: const ListScrollConfig(reverse: true),
+          dismissDirection: .endToStart,
+          swipeOffset: const Offset(-700, 0),
         ),
         'across a sideways list': (
-          scroll: const ListScrollConfig(scrollDirection: .horizontal),
-          direction: .up,
-          swipe: const Offset(0, -500),
+          scrollConfig: const ListScrollConfig(scrollDirection: .horizontal),
+          dismissDirection: .up,
+          swipeOffset: const Offset(0, -500),
         ),
       },
       outline: (tester, example) async {
         final dismissed = <int>[];
         await _pumpRows(
           tester,
-          scroll: example.scroll,
-          dismissDirection: example.direction,
+          scrollConfig: example.scrollConfig,
+          dismissDirection: example.dismissDirection,
           dismissed: dismissed,
           duration: const Duration(seconds: 1), // long, so a list exit would still be running
         );
 
-        await tester.drag(find.text('off 2'), example.swipe);
+        await tester.drag(find.text('off 2'), example.swipeOffset);
         for (var frame = 0; frame < 20 && dismissed.isEmpty; frame++) {
           await tester.pump(const Duration(milliseconds: 50));
         }
@@ -373,7 +375,7 @@ Future<ListSmithController<int>> _pumpRows(
   Grouping<int>? grouping,
   Search<int> search = const NoSearch(),
   String query = '',
-  ListScrollConfig scroll = const ListScrollConfig(),
+  ListScrollConfig scrollConfig = const ListScrollConfig(),
   Duration duration = const Duration(milliseconds: 300),
   DismissDirection? dismissDirection,
   List<int>? dismissed,
@@ -383,7 +385,7 @@ Future<ListSmithController<int>> _pumpRows(
   bool isDrained = true,
 }) async {
   final handle = controller ?? ListSmithController<int>();
-  final axis = scroll.scrollDirection;
+  final axis = scrollConfig.scrollDirection;
   final listSmith = ListSmith.async(
     fetchPage: fetchPage ?? pagedFetcher([items]),
     itemIdGetter: (item) => item,
@@ -393,7 +395,7 @@ Future<ListSmithController<int>> _pumpRows(
     search: search,
     query: query,
     searchDebounce: const Duration(milliseconds: 20),
-    scroll: scroll,
+    scroll: scrollConfig,
     emptyBuilder: emptyBuilder,
     controller: handle,
     editTransition: !isTransitionOn

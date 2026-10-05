@@ -93,16 +93,22 @@ void main() {
     });
 
     scenarioOutlineWidgets<
-      ({Future<void> Function(ListSmithController<int> controller) verb, bool isFailing})
+      ({Future<void> Function(ListSmithController<int> controller) callVerb, bool isFailing})
     >(
       'a verb from code completes once its fresh page has landed or failed',
       examples: {
-        'refresh(), landing': (verb: (controller) => controller.refresh(), isFailing: false),
-        'refresh(), failing': (verb: (controller) => controller.refresh(), isFailing: true),
-        'invalidate(), landing': (verb: (controller) => controller.invalidate(), isFailing: false),
-        'invalidate(), failing': (verb: (controller) => controller.invalidate(), isFailing: true),
-        'reset(), landing': (verb: (controller) => controller.reset(), isFailing: false),
-        'reset(), failing': (verb: (controller) => controller.reset(), isFailing: true),
+        'refresh(), landing': (callVerb: (controller) => controller.refresh(), isFailing: false),
+        'refresh(), failing': (callVerb: (controller) => controller.refresh(), isFailing: true),
+        'invalidate(), landing': (
+          callVerb: (controller) => controller.invalidate(),
+          isFailing: false,
+        ),
+        'invalidate(), failing': (
+          callVerb: (controller) => controller.invalidate(),
+          isFailing: true,
+        ),
+        'reset(), landing': (callVerb: (controller) => controller.reset(), isFailing: false),
+        'reset(), failing': (callVerb: (controller) => controller.reset(), isFailing: true),
       },
       outline: (tester, example) async {
         final server = FakeServer<int>([1, 2, 3]);
@@ -113,7 +119,7 @@ void main() {
         final holdCompleter = server.hold(0, attempt: 2);
 
         var isDone = false;
-        unawaited(example.verb(controller).then((_) => isDone = true));
+        unawaited(example.callVerb(controller).then((_) => isDone = true));
         await drain(tester);
         check(server.attempts[0]).equals(2); // the fresh page is out, and held
         check(isDone).isFalse();

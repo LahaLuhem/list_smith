@@ -9,31 +9,31 @@ import '../support/support.dart';
 
 void main() {
   feature('ListSmith.async surfaces', () {
-    scenarioOutlineWidgets<({PageFetcher<int> fetchPage, String shows})>(
+    scenarioOutlineWidgets<({PageFetcher<int> fetchPage, String shownText})>(
       'renders the right surface for the source state',
       examples: {
         'the first page of items': (
           fetchPage: PageFetcher(
             (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
           ),
-          shows: 'item 1',
+          shownText: 'item 1',
         ),
         'the empty surface when the source has no items': (
           fetchPage: PageFetcher((_) async => const <int>[]),
-          shows: 'No items',
+          shownText: 'No items',
         ),
         'the no-more footer once every page has loaded': (
           fetchPage: PageFetcher(
             (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
           ),
-          shows: 'No more items',
+          shownText: 'No more items',
         ),
       },
       outline: (tester, example) async {
         await _pumpList(tester, example.fetchPage);
         await drain(tester);
 
-        check(find.text(example.shows).evaluate()).length.equals(1);
+        check(find.text(example.shownText).evaluate()).length.equals(1);
       },
     );
 

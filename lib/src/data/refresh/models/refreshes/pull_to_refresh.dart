@@ -21,12 +21,12 @@ final class const PullToRefresh({
   /// Creates it.
   this : assert(indicatorExtent > 0, 'indicatorExtent must be positive.');
 
-  /// Always-scrollable, so short content can still be pulled. Below the app's [physics] in the chain, so
-  /// a [NeverScrollableScrollPhysics] there still wins.
+  /// Always-scrollable, so short content can still be pulled. Below the app's physics in the chain, so a
+  /// [NeverScrollableScrollPhysics] there still wins.
   @internal
   @override
-  ScrollPhysics scrollPhysics(ScrollPhysics? physics) =>
-      physics?.applyTo(const AlwaysScrollableScrollPhysics()) ??
+  ScrollPhysics scrollPhysics(ListScrollConfig scrollConfig) =>
+      scrollConfig.physics?.applyTo(const AlwaysScrollableScrollPhysics()) ??
       const AlwaysScrollableScrollPhysics();
 
   @internal

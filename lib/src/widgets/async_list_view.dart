@@ -67,7 +67,7 @@ class const AsyncListView<T extends Object>({
   required final AsyncListSurfaces surfaces,
 
   /// Scroll and layout configuration for the underlying scrollable.
-  required final ListScrollConfig scroll,
+  required final ListScrollConfig scrollConfig,
 
   /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -535,8 +535,10 @@ class _AsyncListViewState<T extends Object>()
             },
             itemIdGetter: widget.source.itemIdGetter,
             grouping: widget.grouping,
-            scroll: widget.scroll,
+            scrollConfig: widget.scrollConfig,
             refresh: widget.source.refresh,
+            showsSurfaceGetter: _showsSurface,
+            takesPullGetter: _takesPull,
             isSearchMode: isSearchMode,
             query: _debouncer.committedQuery,
             separatorBuilder: widget.separatorBuilder,
@@ -556,7 +558,7 @@ class _AsyncListViewState<T extends Object>()
       NoRefresh() => pagedList,
       PullToRefresh(:final indicatorBuilder, :final indicatorExtent) => RefreshBinding(
         onRefresh: _refreshFromPull,
-        takesPull: _takesPull,
+        takesPullGetter: _takesPull,
         indicatorExtent: indicatorExtent,
         indicatorBuilder: indicatorBuilder,
         child: pagedList,
@@ -566,6 +568,11 @@ class _AsyncListViewState<T extends Object>()
 
   /// Reads the state as a drag starts, which can be a frame ahead of the screen.
   bool _takesPull() => widget.source.refresh.takesPull(_shownStatus());
+
+  bool _showsSurface() => switch (_shownStatus()) {
+    .loadingFirstPage || .firstPageError || .noItemsFound => true,
+    .ongoing || .subsequentPageError || .completed => false,
+  };
 
   /// What the list shows, the loader included while it pages past an empty page.
   PagingStatus _shownStatus() {
@@ -625,7 +632,7 @@ class _AsyncListViewState<T extends Object>()
       id,
       item,
       duration: animation.duration,
-      axis: widget.scroll.scrollDirection,
+      axis: widget.scrollConfig.scrollDirection,
     );
   }
 
