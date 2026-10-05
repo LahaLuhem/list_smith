@@ -10,6 +10,9 @@ Future<void> pumpListSmith(WidgetTester tester, Widget child) => tester.pumpWidg
   ),
 );
 
+/// The list's scroll view, not the neutral error's.
+final listScrollableFinder = find.byType(Scrollable).first;
+
 /// Pumps [frames] fixed frames so the 1st fetch, its result, and any page it triggers all settle. Never
 /// `pumpAndSettle`, for the reason in CODESTYLE's test style.
 Future<void> drain(WidgetTester tester, {int frames = 5}) async {
