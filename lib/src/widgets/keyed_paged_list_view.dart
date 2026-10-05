@@ -63,9 +63,7 @@ class const KeyedPagedListView<T extends Object>({
             key: ValueKey(status), // so one surface replacing another starts fresh
             // So a short surface has nothing to scroll.
             trailingPaddingExtent: _trailingPaddingExtentOf(context),
-            child: status != .loadingFirstPage
-                ? firstPageBuilder(context)
-                : _DragAbsorber(axis: scrollDirection, child: firstPageBuilder(context)),
+            child: firstPageBuilder(context),
           )
         // One shape whatever the footer shows: the end, a new page loading, or its error.
         : _KeyedRows(
@@ -121,25 +119,6 @@ class const _SurfaceSlot({
       );
     },
   );
-}
-
-/// Wins drags along [axis] that start on [child], so the list stays still. Only works inside the list.
-class const _DragAbsorber({required final Axis axis, required final Widget child})
-    extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onVerticalDragStart: axis != .vertical ? null : _ignore,
-    onHorizontalDragStart: axis != .horizontal ? null : _ignore,
-    // Opaque, so the gaps around a small loader count too.
-    behavior: .opaque,
-    // So a screen reader doesn't offer to scroll it.
-    excludeFromSemantics: true,
-    child: child,
-  );
-
-  // Winning the drag is the whole job.
-  // ignore: no-empty-block
-  static void _ignore(DragStartDetails _) {}
 }
 
 /// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too.
