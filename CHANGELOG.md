@@ -1,3 +1,7 @@
+## [Unreleased]
+### Fixed
+- \[#89\] Error and empty surfaces built with a LayoutBuilder no longer crash
+
 ## [2.0.0] - 2026-10-05
 ### Added
 - \[#24\] In-place item edits (upsert / remove) without a refetch
@@ -78,6 +82,7 @@
 - Opt-in `itemId` de-duplication for items repeated across overlapping pages.
 - Lifecycle observer `ListSmithObserver` (and `LoggingListSmithObserver`) for page-load, error, refresh, and search events.
 
+[Unreleased]: https://github.com/LahaLuhem/list_smith/compare/2.0.0...HEAD
 [2.0.0]: https://github.com/LahaLuhem/list_smith/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/LahaLuhem/list_smith/compare/0.1.1...1.0.0
 [0.1.1]: https://github.com/LahaLuhem/list_smith/compare/0.1.0...0.1.1
