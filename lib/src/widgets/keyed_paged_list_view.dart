@@ -57,14 +57,11 @@ class const KeyedPagedListView<T extends Object>({
       .noItemsFound => surfaces.noItemsFound,
       .ongoing || .subsequentPageError || .completed => null,
     };
-    final isLoader = status == .loadingFirstPage;
 
     return firstPageBuilder != null
-        ? SliverFillRemaining(
+        ? _SurfaceSlot(
             key: ValueKey(status), // so one surface replacing another starts fresh
-            // Only the loader skips measuring, so its LayoutBuilder works and a tall error still scrolls.
-            hasScrollBody: isLoader,
-            child: !isLoader
+            child: status != .loadingFirstPage
                 ? firstPageBuilder(context)
                 : _DragAbsorber(axis: scrollDirection, child: firstPageBuilder(context)),
           )
@@ -83,6 +80,26 @@ class const KeyedPagedListView<T extends Object>({
             onNearEnd: status != .ongoing ? null : onNearEnd,
           );
   }
+}
+
+/// The space left below whatever comes before, which `SliverFillRemaining` can't give: it either
+/// measures the surface, breaking a `LayoutBuilder`, or resizes it as the list scrolls.
+class const _SurfaceSlot({required final Widget child, super.key}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => SliverLayoutBuilder(
+    builder: (_, constraints) {
+      final remainingExtent = math.max<double>(
+        0,
+        constraints.viewportMainAxisExtent - constraints.precedingScrollExtent,
+      );
+
+      return SliverToBoxAdapter(
+        child: constraints.axis == .vertical
+            ? SizedBox(height: remainingExtent, child: child)
+            : SizedBox(width: remainingExtent, child: child),
+      );
+    },
+  );
 }
 
 /// Wins drags along [axis] that start on [child], so the list stays still. Only works inside the list.

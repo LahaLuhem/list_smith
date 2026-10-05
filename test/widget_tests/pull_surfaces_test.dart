@@ -122,7 +122,7 @@ void main() {
         await pumpListSmith(tester, list(server, scroll: setup.makeScroll(scrollController)));
         await drain(tester);
 
-        await pullToRefresh(tester, find.byType(Scrollable), offset: setup.pullOffset);
+        await pullToRefresh(tester, _listScrollableFinder, offset: setup.pullOffset);
 
         check(server.attempts[0]).equals(2);
       },
@@ -158,7 +158,7 @@ void main() {
         );
         await drain(tester);
 
-        await pullToRefresh(tester, find.byType(Scrollable));
+        await pullToRefresh(tester, _listScrollableFinder);
 
         check(server.attempts[0]).equals(example.isPulled ? 2 : 1);
       },
@@ -234,6 +234,9 @@ FakeServer<int> _failingServer() => FakeServer([1, 2, 3])..failing.add((0, 1));
 FakeServer<int> _emptyServer() => FakeServer(<int>[]);
 
 const _indicatorKey = ValueKey('indicator');
+
+/// The list's own scroll view, ahead of the one the neutral error scrolls itself with.
+final _listScrollableFinder = find.byType(Scrollable).first;
 
 /// How far a held drag along [axis] moves the list. Starts in a corner, clear of a centred loader.
 Future<double> _dragDistance(WidgetTester tester, Axis axis) async {

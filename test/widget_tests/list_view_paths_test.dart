@@ -29,61 +29,80 @@ void main() {
       check(find.text('later failed').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets(
-      "a loader taller than the list gets the list's height, so none of it is out of reach",
-      (tester) async {
-        final holdCompleter = Completer<List<int>>();
-        await _pumpAsync(
+    scenarioOutlineWidgets<_SurfaceHost>(
+      "a surface gets exactly the list's height, however tall it asks to be",
+      examples: _asyncSurfaceHosts,
+      outline: (tester, host) async {
+        await host(tester, (_) => const SizedBox(key: _surfaceKey, height: 2000));
+        await drain(tester);
+
+        check(tester.getSize(find.byKey(_surfaceKey)).height)
+            .equals(tester.getSize(find.byType(Scrollable)).height);
+      },
+    );
+
+    scenarioOutlineWidgets<_SurfaceHost>(
+      'a surface built with a LayoutBuilder renders',
+      examples: _surfaceHosts,
+      outline: (tester, host) async {
+        await host(
           tester,
-          fetchPage: PageFetcher((_) => holdCompleter.future),
-          surfaces: AsyncListSurfaces(
-            firstPageLoadingBuilder: (_) => const SizedBox(key: _loaderKey, height: 2000),
+          (_) => LayoutBuilder(
+            builder: (_, constraints) => Text('surface at ${constraints.maxHeight}'),
           ),
         );
         await drain(tester);
 
-        check(tester.getSize(find.byKey(_loaderKey)).height)
-            .equals(tester.getSize(find.byType(Scrollable)).height);
-        holdCompleter.complete(const []);
+        check(find.textContaining('surface at').evaluate()).length.equals(1);
       },
     );
 
-    scenarioWidgets('a loader built with a LayoutBuilder renders', (tester) async {
-      final holdCompleter = Completer<List<int>>();
-      await _pumpAsync(
+    scenarioOutlineWidgets<_SurfaceHost>(
+      'a surface built with Expanded renders',
+      examples: _surfaceHosts,
+      outline: (tester, host) async {
+        await host(
+          tester,
+          (_) => const Column(
+            children: [
+              Expanded(child: Text('fills')),
+              Text('below'),
+            ],
+          ),
+        );
+        await drain(tester);
+
+        check(find.text('fills').evaluate()).length.equals(1);
+        check(find.text('below').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioWidgets('the neutral 1st-page error taller than the list still scrolls to its Retry', (
+      tester,
+    ) async {
+      await pumpListSmith(
         tester,
-        fetchPage: PageFetcher((_) => holdCompleter.future),
-        surfaces: AsyncListSurfaces(
-          firstPageLoadingBuilder: (_) => LayoutBuilder(
-            builder: (_, constraints) => Text('loading at ${constraints.maxWidth}'),
+        MediaQuery(
+          data: const MediaQueryData(textScaler: .linear(3)),
+          child: Align(
+            alignment: .topCenter,
+            child: SizedBox(
+              height: 200, // short enough for the error to outgrow at this text size
+              child: ListSmith.async(
+                fetchPage: PageFetcher((_) async => throw Exception('down')),
+                itemIdGetter: (item) => item,
+                itemBuilder: (_, item, _) => Text('item $item'),
+              ),
+            ),
           ),
         ),
       );
       await drain(tester);
 
-      check(find.textContaining('loading at').evaluate()).length.equals(1);
-      holdCompleter.complete(const []);
-    });
-
-    scenarioWidgets('a 1st-page error taller than the list still scrolls to its end', (
-      tester,
-    ) async {
-      await _pumpAsync(
-        tester,
-        fetchPage: PageFetcher((_) async => throw Exception('down')),
-        surfaces: AsyncListSurfaces(
-          firstPageErrorBuilder: (_, _, _) =>
-              const Column(children: [SizedBox(height: 2000), Text('end of error')]),
-        ),
-      );
+      await tester.drag(find.text('Something went wrong'), const Offset(0, -300));
       await drain(tester);
 
-      await tester.dragUntilVisible(
-        find.text('end of error').hitTestable(),
-        find.byType(Scrollable),
-        const Offset(0, -300),
-      );
-      check(find.text('end of error').hitTestable().evaluate()).length.equals(1);
+      check(find.text('Retry').hitTestable().evaluate()).length.equals(1);
     });
 
     scenarioWidgets('a separator builder renders the separated list', (tester) async {
@@ -413,6 +432,7 @@ Future<void> _pumpAsync(
   WidgetTester tester, {
   required PageFetcher<int> fetchPage,
   AsyncListSurfaces surfaces = const AsyncListSurfaces(),
+  WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
 }) => pumpListSmith(
   tester,
@@ -420,6 +440,7 @@ Future<void> _pumpAsync(
     fetchPage: fetchPage,
     itemIdGetter: (item) => item,
     surfaces: surfaces,
+    emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
     refresh: const NoRefresh(),
     itemBuilder: (_, item, _) => Text('item $item'),
@@ -431,6 +452,7 @@ Future<void> _pumpSync(
   required List<String> items,
   required SyncSearchPredicate<String> searchBy,
   String query = '',
+  WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
   ListScrollConfig scroll = const ListScrollConfig(),
 }) => pumpListSmith(
@@ -439,6 +461,7 @@ Future<void> _pumpSync(
     items: items,
     searchBy: searchBy,
     query: query,
+    emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
     scroll: scroll,
     itemBuilder: (_, item, _) => Text(item),
@@ -447,9 +470,38 @@ Future<void> _pumpSync(
 
 typedef _Orientation = ({ListScrollConfig scroll, TextDirection text, AxisDirection pull});
 
+/// Pumps a list that shows only a surface, the one [surface] builds.
+typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
+
+final _asyncSurfaceHosts = <String, _SurfaceHost>{
+  'the loader': (tester, surface) {
+    final holdCompleter = Completer<List<int>>();
+    addTearDown(() => holdCompleter.complete(const []));
+
+    return _pumpAsync(
+      tester,
+      fetchPage: PageFetcher((_) => holdCompleter.future),
+      surfaces: AsyncListSurfaces(firstPageLoadingBuilder: surface),
+    );
+  },
+  'the 1st-page error': (tester, surface) => _pumpAsync(
+    tester,
+    fetchPage: PageFetcher((_) async => throw Exception('down')),
+    surfaces: AsyncListSurfaces(firstPageErrorBuilder: (context, _, _) => surface(context)),
+  ),
+  'the empty list': (tester, surface) =>
+      _pumpAsync(tester, fetchPage: PageFetcher((_) async => const []), emptyBuilder: surface),
+};
+
+final _surfaceHosts = <String, _SurfaceHost>{
+  ..._asyncSurfaceHosts,
+  'the sync empty list': (tester, surface) =>
+      _pumpSync(tester, items: const [], searchBy: containsIgnoreCase, emptyBuilder: surface),
+};
+
 const _indicatorKey = ValueKey('indicator');
 
-const _loaderKey = ValueKey('loader');
+const _surfaceKey = ValueKey('surface');
 
 /// Enough rows to overfill the viewport along either axis, so every orientation can scroll.
 final _items = List<int>.generate(30, (index) => index);

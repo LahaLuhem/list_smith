@@ -30,8 +30,7 @@ class const NeutralErrorIndicator({
   @override
   Widget build(BuildContext context) {
     final foregroundColour = neutralForegroundOf(context);
-
-    return Padding(
+    final indicatorPadding = Padding(
       padding: .all(isCompact ? _compactPadding : _padding),
       child: Center(
         child: Column(
@@ -51,5 +50,19 @@ class const NeutralErrorIndicator({
         ),
       ),
     );
+
+    // The full form gets the list's height and no more, so it scrolls once large text outgrows it.
+    return isCompact
+        ? indicatorPadding
+        : LayoutBuilder(
+            builder: (_, constraints) => SingleChildScrollView(
+              // Without this, it takes the app's primary controller when the list has its own.
+              primary: false,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: indicatorPadding,
+              ),
+            ),
+          );
   }
 }
