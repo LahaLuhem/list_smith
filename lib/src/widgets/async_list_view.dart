@@ -17,6 +17,7 @@ import '/src/data/edits/utils/edit_resolver.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
+import '/src/data/pagination/enums/paging_status.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/pagination/models/loaded_page.dart';
@@ -27,7 +28,6 @@ import '/src/data/presentation/models/async_list_surfaces.dart';
 import '/src/data/presentation/models/list_scroll_config.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/typedefs/no_results_builder.dart';
-import '/src/data/refresh/enums/pullable_surface.dart';
 import '/src/data/refresh/models/refresh.dart';
 import '/src/data/refresh/models/reload.dart';
 import '/src/data/refresh/models/reload_context.dart';
@@ -554,28 +554,24 @@ class _AsyncListViewState<T extends Object>()
 
     return switch (widget.source.refresh) {
       NoRefresh() => pagedList,
-      PullToRefresh(:final indicatorBuilder, :final indicatorExtent, :final pullableSurfaces) =>
-        RefreshBinding(
-          onRefresh: _refreshFromPull,
-          takesPull: () => _takesPull(pullableSurfaces),
-          indicatorExtent: indicatorExtent,
-          indicatorBuilder: indicatorBuilder,
-          child: pagedList,
-        ),
+      PullToRefresh(:final indicatorBuilder, :final indicatorExtent) => RefreshBinding(
+        onRefresh: _refreshFromPull,
+        takesPull: _takesPull,
+        indicatorExtent: indicatorExtent,
+        indicatorBuilder: indicatorBuilder,
+        child: pagedList,
+      ),
     };
   }
 
   /// Reads the state as a drag starts, which can be a frame ahead of the screen.
-  bool _takesPull(Set<PullableSurface> pullableSurfaces) {
-    final state = _pagingStateNotifier.value;
-    if (_shouldAdvancePastEmpty(state)) return false; // the loader shows meanwhile
+  bool _takesPull() => widget.source.refresh.takesPull(_shownStatus());
 
-    return switch (_displayFor(state).state.status) {
-      .loadingFirstPage => false,
-      .firstPageError => pullableSurfaces.contains(PullableSurface.error),
-      .noItemsFound => pullableSurfaces.contains(PullableSurface.empty),
-      .ongoing || .subsequentPageError || .completed => true,
-    };
+  /// What the list shows, the loader included while it pages past an empty page.
+  PagingStatus _shownStatus() {
+    final state = _pagingStateNotifier.value;
+
+    return _shouldAdvancePastEmpty(state) ? .loadingFirstPage : _displayFor(state).state.status;
   }
 
   @override

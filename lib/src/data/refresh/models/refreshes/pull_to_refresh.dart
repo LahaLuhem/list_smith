@@ -29,6 +29,15 @@ final class const PullToRefresh({
       physics?.applyTo(const AlwaysScrollableScrollPhysics()) ??
       const AlwaysScrollableScrollPhysics();
 
+  @internal
+  @override
+  bool takesPull(PagingStatus status) => switch (status) {
+    .loadingFirstPage => false,
+    .firstPageError => pullableSurfaces.contains(PullableSurface.error),
+    .noItemsFound => pullableSurfaces.contains(PullableSurface.empty),
+    .ongoing || .subsequentPageError || .completed => true,
+  };
+
   @override
   String toString() => 'PullToRefresh()';
 }
