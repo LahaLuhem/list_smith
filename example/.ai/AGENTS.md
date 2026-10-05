@@ -40,5 +40,5 @@ it exercises and stops there. Otherwise the same sentence ends up in 3 places an
 
 ## Mobile-targeted
 
-`platformValue` and `context.platformIcon` throw on desktop and web, so run this on a mobile
-device or simulator.
+`platformValue` throws anywhere but Android and iOS, and `PlatformIcon` throws on web, so run this
+on a mobile device or simulator.

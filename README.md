@@ -266,10 +266,10 @@ De-dup runs when a page arrives, never per scroll frame. What it costs is in
 On by default for `ListSmith.async`. Pull from the list's start (the top of a plain vertical list)
 and it resets and reloads from the 1st page. Switch it off with `refresh: NoRefresh()`.
 
-A pull works on the rows, and on the error and empty screens unless you leave them out. Never on the
-1st-page loader, whose page is already on its way. A short list takes a pull too, whatever your
-`ScrollController`, physics or scroll direction, unless its physics are
-`NeverScrollableScrollPhysics`.
+A pull works on the rows, and on the error and empty screens unless you leave them out of
+`pullableSurfaces`, a set of `PullableSurface.error` and `.empty`. Never on the 1st-page loader,
+whose page is already on its way. A short list takes a pull too, whatever your `ScrollController`,
+physics or scroll direction, unless its physics are `NeverScrollableScrollPhysics`.
 
 ```dart
 refresh: const PullToRefresh(pullableSurfaces: {.error}), // the empty screen takes no pull
