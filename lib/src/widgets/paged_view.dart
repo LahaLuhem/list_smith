@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/models/grouping.dart';
@@ -37,10 +39,16 @@ class const PagedView<T extends Object>({
   required final Grouping<T> grouping,
 
   /// Scroll and layout configuration.
-  required final ListScrollConfig scroll,
+  required final ListScrollConfig scrollConfig,
 
   /// Whether the list takes a pull, which decides the physics it scrolls with.
   required final Refresh refresh,
+
+  /// Whether a surface shows instead of the rows, read as a drag goes.
+  required final ValueGetter<bool> showsSurfaceGetter,
+
+  /// Whether a pull may start on what shows, read as a drag goes.
+  required final ValueGetter<bool> takesPullGetter,
 
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
@@ -84,12 +92,16 @@ class const PagedView<T extends Object>({
     surfaces: _surfaces(),
     onNearEnd: onNearEnd,
     separatorBuilder: separatorBuilder,
-    controller: scroll.controller,
-    scrollDirection: scroll.scrollDirection,
-    reverse: scroll.reverse,
-    physics: refresh.scrollPhysics(scroll.physics),
-    padding: scroll.padding,
-    scrollCacheExtent: scroll.scrollCacheExtent,
+    controller: scrollConfig.controller,
+    scrollDirection: scrollConfig.scrollDirection,
+    reverse: scrollConfig.reverse,
+    physics: _SurfaceDragPhysics(
+      showsSurfaceGetter: showsSurfaceGetter,
+      takesPullGetter: takesPullGetter,
+      parent: refresh.scrollPhysics(scrollConfig),
+    ),
+    padding: scrollConfig.padding,
+    scrollCacheExtent: scrollConfig.scrollCacheExtent,
   );
 
   /// The item builder the rows use. The group look-back only walks the pages when grouping is on, since
@@ -97,7 +109,7 @@ class const PagedView<T extends Object>({
   ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
     itemBuilder,
     flattenItems: () => state.pages?.expand((page) => page.items) ?? const Iterable.empty(),
-    axis: scroll.scrollDirection,
+    axis: scrollConfig.scrollDirection,
   );
 
   /// Every surface. The error ones read `state.error!`, non-null because only an error status builds
@@ -137,5 +149,36 @@ class const _ResolvedError({
     return errorBuilder != null
         ? errorBuilder(context, error, onRetry)
         : NeutralErrorIndicator(error: error, onRetry: onRetry, isCompact: isCompact);
+  }
+}
+
+/// While a surface shows, the list moves past its ends only into a pull [takesPullGetter] allows.
+/// Both getters are read live, since the list keeps the 1st physics it gets.
+final class const _SurfaceDragPhysics({
+  required final ValueGetter<bool> showsSurfaceGetter,
+  required final ValueGetter<bool> takesPullGetter,
+  super.parent,
+}) extends ScrollPhysics {
+  @override
+  _SurfaceDragPhysics applyTo(ScrollPhysics? ancestor) => _SurfaceDragPhysics(
+    showsSurfaceGetter: showsSurfaceGetter,
+    takesPullGetter: takesPullGetter,
+    parent: buildParent(ancestor),
+  );
+
+  @override
+  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
+    final parentAdjustedOffset = super.applyPhysicsToUserOffset(position, offset);
+    if (!showsSurfaceGetter()) return parentAdjustedOffset;
+
+    final currentScrollOffset = position.pixels;
+    // Never further out than now, so a pull the list changes under stops instead of snapping back.
+    final minScrollOffset = takesPullGetter()
+        ? double.negativeInfinity
+        : math.min(position.minScrollExtent, currentScrollOffset);
+    final maxScrollOffset = math.max(position.maxScrollExtent, currentScrollOffset);
+
+    return currentScrollOffset -
+        (currentScrollOffset - parentAdjustedOffset).clamp(minScrollOffset, maxScrollOffset);
   }
 }

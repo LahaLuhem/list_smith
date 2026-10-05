@@ -7,7 +7,12 @@ final class const NoRefresh() extends Refresh {
 
   @internal
   @override
-  ScrollPhysics? scrollPhysics(ScrollPhysics? physics) => physics;
+  ScrollPhysics? scrollPhysics(ListScrollConfig scrollConfig) =>
+      scrollConfig.physics ??
+      // Flutter's default, which any physics list_smith passes would switch off.
+      (scrollConfig.controller != null || scrollConfig.scrollDirection != .vertical
+          ? null
+          : const AlwaysScrollableScrollPhysics());
 
   @internal
   @override

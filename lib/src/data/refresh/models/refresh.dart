@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
 import '/src/data/pagination/enums/paging_status.dart';
+import '/src/data/presentation/models/list_scroll_config.dart';
 import '../enums/pullable_surface.dart';
 import 'list_smith_refresh_state.dart';
 import 'reload.dart';
@@ -22,7 +23,7 @@ sealed class const Refresh() {
 
   /// The same on every surface, since swapping physics mid-drag cancels the drag.
   @internal
-  ScrollPhysics? scrollPhysics(ScrollPhysics? physics);
+  ScrollPhysics? scrollPhysics(ListScrollConfig scrollConfig);
 
   /// Whether a pull may start while the list shows [status].
   @internal

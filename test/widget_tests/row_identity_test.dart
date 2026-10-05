@@ -55,16 +55,16 @@ void main() {
       check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'off 3']);
     });
 
-    scenarioOutlineWidgets<({List<int> items, void Function(ListSmithController<int>) edit})>(
+    scenarioOutlineWidgets<({List<int> items, void Function(ListSmithController<int>) applyEdit})>(
       'a row keeps its state as its group header comes and goes',
       examples: {
         'gaining the header': (
           items: const [10, 11, 12, 20],
-          edit: (controller) => controller.remove(10),
+          applyEdit: (controller) => controller.remove(10),
         ),
         'losing the header': (
           items: const [11, 12, 20],
-          edit: (controller) => controller.upsert(10),
+          applyEdit: (controller) => controller.upsert(10),
         ),
       },
       outline: (tester, example) async {
@@ -79,7 +79,7 @@ void main() {
         await tester.tap(find.text('off 11'));
         await tester.pump();
 
-        example.edit(controller);
+        example.applyEdit(controller);
         await tester.pump();
 
         check(shownToggleRows()).contains('on 11');

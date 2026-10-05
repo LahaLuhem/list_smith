@@ -24,7 +24,7 @@ class const RefreshBinding({
   required final double indicatorExtent,
 
   /// Whether a pull may start on what the list shows now, asked as each drag starts.
-  required final ValueGetter<bool> takesPull,
+  required final ValueGetter<bool> takesPullGetter,
 
   /// Draws the indicator, or `null` to use the neutral default.
   final RefreshIndicatorBuilder? indicatorBuilder,
@@ -60,7 +60,7 @@ class _RefreshBindingState() extends State<RefreshBinding> {
   /// its end and lets go.
   bool _isForIndicator(ScrollNotification notification) =>
       CustomRefreshIndicator.defaultScrollNotificationPredicate(notification) &&
-      (notification is! ScrollStartNotification || widget.takesPull());
+      (notification is! ScrollStartNotification || widget.takesPullGetter());
 
   @override
   Widget build(BuildContext context) => CustomRefreshIndicator(

@@ -38,7 +38,7 @@ class const SyncListView<T extends Object>({
   required final Grouping<T> grouping,
 
   /// Scroll and layout configuration for the underlying scrollable.
-  required final ListScrollConfig scroll,
+  required final ListScrollConfig scrollConfig,
 
   /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -123,34 +123,34 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
       final visibleItems = result.visibleItems;
       final separatorBuilder = widget.separatorBuilder;
-      final scroll = widget.scroll;
+      final scrollConfig = widget.scrollConfig;
 
       final effectiveItemBuilder = widget.grouping.decorate(
         widget.itemBuilder,
         flattenItems: () => visibleItems,
-        axis: scroll.scrollDirection,
+        axis: scrollConfig.scrollDirection,
       );
 
       return separatorBuilder != null
           ? ListView.separated(
-              scrollDirection: scroll.scrollDirection,
-              reverse: scroll.reverse,
-              controller: scroll.controller,
-              physics: scroll.physics,
-              padding: scroll.padding,
-              scrollCacheExtent: scroll.scrollCacheExtent,
+              scrollDirection: scrollConfig.scrollDirection,
+              reverse: scrollConfig.reverse,
+              controller: scrollConfig.controller,
+              physics: scrollConfig.physics,
+              padding: scrollConfig.padding,
+              scrollCacheExtent: scrollConfig.scrollCacheExtent,
               itemCount: visibleItems.length,
               itemBuilder: (context, index) =>
                   effectiveItemBuilder(context, visibleItems[index], index),
               separatorBuilder: separatorBuilder,
             )
           : ListView.builder(
-              scrollDirection: scroll.scrollDirection,
-              reverse: scroll.reverse,
-              controller: scroll.controller,
-              physics: scroll.physics,
-              padding: scroll.padding,
-              scrollCacheExtent: scroll.scrollCacheExtent,
+              scrollDirection: scrollConfig.scrollDirection,
+              reverse: scrollConfig.reverse,
+              controller: scrollConfig.controller,
+              physics: scrollConfig.physics,
+              padding: scrollConfig.padding,
+              scrollCacheExtent: scrollConfig.scrollCacheExtent,
               itemCount: visibleItems.length,
               itemBuilder: (context, index) =>
                   effectiveItemBuilder(context, visibleItems[index], index),

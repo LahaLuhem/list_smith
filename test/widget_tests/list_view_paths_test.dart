@@ -77,20 +77,23 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<({ListScrollConfig scroll, EdgeInsets safeAreaInsets})>(
+    scenarioOutlineWidgets<({ListScrollConfig scrollConfig, EdgeInsets safeAreaInsets})>(
       'a short surface leaves nothing to scroll, padding included',
       examples: const {
-        'padding all round': (scroll: ListScrollConfig(padding: .all(24)), safeAreaInsets: .zero),
+        'padding all round': (
+          scrollConfig: ListScrollConfig(padding: .all(24)),
+          safeAreaInsets: .zero,
+        ),
         "the screen's safe area, with no padding set": (
-          scroll: ListScrollConfig(),
+          scrollConfig: ListScrollConfig(),
           safeAreaInsets: .only(top: 47, bottom: 34),
         ),
         'a reversed list': (
-          scroll: ListScrollConfig(reverse: true, padding: .only(top: 30, bottom: 10)),
+          scrollConfig: ListScrollConfig(reverse: true, padding: .only(top: 30, bottom: 10)),
           safeAreaInsets: .zero,
         ),
         'a horizontal list': (
-          scroll: ListScrollConfig(
+          scrollConfig: ListScrollConfig(
             scrollDirection: .horizontal,
             padding: .only(left: 10, right: 30),
           ),
@@ -105,7 +108,7 @@ void main() {
             child: ListSmith.async(
               fetchPage: PageFetcher((_) async => throw Exception('down')),
               itemIdGetter: (item) => item,
-              scroll: example.scroll,
+              scroll: example.scrollConfig,
               itemBuilder: (_, item, _) => Text('item $item'),
             ),
           ),
@@ -225,21 +228,25 @@ void main() {
       'the pull indicator sits at the edge the pull starts from, is told which way it travels, and '
       'the list moves away from it',
       examples: const {
-        'a plain list, pulled down': (scroll: ListScrollConfig(), text: .ltr, pull: .down),
+        'a plain list, pulled down': (
+          scrollConfig: ListScrollConfig(),
+          textDirection: .ltr,
+          pullDirection: .down,
+        ),
         'a reversed list, pulled up': (
-          scroll: ListScrollConfig(reverse: true),
-          text: .ltr,
-          pull: .up,
+          scrollConfig: ListScrollConfig(reverse: true),
+          textDirection: .ltr,
+          pullDirection: .up,
         ),
         'a horizontal list, pulled right': (
-          scroll: ListScrollConfig(scrollDirection: .horizontal),
-          text: .ltr,
-          pull: .right,
+          scrollConfig: ListScrollConfig(scrollDirection: .horizontal),
+          textDirection: .ltr,
+          pullDirection: .right,
         ),
         'a right-to-left horizontal list, pulled left': (
-          scroll: ListScrollConfig(scrollDirection: .horizontal),
-          text: .rtl,
-          pull: .left,
+          scrollConfig: ListScrollConfig(scrollDirection: .horizontal),
+          textDirection: .rtl,
+          pullDirection: .left,
         ),
       },
       outline: (tester, orientation) async {
@@ -247,11 +254,11 @@ void main() {
         await pumpListSmith(
           tester,
           Directionality(
-            textDirection: orientation.text,
+            textDirection: orientation.textDirection,
             child: ListSmith.async(
               fetchPage: pagedFetcher([_items]),
               itemIdGetter: (item) => item,
-              scroll: orientation.scroll,
+              scroll: orientation.scrollConfig,
               refresh: PullToRefresh(
                 indicatorBuilder: (_, state) {
                   toldDirections.add(state.pullDirection);
@@ -267,19 +274,19 @@ void main() {
         final restingList = tester.getRect(find.byType(Scrollable));
         final restingRow = tester.getRect(find.text('item 0'));
 
-        final gesture = await _pullAndHold(tester, orientation.pull);
+        final gesture = await _pullAndHold(tester, orientation.pullDirection);
 
-        final unitOffset = _unit(orientation.pull);
+        final unitOffset = _unit(orientation.pullDirection);
         double along(Offset offset) => offset.dx * unitOffset.dx + offset.dy * unitOffset.dy;
 
         final indicator = tester.getRect(find.byKey(_indicatorKey));
-        check(_startEdge(indicator, orientation.pull))
-            .isCloseTo(_startEdge(restingList, orientation.pull), 1);
+        check(_startEdge(indicator, orientation.pullDirection))
+            .isCloseTo(_startEdge(restingList, orientation.pullDirection), 1);
         // Touching the start edge isn't enough: a slot along the wrong axis touches it too.
         check(along(indicator.center - restingList.center)).isLessThan(0);
         check(along(tester.getRect(find.text('item 0')).center - restingRow.center))
             .isGreaterThan(0);
-        check(toldDirections).deepEquals({orientation.pull});
+        check(toldDirections).deepEquals({orientation.pullDirection});
 
         await gesture.up();
       },
@@ -315,7 +322,7 @@ void main() {
         'clamping physics': ListScrollConfig(),
         'bouncing physics': ListScrollConfig(physics: BouncingScrollPhysics()),
       },
-      outline: (tester, scroll) async {
+      outline: (tester, config) async {
         final holdCompleter = Completer<List<int>>();
         var firstPageFetches = 0;
         await pumpListSmith(
@@ -328,7 +335,7 @@ void main() {
               return firstPageFetches == 1 ? Future.value(_items) : holdCompleter.future;
             }),
             itemIdGetter: (item) => item,
-            scroll: scroll,
+            scroll: config,
             refresh: PullToRefresh(
               // Waits on the held fetch, so the refresh keeps running.
               reload: const ReloadToCurrentDepth(),
@@ -445,7 +452,7 @@ void main() {
         tester,
         items: const ['apple'],
         searchBy: containsIgnoreCase,
-        scroll: const ListScrollConfig(cacheExtent: 250),
+        scrollConfig: const ListScrollConfig(cacheExtent: 250),
       );
       await tester.pump();
 
@@ -494,7 +501,7 @@ Future<void> _pumpSync(
   String query = '',
   WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
-  ListScrollConfig scroll = const ListScrollConfig(),
+  ListScrollConfig scrollConfig = const ListScrollConfig(),
 }) => pumpListSmith(
   tester,
   ListSmith.sync(
@@ -503,12 +510,16 @@ Future<void> _pumpSync(
     query: query,
     emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
-    scroll: scroll,
+    scroll: scrollConfig,
     itemBuilder: (_, item, _) => Text(item),
   ),
 );
 
-typedef _Orientation = ({ListScrollConfig scroll, TextDirection text, AxisDirection pull});
+typedef _Orientation = ({
+  ListScrollConfig scrollConfig,
+  TextDirection textDirection,
+  AxisDirection pullDirection,
+});
 
 /// Pumps a list showing only [surface].
 typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
