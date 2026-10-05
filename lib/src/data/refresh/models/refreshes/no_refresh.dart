@@ -9,6 +9,10 @@ final class const NoRefresh() extends Refresh {
   @override
   ScrollPhysics? scrollPhysics(ScrollPhysics? physics) => physics;
 
+  @internal
+  @override
+  bool takesPull(PagingStatus status) => false;
+
   @override
   String toString() => 'NoRefresh()';
 }
