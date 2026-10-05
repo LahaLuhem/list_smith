@@ -704,13 +704,16 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   `PullToRefresh.pullableSurfaces` lists them, as it does by default. Never on the 1st-page loader,
   whose page is already on its way.
 - **Only a drag's start is refused,** so a pull the list changes under still ends and lets go.
+- **While a surface shows, the list moves past its ends only into a pull it takes.** It asks whether
+  a surface shows, not whether anything overflows, so short rows still bounce away from the pull on
+  iOS, like a plain `ListView`.
 - **One set of physics for every surface:** always-scrollable under pull-to-refresh, below the app's
   physics so a `NeverScrollableScrollPhysics` still wins. Swapping them per surface cancels a held
-  drag inside layout, where the indicator's `setState` asserts.
-- **The loader wins its own drags,** since a recognizer inside the list beats the list's. The list's
-  padding around it isn't covered.
-- **Every surface gets the list's visible space,** unmeasured, so a `LayoutBuilder` or `Expanded`
-  works and a short one can't scroll. A taller one scrolls itself.
+  drag inside layout, where the indicator's `setState` asserts, so the rule above reads what shows
+  as the drag goes.
+- **Every surface sits in the list and gets its visible space,** unmeasured, so a `LayoutBuilder` or
+  `Expanded` works and a short one can't scroll. A taller one scrolls itself. Built outside it, a
+  surface would take the list out of the tree and detach the app's `ScrollController`.
 
 ---
 
