@@ -10,12 +10,15 @@ import '/features/core/data/models/demo_item.dart';
 /// read only inside [fetchPage], so it is a scoped `ValueNotifier`. See `CODESTYLE.md` *State management*.
 final class ReloadViewModel() extends ViewModel {
   static const _dataPages = 6;
-  static const _failPage = 1;
+  static const _failPage = 0;
   static const _latency = Duration(milliseconds: 500);
 
   final _attempts = <int, int>{};
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
   final _isRefreshingNotifier = ValueNotifier(false);
+  final _lastErrorNotifier = ValueNotifier<Exception?>(null);
+
+  late final observer = _LastErrorObserver(_lastErrorNotifier);
 
   /// Runs the same [reload] as a pull, from the "Refresh from code" button.
   final controller = ListSmithController<DemoItem>();
@@ -30,8 +33,11 @@ final class ReloadViewModel() extends ViewModel {
 
   bool get atomic => _atomic;
 
-  /// Fails one page of the next reload, to exercise the error policy.
+  /// Fails every load of the 1st page after its first, to exercise the error policy.
   ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
+
+  /// The latest reload's error, since a reload that keeps depth leaves the rows as they were.
+  ValueListenable<Exception?> get lastErrorListenable => _lastErrorNotifier;
 
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
   ValueListenable<bool> get isRefreshingListenable => _isRefreshingNotifier;
@@ -99,7 +105,17 @@ final class ReloadViewModel() extends ViewModel {
   void dispose() {
     _shouldInjectFailuresNotifier.dispose();
     _isRefreshingNotifier.dispose();
+    _lastErrorNotifier.dispose();
 
     super.dispose();
   }
+}
+
+final class _LastErrorObserver(final ValueNotifier<Exception?> _lastErrorNotifier)
+    extends ListSmithObserver {
+  @override
+  void onReload(FetchTrigger trigger) => _lastErrorNotifier.value = null;
+
+  @override
+  void onError(Exception error, StackTrace stackTrace) => _lastErrorNotifier.value = error;
 }

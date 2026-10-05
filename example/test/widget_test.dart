@@ -2,6 +2,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart' show Slidable;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:list_smith_example/features/core/widgets/bool_knob.dart';
 import 'package:list_smith_example/main.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
 
@@ -207,6 +208,36 @@ void main() {
       // The button ran the pull's own reload (depth kept by default), so every page is re-stamped.
       check(find.textContaining('load #2').evaluate().length).isGreaterThan(0);
       check(find.textContaining('load #1').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('the reload demo shows an injected failure after a pull', (tester) async {
+      // Phone-sized, so only the 1st page loads before the pull.
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Reload'), 100);
+      await tester.tap(find.text('Reload'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      final injectKnobFinder = find.ancestor(
+        of: find.text('Inject a failure on reload'),
+        matching: find.byType(BoolKnob),
+      );
+      await tester.tap(
+        find.descendant(of: injectKnobFinder, matching: find.byType(PlatformSwitch)),
+      );
+      await tester.pump();
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      check(find.textContaining('Simulated reload failure').evaluate()).isNotEmpty();
     });
 
     scenarioWidgets('the edits demo adds on top, renames in place and swipes a row away', (

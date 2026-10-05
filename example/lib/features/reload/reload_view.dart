@@ -71,6 +71,11 @@ class const ReloadView({super.key}) extends StatelessWidget {
                     child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
                   ),
                 ),
+                ValueListenableBuilder(
+                  valueListenable: viewModel.lastErrorListenable,
+                  builder: (_, lastError, _) =>
+                      lastError == null ? const SizedBox.shrink() : Text('$lastError'),
+                ),
               ],
             ),
           ),
@@ -81,6 +86,7 @@ class const ReloadView({super.key}) extends StatelessWidget {
               pageSize: 12,
               refresh: PullToRefresh(reload: viewModel.reload),
               controller: viewModel.controller,
+              observer: viewModel.observer,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (_, item, _) =>
                   PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
