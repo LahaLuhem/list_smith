@@ -633,6 +633,9 @@ ListSmith.async(
 )
 ```
 
+Surfaces get exactly the list's visible space. Make yours fit, or wrap it in a
+`SingleChildScrollView`.
+
 <details>
 <summary><b>The full set of surface slots</b></summary>
 
@@ -682,9 +685,6 @@ ListSmith.async(
 
 The shading is yours: list_smith ships none. If the row needs something from the enclosing scope,
 hoist the builder to a local and call it from both slots.
-
-The 1st-page loader gets exactly the list's visible space, so make it fit: a taller `Column`
-overflows.
 
 ## Watching what it does
 
