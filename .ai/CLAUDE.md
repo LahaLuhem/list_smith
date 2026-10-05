@@ -38,8 +38,8 @@ publishes automatically.
 - **Bash** only for what has no dedicated tool: `flutter`, `dart`, `git`. Invoke plain `flutter` /
   `dart`, which the user's shell aliases to whatever serves the `.fvmrc`-pinned channel, never the
   toolchain manager directly.
-- **Lint with `flutter analyze`.** The lints promoted to `error:` are the contract, not
-  suggestions.
+- **Lint with `flutter analyze --fatal-infos --fatal-warnings`.** The lints promoted to `error:`
+  are the contract, not suggestions.
 - **Clear lints with `dart fix --apply` first**, then hand-fix what has no automated fix, then
   `dart format`. Never hand-edit a lint the tool would fix. Run it per package, so repo root and
   `example/`. DCM findings need hand-fixing, `dart fix` doesn't touch them.
@@ -54,7 +54,7 @@ publishes automatically.
 | `lib/src/` | private. Refactor freely while the re-exports hold | no, for one file and one concern |
 | `test/` | local | no |
 | `pubspec.yaml` dependencies | every downstream user's transitive closure | yes |
-| `analysis_options.yaml` | every file. Surface the posture change loudly | yes, with a written reason in `APPENDIX.md` |
+| An override of the shared lints in `analysis_options.yaml` | every file. Surface the posture change loudly | yes, with a written reason in `APPENDIX.md` |
 
 The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is pipeline-owned. See
 *Forbidden* below, and don't plan or make a CHANGELOG edit or a version bump at all.
@@ -96,7 +96,7 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 
 ## Definition of done
 
-- `flutter analyze` clean. Non-negotiable.
+- `flutter analyze --fatal-infos --fatal-warnings` clean. Non-negotiable.
 - `dcm analyze` clean where the CLI is there. Otherwise apply the DCM rules by hand, since
   `flutter analyze` surfaces none of them. See [`CODESTYLE.md`](CODESTYLE.md#dcm-rules).
 - `dart format --output=none --set-exit-if-changed .` clean.

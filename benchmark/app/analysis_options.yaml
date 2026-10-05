@@ -1,20 +1,12 @@
-# The package's lints, relaxed only where the benchmark host needs it:
+# Not ../../analysis_options.yaml, the same as the example's.
+include: package:dartender_lints/analysis_options.yaml
+
+# The shared lints, relaxed only where the benchmark host needs it:
 # - public_member_api_docs: a host app has no public API to document.
 # - do_not_use_environment: an integration_test takes no command-line arguments, so scenario
 #   arguments arrive as --dart-define.
 # - avoid_redundant_argument_values: a --dart-define's default can match the parameter's (page
 #   size 20, say), but the argument has to stay for the define to apply.
-analyzer:
-  exclude:
-    - build/**
-    - android/**
-    - ios/**
-    - web/**
-    - windows/**
-    - macos/**
-    - linux/**
-include: ../../analysis_options.yaml
-
 linter:
   rules:
     public_member_api_docs: false

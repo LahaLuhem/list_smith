@@ -556,9 +556,9 @@ doesn't read [`.fvmrc`](.fvmrc), which only picks the SDK FVM gives you locally.
 
 `benchmark/app` is its own Flutter package, and the root `flutter pub get` resolves only the package
 and `example/`. So CI's `dart analyze .` at the root would fail on the app's unresolved
-`integration_test` imports. The root [`analysis_options.yaml`](analysis_options.yaml) excludes it,
-and [`bench-app.yml`](.github/workflows/bench-app.yml) analyses it after a `pub get` of its own. The
-app inherits the exclude through its `include:`, where it matches nothing, so its own run still
+`integration_test` imports. The shared lints the root includes exclude `benchmark/app/**`, and
+[`bench-app.yml`](.github/workflows/bench-app.yml) analyses it after a `pub get` of its own. The
+app gets the same exclude through its own `include:`, where it matches nothing, so its run still
 analyses every file.
 
 ---

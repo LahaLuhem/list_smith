@@ -7,15 +7,6 @@ rules:
   # exempt via yamllint's allow-non-breakable-words default.
   line-length:
     max: 100
-  # The multi-blank section dividers, as in analysis_options.yaml.
-  empty-lines:
-    max: 5
-  # The repo puts one space before inline comments and disables config blocks by
-  # prefixing `#` with no trailing space (analysis_options' plugin block), so
-  # don't require two-space gaps or a leading space.
-  comments:
-    min-spaces-from-content: 1
-    require-starting-space: false
   # Workflows use `on:`, which reads as a truthy key, so only values are checked.
   truthy:
     check-keys: false
