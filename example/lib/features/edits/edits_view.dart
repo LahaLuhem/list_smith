@@ -9,7 +9,6 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import '/features/core/data/constants/const_theme.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/widgets/bool_knob.dart';
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'edits_view_model.dart';
 
@@ -29,20 +28,12 @@ class const EditsView({super.key}) extends StatelessWidget {
               crossAxisAlignment: .stretch,
               spacing: 8,
               children: [
-                const DemoIntro(
-                  title: 'Edit loaded items',
-                  description:
-                      'Swipe a row left for Rename and Delete, or all the way to delete it in one go. '
-                      '"Add an item" puts a new one on top. Each change goes through upsert() or '
-                      'remove(), with no refetch, and a row they add or take grows in or shrinks '
-                      'out. With deletes failing, Delete leaves the row alone, but a full swipe still '
-                      'removes it, since the row has to go before the store answers. Pull to refresh '
-                      'and it comes back.',
-                ),
+                const Text('Swipe a row left for Rename and Delete, or all the way to delete it.'),
                 ValueListenableBuilder(
                   valueListenable: viewModel.shouldFailDeletesListenable,
                   builder: (context, shouldFailDeletes, _) => BoolKnob(
                     label: 'Deletes fail',
+                    subtitle: 'Delete keeps the row, but a full swipe drops it until you pull',
                     value: shouldFailDeletes,
                     onChanged: (value) => viewModel.onDeletesFailToggled(value: value),
                   ),

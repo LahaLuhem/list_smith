@@ -5,7 +5,6 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'playground_view_model.dart';
@@ -27,14 +26,6 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
               crossAxisAlignment: .stretch,
               spacing: 8,
               children: [
-                const DemoIntro(
-                  title: 'Tweak the config live',
-                  description:
-                      "The source's 1st page is empty, with data after it. \"Page past empty "
-                      'pages" advances to the 1st page with items, as long as "Empty pages before '
-                      'end" is high enough to continue past the empty run. Turn it off to stop on '
-                      'the empty surface instead.',
-                ),
                 SliderKnob(
                   label: 'Page size',
                   valueText: '${viewModel.pageSize}',
@@ -46,6 +37,7 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
                 ),
                 SliderKnob(
                   label: 'Empty pages before end',
+                  subtitle: 'Empty pages in a row that end the list',
                   valueText: '${viewModel.emptyRunBeforeEnd}',
                   value: viewModel.emptyRunBeforeEnd.toDouble(),
                   min: 1,
@@ -55,6 +47,7 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
                 ),
                 BoolKnob(
                   label: 'Page past empty pages',
+                  subtitle: "Skips the empty 1st page, unless that's the end",
                   value: viewModel.pagePastEmpty,
                   onChanged: (value) => viewModel.onPagePastEmptyToggled(value: value),
                 ),

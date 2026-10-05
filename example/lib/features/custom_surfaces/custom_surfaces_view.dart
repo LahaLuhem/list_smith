@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
-import '/features/core/widgets/demo_intro.dart';
+import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'custom_surfaces_view_model.dart';
 import 'widgets/custom_empty.dart';
@@ -25,16 +24,19 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
         children: [
           const Padding(
             padding: .all(16),
-            child: DemoIntro(
-              title: 'Overriding the defaults',
-              description:
-                  'Every surface (loading, error, empty, end, and the pull indicator) is replaced '
-                  'with a platform-adaptive one. Flip failures on to see the error and retry path.',
-            ),
+            child: Text('Pull to refresh to see the custom indicator.'),
           ),
-          _FailureToggle(
-            shouldInjectFailuresListenable: viewModel.shouldInjectFailuresListenable,
-            onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
+          Padding(
+            padding: const .symmetric(horizontal: 16),
+            child: ValueListenableBuilder(
+              valueListenable: viewModel.shouldInjectFailuresListenable,
+              builder: (_, shouldInjectFailures, _) => BoolKnob(
+                label: 'Inject fetch failures',
+                subtitle: 'Shows the custom error and its Retry',
+                value: shouldInjectFailures,
+                onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
+              ),
+            ),
           ),
           Expanded(
             child: ListSmith.async(
@@ -57,25 +59,6 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class const _FailureToggle({
-  required final ValueListenable<bool> shouldInjectFailuresListenable,
-  required final ValueChanged<bool> onChanged,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const .symmetric(horizontal: 16),
-    child: Row(
-      children: [
-        const Expanded(child: Text('Inject fetch failures')),
-        ValueListenableBuilder(
-          valueListenable: shouldInjectFailuresListenable,
-          builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
-        ),
-      ],
     ),
   );
 }

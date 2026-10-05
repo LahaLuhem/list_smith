@@ -100,6 +100,35 @@ void main() {
       check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
     });
 
+    scenarioOutlineWidgets<ReloadOnError>(
+      'a failed page reaches the observer, though the list still shows its old rows',
+      examples: const {'best-effort': .commitSucceeded, 'all-or-nothing': .allOrNothing},
+      outline: (tester, onError) async {
+        final fetcher = valuedFetcher(failPageOnReload: 1);
+        final observer = RecordingListSmithObserver();
+
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: fetcher.fetchPage,
+            itemIdGetter: (item) => item,
+            endPolicy: const FixedPageCountPolicy(pageCount: 3),
+            refresh: PullToRefresh(
+              reload: ReloadToCurrentDepth(concurrency: null, onError: onError),
+            ),
+            observer: observer,
+            itemBuilder: (_, item, _) => Text('item $item'),
+          ),
+        );
+        await drain(tester, frames: 12);
+
+        await pullToRefresh(tester, find.text('item 1'));
+
+        check(find.text('item 1001').evaluate()).length.equals(1);
+        check(observer.lastError).isA<Exception>();
+      },
+    );
+
     scenarioWidgets('a reload in search mode reads the search fetcher for its signal', (
       tester,
     ) async {

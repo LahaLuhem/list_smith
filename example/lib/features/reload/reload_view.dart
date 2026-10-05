@@ -5,7 +5,6 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'reload_view_model.dart';
@@ -27,22 +26,16 @@ class const ReloadView({super.key}) extends StatelessWidget {
               crossAxisAlignment: .stretch,
               spacing: 8,
               children: [
-                const DemoIntro(
-                  title: 'Reload to current depth',
-                  description:
-                      'Scroll to load a few pages, then pull to refresh. "Keep scroll depth" '
-                      're-fetches every loaded page in place (the "load #" stamp bumps), and off '
-                      'resets to the 1st page. Inject a failure to compare best-effort with '
-                      'all-or-nothing. The button runs the same reload without a pull, staying '
-                      'busy as long as refresh() takes.',
-                ),
+                const Text('Scroll down a few pages, then pull to refresh.'),
                 BoolKnob(
                   label: 'Keep scroll depth',
+                  subtitle: 'Reloads every loaded page, not just the 1st',
                   value: viewModel.keepDepth,
                   onChanged: (value) => viewModel.onKeepDepthToggled(value: value),
                 ),
                 SliderKnob(
                   label: 'Reload concurrency',
+                  subtitle: 'Pages reloaded at once',
                   valueText: '${viewModel.concurrency}',
                   value: viewModel.concurrency.toDouble(),
                   min: 1,
@@ -54,12 +47,14 @@ class const ReloadView({super.key}) extends StatelessWidget {
                   valueListenable: viewModel.shouldInjectFailuresListenable,
                   builder: (context, shouldInjectFailures, _) => BoolKnob(
                     label: 'Inject a failure on reload',
+                    subtitle: 'The 1st page fails to reload',
                     value: shouldInjectFailures,
                     onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
                   ),
                 ),
                 BoolKnob(
                   label: 'Atomic (all-or-nothing)',
+                  subtitle: 'One failure keeps all the old pages',
                   value: viewModel.atomic,
                   onChanged: (value) => viewModel.onAtomicToggled(value: value),
                 ),

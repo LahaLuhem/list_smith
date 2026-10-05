@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
-import '/features/core/widgets/demo_intro.dart';
+import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/event_log_panel.dart';
 import 'observer_view_model.dart';
@@ -22,17 +21,19 @@ class const ObserverView({super.key}) extends StatelessWidget {
         children: [
           const Padding(
             padding: .all(16),
-            child: DemoIntro(
-              title: 'ListSmith.async + observer',
-              description:
-                  'An injected ListSmithObserver reports lifecycle events without exposing the '
-                  'controller. Scroll to load pages, pull to refresh, search, or inject a failure, '
-                  'and each event lands in the log below.',
-            ),
+            child: Text('Scroll, pull or search, and watch the log.'),
           ),
-          _InjectFailureToggle(
-            shouldInjectFailuresListenable: viewModel.shouldInjectFailuresListenable,
-            onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
+          Padding(
+            padding: const .symmetric(horizontal: 16),
+            child: ValueListenableBuilder(
+              valueListenable: viewModel.shouldInjectFailuresListenable,
+              builder: (_, shouldInjectFailures, _) => BoolKnob(
+                label: 'Inject failures',
+                subtitle: 'Every fetch fails',
+                value: shouldInjectFailures,
+                onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
+              ),
+            ),
           ),
           Padding(
             padding: const .symmetric(horizontal: 16),
@@ -56,25 +57,6 @@ class const ObserverView({super.key}) extends StatelessWidget {
           EventLogPanel(events: viewModel.eventsListenable, onClear: viewModel.clearLog),
         ],
       ),
-    ),
-  );
-}
-
-class const _InjectFailureToggle({
-  required final ValueListenable<bool> shouldInjectFailuresListenable,
-  required final ValueChanged<bool> onChanged,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const .symmetric(horizontal: 16),
-    child: Row(
-      children: [
-        const Expanded(child: Text('Inject failures')),
-        ValueListenableBuilder(
-          valueListenable: shouldInjectFailuresListenable,
-          builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
-        ),
-      ],
     ),
   );
 }

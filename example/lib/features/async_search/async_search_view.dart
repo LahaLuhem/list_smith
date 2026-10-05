@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
-import '/features/core/widgets/demo_intro.dart';
+import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'async_search_view_model.dart';
 
@@ -19,19 +18,17 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
       body: Column(
         crossAxisAlignment: .stretch,
         children: [
-          const Padding(
-            padding: .all(16),
-            child: DemoIntro(
-              title: 'ListSmith.async + search',
-              description:
-                  'Paginates the feed, and a query switches to paginated search results and back. '
-                  'Turn on "Keep list across search", scroll the feed, search, then clear to land '
-                  'back where you were. With it off (the default), clearing reloads from the top.',
+          Padding(
+            padding: const .fromLTRB(16, 16, 16, 8),
+            child: ValueListenableBuilder(
+              valueListenable: viewModel.shouldKeepCacheListenable,
+              builder: (_, shouldKeepCache, _) => BoolKnob(
+                label: 'Keep list across search',
+                subtitle: 'Clearing a search lands back where you were',
+                value: shouldKeepCache,
+                onChanged: (value) => viewModel.onKeepCacheToggled(value: value),
+              ),
             ),
-          ),
-          _KeepCacheToggle(
-            shouldKeepCacheListenable: viewModel.shouldKeepCacheListenable,
-            onChanged: (value) => viewModel.onKeepCacheToggled(value: value),
           ),
           Padding(
             padding: const .symmetric(horizontal: 16),
@@ -61,25 +58,6 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class const _KeepCacheToggle({
-  required final ValueListenable<bool> shouldKeepCacheListenable,
-  required final ValueChanged<bool> onChanged,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const .symmetric(horizontal: 16),
-    child: Row(
-      children: [
-        const Expanded(child: Text('Keep list across search')),
-        ValueListenableBuilder(
-          valueListenable: shouldKeepCacheListenable,
-          builder: (_, value, _) => PlatformSwitch(value: value, onChanged: onChanged),
-        ),
-      ],
     ),
   );
 }
