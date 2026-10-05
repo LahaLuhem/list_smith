@@ -5,7 +5,6 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/event_log_panel.dart';
 import 'cache_routing_view_model.dart';
@@ -22,13 +21,7 @@ class const CacheRoutingView({super.key}) extends StatelessWidget {
         children: [
           const Padding(
             padding: .all(16),
-            child: DemoIntro(
-              title: 'Routing on PageRequest.trigger',
-              description:
-                  'The fetch bypasses its cache for a refresh or a retry, and serves a scroll from '
-                  'it. Rows are stamped with the fetch that produced them: pull to refresh and the '
-                  'stamps change, scroll back and they do not.',
-            ),
+            child: Text("Pull and the stamps change, scroll back and they don't."),
           ),
           Padding(
             padding: const .symmetric(horizontal: 16),
@@ -36,6 +29,7 @@ class const CacheRoutingView({super.key}) extends StatelessWidget {
               valueListenable: viewModel.shouldRouteOnTriggerListenable,
               builder: (_, routeOnTrigger, _) => BoolKnob(
                 label: 'Route on trigger',
+                subtitle: 'Refreshes and retries skip the cache',
                 value: routeOnTrigger,
                 onChanged: (value) => viewModel.onRouteOnTriggerToggled(value: value),
               ),

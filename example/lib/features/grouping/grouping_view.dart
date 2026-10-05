@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'grouping_view_model.dart';
 
@@ -21,13 +20,7 @@ class const GroupingView({super.key}) extends StatelessWidget {
         children: [
           const Padding(
             padding: .all(16),
-            child: DemoIntro(
-              title: 'Grouping.by',
-              description:
-                  'Splits the list into labelled sections. The source cycles 3 categories per row, '
-                  'so the interleaved items bucket into 3 contiguous sections. The search field '
-                  'narrows them and the sections re-form over the matches.',
-            ),
+            child: Text('Search, and the sections re-form over the matches.'),
           ),
           Padding(
             padding: const .symmetric(horizontal: 16),

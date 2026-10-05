@@ -5,7 +5,6 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/data/models/demo_item.dart';
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'sync_search_view_model.dart';
 
@@ -21,12 +20,7 @@ class const SyncSearchView({super.key}) extends StatelessWidget {
         children: [
           const Padding(
             padding: .all(16),
-            child: DemoIntro(
-              title: 'ListSmith.sync',
-              description:
-                  'Filters a fixed in-memory list as you type. Clearing the query shows every '
-                  'item, and a query that matches nothing shows the no-results surface.',
-            ),
+            child: Text('Type to filter. A query with no matches shows the no-results screen.'),
           ),
           Padding(
             padding: const .symmetric(horizontal: 16),

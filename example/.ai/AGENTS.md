@@ -33,10 +33,12 @@ README points at it rather than copying it, so adding one leaves no stale list b
 `_DemoTile` to the hub, and add a smoke scenario to `test/widget_test.dart`. Reuse `DemoScaffold`
 for the shell and the `core` fake sources.
 
-**Where a demo's explanation goes.** The user-facing walkthrough is the screen's own `DemoIntro`,
-and the hub tile's `description` is its one-line pitch. The view's dartdoc names the list_smith API
-it exercises and stops there. Otherwise the same sentence ends up in 3 places and drifts into
-3 versions of itself.
+**Where a demo's explanation goes.** Each knob explains itself in a one-line `subtitle`, and a
+screen adds one hint line on top only for a gesture nothing else shows. The hub tile's
+`description` is its one-line pitch, and the view's dartdoc names the list_smith API it exercises
+and stops there. Otherwise the same sentence ends up in 3 places and drifts into 3 versions of
+itself. Why next to the knob: a preamble pushes the list off a phone's screen, and drifts from the
+knobs it describes.
 
 ## Mobile-targeted
 

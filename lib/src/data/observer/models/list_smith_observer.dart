@@ -33,8 +33,8 @@ abstract base class const ListSmithObserver() {
   /// An empty page still fires. Whether that's the end is the end policy's call.
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) {}
 
-  /// A page fetch threw [error], and the list shows its error surface. An [Error] never comes here:
-  /// it's a bug, so it goes on to the app.
+  /// A page fetch threw [error]. Fires even when the list shows nothing, as when a reload that keeps
+  /// depth leaves the old rows up. An [Error] never comes here: it's a bug, so it goes on to the app.
   void onError(Exception error, StackTrace stackTrace) {}
 
   /// A reload started, before any of its pages is asked for. [trigger] is what those pages report.

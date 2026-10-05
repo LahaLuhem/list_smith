@@ -9,8 +9,7 @@ unchanged.
 [`home_view.dart`](lib/features/core/views/home_view.dart) is the list, one tile per demo with its
 own one-line description, and the app opens on it.
 
-Every screen carries a `DemoIntro` explaining what it exercises, and the app-bar control flips light
-and dark.
+Each knob says what it does underneath its name, and the app-bar control flips light and dark.
 
 ## Running
 

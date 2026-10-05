@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
-import '/features/core/widgets/demo_intro.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'cursor_feed_view_model.dart';
 
@@ -16,29 +15,13 @@ class const CursorFeedView({super.key}) extends StatelessWidget {
     viewModel: CursorFeedViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Cursor feed',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          const Padding(
-            padding: .all(16),
-            child: DemoIntro(
-              title: 'Cursor pagination',
-              description:
-                  'Each fetch is driven by the cursor the previous page returned, not a page index. '
-                  'StopOnNullSignalPolicy ends the list when the source returns a null cursor.',
-            ),
-          ),
-          Expanded(
-            child: ListSmith.async(
-              fetchPage: PageFetcher.withSignal(viewModel.cursorFetchPage),
-              itemIdGetter: (item) => item.id,
-              endPolicy: const StopOnNullSignalPolicy(),
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, item, _) =>
-                  PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
-            ),
-          ),
-        ],
+      body: ListSmith.async(
+        fetchPage: PageFetcher.withSignal(viewModel.cursorFetchPage),
+        itemIdGetter: (item) => item.id,
+        endPolicy: const StopOnNullSignalPolicy(),
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (_, item, _) =>
+            PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
       ),
     ),
   );

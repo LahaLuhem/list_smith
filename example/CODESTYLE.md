@@ -52,8 +52,8 @@ Feature-first MVVM, mirroring the sibling examples:
 - `lib/features/<feature>/`: one folder per demo, holding `<feature>_view.dart` +
   `<feature>_view_model.dart`, plus a `widgets/` subfolder for widgets used only by that feature.
 - `lib/features/core/`: shared building blocks: `data/models/` (immutable models), `data/constants/`
-  (theme), `repos/` (fake data sources), `views/` (the home hub), `widgets/` (`DemoScaffold`,
-  `DemoIntro`).
+  (theme), `repos/` (fake data sources), `views/` (the home hub), `widgets/` (`DemoScaffold`, the
+  knobs).
 
 One primary public class per file, file name matching, as in the package. Cross-feature imports
 take the package-root form (`/features/...`), same-feature ones stay relative.
