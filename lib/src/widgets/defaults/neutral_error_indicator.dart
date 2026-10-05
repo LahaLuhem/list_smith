@@ -51,12 +51,12 @@ class const NeutralErrorIndicator({
       ),
     );
 
-    // The full form gets the list's height and no more, so it scrolls once large text outgrows it.
+    // Large text can outgrow the list.
     return isCompact
         ? indicatorPadding
         : LayoutBuilder(
             builder: (_, constraints) => SingleChildScrollView(
-              // Without this, it takes the app's primary controller when the list has its own.
+              // Else it takes the app's primary controller beside a list with its own.
               primary: false,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),

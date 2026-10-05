@@ -77,6 +77,46 @@ void main() {
       },
     );
 
+    scenarioOutlineWidgets<({ListScrollConfig scroll, EdgeInsets safeAreaInsets})>(
+      'a short surface leaves nothing to scroll, padding included',
+      examples: const {
+        'padding all round': (scroll: ListScrollConfig(padding: .all(24)), safeAreaInsets: .zero),
+        "the screen's safe area, with no padding set": (
+          scroll: ListScrollConfig(),
+          safeAreaInsets: .only(top: 47, bottom: 34),
+        ),
+        'a reversed list': (
+          scroll: ListScrollConfig(reverse: true, padding: .only(top: 30, bottom: 10)),
+          safeAreaInsets: .zero,
+        ),
+        'a horizontal list': (
+          scroll: ListScrollConfig(
+            scrollDirection: .horizontal,
+            padding: .only(left: 10, right: 30),
+          ),
+          safeAreaInsets: .zero,
+        ),
+      },
+      outline: (tester, example) async {
+        await pumpListSmith(
+          tester,
+          MediaQuery(
+            data: MediaQueryData(padding: example.safeAreaInsets),
+            child: ListSmith.async(
+              fetchPage: PageFetcher((_) async => throw Exception('down')),
+              itemIdGetter: (item) => item,
+              scroll: example.scroll,
+              itemBuilder: (_, item, _) => Text('item $item'),
+            ),
+          ),
+        );
+        await drain(tester);
+
+        check(tester.state<ScrollableState>(listScrollableFinder).position.maxScrollExtent)
+            .equals(0);
+      },
+    );
+
     scenarioWidgets('the neutral 1st-page error taller than the list still scrolls to its Retry', (
       tester,
     ) async {

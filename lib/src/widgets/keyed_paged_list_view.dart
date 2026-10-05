@@ -61,6 +61,8 @@ class const KeyedPagedListView<T extends Object>({
     return firstPageBuilder != null
         ? _SurfaceSlot(
             key: ValueKey(status), // so one surface replacing another starts fresh
+            // So a short surface has nothing to scroll.
+            trailingPaddingExtent: _trailingPaddingExtentOf(context),
             child: status != .loadingFirstPage
                 ? firstPageBuilder(context)
                 : _DragAbsorber(axis: scrollDirection, child: firstPageBuilder(context)),
@@ -80,17 +82,36 @@ class const KeyedPagedListView<T extends Object>({
             onNearEnd: status != .ongoing ? null : onNearEnd,
           );
   }
+
+  /// As [BoxScrollView] pads: [padding], else the safe area.
+  double _trailingPaddingExtentOf(BuildContext context) {
+    final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
+      Directionality.maybeOf(context),
+    );
+
+    return switch (getDirection(context)) {
+      .down => resolvedInsets.bottom,
+      .up => resolvedInsets.top,
+      .right => resolvedInsets.right,
+      .left => resolvedInsets.left,
+    };
+  }
 }
 
-/// The space left below whatever comes before, which `SliverFillRemaining` can't give: it either
-/// measures the surface, breaking a `LayoutBuilder`, or resizes it as the list scrolls.
-class const _SurfaceSlot({required final Widget child, super.key}) extends StatelessWidget {
+/// Unlike `SliverFillRemaining`, never measures the surface or resizes it while scrolling.
+class const _SurfaceSlot({
+  required final double trailingPaddingExtent,
+  required final Widget child,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverLayoutBuilder(
     builder: (_, constraints) {
       final remainingExtent = math.max<double>(
         0,
-        constraints.viewportMainAxisExtent - constraints.precedingScrollExtent,
+        constraints.viewportMainAxisExtent -
+            constraints.precedingScrollExtent -
+            trailingPaddingExtent,
       );
 
       return SliverToBoxAdapter(
