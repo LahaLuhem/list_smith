@@ -709,9 +709,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   drag inside layout, where the indicator's `setState` asserts.
 - **The loader wins its own drags,** since a recognizer inside the list beats the list's. The list's
   padding around it isn't covered.
-- **The loader gets exactly one screen,** unmeasured, so a `LayoutBuilder` inside it works. The error
-  and empty surfaces still grow, so a tall error scrolls to its Retry, and still can't take a
-  `LayoutBuilder` ([#89](https://github.com/LahaLuhem/list_smith/issues/89)).
+- **Every surface gets the list's visible space,** unmeasured, so a `LayoutBuilder` or `Expanded`
+  works and a short one can't scroll. A taller one scrolls itself.
 
 ---
 

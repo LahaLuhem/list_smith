@@ -41,8 +41,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Builds the separator between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder;
 
-  /// Builds the surface shown when the source has no items. Null uses the neutral default. On the constructor
-  /// rather than in [surfaces], because every list has an empty state.
+  /// Builds the surface shown when the source has no items, sized to the list. Null uses the neutral
+  /// default. On the constructor rather than in [surfaces], because every list has an empty state.
   final WidgetBuilder? emptyBuilder;
 
   /// The async-only override surfaces: page loading and error, end-of-list footer.
@@ -63,7 +63,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate.
   final Duration searchDebounce;
 
-  /// Builds the surface shown when a search matches nothing. Null uses the neutral default.
+  /// Builds the surface shown when a search matches nothing, sized to the list. Null uses the neutral
+  /// default.
   final NoResultsBuilder? noResultsBuilder;
 
   /// Scroll and layout configuration for the underlying scrollable.

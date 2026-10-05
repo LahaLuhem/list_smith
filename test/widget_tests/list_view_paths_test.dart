@@ -127,7 +127,7 @@ void main() {
           child: Align(
             alignment: .topCenter,
             child: SizedBox(
-              height: 200, // short enough for the error to outgrow at this text size
+              height: 200, // the error outgrows it at 3x
               child: ListSmith.async(
                 fetchPage: PageFetcher((_) async => throw Exception('down')),
                 itemIdGetter: (item) => item,
@@ -510,7 +510,7 @@ Future<void> _pumpSync(
 
 typedef _Orientation = ({ListScrollConfig scroll, TextDirection text, AxisDirection pull});
 
-/// Pumps a list that shows only a surface, the one [surface] builds.
+/// Pumps a list showing only [surface].
 typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
 
 final _asyncSurfaceHosts = <String, _SurfaceHost>{

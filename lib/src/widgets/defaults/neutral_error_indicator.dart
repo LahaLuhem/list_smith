@@ -56,7 +56,7 @@ class const NeutralErrorIndicator({
         ? indicatorPadding
         : LayoutBuilder(
             builder: (_, constraints) => SingleChildScrollView(
-              // Else it takes the app's primary controller beside a list with its own.
+              // Else it grabs the app's primary controller.
               primary: false,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
