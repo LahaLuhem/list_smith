@@ -84,6 +84,46 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets(
+      "the app's ScrollController stays attached while the list pages past an empty page",
+      (tester) async {
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
+        final holdCompleter = await _pumpPagingPastEmpty(
+          tester,
+          scrollConfig: ListScrollConfig(controller: scrollController),
+        );
+
+        check(scrollController.hasClients).isTrue();
+        holdCompleter.complete(const [1, 2]);
+        await drain(tester);
+      },
+    );
+
+    scenarioWidgets(
+      'the loader shown while the list pages past an empty page holds still under a drag',
+      (tester) async {
+        // Bouncing physics, so anything that takes the drag visibly moves.
+        final holdCompleter = await _pumpPagingPastEmpty(
+          tester,
+          scrollConfig: const ListScrollConfig(physics: BouncingScrollPhysics()),
+        );
+        final restingRect = tester.getRect(find.text('my loader'));
+
+        final gesture = await tester.startGesture(tester.getCenter(find.text('my loader')));
+        for (var step = 0; step < 6; step++) {
+          await gesture.moveBy(const Offset(0, 30));
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        final draggedRect = tester.getRect(find.text('my loader'));
+        await gesture.up();
+
+        check(draggedRect).equals(restingRect);
+        holdCompleter.complete(const [1, 2]);
+        await drain(tester);
+      },
+    );
+
     scenarioWidgets('the default (ShowEmptySurface) stops on the first empty page', (tester) async {
       final fetcher = recordingFetcher(const <List<int>>[
         [],
@@ -157,4 +197,31 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
   });
+}
+
+/// Pumps a list whose page 0 is empty and whose page 1 holds, so it sits paging past the empty one.
+Future<Completer<List<int>>> _pumpPagingPastEmpty(
+  WidgetTester tester, {
+  required ListScrollConfig scrollConfig,
+}) async {
+  final holdCompleter = Completer<List<int>>();
+  await pumpListSmith(
+    tester,
+    ListSmith.async(
+      fetchPage: PageFetcher(
+        (request) => request.pageIndex == 0 ? Future.value(const <int>[]) : holdCompleter.future,
+      ),
+      itemIdGetter: (item) => item,
+      endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
+      onEmptyPage: const AdvanceToFirstNonEmpty(),
+      scroll: scrollConfig,
+      surfaces: AsyncListSurfaces(firstPageLoadingBuilder: (_) => const Text('my loader')),
+      itemBuilder: (_, item, _) => Text('item $item'),
+    ),
+  );
+  await drain(tester, frames: 12);
+  // Premise: page 0 came back empty and the list is still paging on.
+  check(find.text('my loader').evaluate()).length.equals(1);
+
+  return holdCompleter;
 }
