@@ -129,6 +129,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.2"
+  dartender_lints:
+    dependency: "direct dev"
+    description:
+      path: lints
+      ref: main
+      resolved-ref: "3ad0d9940c5a21264ea040523e994bb2579b12af"
+      url: "https://github.com/LahaLuhem/dartender.git"
+    source: git
+    version: "0.0.0"
   dependency_validator:
     dependency: "direct dev"
     description:

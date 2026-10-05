@@ -1,14 +1,7 @@
-# A demo app has no published API, so it drops public_member_api_docs from the package's lints.
-include: ../analysis_options.yaml
+# Not ../analysis_options.yaml, which dependency_validator doesn't count as using the package.
+include: package:dartender_lints/analysis_options.yaml
 
-analyzer:
-  errors:
-    public_member_api_docs: ignore
-  exclude:
-    - build/**
-    - android/**
-    - ios/**
-    - web/**
-    - windows/**
-    - macos/**
-    - linux/**
+linter:
+  rules:
+    # A demo app has no published API.
+    public_member_api_docs: false

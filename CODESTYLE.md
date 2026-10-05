@@ -1,8 +1,10 @@
 Package code style. Project facts live in [`.ai/AGENTS.md`](.ai/AGENTS.md), design rationale in
 [`APPENDIX.md`](APPENDIX.md).
 
-The lint posture is deliberately strict: [`analysis_options.yaml`](analysis_options.yaml) promotes a
-long list of lints to errors. The house style wants explicit types, no ambient mutability, and small
+The lint posture is deliberately strict:
+[dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+which [`analysis_options.yaml`](analysis_options.yaml) includes, promote a long list of lints to
+errors. The house style wants explicit types, no ambient mutability, and small
 focused classes.
 
 Every heading carries an explicit `<a id="…">` anchor. Link by anchor, not heading text, so renames
@@ -184,7 +186,7 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
 <a id="formatting"></a>
 ## Formatting
 
-- **Wrap text-file content at 100 columns.** `formatter.page_width` in `analysis_options.yaml` is
+- **Wrap text-file content at 100 columns.** `formatter.page_width` in the shared lints is
   authoritative for Dart, [`.editorconfig`](.editorconfig) matches it for Markdown and YAML, and
   they move together. `dart format` does *not* reflow comment prose, so a `///` or `//` block
   wrapped narrow stays narrow forever.

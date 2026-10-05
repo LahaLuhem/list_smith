@@ -47,6 +47,8 @@ final class const PagingState<T extends Object>({
 
   /// A copy with the given fields replaced. The error only changes through [loading], [failed] and
   /// [settled].
+  // Leaves error out on purpose, as the doc says.
+  // ignore: avoid-incomplete-copy-with
   PagingState<T> copyWith({List<LoadedPage<T>>? pages, bool? hasNextPage, bool? isLoading}) =>
       PagingState(
         pages: pages ?? this.pages,

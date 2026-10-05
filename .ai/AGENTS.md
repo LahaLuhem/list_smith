@@ -20,8 +20,10 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
 - **The SDK floor lives in `pubspec.yaml`'s `environment:` block**, the channel in `.fvmrc`. Bump
   the floor only when a new stable language feature is actually consumed, and record why in
   `APPENDIX.md`.
-- **`flutter analyze`** for static analysis. `analysis_options.yaml` holds the posture: strict
-  language modes plus a long `errors:` block. The pedantry is intentional, not negotiable.
+- **`flutter analyze`** for static analysis.
+  [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+  which `analysis_options.yaml` includes, hold the posture: strict language modes plus a long
+  `errors:` block. The pedantry is intentional, not negotiable.
 - **The `dart format` gate runs Flutter's Dart**, not standalone Dart stable, which runs ahead of it
   and formats differently. What CI rejects has to be what a local `dart format .` fixes. Why:
   [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).

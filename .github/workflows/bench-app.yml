@@ -25,7 +25,7 @@ jobs:
       - uses: LahaLuhem/dartender/actions/setup-flutter@main
         with:
           working-directory: benchmark/app
-      - run: flutter --no-version-check analyze .
+      - run: flutter --no-version-check analyze --fatal-infos --fatal-warnings .
 
   # The ruleset requires this job's id, so no `name:` and no rename.
   bench-app-ok:
