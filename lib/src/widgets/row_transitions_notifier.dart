@@ -199,20 +199,9 @@ class _TransitionRowState<T extends Object>() extends State<_TransitionRow<T>> {
   }
 
   @override
-  void didUpdateWidget(_TransitionRow<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.id == widget.id &&
-        identical(oldWidget.rowTransitionsNotifier, widget.rowTransitionsNotifier)) {
-      return;
-    }
-    _unregister(oldWidget);
-    widget.rowTransitionsNotifier._rows[widget.id] = this;
-  }
-
-  @override
   void dispose() {
-    _unregister(widget);
+    final rows = widget.rowTransitionsNotifier._rows;
+    if (identical(rows[widget.id], this)) rows.remove(widget.id);
 
     super.dispose();
   }
@@ -253,10 +242,5 @@ class _TransitionRowState<T extends Object>() extends State<_TransitionRow<T>> {
       .vertical => box.size.height,
       .horizontal => box.size.width,
     };
-  }
-
-  void _unregister(_TransitionRow<T> row) {
-    final rows = row.rowTransitionsNotifier._rows;
-    if (identical(rows[row.id], this)) rows.remove(row.id);
   }
 }
