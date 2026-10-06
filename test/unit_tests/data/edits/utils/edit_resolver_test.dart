@@ -197,6 +197,20 @@ void main() {
       });
 
   Bdd(resolutionFeature)
+      .scenario('a new item goes to the start of its group when that group starts on a later page')
+      .given('pages [0, 1] and [2, 10, 11], grouped by the tens digit')
+      .when('12 is added')
+      .then('it shows before 10')
+      .run((_) {
+        final shownItems = resolveByTens(const [
+          [0, 1],
+          [2, 10, 11],
+        ], addedInTurn(const [12]));
+
+        check(shownItems).deepEquals(const [0, 1, 2, 12, 10, 11]);
+      });
+
+  Bdd(resolutionFeature)
       .scenario("an edit that changes an item's group moves it to the start of that group")
       .given('items 0 and 1 in group 0, items 10 and 11 in group 1')
       .when('item 0 is edited into group 1')
