@@ -415,7 +415,8 @@ class _AsyncListViewState<T extends Object>()
         wasSearching: wasSearching,
         isSearching: isSearchMode,
       ),
-      NoSearch() => CacheAction.refresh,
+      // Search taken away lands like a cleared query: on the kept feed if there is one.
+      NoSearch() => CacheAction.restoreNormal,
     };
 
     _searchModeNotifier.value = isSearchMode;

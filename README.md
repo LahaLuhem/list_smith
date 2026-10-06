@@ -527,6 +527,9 @@ search: AsyncSearch(fetchPage: mySearchFetcher, cachePolicy: const KeepCachePoli
   back, reporting that trigger
 - `reset()` while searching drops the kept feed too, so it comes back from page 0
 
+Dropping `search` mid-search lands like clearing the query, so back on the kept feed. Want a fresh
+one instead? Call `reset()` right after.
+
 </details>
 
 ### You keep the search field

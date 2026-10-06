@@ -173,6 +173,42 @@ void main() {
       check(find.text('item 99').evaluate()).isEmpty();
       check(feedFetches).equals(1);
     });
+
+    scenarioWidgets('taking search away under KeepCachePolicy lands back on the kept feed', (
+      tester,
+    ) async {
+      var feedFetches = 0;
+      Widget build({required Search<int> search, required String query}) => ListSmith.async(
+        fetchPage: PageFetcher((request) async {
+          if (request.pageIndex == 0) feedFetches++;
+
+          return request.pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+        }),
+        itemIdGetter: (item) => item,
+        search: search,
+        query: query,
+        searchDebounce: const Duration(milliseconds: 20),
+        itemBuilder: (_, item, _) => Text('item $item'),
+      );
+      final keepingSearch = AsyncSearch<int>(
+        fetchPage: SearchPageFetcher((_) async => const [99]),
+        cachePolicy: const KeepCachePolicy(),
+      );
+
+      await pumpListSmith(tester, build(search: keepingSearch, query: ''));
+      await settle(tester);
+      await pumpListSmith(tester, build(search: keepingSearch, query: 'ab'));
+      await settle(tester);
+      // Premise: searching, with the feed loaded once and kept.
+      check(find.text('item 99').evaluate()).length.equals(1);
+      check(feedFetches).equals(1);
+
+      await pumpListSmith(tester, build(search: const NoSearch(), query: ''));
+      await settle(tester);
+
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(feedFetches).equals(1);
+    });
   });
 }
 
