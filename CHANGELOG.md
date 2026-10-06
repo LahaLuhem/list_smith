@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Fixed
 - \[#89\] Error and empty surfaces built with a LayoutBuilder no longer crash
+- \[#93\] Error and empty screens move only into a pull
 
 ## [2.0.0] - 2026-10-05
 ### Added
