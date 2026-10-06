@@ -2,6 +2,8 @@ import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
+import '../../../../support/support.dart';
+
 void main() {
   final behavioursFeature = BddFeature('EmptyPageBehaviour.shouldAdvance');
 
@@ -63,4 +65,16 @@ void main() {
         check(capped.shouldAdvance(context(pagesLoaded: 2))).isTrue();
         check(capped.shouldAdvance(context(pagesLoaded: 3))).isFalse();
       });
+
+  final logFormFeature = BddFeature('EmptyPageBehaviour log form');
+
+  const valueKey = 'value';
+  Bdd(logFormFeature)
+      .scenario('every empty-page behaviour reads as itself in a log')
+      .given('the empty-page behaviour <$valueKey>')
+      .when('it is turned into a string')
+      .then("it reads as itself, not as Dart's default Instance of")
+      .example(val(valueKey, const AdvanceToFirstNonEmpty(maxPages: 7)))
+      .example(val(valueKey, const ShowEmptySurface()))
+      .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }

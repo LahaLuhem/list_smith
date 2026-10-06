@@ -2,6 +2,8 @@ import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
+import '../../../../support/support.dart';
+
 void main() {
   final refreshStateFeature = BddFeature('ListSmithRefreshState value semantics');
 
@@ -37,4 +39,15 @@ void main() {
         check(base == otherValue).isFalse();
         check(base == otherDirection).isFalse();
       });
+
+  const valueKey = 'value';
+  Bdd(refreshStateFeature)
+      .scenario('every refresh state reads as itself in a log')
+      .given('the refresh state <$valueKey>')
+      .when('it is turned into a string')
+      .then("it reads as itself, not as Dart's default Instance of")
+      .example(
+        val(valueKey, const ListSmithRefreshState(phase: .armed, value: 1, pullDirection: .up)),
+      )
+      .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }

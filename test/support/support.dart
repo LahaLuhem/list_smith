@@ -7,3 +7,4 @@ export 'fake_sources.dart';
 export 'list_smith_harness.dart';
 export 'recording_list_smith_observer.dart';
 export 'toggle_row.dart';
+export 'value_checks.dart';
