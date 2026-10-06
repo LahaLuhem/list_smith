@@ -1,12 +1,20 @@
-"""Tests for `list_smith_bench.subcommands.ab`'s pure scheduling.
+"""Tests for `list_smith_bench.subcommands.ab`'s pure parts: the run order and each side's command.
 
-The interleaving order is the whole fix for the gate's order sensitivity, so it is pinned here
-rather than left to a read of the runner. Everything else in `ab` is subprocess plumbing.
+Both are what keeps the gate from favouring a side, so they are pinned here rather than left to a
+read of the runner. Everything else in `ab` is subprocess plumbing.
 """
 
 from __future__ import annotations
 
-from list_smith_bench.subcommands.ab import BASELINE, CANDIDATE, interleaved_schedule
+from pathlib import Path
+
+from list_smith_bench.subcommands.ab import (
+    BASELINE,
+    CANDIDATE,
+    interleaved_schedule,
+    run_command,
+    staged_exe,
+)
 
 
 class TestInterleavedSchedule:
@@ -55,3 +63,21 @@ class TestInterleavedSchedule:
 
     def test_zero_iterations_schedules_nothing(self) -> None:
         assert interleaved_schedule(0) == []
+
+
+class TestSideCommands:
+    def test_both_sides_run_with_arguments_of_the_same_length(self, tmp_path: Path) -> None:
+        """Equal lengths, so neither side's process starts with its memory laid out differently."""
+        commands = {
+            side: run_command(tmp_path, "sync_search_scaling", side, 3, ("abc1234", "2.0.0"), 500)
+            for side in (CANDIDATE, BASELINE)
+        }
+
+        assert [len(arg) for arg in commands[CANDIDATE]] == [len(arg) for arg in commands[BASELINE]]
+
+    def test_each_side_runs_its_own_copy(self, tmp_path: Path) -> None:
+        """Sharing one copy would time a build against itself and pass whatever changed."""
+        candidate_exe = staged_exe(tmp_path, "sync_search_scaling", CANDIDATE)
+        baseline_exe = staged_exe(tmp_path, "sync_search_scaling", BASELINE)
+
+        assert candidate_exe != baseline_exe

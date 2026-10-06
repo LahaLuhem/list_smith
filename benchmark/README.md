@@ -172,4 +172,5 @@ capture reproduces it rather than restamping it with today.
 | `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide` |
 
 On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
-interleaved so run-order drift lands on both sides equally.
+interleaved so run-order drift lands on both sides equally. Each side runs a copy of its build from
+a path the same length as the other's, so neither process starts laid out differently in memory.
