@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../support/support.dart';
+import '../../../../support/support.dart';
 
 typedef _Item = ({String group, String label});
 
