@@ -5,6 +5,8 @@ import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
+import '../../../../support/support.dart';
+
 void main() {
   final endDetectionFeature = BddFeature('Pagination end detection');
 
@@ -119,6 +121,20 @@ void main() {
         check(const StopOnNullSignalPolicy().requiresSignal).isTrue();
         check(const _ShortLastPagePolicy().requiresSignal).isFalse();
       });
+
+  final logFormFeature = BddFeature('Pagination end policy log form');
+
+  const valueKey = 'value';
+  Bdd(logFormFeature)
+      .scenario('every end policy reads as itself in a log')
+      .given('the end policy <$valueKey>')
+      .when('it is turned into a string')
+      .then("it reads as itself, not as Dart's default Instance of")
+      .example(val(valueKey, const ExplicitHasMorePolicy()))
+      .example(val(valueKey, const FixedPageCountPolicy(pageCount: 3)))
+      .example(val(valueKey, const StopOnEmptyPagesPolicy()))
+      .example(val(valueKey, const StopOnNullSignalPolicy()))
+      .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }
 
 /// Ends when the last page held fewer than a full page, a common REST idiom.
