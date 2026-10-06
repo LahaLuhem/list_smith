@@ -173,4 +173,6 @@ capture reproduces it rather than restamping it with today.
 
 On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
 interleaved so run-order drift lands on both sides equally. Each side runs a copy of its build from
-a path the same length as the other's, so neither process starts laid out differently in memory.
+a path the same length as the other's, so neither process starts laid out differently in memory. A
+micro built from the same inputs on both sides isn't timed at all, since its code can't differ:
+`build` hashes each micro's inputs, as the compiler lists them, into `build/inputs/`.

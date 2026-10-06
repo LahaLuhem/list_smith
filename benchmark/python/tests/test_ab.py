@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from list_smith_bench.data.utils.fingerprint import fingerprint_path
 from list_smith_bench.subcommands.ab import (
     BASELINE,
     CANDIDATE,
     interleaved_schedule,
     run_command,
     staged_exe,
+    unchanged_micros,
 )
 
 
@@ -81,3 +83,25 @@ class TestSideCommands:
         baseline_exe = staged_exe(tmp_path, "sync_search_scaling", BASELINE)
 
         assert candidate_exe != baseline_exe
+
+
+class TestUnchangedMicros:
+    @staticmethod
+    def _build(root: Path, fingerprints: dict[str, str]) -> Path:
+        for name, fingerprint in fingerprints.items():
+            path = fingerprint_path(root, name)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(fingerprint)
+
+        return root
+
+    def test_only_a_fingerprint_matching_on_both_sides_skips_the_timing(
+        self, tmp_path: Path
+    ) -> None:
+        """A side without one, like a build from before fingerprints, still gets timed."""
+        candidate = self._build(tmp_path / "candidate", {"same": "1", "changed": "2", "new": "3"})
+        baseline = self._build(tmp_path / "baseline", {"same": "1", "changed": "9"})
+
+        untimed = unchanged_micros(["same", "changed", "new", "neither"], candidate, baseline)
+
+        assert untimed == {"same"}

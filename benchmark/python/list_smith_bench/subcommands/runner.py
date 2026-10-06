@@ -56,7 +56,7 @@ def _run_micros(
     package_version: str,
 ) -> list[ResultRecord]:
     """Run each compiled micro exe with `--iterations N`, returning the captured records."""
-    exes = sorted(BUILD_DIR.glob("*"))
+    exes = sorted(path for path in BUILD_DIR.glob("*") if path.is_file())
     if not exes:
         print("no compiled micros found. Run `build` first", file=sys.stderr)
         return []
