@@ -706,7 +706,18 @@ clean under the DCM CLI (`dcm analyze <dir>`):
 <a id="test-style"></a>
 ## Test style
 
-Tests split by kind under `test/`:
+Tests split by kind under `test/`, and each kind mirrors `lib/src/`. So `reload.dart` in
+`lib/src/data/refresh/models/` is pinned by `test/widget_tests/data/refresh/models/reload_test.dart`,
+and a unit run stays separate (`flutter test test/unit_tests`).
+
+- **One test file per library,** its `part` files included. A file with no behaviour of its own (a
+  typedef, an enum, a plain value) gets none.
+- **A scenario goes with the file that owns the rule it pins,** so a suite reaching across several
+  files splits along them.
+- **A library too big for one file gets a folder of its name,** one file per behaviour, like the
+  engine's `widgets/async_list_view/`.
+
+What each kind holds:
 
 - **`test/unit_tests/`** holds pure-logic units in `bdd_framework` + `checks`. Frame behaviour as a
   `BddFeature` with `Bdd(...).scenario().given().when().then()`, and keep the parameter matrix in

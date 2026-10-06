@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +89,131 @@ void main() {
       },
     );
   });
+
+  feature('ListSmith.async surfaces and separators', () {
+    scenarioWidgets('a failing later page shows the new-page error surface', (tester) async {
+      await _pumpAsync(
+        tester,
+        fetchPage: PageFetcher((request) async {
+          if (request.pageIndex == 0) return const [1, 2, 3];
+
+          throw Exception('later page');
+        }),
+        surfaces: AsyncListSurfaces(newPageErrorBuilder: (_, _, _) => const Text('later failed')),
+      );
+      await drain(tester);
+
+      // Page 0's items stay while the failed page 1 shows its own error footer.
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.text('later failed').evaluate()).length.equals(1);
+    });
+
+    scenarioOutlineWidgets<_SurfaceHost>(
+      "a surface gets exactly the list's height, however tall it asks to be",
+      examples: _surfaceHosts,
+      outline: (tester, host) async {
+        await host(tester, (_) => const SizedBox(key: _surfaceKey, height: 2000));
+        await drain(tester);
+
+        check(tester.getSize(find.byKey(_surfaceKey)).height)
+            .equals(tester.getSize(find.byType(Scrollable)).height);
+      },
+    );
+
+    scenarioOutlineWidgets<_SurfaceHost>(
+      'a surface built with a LayoutBuilder renders',
+      examples: _surfaceHosts,
+      outline: (tester, host) async {
+        await host(
+          tester,
+          (_) => LayoutBuilder(
+            builder: (_, constraints) => Text('surface at ${constraints.maxHeight}'),
+          ),
+        );
+        await drain(tester);
+
+        check(find.textContaining('surface at').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioOutlineWidgets<_SurfaceHost>(
+      'a surface built with Expanded renders',
+      examples: _surfaceHosts,
+      outline: (tester, host) async {
+        await host(
+          tester,
+          (_) => const Column(
+            children: [
+              Expanded(child: Text('fills')),
+              Text('below'),
+            ],
+          ),
+        );
+        await drain(tester);
+
+        check(find.text('fills').evaluate()).length.equals(1);
+        check(find.text('below').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioOutlineWidgets<({ListScrollConfig scrollConfig, EdgeInsets safeAreaInsets})>(
+      'a short surface leaves nothing to scroll, padding included',
+      examples: const {
+        'padding all round': (
+          scrollConfig: ListScrollConfig(padding: .all(24)),
+          safeAreaInsets: .zero,
+        ),
+        "the screen's safe area, with no padding set": (
+          scrollConfig: ListScrollConfig(),
+          safeAreaInsets: .only(top: 47, bottom: 34),
+        ),
+        'a reversed list': (
+          scrollConfig: ListScrollConfig(reverse: true, padding: .only(top: 30, bottom: 10)),
+          safeAreaInsets: .zero,
+        ),
+        'a horizontal list': (
+          scrollConfig: ListScrollConfig(
+            scrollDirection: .horizontal,
+            padding: .only(left: 10, right: 30),
+          ),
+          safeAreaInsets: .zero,
+        ),
+      },
+      outline: (tester, example) async {
+        await pumpListSmith(
+          tester,
+          MediaQuery(
+            data: MediaQueryData(padding: example.safeAreaInsets),
+            child: ListSmith.async(
+              fetchPage: PageFetcher((_) async => throw Exception('down')),
+              itemIdGetter: (item) => item,
+              scroll: example.scrollConfig,
+              itemBuilder: (_, item, _) => Text('item $item'),
+            ),
+          ),
+        );
+        await drain(tester);
+
+        check(tester.state<ScrollableState>(listScrollableFinder).position.maxScrollExtent)
+            .equals(0);
+      },
+    );
+
+    scenarioWidgets('a separator builder renders the separated list', (tester) async {
+      await _pumpAsync(
+        tester,
+        fetchPage: PageFetcher(
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
+        separatorBuilder: (_, _) => const Text('sep'),
+      );
+      await drain(tester);
+
+      check(find.text('item 1').evaluate()).length.equals(1);
+      // Separators fall between the items (and before the end-of-list footer).
+      check(find.text('sep').evaluate()).length.isGreaterThan(1);
+    });
+  });
 }
 
 /// Pumps [items] as one page of stateful, swipeable rows. A swiped row is removed and lands in
@@ -128,3 +255,47 @@ Future<void> _finishSwipes(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
+
+Future<void> _pumpAsync(
+  WidgetTester tester, {
+  required PageFetcher<int> fetchPage,
+  AsyncListSurfaces surfaces = const AsyncListSurfaces(),
+  WidgetBuilder? emptyBuilder,
+  IndexedWidgetBuilder? separatorBuilder,
+}) => pumpListSmith(
+  tester,
+  ListSmith.async(
+    fetchPage: fetchPage,
+    itemIdGetter: (item) => item,
+    surfaces: surfaces,
+    emptyBuilder: emptyBuilder,
+    separatorBuilder: separatorBuilder,
+    refresh: const NoRefresh(),
+    itemBuilder: (_, item, _) => Text('item $item'),
+  ),
+);
+
+/// Pumps a list showing only [surface].
+typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
+
+final _surfaceHosts = <String, _SurfaceHost>{
+  'the loader': (tester, surface) {
+    final holdCompleter = Completer<List<int>>();
+    addTearDown(() => holdCompleter.complete(const []));
+
+    return _pumpAsync(
+      tester,
+      fetchPage: PageFetcher((_) => holdCompleter.future),
+      surfaces: AsyncListSurfaces(firstPageLoadingBuilder: surface),
+    );
+  },
+  'the 1st-page error': (tester, surface) => _pumpAsync(
+    tester,
+    fetchPage: PageFetcher((_) async => throw Exception('down')),
+    surfaces: AsyncListSurfaces(firstPageErrorBuilder: (context, _, _) => surface(context)),
+  ),
+  'the empty list': (tester, surface) =>
+      _pumpAsync(tester, fetchPage: PageFetcher((_) async => const []), emptyBuilder: surface),
+};
+
+const _surfaceKey = ValueKey('surface');

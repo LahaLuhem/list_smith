@@ -61,8 +61,8 @@ list_smith/
 └── .ai/                            This file + CLAUDE.md (symlinked to repo root)
 ```
 
-`test/` is organised by test kind (`unit_tests/`, `widget_tests/`, `support/`), not as a mirror of
-`lib/src/`.
+`test/` splits by test kind (`unit_tests/`, `widget_tests/`) next to the shared `support/`, and each
+kind mirrors `lib/src/`. Where a test goes is in CODESTYLE's [test style](CODESTYLE.md#test-style).
 
 **Nested-app lockfiles are opt-in.** The root `.gitignore` ignores `pubspec.lock` broadly, the
 library following the "don't commit your own lockfile" convention. A nested app that *should* commit
