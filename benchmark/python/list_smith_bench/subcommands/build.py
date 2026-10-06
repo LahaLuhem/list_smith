@@ -22,11 +22,15 @@ from list_smith_bench.config import (
     PROJECT_ROOT,
     dart_command,
 )
+from list_smith_bench.data.utils.fingerprint import fingerprint_path, micro_fingerprint
 from list_smith_bench.data.utils.io import discover_sources
 
 # Roots scanned to decide whether a compiled exe is stale. Conservative: any .dart change here
 # triggers a rebuild. Per-file dependency graphs aren't worth tracking. An over-rebuild is cheap.
 _SOURCE_ROOTS: Final[list[Path]] = [LIB_DIR, MICRO_DIR, HARNESS_DIR]
+
+# The compile step, minus paths. Part of each micro's fingerprint, so a flag added here re-times it.
+_COMPILE: Final[tuple[str, ...]] = ("compile", "exe")
 
 
 def _max_source_mtime() -> float:
@@ -42,8 +46,8 @@ def _max_source_mtime() -> float:
 
 
 def _is_exe_fresh(out: Path, max_src_mtime: float) -> bool:
-    """Whether `out` exists and is at least as new as the latest source file."""
-    if not out.exists():
+    """Whether `out` and its fingerprint exist, and `out` is as new as the latest source."""
+    if not out.exists() or not fingerprint_path(out.parent, out.name).exists():
         return False
     return out.stat().st_mtime >= max_src_mtime
 
@@ -74,6 +78,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     if not targets:
         return 0
 
+    sdk_version = _sdk_version()
     cpu = os.cpu_count() or 1
     # Cap at 4: parallel `dart compile exe` can spike RAM (~1 GB peak each). Override --workers.
     workers = args.workers if args.workers else min(cpu, 4)
@@ -81,7 +86,9 @@ def cmd_build(args: argparse.Namespace) -> int:
 
     failed: list[Path] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        future_to_src = {pool.submit(_compile_one, src, out): src for src, out in targets}
+        future_to_src = {
+            pool.submit(_compile_one, src, out, sdk_version): src for src, out in targets
+        }
         for future in concurrent.futures.as_completed(future_to_src):
             src = future_to_src[future]
             ok = future.result()
@@ -95,10 +102,13 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
-def _compile_one(src: Path, out: Path) -> bool:
-    """A single `dart compile exe` invocation. Suppresses stdout, surfaces stderr on failure."""
+def _compile_one(src: Path, out: Path, sdk_version: str) -> bool:
+    """One `dart compile exe`, then the micro's fingerprint. Surfaces stderr on failure."""
+    fingerprint = fingerprint_path(out.parent, out.name)
+    depfile = fingerprint.with_suffix(".d")
+    depfile.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
-        [*dart_command(), "compile", "exe", str(src), "-o", str(out)],
+        [*dart_command(), *_COMPILE, str(src), "-o", str(out), "--depfile", str(depfile)],
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
@@ -107,4 +117,16 @@ def _compile_one(src: Path, out: Path) -> bool:
     if result.returncode != 0:
         print(f"\n--- {src.name} stderr ---\n{result.stderr}\n", file=sys.stderr)
         return False
+    fingerprint.write_text(
+        micro_fingerprint(depfile.read_text(), Path.read_bytes, (*_COMPILE, sdk_version))
+    )
     return True
+
+
+def _sdk_version() -> str:
+    """The Dart SDK's version. Part of every fingerprint, so 2 SDKs' builds always get timed."""
+    result = subprocess.run(
+        [*dart_command(), "--version"], capture_output=True, text=True, check=True
+    )
+
+    return (result.stdout or result.stderr).strip()
