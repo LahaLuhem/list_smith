@@ -109,17 +109,32 @@ void main() {
       check(find.text('banana').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('applies a custom cache extent', (tester) async {
-      await _pumpSync(
-        tester,
-        items: const ['apple'],
-        searchBy: containsIgnoreCase,
-        scrollConfig: const ListScrollConfig(cacheExtent: 250),
-      );
-      await tester.pump();
+    scenarioOutlineWidgets<({double cacheExtent, int row, bool isBuilt})>(
+      'rows are built as far past the screen as the cache extent reaches',
+      examples: const {
+        'no cache extent, a row just past the screen': (cacheExtent: 0, row: 13, isBuilt: false),
+        'a long cache extent, a row far past the screen': (
+          cacheExtent: 1000,
+          row: 30,
+          isBuilt: true,
+        ),
+      },
+      outline: (tester, example) async {
+        await pumpListSmith(
+          tester,
+          ListSmith.sync(
+            items: List.generate(100, (index) => 'row $index'),
+            searchBy: containsIgnoreCase,
+            scroll: ListScrollConfig(cacheExtent: example.cacheExtent),
+            itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text(item)),
+          ),
+        );
+        await tester.pump();
 
-      check(find.text('apple').evaluate()).length.equals(1);
-    });
+        check(find.text('row ${example.row}', skipOffstage: false).evaluate()).length
+            .equals(example.isBuilt ? 1 : 0);
+      },
+    );
 
     scenarioWidgets('a separator builder renders the separated list', (tester) async {
       await _pumpSync(

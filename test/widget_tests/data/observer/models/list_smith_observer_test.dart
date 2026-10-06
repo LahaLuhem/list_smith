@@ -1,3 +1,6 @@
+// Test-local fixtures share the file with the scenarios that use them.
+// ignore_for_file: prefer-match-file-name
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -277,6 +280,31 @@ void main() {
 
       check(find.text('item 1').evaluate()).length.equals(1);
     });
+
+    scenarioWidgets('an observer that overrides only onError still gets its errors', (
+      tester,
+    ) async {
+      final reportedErrors = <Exception>[];
+      final observer = _ErrorsOnlyObserver(reportedErrors);
+      Future<void> pumpWith(String query) => _pumpObserved(
+        tester,
+        observer,
+        fetchPage: PageFetcher(
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        ),
+        search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => throw Exception('down'))),
+        query: query,
+      );
+
+      // Loads, then searches into a failure, so every event fires and only onError is overridden.
+      await pumpWith('');
+      await drain(tester);
+      await pumpWith('ab');
+      await settle(tester);
+
+      check(reportedErrors).length.equals(1);
+      check(find.text('Something went wrong').evaluate()).length.equals(1);
+    });
   });
 }
 
@@ -302,3 +330,9 @@ Future<void> _pumpObserved(
     itemBuilder: (_, item, _) => Text('item $item'),
   ),
 );
+
+/// Overrides only `onError`, like the README's observer, so every other event runs its no-op default.
+final class _ErrorsOnlyObserver(final List<Exception> _reportedErrors) extends ListSmithObserver {
+  @override
+  void onError(Exception error, StackTrace stackTrace) => _reportedErrors.add(error);
+}
