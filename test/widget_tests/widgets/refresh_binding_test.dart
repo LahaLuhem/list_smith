@@ -8,161 +8,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../support/support.dart';
+import '../../support/support.dart';
 
 void main() {
-  feature('ListSmith.async surface paths', () {
-    scenarioWidgets('a failing later page shows the new-page error surface', (tester) async {
-      await _pumpAsync(
-        tester,
-        fetchPage: PageFetcher((request) async {
-          if (request.pageIndex == 0) return const [1, 2, 3];
-
-          throw Exception('later page');
-        }),
-        surfaces: AsyncListSurfaces(newPageErrorBuilder: (_, _, _) => const Text('later failed')),
-      );
-      await drain(tester);
-
-      // Page 0's items stay while the failed page 1 shows its own error footer.
-      check(find.text('item 1').evaluate()).length.equals(1);
-      check(find.text('later failed').evaluate()).length.equals(1);
-    });
-
-    scenarioOutlineWidgets<_SurfaceHost>(
-      "a surface gets exactly the list's height, however tall it asks to be",
-      examples: _asyncSurfaceHosts,
-      outline: (tester, host) async {
-        await host(tester, (_) => const SizedBox(key: _surfaceKey, height: 2000));
-        await drain(tester);
-
-        check(tester.getSize(find.byKey(_surfaceKey)).height)
-            .equals(tester.getSize(find.byType(Scrollable)).height);
-      },
-    );
-
-    scenarioOutlineWidgets<_SurfaceHost>(
-      'a surface built with a LayoutBuilder renders',
-      examples: _surfaceHosts,
-      outline: (tester, host) async {
-        await host(
-          tester,
-          (_) => LayoutBuilder(
-            builder: (_, constraints) => Text('surface at ${constraints.maxHeight}'),
-          ),
-        );
-        await drain(tester);
-
-        check(find.textContaining('surface at').evaluate()).length.equals(1);
-      },
-    );
-
-    scenarioOutlineWidgets<_SurfaceHost>(
-      'a surface built with Expanded renders',
-      examples: _surfaceHosts,
-      outline: (tester, host) async {
-        await host(
-          tester,
-          (_) => const Column(
-            children: [
-              Expanded(child: Text('fills')),
-              Text('below'),
-            ],
-          ),
-        );
-        await drain(tester);
-
-        check(find.text('fills').evaluate()).length.equals(1);
-        check(find.text('below').evaluate()).length.equals(1);
-      },
-    );
-
-    scenarioOutlineWidgets<({ListScrollConfig scrollConfig, EdgeInsets safeAreaInsets})>(
-      'a short surface leaves nothing to scroll, padding included',
-      examples: const {
-        'padding all round': (
-          scrollConfig: ListScrollConfig(padding: .all(24)),
-          safeAreaInsets: .zero,
-        ),
-        "the screen's safe area, with no padding set": (
-          scrollConfig: ListScrollConfig(),
-          safeAreaInsets: .only(top: 47, bottom: 34),
-        ),
-        'a reversed list': (
-          scrollConfig: ListScrollConfig(reverse: true, padding: .only(top: 30, bottom: 10)),
-          safeAreaInsets: .zero,
-        ),
-        'a horizontal list': (
-          scrollConfig: ListScrollConfig(
-            scrollDirection: .horizontal,
-            padding: .only(left: 10, right: 30),
-          ),
-          safeAreaInsets: .zero,
-        ),
-      },
-      outline: (tester, example) async {
-        await pumpListSmith(
-          tester,
-          MediaQuery(
-            data: MediaQueryData(padding: example.safeAreaInsets),
-            child: ListSmith.async(
-              fetchPage: PageFetcher((_) async => throw Exception('down')),
-              itemIdGetter: (item) => item,
-              scroll: example.scrollConfig,
-              itemBuilder: (_, item, _) => Text('item $item'),
-            ),
-          ),
-        );
-        await drain(tester);
-
-        check(tester.state<ScrollableState>(listScrollableFinder).position.maxScrollExtent)
-            .equals(0);
-      },
-    );
-
-    scenarioWidgets('the neutral 1st-page error taller than the list still scrolls to its Retry', (
-      tester,
-    ) async {
-      await pumpListSmith(
-        tester,
-        MediaQuery(
-          data: const MediaQueryData(textScaler: .linear(3)),
-          child: Align(
-            alignment: .topCenter,
-            child: SizedBox(
-              height: 200, // the error outgrows it at 3x
-              child: ListSmith.async(
-                fetchPage: PageFetcher((_) async => throw Exception('down')),
-                itemIdGetter: (item) => item,
-                itemBuilder: (_, item, _) => Text('item $item'),
-              ),
-            ),
-          ),
-        ),
-      );
-      await drain(tester);
-
-      await tester.drag(find.text('Something went wrong'), const Offset(0, -300));
-      await drain(tester);
-
-      check(find.text('Retry').hitTestable().evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('a separator builder renders the separated list', (tester) async {
-      await _pumpAsync(
-        tester,
-        fetchPage: PageFetcher(
-          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-        ),
-        separatorBuilder: (_, _) => const Text('sep'),
-      );
-      await drain(tester);
-
-      check(find.text('item 1').evaluate()).length.equals(1);
-      // Separators fall between the items (and before the end-of-list footer).
-      check(find.text('sep').evaluate()).length.isGreaterThan(1);
-    });
-
+  feature('ListSmith.async pull indicator', () {
     scenarioWidgets('an idle list under the neutral pull indicator requests no frames', (
       tester,
     ) async {
@@ -385,135 +234,47 @@ void main() {
       },
     );
 
-    scenarioWidgets('the neutral spinner repaints when the ambient colour changes', (tester) async {
-      final holdCompleter = Completer<List<int>>();
-      Widget build(Color colour) => DefaultTextStyle(
-        style: TextStyle(color: colour),
-        child: ListSmith.async(
-          fetchPage: PageFetcher(
-            (request) =>
-                request.pageIndex == 0 ? holdCompleter.future : Future.value(const <int>[]),
-          ),
+    scenarioWidgets('a pull the list resets under still lets go of its indicator', (tester) async {
+      final server = FakeServer<int>([1, 2, 3]);
+      final controller = ListSmithController<int>();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
           itemIdGetter: (item) => item,
-          refresh: const NoRefresh(),
-          itemBuilder: (_, item, _) => Text('item $item'),
+          pageSize: 3,
+          endPolicy: const FixedPageCountPolicy(pageCount: 1),
+          controller: controller,
+          refresh: PullToRefresh(
+            indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+          ),
+          itemBuilder: (_, item, _) => SizedBox.square(dimension: 50, child: Text('item $item')),
         ),
       );
-
-      // Held on the 1st page, so the neutral spinner is what is on screen.
-      await pumpListSmith(tester, build(const Color(0xFFFF0000)));
       await drain(tester);
-      check(find.byType(CustomPaint).evaluate()).isNotEmpty();
+      final holdCompleter = server.hold(0, attempt: 2);
 
-      // Re-pump under a different ambient colour: the arc painter has to notice and repaint.
-      await pumpListSmith(tester, build(const Color(0xFF0000FF)));
+      // Short of the arm threshold, so letting go cancels instead of refreshing.
+      final gesture = await tester.startGesture(tester.getCenter(find.byType(Scrollable)));
+      for (var step = 0; step < 3; step++) {
+        await gesture.moveBy(const Offset(0, 20));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      // Premise: the pull is under way.
+      check(find.byKey(_indicatorKey).evaluate()).length.equals(1);
+      unawaited(controller.reset());
       await drain(tester);
-      check(find.byType(CustomPaint).evaluate()).isNotEmpty();
+      await gesture.up();
+      // Timed frames, so the indicator's animation back to rest actually runs.
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
-      holdCompleter.complete(const [1]);
-      await tester.idle();
-      await drain(tester);
-      check(find.text('item 1').evaluate()).length.equals(1);
-    });
-  });
-
-  feature('ListSmith.sync rebuild and layout', () {
-    scenarioWidgets('replacing the items list after build re-materialises and re-filters', (
-      tester,
-    ) async {
-      await _pumpSync(tester, items: const ['apple', 'banana'], searchBy: containsIgnoreCase);
-      await tester.pump();
-      check(find.text('apple').evaluate()).length.equals(1);
-
-      await _pumpSync(tester, items: const ['cherry', 'date'], searchBy: containsIgnoreCase);
-      await tester.pump();
-
-      check(find.text('cherry').evaluate()).length.equals(1);
-      check(find.text('apple').evaluate()).length.equals(0);
-    });
-
-    scenarioWidgets('changing the query after build commits a new filter', (tester) async {
-      // Same const list on both pumps, so only the query changes (isolates the query path).
-      const items = ['apple', 'banana'];
-      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase);
-      await tester.pump();
-      check(find.text('banana').evaluate()).length.equals(1);
-
-      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase, query: 'app');
-      // Fire the zero-duration debounce timer so the new query commits.
-      await tester.pump(const Duration(milliseconds: 1));
-
-      check(find.text('apple').evaluate()).length.equals(1);
-      check(find.text('banana').evaluate()).length.equals(0);
-    });
-
-    scenarioWidgets('applies a custom cache extent', (tester) async {
-      await _pumpSync(
-        tester,
-        items: const ['apple'],
-        searchBy: containsIgnoreCase,
-        scrollConfig: const ListScrollConfig(cacheExtent: 250),
-      );
-      await tester.pump();
-
-      check(find.text('apple').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('a separator builder renders the separated list', (tester) async {
-      await _pumpSync(
-        tester,
-        items: const ['apple', 'banana'],
-        searchBy: containsIgnoreCase,
-        separatorBuilder: (_, _) => const Text('sep'),
-      );
-      await tester.pump();
-
-      check(find.text('apple').evaluate()).length.equals(1);
-      // 2 items yield one separator.
-      check(find.text('sep').evaluate()).length.equals(1);
+      check(find.byKey(_indicatorKey).evaluate()).isEmpty();
+      await release(tester, [holdCompleter]);
     });
   });
 }
-
-Future<void> _pumpAsync(
-  WidgetTester tester, {
-  required PageFetcher<int> fetchPage,
-  AsyncListSurfaces surfaces = const AsyncListSurfaces(),
-  WidgetBuilder? emptyBuilder,
-  IndexedWidgetBuilder? separatorBuilder,
-}) => pumpListSmith(
-  tester,
-  ListSmith.async(
-    fetchPage: fetchPage,
-    itemIdGetter: (item) => item,
-    surfaces: surfaces,
-    emptyBuilder: emptyBuilder,
-    separatorBuilder: separatorBuilder,
-    refresh: const NoRefresh(),
-    itemBuilder: (_, item, _) => Text('item $item'),
-  ),
-);
-
-Future<void> _pumpSync(
-  WidgetTester tester, {
-  required List<String> items,
-  required SyncSearchPredicate<String> searchBy,
-  String query = '',
-  WidgetBuilder? emptyBuilder,
-  IndexedWidgetBuilder? separatorBuilder,
-  ListScrollConfig scrollConfig = const ListScrollConfig(),
-}) => pumpListSmith(
-  tester,
-  ListSmith.sync(
-    items: items,
-    searchBy: searchBy,
-    query: query,
-    emptyBuilder: emptyBuilder,
-    separatorBuilder: separatorBuilder,
-    scroll: scrollConfig,
-    itemBuilder: (_, item, _) => Text(item),
-  ),
-);
 
 typedef _Orientation = ({
   ListScrollConfig scrollConfig,
@@ -521,38 +282,7 @@ typedef _Orientation = ({
   AxisDirection pullDirection,
 });
 
-/// Pumps a list showing only [surface].
-typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
-
-final _asyncSurfaceHosts = <String, _SurfaceHost>{
-  'the loader': (tester, surface) {
-    final holdCompleter = Completer<List<int>>();
-    addTearDown(() => holdCompleter.complete(const []));
-
-    return _pumpAsync(
-      tester,
-      fetchPage: PageFetcher((_) => holdCompleter.future),
-      surfaces: AsyncListSurfaces(firstPageLoadingBuilder: surface),
-    );
-  },
-  'the 1st-page error': (tester, surface) => _pumpAsync(
-    tester,
-    fetchPage: PageFetcher((_) async => throw Exception('down')),
-    surfaces: AsyncListSurfaces(firstPageErrorBuilder: (context, _, _) => surface(context)),
-  ),
-  'the empty list': (tester, surface) =>
-      _pumpAsync(tester, fetchPage: PageFetcher((_) async => const []), emptyBuilder: surface),
-};
-
-final _surfaceHosts = <String, _SurfaceHost>{
-  ..._asyncSurfaceHosts,
-  'the sync empty list': (tester, surface) =>
-      _pumpSync(tester, items: const [], searchBy: containsIgnoreCase, emptyBuilder: surface),
-};
-
 const _indicatorKey = ValueKey('indicator');
-
-const _surfaceKey = ValueKey('surface');
 
 /// Enough rows to overfill the viewport along either axis, so every orientation can scroll.
 final _items = List<int>.generate(30, (index) => index);
