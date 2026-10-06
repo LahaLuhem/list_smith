@@ -147,6 +147,31 @@ void main() {
       check(shownToggleRows()).deepEquals(['off 1', 'on 2', 'off 3']);
     });
 
+    scenarioWidgets('a removal mid-entry shrinks the row from where it got to, then lands', (
+      tester,
+    ) async {
+      final controller = await _pumpRows(tester);
+
+      controller.upsert(0);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      final enteredHeight = _heightOf(0);
+      // Premise: the entry is under way.
+      check(enteredHeight)
+        ..isGreaterThan(0)
+        ..isLessThan(50);
+      controller.remove(0);
+      await tester.pump(); // a restarted ticker's 1st frame has no time in it
+      await tester.pump(const Duration(milliseconds: 50));
+
+      check(_heightOf(0))
+        ..isGreaterThan(0)
+        ..isLessThan(enteredHeight);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3']);
+    });
+
     scenarioWidgets('with animations turned off, edits show at once', (tester) async {
       final controller = await _pumpRows(tester, isMotionReduced: true);
 

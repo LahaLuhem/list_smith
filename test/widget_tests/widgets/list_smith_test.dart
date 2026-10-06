@@ -59,6 +59,31 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets("a later page's Retry asks for that page again and shows its rows", (
+      tester,
+    ) async {
+      final server = FakeServer([1, 2, 3, 4, 5, 6])..failing.add((1, 1));
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          pageSize: 3,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      // Premise: page 1 failed under page 0's rows.
+      check(find.text('item 3').evaluate()).length.equals(1);
+      check(find.text('item 4').evaluate()).isEmpty();
+
+      await tester.tap(find.text('Retry'));
+      await drain(tester);
+
+      check(server.attempts[1]).equals(2);
+      check(find.text('item 4').evaluate()).length.equals(1);
+    });
+
     scenarioWidgets(
       "a fetcher's Error isn't caught, so it reaches the app instead of the error surface",
       (tester) async {
