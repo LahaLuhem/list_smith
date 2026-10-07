@@ -42,7 +42,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  bdd_framework: ^4.0.7
+  bdd_framework: ">=4.0.7 <6.0.0"
   benchmark_harness: ^2.4.0
   checks: ^0.3.2
   dartender_lints:
