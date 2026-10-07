@@ -16,9 +16,9 @@ final class ReloadViewModel() extends ViewModel {
   final _attempts = <int, int>{};
   final _shouldInjectFailuresNotifier = ValueNotifier(false);
   final _isRefreshingNotifier = ValueNotifier(false);
-  final _lastErrorNotifier = ValueNotifier<Exception?>(null);
+  final _lastExceptionNotifier = ValueNotifier<Exception?>(null);
 
-  late final observer = _LastErrorObserver(_lastErrorNotifier);
+  late final observer = _LastExceptionObserver(_lastExceptionNotifier);
 
   /// Runs the same [reload] as a pull, from the "Refresh from code" button.
   final controller = ListSmithController<DemoItem>();
@@ -37,7 +37,7 @@ final class ReloadViewModel() extends ViewModel {
   ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
   /// The latest reload's error, since a reload that keeps depth leaves the rows as they were.
-  ValueListenable<Exception?> get lastErrorListenable => _lastErrorNotifier;
+  ValueListenable<Exception?> get lastExceptionListenable => _lastExceptionNotifier;
 
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
   ValueListenable<bool> get isRefreshingListenable => _isRefreshingNotifier;
@@ -105,17 +105,18 @@ final class ReloadViewModel() extends ViewModel {
   void dispose() {
     _shouldInjectFailuresNotifier.dispose();
     _isRefreshingNotifier.dispose();
-    _lastErrorNotifier.dispose();
+    _lastExceptionNotifier.dispose();
 
     super.dispose();
   }
 }
 
-final class _LastErrorObserver(final ValueNotifier<Exception?> _lastErrorNotifier)
+final class _LastExceptionObserver(final ValueNotifier<Exception?> _lastExceptionNotifier)
     extends ListSmithObserver {
   @override
-  void onReload(FetchTrigger trigger) => _lastErrorNotifier.value = null;
+  void onReload(FetchTrigger trigger) => _lastExceptionNotifier.value = null;
 
   @override
-  void onError(Exception error, StackTrace stackTrace) => _lastErrorNotifier.value = error;
+  void onError(Exception exception, StackTrace stackTrace) =>
+      _lastExceptionNotifier.value = exception;
 }

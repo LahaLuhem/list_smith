@@ -4,4 +4,8 @@ import 'package:flutter/widgets.dart';
 /// the app instead.
 ///
 /// `onRetry` re-attempts the load, so a custom error view can offer retry without a controller.
-typedef ErrorBuilder = Widget Function(BuildContext context, Exception error, VoidCallback onRetry);
+typedef ErrorBuilder = Widget Function(
+  BuildContext context,
+  Exception exception,
+  VoidCallback onRetry,
+);

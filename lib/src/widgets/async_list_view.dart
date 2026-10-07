@@ -112,7 +112,7 @@ class _AsyncListViewState<T extends Object>()
   var _generation = 0;
 
   /// The page whose last attempt threw, so its re-fetch reports [FetchTrigger.retry]. Outlives the
-  /// error on the paging state: a depth reload's commit clears that, and the page is still a retry.
+  /// exception on the paging state: a depth reload's commit clears that, and the page is still a retry.
   int? _lastFailedPageIndex;
 
   /// Whether a row near the end already booked the next page this frame.
@@ -214,10 +214,10 @@ class _AsyncListViewState<T extends Object>()
         ],
         isLoading: false,
       );
-    } on Exception catch (error) {
+    } on Exception catch (exception) {
       // Only Exceptions: an Error is a bug in the fetcher, so it goes on to the app and the list waits.
       if (generation == _generation) {
-        _pagingStateNotifier.value = _pagingStateNotifier.value.failed(error);
+        _pagingStateNotifier.value = _pagingStateNotifier.value.failed(exception);
       }
     }
   }
@@ -285,9 +285,9 @@ class _AsyncListViewState<T extends Object>()
       }
 
       return (pageItems, signal);
-    } on Exception catch (error, stackTrace) {
+    } on Exception catch (exception, stackTrace) {
       if (generation == _generation) _lastFailedPageIndex = pageKey;
-      widget.observer?.onError(error, stackTrace);
+      widget.observer?.onError(exception, stackTrace);
 
       rethrow;
     }
@@ -584,7 +584,7 @@ class _AsyncListViewState<T extends Object>()
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   }) async {
     final itemIdGetter = widget.source.itemIdGetter;
     final draftId = itemIdGetter(draft);
@@ -606,9 +606,9 @@ class _AsyncListViewState<T extends Object>()
         itemIdGetter(savedItem) == draftId,
         "upsertAsync needs the saved item to keep the draft's id.",
       );
-    } on Exception catch (error) {
+    } on Exception catch (exception) {
       rollBack();
-      onFailure?.call(error);
+      onFailure?.call(exception);
 
       return;
     } on Object {
@@ -623,7 +623,7 @@ class _AsyncListViewState<T extends Object>()
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   }) async {
     final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null);
     _bookShrinkingOut(item, pendingEdit.book);
@@ -632,9 +632,9 @@ class _AsyncListViewState<T extends Object>()
 
     try {
       await commit;
-    } on Exception catch (error) {
+    } on Exception catch (exception) {
       rollBack();
-      onFailure?.call(error);
+      onFailure?.call(exception);
 
       return;
     } on Object {

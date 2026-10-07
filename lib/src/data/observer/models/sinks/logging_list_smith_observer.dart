@@ -25,10 +25,10 @@ final class const LoggingListSmithObserver() extends ListSmithObserver {
   );
 
   @override
-  void onError(Exception error, StackTrace stackTrace) => developer.log(
+  void onError(Exception exception, StackTrace stackTrace) => developer.log(
     'load failed',
     name: _name,
-    error: error,
+    error: exception,
     stackTrace: stackTrace,
     level: _severeLevel,
   );

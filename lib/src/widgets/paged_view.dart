@@ -112,20 +112,23 @@ class const PagedView<T extends Object>({
     axis: scrollConfig.scrollDirection,
   );
 
-  /// Every surface. The error ones read `state.error!`, non-null because only an error status builds
+  /// Every surface. The error ones read `state.exception!`, non-null because only an error status builds
   /// them.
   PagedSurfaces _surfaces() => (
     firstPageLoading: (context) =>
         firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
-    firstPageError: (_) =>
-        _ResolvedError(error: state.error!, onRetry: onRetry, builder: firstPageErrorBuilder),
+    firstPageError: (_) => _ResolvedError(
+      exception: state.exception!,
+      onRetry: onRetry,
+      builder: firstPageErrorBuilder,
+    ),
     noItemsFound: (context) => isSearchMode
         ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
         : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
     newPageLoading: (context) =>
         newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
     newPageError: (_) => _ResolvedError(
-      error: state.error!,
+      exception: state.exception!,
       onRetry: onRetry,
       builder: newPageErrorBuilder,
       isCompact: true,
@@ -137,7 +140,7 @@ class const PagedView<T extends Object>({
 
 /// The consumer's [ErrorBuilder] if there is one, else the neutral default.
 class const _ResolvedError({
-  required final Exception error,
+  required final Exception exception,
   required final VoidCallback onRetry,
   final ErrorBuilder? builder,
   final bool isCompact = false,
@@ -147,8 +150,8 @@ class const _ResolvedError({
     final errorBuilder = builder;
 
     return errorBuilder != null
-        ? errorBuilder(context, error, onRetry)
-        : NeutralErrorIndicator(error: error, onRetry: onRetry, isCompact: isCompact);
+        ? errorBuilder(context, exception, onRetry)
+        : NeutralErrorIndicator(exception: exception, onRetry: onRetry, isCompact: isCompact);
   }
 }
 

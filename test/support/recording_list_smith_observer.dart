@@ -5,15 +5,15 @@ final class RecordingListSmithObserver() extends ListSmithObserver {
   final List<String> events = [];
 
   /// The error passed to the most recent [onError], or null if none has fired.
-  Exception? lastError;
+  Exception? lastException;
 
   @override
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) =>
       events.add('pageLoaded(index: $pageIndex, count: $itemCount, search: $isSearchMode)');
 
   @override
-  void onError(Exception error, StackTrace stackTrace) {
-    lastError = error;
+  void onError(Exception exception, StackTrace stackTrace) {
+    lastException = exception;
     events.add('error');
   }
 

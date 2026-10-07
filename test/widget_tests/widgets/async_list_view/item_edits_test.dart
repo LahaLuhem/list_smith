@@ -490,7 +490,7 @@ void main() {
     });
 
     scenarioOutlineWidgets<
-      Future<void> Function(ListSmithController<_Row>, void Function(Exception error) onFailure)
+      Future<void> Function(ListSmithController<_Row>, void Function(Exception exception) onFailure)
     >(
       'a failed save goes to onFailure instead of throwing',
       examples: {
@@ -507,12 +507,12 @@ void main() {
       },
       outline: (tester, edit) async {
         final (_, controller) = await pumpRows(tester);
-        final reportedErrors = <Exception>[];
+        final reportedExceptions = <Exception>[];
 
-        await edit(controller, reportedErrors.add);
+        await edit(controller, reportedExceptions.add);
         await tester.pump();
 
-        check(reportedErrors).length.equals(1);
+        check(reportedExceptions).length.equals(1);
         check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
       },
     );
@@ -606,7 +606,7 @@ void main() {
       final saveCompleter = Completer<_Row>();
       final createCompleter = Completer<_Row>();
       final deleteCompleter = Completer<void>();
-      final reportedErrors = <Exception>[];
+      final reportedExceptions = <Exception>[];
       final savedFuture = controller.upsertAsync((
         id: 1,
         label: 'mine',
@@ -614,12 +614,12 @@ void main() {
       final createdFuture = controller.upsertAsync(
         (id: 9, label: 'new'),
         commit: createCompleter.future,
-        onFailure: reportedErrors.add,
+        onFailure: reportedExceptions.add,
       );
       final removedFuture = controller.removeAsync(
         (id: 2, label: 'b'),
         commit: deleteCompleter.future,
-        onFailure: reportedErrors.add,
+        onFailure: reportedExceptions.add,
       );
       await tester.pump();
 
@@ -629,7 +629,7 @@ void main() {
       deleteCompleter.completeError(Exception('delete failed'));
       await (savedFuture, createdFuture, removedFuture).wait;
 
-      check(reportedErrors).length.equals(2);
+      check(reportedExceptions).length.equals(2);
     });
   });
 }
