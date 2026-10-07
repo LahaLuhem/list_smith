@@ -32,4 +32,13 @@ The parts, and what each seam between them promises. The reasons are in
 | surfaces → scroll view                | every surface sits in the list and gets its visible space, unmeasured                                                                  | [pull-surfaces](../APPENDIX.md#pull-surfaces)                         | [`keyed_paged_list_view_test`](../test/widget_tests/widgets/keyed_paged_list_view_test.dart), [`empty_page_behaviour_test`](../test/widget_tests/data/pagination/models/empty_page_behaviour_test.dart)    |
 | `custom_refresh_indicator` → the rest | its types stay inside `RefreshBinding`, and indicator builders get a `ListSmithRefreshState`                                           | [pull-indicator-layout](../APPENDIX.md#pull-indicator-layout)         | no test, only the [exports](../lib/list_smith.dart)                                                                                                                                                        |
 | engine → sealed types                 | the engine gathers the facts and the type decides                                                                                      | [CODESTYLE](../CODESTYLE.md#patterns-behaviour-in-the-type)           | the [unit tests](../test/unit_tests/), [`reload_test`](../test/widget_tests/data/refresh/models/reload_test.dart), [`refresh_test`](../test/widget_tests/data/refresh/models/refresh_test.dart)            |
-| edits → display                       | edits apply in the display pass, so the pages keep what the server sent                                                                | [edit-layer](../APPENDIX.md#edit-layer)                               | [`item_edits_test`](../test/widget_tests/widgets/async_list_view/item_edits_test.dart)                                                                                                                     |
+| edits → display                       | edits apply in the display pass, so the pages keep what the server sent. A draft covers every page until its save answers              | [edit-layer](../APPENDIX.md#edit-layer)                               | [`item_edits_test`](../test/widget_tests/widgets/async_list_view/item_edits_test.dart)                                                                                                                     |
+
+## Known gaps
+
+Both need an odd sequence, under an `EditTransition`:
+
+- a create whose save fails after a re-read already shows the server's copy shrinks away, then pops
+  back
+- a delete whose save fails mid-exit brings its row back even if the row was removed again during
+  that exit, until the next re-read

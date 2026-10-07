@@ -585,51 +585,61 @@ class _AsyncListViewState<T extends Object>()
     final itemIdGetter = widget.source.itemIdGetter;
     final draftId = itemIdGetter(draft);
     final pendingEdit = _editStoreNotifier.pendingEdit(draftId, draft);
-    _bookGrowingIn(draft, pendingEdit.book);
+    final isNewRow = _bookGrowingIn(draft, pendingEdit.book);
 
+    final T savedItem;
     try {
-      final savedItem = await commit;
+      savedItem = await commit;
       assert(
         itemIdGetter(savedItem) == draftId,
         "upsertAsync needs the saved item to keep the draft's id.",
       );
-      pendingEdit.settle(savedItem);
+    } on Object {
+      // A create that didn't stick leaves like a remove.
+      if (isNewRow && pendingEdit.isNewest) {
+        _bookShrinkingOut(draft, pendingEdit.drop);
+      } else {
+        pendingEdit.drop();
+      }
 
-      return savedItem;
-    } finally {
-      pendingEdit.drop(); // a no-op once settled
+      rethrow;
     }
+    pendingEdit.settle(savedItem);
+
+    return savedItem;
   }
 
   @override
   Future<void> removeAsync(T item, {required Future<void> commit}) async {
-    final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null)
-      ..book();
+    final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null);
+    _bookShrinkingOut(item, pendingEdit.book);
 
     try {
       await commit;
-      pendingEdit.settle(null);
-    } finally {
-      pendingEdit.drop(); // a no-op once settled
+    } on Object {
+      _bookGrowingIn(item, pendingEdit.drop); // comes back like an upsert
+
+      rethrow;
     }
+    pendingEdit.settle(null);
   }
 
-  void _bookGrowingIn(T item, VoidCallback book) {
+  /// Whether [book] brought in a new row.
+  bool _bookGrowingIn(T item, VoidCallback book) {
     final animation = _editAnimation;
     if (animation == null) {
       book();
 
-      return;
+      return false;
     }
 
     final id = widget.source.itemIdGetter(item);
     final wasShown = _isShown(id);
     book();
-    _rowTransitionsNotifier.upsert(
-      id,
-      isNewRow: !wasShown && _isShown(id),
-      duration: animation.duration,
-    );
+    final isNewRow = !wasShown && _isShown(id);
+    _rowTransitionsNotifier.upsert(id, isNewRow: isNewRow, duration: animation.duration);
+
+    return isNewRow;
   }
 
   @override
@@ -652,10 +662,11 @@ class _AsyncListViewState<T extends Object>()
     );
   }
 
-  /// The edit transition, unless there is none or the platform asks for less motion.
+  /// The edit transition, unless there is none, the platform asks for less motion, or a save answered
+  /// after the list was gone.
   AnimatedEditTransition? get _editAnimation => switch (widget.source.editTransition) {
     final AnimatedEditTransition transition
-        when !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
+        when mounted && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
       transition,
     AnimatedEditTransition() || NoEditTransition() => null,
   };

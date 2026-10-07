@@ -593,8 +593,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="edit-layer"></a>
 ## Local edits live beside the pages, not in them
 
-- **Decision:** `upsert` and `remove` book an edit beside the loaded pages, applied in the display
-  pass de-dup already runs. The pages keep saying what the backend returned, because the end policy
+- **Decision:** the edit verbs book an edit beside the loaded pages, applied in the display pass
+  de-dup already runs. The pages keep saying what the backend returned, because the end policy
   counts them and a depth reload or `KeepCachePolicy` writes them back. An edit made inside them
   would end the list early, or be undone.
 - **Each page carries a read stamp,** the edit counter when its fetch went out, and an edit
@@ -602,8 +602,17 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   loaded and parked page was read after an edit, the edit is forgotten.
 - **Values, not transforms.** An edit is re-applied over whatever the server sends until it
   expires, so a `likes + 1` would count twice.
-- **Sync and `void`,** unlike the other verbs. The change is already true on the server or in the
-  store, and `void` keeps `Dismissible.onDismissed` plain.
+- **`upsert` and `remove` are sync and `void`,** since the change is already true on the server or
+  in the store. `upsertAsync` and `removeAsync` are for one that isn't yet.
+- **A pending edit counts as true from the far future,** `2^53 - 1`, the web's largest exact int, so
+  it covers every page, read before it or after. Its save's answer stamps it from the counter then,
+  so the display pass, expiry and new-item placement need nothing new.
+- **Each item keeps its edits in the order they were made.** A failed one drops out and the newest
+  left shows, so a rollback can't wipe an edit under it. An answer settles its own edit in place, so
+  a create doesn't jump when it saves.
+- **The saved item keeps the draft's id,** asserted. A swapped temp id is a removal plus a new item,
+  which reorders new items and loses the row's state.
+- **`reset()` clears every edit,** pending ones too, so a logout can't show the old account's draft.
 - **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
   in-flight page's cursor, so the next page repeats. The edit store moves its own counter instead,
   on every change that shows, since the display memo keys on it.
@@ -665,10 +674,16 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Decision:** an `EditTransition(duration:, transitionBuilder:)` seam, `NoEditTransition()` by
   default. The builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming
   in and in reverse for one going out. list_smith brings the timing, never a look of its own. Only
-  an `upsert` of a new, shown id and a `remove` of a shown one start one, so page loads can't.
+  an `upsert` of a new, shown id, a `remove` of a shown one, or a rollback of either starts one, so
+  page loads can't.
 - **A removal lands when its exit ends.** Until then the row is still in the display, exactly where
   it was, so there's no leaving copy to keep in step, and an upsert meanwhile turns the same
   controller round.
+- **Each exit holds what to do when it ends:** book a removal, a pending one, or drop a failed
+  create. A restart's settle runs the same thing, so it can't turn a pending delete plain.
+- **Rollbacks animate.** A failed create leaves like a `remove`, a failed delete comes back like an
+  `upsert`, so the user sees the change didn't stick. The gaps are in
+  [how-it-works](doc/how-it-works.md#known-gaps).
 - **A row that shrank itself skips the exit.** A frame after `remove()`, a row that isn't built or
   has no extent left goes at once. Dismissible and Slidable collapse themselves and throw if kept in
   the tree after, and this way `remove()` needs no flag for them.
