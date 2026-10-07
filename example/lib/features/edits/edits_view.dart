@@ -12,7 +12,7 @@ import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'edits_view_model.dart';
 
-/// `ListSmithController.upsert` and `remove`, behind flutter_slidable's swipe actions.
+/// `ListSmithController.upsert` and `removeAsync`, behind flutter_slidable's swipe actions.
 class const EditsView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -33,7 +33,7 @@ class const EditsView({super.key}) extends StatelessWidget {
                   valueListenable: viewModel.shouldFailDeletesListenable,
                   builder: (context, shouldFailDeletes, _) => BoolKnob(
                     label: 'Deletes fail',
-                    subtitle: 'Delete keeps the row, but a full swipe drops it until you pull',
+                    subtitle: 'A deleted row comes back when its delete fails',
                     value: shouldFailDeletes,
                     onChanged: (value) => viewModel.onDeletesFailToggled(value: value),
                   ),
@@ -70,7 +70,7 @@ class const _EditableRow({required final DemoItem item, required final EditsView
     key: ValueKey(item.id), // DismissiblePane asserts without one
     endActionPane: ActionPane(
       motion: const DrawerMotion(),
-      dismissible: DismissiblePane(onDismissed: () => viewModel.onDismissed(item)),
+      dismissible: DismissiblePane(onDismissed: () => viewModel.onDeleted(item)),
       children: [
         SlidableAction(
           onPressed: _onRenamePressed,
@@ -79,7 +79,7 @@ class const _EditableRow({required final DemoItem item, required final EditsView
           label: 'Rename',
         ),
         SlidableAction(
-          onPressed: (_) => viewModel.onDeletePressed(item),
+          onPressed: (_) => viewModel.onDeleted(item),
           backgroundColor: _deleteColour,
           icon: _iconOf(PlatformIcons.delete),
           label: 'Delete',
