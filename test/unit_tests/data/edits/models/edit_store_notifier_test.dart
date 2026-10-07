@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/src/data/edits/models/edit_store_notifier.dart';
 import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 
 typedef _Row = ({int id, String label});
-typedef _Draft = ({Completer<_Row> saveCompleter, Future<_Row> savedFuture});
 
 void main() {
   final storeFeature = BddFeature('Edit store');
@@ -27,19 +24,8 @@ void main() {
       .map((item) => item.label)
       .toList(growable: false);
 
-  _Draft draftOut(EditStoreNotifier<_Row> editStoreNotifier, String label) {
-    final saveCompleter = Completer<_Row>();
-
-    return (
-      saveCompleter: saveCompleter,
-      savedFuture: editStoreNotifier.bookPending(1, (id: 1, label: label), saveCompleter.future),
-    );
-  }
-
-  Future<void> fail(_Draft draft) async {
-    draft.saveCompleter.completeError(Exception('save failed'));
-    await check(draft.savedFuture).throws<Exception>();
-  }
+  PendingEdit<_Row> draftOut(EditStoreNotifier<_Row> editStoreNotifier, String label) =>
+      editStoreNotifier.pendingEdit(1, (id: 1, label: label))..book();
 
   Bdd(storeFeature)
       .scenario('every edit moves the value on and tells the listeners, so the display re-runs')
@@ -108,20 +94,12 @@ void main() {
       .given('2 new items whose saves are out, 8 booked after 7')
       .when("7's save answers")
       .then('7 shows what the save gave back, still under 8')
-      .run((_) async {
+      .run((_) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
-        final saveCompleter = Completer<_Row>();
-        final savedFuture = editStoreNotifier.bookPending(7, (
-          id: 7,
-          label: '7 draft',
-        ), saveCompleter.future);
-        editStoreNotifier.bookPending(8, (
-          id: 8,
-          label: '8 draft',
-        ), Completer<_Row>().future).ignore();
+        final pendingEdit = editStoreNotifier.pendingEdit(7, (id: 7, label: '7 draft'))..book();
+        editStoreNotifier.pendingEdit(8, (id: 8, label: '8 draft')).book();
 
-        saveCompleter.complete((id: 7, label: '7 saved'));
-        await savedFuture;
+        pendingEdit.settle((id: 7, label: '7 saved'));
 
         check(shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: 0))
             .deepEquals(['8 draft', '7 saved', 'a']);
@@ -141,8 +119,7 @@ void main() {
         val(coveredKey, 'a booked edit'),
         val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) {
           editStoreNotifier.book(1, (id: 1, label: 'booked'));
-
-          return fail(draftOut(editStoreNotifier, 'draft'));
+          draftOut(editStoreNotifier, 'draft').drop();
         }),
         val(shownKey, const ['booked']),
       )
@@ -150,7 +127,8 @@ void main() {
         val(coveredKey, 'nothing'),
         val(
           editsKey,
-          (EditStoreNotifier<_Row> editStoreNotifier) => fail(draftOut(editStoreNotifier, 'draft')),
+          (EditStoreNotifier<_Row> editStoreNotifier) =>
+              draftOut(editStoreNotifier, 'draft').drop(),
         ),
         val(shownKey, const ['a']),
       )
@@ -158,51 +136,43 @@ void main() {
         val(coveredKey, 'an older draft still out'),
         val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) {
           draftOut(editStoreNotifier, 'older');
-
-          return fail(draftOut(editStoreNotifier, 'newer'));
+          draftOut(editStoreNotifier, 'newer').drop();
         }),
         val(shownKey, const ['older']),
       )
       .example(
         val(coveredKey, 'nothing, with a newer draft out over it'),
         val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) {
-          final olderDraft = draftOut(editStoreNotifier, 'older');
+          final olderPendingEdit = draftOut(editStoreNotifier, 'older');
           draftOut(editStoreNotifier, 'newer');
-
-          return fail(olderDraft);
+          olderPendingEdit.drop();
         }),
         val(shownKey, const ['newer']),
       )
       .example(
         val(coveredKey, 'nothing, with a newer save that answered'),
-        val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) async {
-          final olderDraft = draftOut(editStoreNotifier, 'older');
-          final newerDraft = draftOut(editStoreNotifier, 'newer');
-          newerDraft.saveCompleter.complete((id: 1, label: 'newer saved'));
-          await newerDraft.savedFuture;
-
-          await fail(olderDraft);
+        val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) {
+          final olderPendingEdit = draftOut(editStoreNotifier, 'older');
+          draftOut(editStoreNotifier, 'newer').settle((id: 1, label: 'newer saved'));
+          olderPendingEdit.drop();
         }),
         val(shownKey, const ['newer saved']),
       )
       .example(
         val(coveredKey, 'an older save that answered'),
-        val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) async {
-          final olderDraft = draftOut(editStoreNotifier, 'older');
-          final newerDraft = draftOut(editStoreNotifier, 'newer');
-          olderDraft.saveCompleter.complete((id: 1, label: 'older saved'));
-          await olderDraft.savedFuture;
-
-          await fail(newerDraft);
+        val(editsKey, (EditStoreNotifier<_Row> editStoreNotifier) {
+          final olderPendingEdit = draftOut(editStoreNotifier, 'older');
+          final newerPendingEdit = draftOut(editStoreNotifier, 'newer');
+          olderPendingEdit.settle((id: 1, label: 'older saved'));
+          newerPendingEdit.drop();
         }),
         val(shownKey, const ['older saved']),
       )
-      .run((context) async {
+      .run((context) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
-        final applyEdits =
-            context.example.val(editsKey) as Future<void> Function(EditStoreNotifier<_Row>);
+        final applyEdits = context.example.val(editsKey) as void Function(EditStoreNotifier<_Row>);
 
-        await applyEdits(editStoreNotifier);
+        applyEdits(editStoreNotifier);
 
         check(shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: 0))
             .deepEquals(context.example.val(shownKey) as List<String>);
@@ -214,22 +184,58 @@ void main() {
       .given('new items 7 then 8, so 8 shows on top')
       .when('a draft of 7 lifts it on top, and its save fails')
       .then('7 goes back under 8')
-      .run((_) async {
+      .run((_) {
         final editStoreNotifier = EditStoreNotifier<_Row>()
           ..book(7, (id: 7, label: '7'))
           ..book(8, (id: 8, label: '8'));
-        final saveCompleter = Completer<_Row>();
-        final savedFuture = editStoreNotifier.bookPending(7, (
-          id: 7,
-          label: '7 renamed',
-        ), saveCompleter.future);
+        final pendingEdit = editStoreNotifier.pendingEdit(7, (id: 7, label: '7 renamed'))..book();
         check(shownLabels(editStoreNotifier, const [], readStamp: 0))
             .deepEquals(['7 renamed', '8']);
 
-        saveCompleter.completeError(Exception('save failed'));
-        await check(savedFuture).throws<Exception>();
+        pendingEdit.drop();
 
         check(shownLabels(editStoreNotifier, const [], readStamp: 0)).deepEquals(['8', '7']);
+        editStoreNotifier.dispose();
+      });
+
+  const outcomeKey = 'outcome';
+  const answerKey = 'answer';
+  const shownBeforeKey = 'shown before';
+  const shownAfterKey = 'shown after';
+
+  Bdd(storeFeature)
+      .scenario('a draft booked after its save answered shows only that answer, as settled')
+      .given('item 1 as the server sent it, and a draft of it whose save <$outcomeKey>')
+      .when('the draft is booked')
+      .then('a page read before shows <$shownBeforeKey>, and one read after shows <$shownAfterKey>')
+      .example(
+        val(outcomeKey, 'answered'),
+        val(
+          answerKey,
+          (PendingEdit<_Row> pendingEdit) => pendingEdit.settle((id: 1, label: 'saved')),
+        ),
+        val(shownBeforeKey, const ['saved']),
+        val(shownAfterKey, const ['a']),
+      )
+      .example(
+        val(outcomeKey, 'failed'),
+        val(answerKey, (PendingEdit<_Row> pendingEdit) => pendingEdit.drop()),
+        val(shownBeforeKey, const ['a']),
+        val(shownAfterKey, const ['a']),
+      )
+      .run((context) {
+        final editStoreNotifier = EditStoreNotifier<_Row>();
+        final pendingEdit = editStoreNotifier.pendingEdit(1, (id: 1, label: 'draft'));
+        (context.example.val(answerKey) as void Function(PendingEdit<_Row>))(pendingEdit);
+        final beforeStamp = editStoreNotifier.value;
+
+        pendingEdit.book();
+
+        check(shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: beforeStamp))
+            .deepEquals(context.example.val(shownBeforeKey) as List<String>);
+        check(
+          shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: editStoreNotifier.value),
+        ).deepEquals(context.example.val(shownAfterKey) as List<String>);
         editStoreNotifier.dispose();
       });
 
@@ -238,31 +244,40 @@ void main() {
       .given('a draft whose save is out')
       .when('the store is cleared, then the save answers')
       .then('the store stays empty and its value stays put')
-      .run((_) async {
+      .run((_) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
-        final draft = draftOut(editStoreNotifier, 'draft');
+        final pendingEdit = draftOut(editStoreNotifier, 'draft');
         editStoreNotifier.clear();
         final clearedValue = editStoreNotifier.value;
 
-        draft.saveCompleter.complete((id: 1, label: 'saved'));
-        await draft.savedFuture;
+        pendingEdit.settle((id: 1, label: 'saved'));
 
         check((editStoreNotifier.isEmpty, editStoreNotifier.value)).equals((true, clearedValue));
         editStoreNotifier.dispose();
       });
 
   Bdd(storeFeature)
-      .scenario('a save answering after dispose still reaches its caller, and touches nothing')
+      .scenario('a save answering after dispose touches nothing')
       .given('a draft whose save is out')
-      .when('the store is disposed, then the save answers')
-      .then('the caller gets the saved item, with nothing thrown')
-      .run((_) async {
+      .when('the store is disposed, then the save <$outcomeKey>')
+      .then('nothing throws')
+      .example(
+        val(outcomeKey, 'answers'),
+        val(
+          answerKey,
+          (PendingEdit<_Row> pendingEdit) => pendingEdit.settle((id: 1, label: 'saved')),
+        ),
+      )
+      .example(
+        val(outcomeKey, 'fails'),
+        val(answerKey, (PendingEdit<_Row> pendingEdit) => pendingEdit.drop()),
+      )
+      .run((context) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
-        final draft = draftOut(editStoreNotifier, 'draft');
+        final pendingEdit = draftOut(editStoreNotifier, 'draft');
+        final answer = context.example.val(answerKey) as void Function(PendingEdit<_Row>);
         editStoreNotifier.dispose();
 
-        draft.saveCompleter.complete((id: 1, label: 'saved'));
-
-        check(await draft.savedFuture).equals((id: 1, label: 'saved'));
+        check(() => answer(pendingEdit)).returnsNormally();
       });
 }
