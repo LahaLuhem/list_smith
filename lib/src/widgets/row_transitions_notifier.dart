@@ -13,11 +13,8 @@ import '/src/data/presentation/typedefs/item_builder.dart';
 final class RowTransitionsNotifier<T extends Object>({
   /// Ticks the controllers.
   required final TickerProvider vsync,
-
-  /// Removes an item once its row has gone.
-  required final void Function(T item) bookRemoval,
 }) extends ChangeNotifier {
-  final _transitions = <Object, _Transition<T>>{};
+  final _transitions = <Object, _Transition>{};
   final _rows = <Object, _TransitionRowState<T>>{};
 
   /// Creates it.
@@ -44,20 +41,25 @@ final class RowTransitionsNotifier<T extends Object>({
 
       return;
     }
-    if (transition.leavingItem == null) return;
+    if (transition.bookRemoval == null) return;
 
     transition
-      ..leavingItem = null
+      ..bookRemoval = null
       ..leavingChild = null;
     _animate(transition, isEntering: true);
   }
 
-  /// Animates a shown row out, then removes [item].
-  void remove(Object id, T item, {required Duration duration, required Axis axis}) {
+  /// Animates a shown row out, and runs [bookRemoval] once it's gone.
+  void remove(
+    Object id, {
+    required VoidCallback bookRemoval,
+    required Duration duration,
+    required Axis axis,
+  }) {
     final transition = _transitions[id];
     if (transition != null) {
       transition
-        ..leavingItem = item
+        ..bookRemoval = bookRemoval
         ..leavingChild ??= _rows[id]?._lastChild;
       _animate(transition, isEntering: false);
 
@@ -65,7 +67,7 @@ final class RowTransitionsNotifier<T extends Object>({
     }
 
     _start(id, duration, value: 1)
-      ..leavingItem = item
+      ..bookRemoval = bookRemoval
       ..leavingChild = _rows[id]?._lastChild;
     // A frame on, so a row that shrank itself (a Dismissible, a Slidable) reads as empty. Those throw
     // if kept in the tree once they're done.
@@ -74,11 +76,14 @@ final class RowTransitionsNotifier<T extends Object>({
       ..ensureVisualUpdate();
   }
 
-  /// Ends every transition now, removing what the exits held back, so none carries onto a fresh list.
+  /// Ends every transition now, booking what the exits held back, so none carries onto a fresh list.
   void settle() {
     if (_transitions.isEmpty) return;
 
-    _transitions.values.map((transition) => transition.leavingItem).nonNulls.forEach(bookRemoval);
+    final heldRemovals = _transitions.values.map((transition) => transition.bookRemoval).nonNulls;
+    for (final bookRemoval in heldRemovals) {
+      bookRemoval();
+    }
     _disposeTransitions();
 
     notifyListeners();
@@ -91,14 +96,14 @@ final class RowTransitionsNotifier<T extends Object>({
     super.dispose();
   }
 
-  _Transition<T> _start(Object id, Duration duration, {required double value}) {
+  _Transition _start(Object id, Duration duration, {required double value}) {
     final controller = AnimationController(vsync: vsync, duration: duration, value: value)
       ..addStatusListener((status) => _onStatus(id, status));
 
     return _transitions[id] = _Transition(controller);
   }
 
-  void _animate(_Transition<T> transition, {required bool isEntering}) {
+  void _animate(_Transition transition, {required bool isEntering}) {
     transition.hasStarted = true;
     unawaited(isEntering ? transition.controller.forward() : transition.controller.reverse());
 
@@ -108,7 +113,7 @@ final class RowTransitionsNotifier<T extends Object>({
   void _startExit(Object id, Axis axis) {
     final transition = _transitions[id];
     // Settled, or brought back by an upsert, meanwhile.
-    if (transition == null || transition.leavingItem == null) return;
+    if (transition == null || transition.bookRemoval == null) return;
 
     if ((_rows[id]?._extentAlong(axis) ?? 0) == 0) {
       _finishExit(id);
@@ -121,7 +126,7 @@ final class RowTransitionsNotifier<T extends Object>({
     final transition = _transitions[id];
     if (transition == null) return;
 
-    final isLeaving = transition.leavingItem != null;
+    final isLeaving = transition.bookRemoval != null;
     if (status.isDismissed && isLeaving) _finishExit(id);
     if (status.isCompleted && !isLeaving) _finishEntry(id);
   }
@@ -131,8 +136,7 @@ final class RowTransitionsNotifier<T extends Object>({
     if (transition == null) return;
 
     transition.controller.dispose();
-    final leavingItem = transition.leavingItem;
-    if (leavingItem != null) bookRemoval(leavingItem);
+    transition.bookRemoval?.call();
     notifyListeners();
   }
 
@@ -154,24 +158,24 @@ final class RowTransitionsNotifier<T extends Object>({
     return transition != null && transition.hasStarted ? transition.controller : null;
   }
 
-  bool _isLeaving(Object id) => _transitions[id]?.leavingItem != null;
+  bool _isLeaving(Object id) => _transitions[id]?.bookRemoval != null;
 
   /// What a leaving row shows instead of building its item again: the item is already gone from the
   /// consumer's store.
   Widget? _leavingChildOf(Object id) {
     final transition = _transitions[id];
-    if (transition == null || transition.leavingItem == null) return null;
+    if (transition == null || transition.bookRemoval == null) return null;
 
     return transition.leavingChild ?? const SizedBox.shrink();
   }
 }
 
-/// One row's animation. [leavingItem] is set while the row goes out.
-final class _Transition<T extends Object>(final AnimationController controller) {
+/// One row's animation. [bookRemoval] is set while the row goes out.
+final class _Transition(final AnimationController controller) {
   /// False for an exit waiting its frame, so the row isn't wrapped before it moves.
   var hasStarted = false;
 
-  T? leavingItem;
+  VoidCallback? bookRemoval;
   Widget? leavingChild;
 }
 

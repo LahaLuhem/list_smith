@@ -131,10 +131,7 @@ class _AsyncListViewState<T extends Object>()
   _ReloadRun<T>? _runningReload;
 
   /// The rows edits are animating. Idle unless the source has an [EditTransition].
-  late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(
-    vsync: this,
-    bookRemoval: (item) => _edit(item, null),
-  );
+  late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(vsync: this);
 
   @override
   void initState() {
@@ -626,18 +623,20 @@ class _AsyncListViewState<T extends Object>()
   }
 
   @override
-  void remove(T item) {
+  void remove(T item) => _bookShrinkingOut(item, () => _edit(item, null));
+
+  void _bookShrinkingOut(T item, VoidCallback book) {
     final animation = _editAnimation;
     final id = widget.source.itemIdGetter(item);
     if (animation == null || !_isShown(id)) {
-      _edit(item, null);
+      book();
 
       return;
     }
 
     _rowTransitionsNotifier.remove(
       id,
-      item,
+      bookRemoval: book,
       duration: animation.duration,
       axis: widget.scrollConfig.scrollDirection,
     );
