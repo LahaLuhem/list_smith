@@ -605,8 +605,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Sync and `void`,** unlike the other verbs. The change is already true on the server or in the
   store, and `void` keeps `Dismissible.onDismissed` plain.
 - **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
-  in-flight page's cursor, so the next page repeats. Anything that changes what the edits show
-  bumps `_editStampNotifier` instead, since the display memo keys on it.
+  in-flight page's cursor, so the next page repeats. The edit store moves its own counter instead,
+  on every change that shows, since the display memo keys on it.
 - **New items** join the start of their group, else the top, since async groups have to stay
   together. They stay out of search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That

@@ -12,8 +12,6 @@ import 'package:multi_value_listenable_builder_typed/multi_value_listenable_buil
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/control/models/list_smith_controller_host.dart';
 import '/src/data/edits/models/edit_transition.dart';
-import '/src/data/edits/typedefs/item_edit.dart';
-import '/src/data/edits/utils/edit_resolver.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
@@ -37,6 +35,7 @@ import '/src/data/search/models/search.dart';
 import '/src/data/search/models/search_page_request.dart';
 import '/src/data/source/list_source.dart';
 import '/src/utils/query_debouncer.dart';
+import '../data/edits/models/edit_store_notifier.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -123,12 +122,7 @@ class _AsyncListViewState<T extends Object>()
   /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
   ({PagingState<T> raw, int editStamp, bool isSearchMode, _Display<T> display})? _displayMemo;
 
-  /// The latest local edit per item id, oldest first. Beside the pages rather than in them, so the end
-  /// policy and the reloads keep reading what the server sent.
-  final _edits = <Object, ItemEdit<T>>{};
-
-  /// Counts local edits.
-  final _editStampNotifier = ValueNotifier<int>(0);
+  final _editStoreNotifier = EditStoreNotifier<T>();
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
   late final ValueNotifier<bool> _searchModeNotifier;
@@ -151,7 +145,7 @@ class _AsyncListViewState<T extends Object>()
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
-    _editStampNotifier.addListener(_maybeAdvancePastEmptyPage);
+    _editStoreNotifier.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
     // A run too, so a reload asked meanwhile meets this load instead of cutting it.
     _startRun(.initialLoad, (run) => run.reset());
@@ -177,7 +171,7 @@ class _AsyncListViewState<T extends Object>()
     _debouncer.dispose();
     _pagingStateNotifier.dispose();
     _searchModeNotifier.dispose();
-    _editStampNotifier.dispose();
+    _editStoreNotifier.dispose();
     _rowTransitionsNotifier.dispose();
 
     super.dispose();
@@ -200,7 +194,7 @@ class _AsyncListViewState<T extends Object>()
 
       return;
     }
-    final readStamp = _editStampNotifier.value; // before the await, so a later edit is newer
+    final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
 
     try {
       final (items, signal) = await _fetchPageRaw(
@@ -323,7 +317,7 @@ class _AsyncListViewState<T extends Object>()
     final pages = state.pages;
     if (pages == null) return (state: state, shownIds: const {});
 
-    final editStamp = _editStampNotifier.value;
+    final editStamp = _editStoreNotifier.value;
     final isSearchMode = _searchModeNotifier.value;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
@@ -334,7 +328,7 @@ class _AsyncListViewState<T extends Object>()
     }
 
     final _Display<T> display;
-    if (_edits.isEmpty) {
+    if (_editStoreNotifier.isEmpty) {
       // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
       final seenIds = <Object>{};
       display = (
@@ -342,9 +336,8 @@ class _AsyncListViewState<T extends Object>()
         shownIds: seenIds,
       );
     } else {
-      final (pages: displayPages, :shownIds) = resolveDisplayPages(
-        pages: pages,
-        edits: _edits,
+      final (pages: displayPages, :shownIds) = _editStoreNotifier.applyTo(
+        pages,
         itemIdGetter: itemIdGetter,
         groupOf: widget.grouping.groupOf,
         acceptsNewItems: !isSearchMode, // only the server knows what matches the query
@@ -356,20 +349,16 @@ class _AsyncListViewState<T extends Object>()
     return display;
   }
 
-  /// Forgets edits that every loaded and parked page was read after, since the server's copy has
-  /// caught up.
+  /// Parked pages count too, so a feed kept while searching comes back with its edits.
   void _dropDeadEdits() {
-    if (_edits.isEmpty) return;
+    if (_editStoreNotifier.isEmpty) return;
 
-    final readStamps = [
-      ...?_pagingStateNotifier.value.pages,
-      ...?_normalSnapshot?.state.pages,
-    ].map((page) => page.readStamp);
-    if (readStamps.isEmpty) return;
-
-    final oldestRead = readStamps.min;
-    // Nothing dropped here still shows, so no [_editStampNotifier] bump, which the display memo keys on.
-    _edits.removeWhere((_, edit) => edit.stamp <= oldestRead);
+    _editStoreNotifier.dropCaughtUp(
+      // Mapped first: a `const []` is a list of `Never`, so `followedBy` would reject the parked pages.
+      (_pagingStateNotifier.value.pages ?? const [])
+          .map((page) => page.readStamp)
+          .followedBy((_normalSnapshot?.state.pages ?? const []).map((page) => page.readStamp)),
+    );
   }
 
   /// Pages past an empty page when [EmptyPageBehaviour.shouldAdvance] says so, since with no rows on
@@ -511,7 +500,7 @@ class _AsyncListViewState<T extends Object>()
       firstListenable: _pagingStateNotifier,
       secondListenable: _searchModeNotifier,
       // An edit only needs the rebuild, _displayFor reads the edits.
-      thirdListenable: _editStampNotifier,
+      thirdListenable: _editStoreNotifier,
       builder: (context, state, isSearchMode, _, _) => PagedView(
         state: _shownStateFor(state),
         onNearEnd: _onNearEnd,
@@ -632,15 +621,8 @@ class _AsyncListViewState<T extends Object>()
   /// Whether the item with [id] has a row in what renders now.
   bool _isShown(Object id) => _displayFor(_pagingStateNotifier.value).shownIds.contains(id);
 
-  /// Books [editedItem] against [item]'s id, null for a removal.
-  void _edit(T item, T? editedItem) {
-    final id = widget.source.itemIdGetter(item);
-    final stamp = _editStampNotifier.value + 1;
-    _edits
-      ..remove(id) // re-booked at the end, so the newest new item lands on top
-      ..[id] = (item: editedItem, stamp: stamp);
-    _editStampNotifier.value = stamp;
-  }
+  void _edit(T item, T? editedItem) =>
+      _editStoreNotifier.book(widget.source.itemIdGetter(item), editedItem);
 
   /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run. [reload]
   /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
@@ -743,7 +725,7 @@ final class _ReloadRun<T extends Object>(
 
   @override
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
-    _readStamps[index] = _engine._editStampNotifier.value;
+    _readStamps[index] = _engine._editStoreNotifier.value;
 
     return _engine._fetchPageRaw(index, previousSignal, trigger);
   }

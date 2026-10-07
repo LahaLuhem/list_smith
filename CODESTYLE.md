@@ -89,7 +89,7 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   `x`/`y` for coordinates.
 - **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
   inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
-  its name (`pageResult`, not `result`, `_editStampNotifier`, not `_editStamp`). A role name goes
+  its name (`pageResult`, not `result`, `_pagingStateNotifier`, not `_pagingState`). A role name goes
   in front of the suffix, not instead of it (`firstLoadHoldCompleter`, not `firstLoadHold`), so the
   name says what a thing is for and what it is. A plural is enough for a collection. A public
   parameter keeps its API name (`fetchPage`), since that's the name every caller reads and types.
