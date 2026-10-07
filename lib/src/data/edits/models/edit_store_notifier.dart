@@ -164,6 +164,14 @@ final class PendingEdit<T extends Object>._(
   ({T? item})? _earlyAnswer;
   var _isDropped = false;
 
+  /// Whether it's booked, still out, and its item's newest edit.
+  bool get isNewest {
+    final pendingBookedEdit = _pendingBookedEdit;
+
+    return pendingBookedEdit != null &&
+        identical(_editStoreNotifier._bookedEditsById[_itemId]?.last, pendingBookedEdit);
+  }
+
   /// Shows it over every page, read before it or after.
   void book() {
     if (_pendingBookedEdit != null || _isDropped) return;

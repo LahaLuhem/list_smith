@@ -539,6 +539,19 @@ void main() {
       check(_shownRows().first).equals('item 1');
     });
 
+    scenarioWidgets('a save that comes back under another id fails in development', (tester) async {
+      final (_, controller) = await pumpRows(tester);
+      final savedFuture = controller.upsertAsync((
+        id: 9,
+        label: 'new',
+      ), commit: Future.value((id: 10, label: 'new')));
+
+      await check(savedFuture).throws<AssertionError>();
+      await tester.pump();
+
+      check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
+    });
+
     scenarioWidgets('reset() mid-save drops the draft, and its late answer changes nothing', (
       tester,
     ) async {

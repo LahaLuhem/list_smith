@@ -381,6 +381,167 @@ void main() {
       check(tester.getTopLeft(find.text('group 1')).dy).isLessThan(_topOf(tester, 11));
     });
   });
+
+  feature('ListSmith.async edit transitions while a save is out', () {
+    scenarioWidgets('a delete that fails mid-exit turns its row round, state kept', (tester) async {
+      final controller = await _pumpRows(tester);
+      await tester.tap(find.text('off 2'));
+      await tester.pump();
+      final deleteCompleter = Completer<void>();
+
+      final removedFuture = controller.removeAsync(2, commit: deleteCompleter.future);
+      await _startExit(tester);
+      await tester.pump(const Duration(milliseconds: 150));
+      final leavingHeight = _heightOf(2);
+      check(leavingHeight).isLessThan(50);
+      deleteCompleter.completeError(Exception('delete failed'));
+      await check(removedFuture).throws<Exception>();
+      await tester.pump(); // a restarted ticker's 1st frame has no time in it
+      await tester.pump(const Duration(milliseconds: 50));
+      final returningHeight = _heightOf(2);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      check(returningHeight).isGreaterThan(leavingHeight);
+      check(_heightOf(2)).equals(50);
+      check(shownToggleRows()).deepEquals(['off 1', 'on 2', 'off 3']);
+    });
+
+    scenarioWidgets('a delete that fails after its exit grows its row back in', (tester) async {
+      final controller = await _pumpRows(tester);
+      final deleteCompleter = Completer<void>();
+
+      final removedFuture = controller.removeAsync(2, commit: deleteCompleter.future);
+      await _startExit(tester);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      check(shownToggleRows()).deepEquals(['off 1', 'off 3']); // premise: the exit is over
+      deleteCompleter.completeError(Exception('delete failed'));
+      await check(removedFuture).throws<Exception>();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      final growingHeight = _heightOf(2);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
+      check(growingHeight)
+        ..isGreaterThan(0)
+        ..isLessThan(50);
+      check(_heightOf(2)).equals(50);
+      check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3']);
+    });
+
+    scenarioOutlineWidgets<({int item, bool isCoveredByNewerEdit, bool leaves})>(
+      'a failed save animates out only a row it brought in',
+      examples: const {
+        'a new row': (item: 9, isCoveredByNewerEdit: false, leaves: true),
+        'a row already shown': (item: 2, isCoveredByNewerEdit: false, leaves: false),
+        'a new row a newer edit covers': (item: 9, isCoveredByNewerEdit: true, leaves: false),
+      },
+      outline: (tester, example) async {
+        final controller = await _pumpRows(tester);
+        final saveCompleter = Completer<int>();
+
+        final savedFuture = controller.upsertAsync(example.item, commit: saveCompleter.future);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400)); // past any entry
+        await tester.pump();
+        if (example.isCoveredByNewerEdit) controller.upsert(example.item);
+        saveCompleter.completeError(Exception('save failed'));
+        await check(savedFuture).throws<Exception>();
+        await _startExit(tester);
+        await tester.pump(const Duration(milliseconds: 150));
+        final failedHeight = _heightOf(example.item);
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+
+        check(failedHeight < 50).equals(example.leaves);
+        check(shownToggleRows().contains('off ${example.item}')).equals(!example.leaves);
+      },
+    );
+
+    scenarioWidgets('a pull that starts over mid-exit keeps a pending delete hidden', (
+      tester,
+    ) async {
+      final server = FakeServer(const [1, 2, 3]); // still has 2 while the delete is out
+      final controller = await _pumpRows(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        refresh: const PullToRefresh(),
+      );
+
+      unawaited(controller.removeAsync(2, commit: Completer<void>().future));
+      await _startExit(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      check(_heightOf(2)).isLessThan(50);
+      await controller.refresh();
+      await drain(tester, frames: 12);
+
+      check(server.attempts[0]).equals(2); // premise: page 0 was read again
+      check(shownToggleRows()).deepEquals(['off 1', 'off 3']);
+    });
+
+    scenarioWidgets('a query change mid-exit keeps a pending delete hidden, in results and feed', (
+      tester,
+    ) async {
+      final controller = ListSmithController<int>();
+      await _pumpKept(tester, controller, query: '');
+
+      unawaited(controller.removeAsync(4, commit: Completer<void>().future));
+      await _startExit(tester);
+      await tester.pump(const Duration(milliseconds: 100));
+      check(_heightOf(4)).isLessThan(50);
+      await _pumpKept(tester, controller, query: 'q');
+      await settle(tester);
+      final resultRows = shownToggleRows();
+      await _pumpKept(tester, controller, query: '');
+      await settle(tester);
+
+      check(resultRows).deepEquals(['off 2', 'off 6']);
+      check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3', 'off 5', 'off 6']);
+    });
+
+    scenarioWidgets(
+      'reset() mid-exit drops a pending delete, and its late answer changes nothing',
+      (tester) async {
+        final server = FakeServer(const [1, 2, 3]); // still has 2 while the delete is out
+        final controller = await _pumpRows(tester, fetchPage: server.offsetLateFetcher);
+        final deleteCompleter = Completer<void>();
+
+        final removedFuture = controller.removeAsync(2, commit: deleteCompleter.future);
+        await _startExit(tester);
+        await tester.pump(const Duration(milliseconds: 100));
+        check(_heightOf(2)).isLessThan(50);
+        await controller.reset();
+        await drain(tester, frames: 12);
+        final resetRows = shownToggleRows();
+        deleteCompleter.complete();
+        await removedFuture;
+        await tester.pump();
+
+        check(resetRows).deepEquals(['off 1', 'off 2', 'off 3']);
+        check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3']);
+      },
+    );
+
+    scenarioWidgets('saves failing after the list is gone still reach their callers', (
+      tester,
+    ) async {
+      final controller = await _pumpRows(tester);
+      final createCompleter = Completer<int>();
+      final deleteCompleter = Completer<void>();
+      final createdFuture = controller.upsertAsync(9, commit: createCompleter.future);
+      final removedFuture = controller.removeAsync(2, commit: deleteCompleter.future);
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox()); // the list goes
+
+      createCompleter.completeError(Exception('save failed'));
+      await check(createdFuture).throws<Exception>();
+      deleteCompleter.completeError(Exception('delete failed'));
+      await check(removedFuture).throws<Exception>();
+    });
+  });
 }
 
 final _byTens = Grouping.by<int, int>(

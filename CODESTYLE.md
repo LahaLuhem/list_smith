@@ -122,8 +122,8 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   and say which is which in the callback's dartdoc, not in the parameter name.
 - **Files mirror the primary public class name.** `PagedListView` in `paged_list_view.dart`,
   `PagedListController` in `paged_list_controller.dart`, enforced by `file_names`. One primary
-  public class per file, though private `_helper` classes may share it. Placement follows
-  [Directory layout](#directory-layout).
+  public class per file, though private `_helper` classes may share it, and so may a public type
+  only that class hands out. Placement follows [Directory layout](#directory-layout).
 
 ---
 
@@ -314,8 +314,8 @@ back door. Watching the list is the observer's job. Full rationale:
 
 **How:**
 
-- One verb per consumer intent, returning a `Future<void>` that completes when the work does. The
-  edit verbs have no work to wait for, so they're sync `void`
+- One verb per consumer intent, returning a `Future` that completes when the work does. `upsert` and
+  `remove` have no work to wait for, so they're sync `void`
   ([`APPENDIX.md#edit-layer`](APPENDIX.md#edit-layer)).
 - The engine implements `ListSmithControllerHost` and attaches itself, so the gesture and the handle
   run the same entry point and the handle can't carry a 2nd implementation that drifts.

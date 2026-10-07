@@ -20,6 +20,7 @@
 - [Pull to refresh](#pull-to-refresh)
     * [Refreshing from code](#refreshing-from-code)
 - [Editing loaded items](#editing-loaded-items)
+    * [Before your server answers](#before-your-server-answers)
     * [Animating edits](#animating-edits)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
@@ -396,28 +397,52 @@ in your store. Where the item shows:
   query. Changes and removals show in the results too.
 
 An edit lasts until the pages it covers are read again, and a page loaded after it shows your
-server's copy. So after a failed save, a refresh puts that copy back. Removals never end the list
-early: the end policy still counts what the server sent, and removing every row on the screen loads
-the next page.
+server's copy. Removals never end the list early: the end policy still counts what the server sent,
+and removing every row on the screen loads the next page.
 
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
 while rows above it come and go.
 
-`remove` fits `Dismissible.onDismissed` as it is:
+> On an offset-paged list, a deletion on your server moves every later row up a place, so the next
+> page skips one. Use cursor paging for a list you edit, for now.
+
+### Before your server answers
+
+`upsertAsync` and `removeAsync` show the edit at once and hold it while your save is out:
+
+```dart
+try {
+  await controller.upsertAsync(draft, commit: api.save(draft));
+} on ApiException {
+  showSnackBar("Couldn't save");
+}
+```
+
+- The draft shows over every page until `commit` answers, whatever the list reads meanwhile.
+- Then the item `commit` returned shows, and lasts like any edit. It has to keep the draft's id, which
+  an assert checks. If your server picks ids, create first, then `upsert` what it returns.
+- If `commit` fails, the draft goes, what it covered comes back, and the error is rethrown.
+- `reset()` drops every draft, and a save answering after that changes nothing.
+
+`removeAsync` fits `Dismissible.onDismissed`. Catch its error, or it lands as an unhandled one:
 
 ```dart
 itemBuilder: (context, task, index) => Dismissible(
   key: ValueKey(task.id),
-  onDismissed: (_) => controller.remove(task),
+  onDismissed: (_) async {
+    try {
+      await controller.removeAsync(task, commit: api.delete(task));
+    } on ApiException {
+      showSnackBar("Couldn't delete");
+    }
+  },
   child: TaskTile(task),
 ),
 ```
 
-The row has to go before your server has answered, so if the delete then fails, a refresh brings it
-back.
-
-> On an offset-paged list, a deletion on your server moves every later row up a place, so the next
-> page skips one. Use cursor paging for a list you edit, for now.
+If your app caches, keep a draft out of the cache until its save answers, or a re-read from it can
+keep a failed draft on screen. And time out your calls: a save that never answers keeps its draft
+until `reset()`.
 
 ### Animating edits
 
@@ -443,6 +468,8 @@ timing, not a look.
 
 - Only edits animate. Page loads, reloads and rows scrolling in show at once.
 - A removed row stays until its exit ends, so upserting it meanwhile brings it back.
+- Rollbacks animate too: a failed create leaves like a `remove`, a failed delete comes back like an
+  `upsert`.
 - A row that shrinks itself, like a `Dismissible` or a Slidable's full swipe, goes at once, with no
   second animation on top.
 - With the platform's reduce-motion setting on, edits show at once.
