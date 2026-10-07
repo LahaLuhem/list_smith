@@ -569,8 +569,11 @@ class _AsyncListViewState<T extends Object>()
   Future<void> reset() {
     widget.observer?.onReload(.invalidated);
     _normalSnapshot = null; // the kept feed starts over too: the restore falls through to page 0
+    final doneFuture = _startRun(.invalidated, (run) => run.reset()).doneFuture;
+    // After the run settles held exits, so none books into the fresh list.
+    _editStoreNotifier.clear();
 
-    return _startRun(.invalidated, (run) => run.reset()).doneFuture;
+    return doneFuture;
   }
 
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
@@ -578,18 +581,48 @@ class _AsyncListViewState<T extends Object>()
   Future<void> _refreshFromPull() => _runReload(.refresh).handOverFuture;
 
   @override
-  void upsert(T item) {
+  void upsert(T item) => _bookGrowingIn(item, () => _edit(item, item));
+
+  @override
+  Future<T> upsertAsync(T draft, {required Future<T> commit}) {
+    final itemIdGetter = widget.source.itemIdGetter;
+    final draftId = itemIdGetter(draft);
+
+    return _bookGrowingIn(
+      draft,
+      () => _editStoreNotifier.bookPending(
+        draftId,
+        draft,
+        commit.then((savedItem) {
+          assert(
+            itemIdGetter(savedItem) == draftId,
+            "upsertAsync needs the saved item to keep the draft's id.",
+          );
+
+          return savedItem;
+        }),
+      ),
+    );
+  }
+
+  @override
+  Future<void> removeAsync(T item, {required Future<void> commit}) => _editStoreNotifier
+      .bookPending(widget.source.itemIdGetter(item), null, commit.then((_) => null));
+
+  R _bookGrowingIn<R>(T item, R Function() book) {
     final animation = _editAnimation;
-    if (animation == null) return _edit(item, item);
+    if (animation == null) return book();
 
     final id = widget.source.itemIdGetter(item);
     final wasShown = _isShown(id);
-    _edit(item, item);
+    final bookingOutcome = book();
     _rowTransitionsNotifier.upsert(
       id,
       isNewRow: !wasShown && _isShown(id),
       duration: animation.duration,
     );
+
+    return bookingOutcome;
   }
 
   @override

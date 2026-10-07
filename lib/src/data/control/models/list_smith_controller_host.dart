@@ -22,4 +22,10 @@ abstract interface class ListSmithControllerHost<T extends Object>._() {
 
   /// See [ListSmithController.remove].
   void remove(T item);
+
+  /// See [ListSmithController.upsertAsync].
+  Future<T> upsertAsync(T draft, {required Future<T> commit});
+
+  /// See [ListSmithController.removeAsync].
+  Future<void> removeAsync(T item, {required Future<void> commit});
 }
