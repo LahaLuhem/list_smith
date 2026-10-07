@@ -727,7 +727,7 @@ final class MyObserver extends ListSmithObserver {
   const MyObserver();
 
   @override
-  void onError(Exception error, StackTrace stackTrace) => crashReporter.record(error, stackTrace);
+  void onError(Exception exception, StackTrace stackTrace) => crashReporter.record(exception, stackTrace);
 }
 
 ListSmith.async(

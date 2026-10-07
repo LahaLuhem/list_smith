@@ -12,7 +12,7 @@ final class const PagingState<T extends Object>({
   final List<LoadedPage<T>>? pages,
 
   /// What the last page fetch threw. Only [failed] sets it.
-  final Exception? error,
+  final Exception? exception,
 
   /// Whether the source may have more pages.
   final bool hasNextPage = true,
@@ -26,33 +26,33 @@ final class const PagingState<T extends Object>({
   /// The surface to show. Counts pages instead of flattening them, so it stays O(pages).
   PagingStatus get status {
     final pages = this.pages;
-    if (pages == null) return error == null ? .loadingFirstPage : .firstPageError;
+    if (pages == null) return exception == null ? .loadingFirstPage : .firstPageError;
     if (pages.every((page) => page.items.isEmpty)) {
-      return error == null ? .noItemsFound : .firstPageError;
+      return exception == null ? .noItemsFound : .firstPageError;
     }
     if (!hasNextPage) return .completed;
 
-    return error == null ? .ongoing : .subsequentPageError;
+    return exception == null ? .ongoing : .subsequentPageError;
   }
 
-  /// A fetch is on its way, so the last one's error goes.
+  /// A fetch is on its way, so the last one's exception goes.
   PagingState<T> loading() => PagingState(pages: pages, hasNextPage: hasNextPage, isLoading: true);
 
-  /// The fetch on its way threw [error].
-  PagingState<T> failed(Exception error) =>
-      PagingState(pages: pages, error: error, hasNextPage: hasNextPage);
+  /// The fetch on its way threw [exception].
+  PagingState<T> failed(Exception exception) =>
+      PagingState(pages: pages, exception: exception, hasNextPage: hasNextPage);
 
   /// Nothing on its way and no error, as a stream parked while searching should come back.
   PagingState<T> settled() => PagingState(pages: pages, hasNextPage: hasNextPage);
 
-  /// A copy with the given fields replaced. The error only changes through [loading], [failed] and
+  /// A copy with the given fields replaced. The exception only changes through [loading], [failed] and
   /// [settled].
-  // Leaves error out on purpose, as the doc says.
+  // Leaves exception out on purpose, as the doc says.
   // ignore: avoid-incomplete-copy-with
   PagingState<T> copyWith({List<LoadedPage<T>>? pages, bool? hasNextPage, bool? isLoading}) =>
       PagingState(
         pages: pages ?? this.pages,
-        error: error,
+        exception: exception,
         hasNextPage: hasNextPage ?? this.hasNextPage,
         isLoading: isLoading ?? this.isLoading,
       );
@@ -73,7 +73,7 @@ final class const PagingState<T extends Object>({
   String toString() =>
       'PagingState('
       'pages: ${pages?.length}, '
-      'error: $error, '
+      'exception: $exception, '
       'hasNextPage: $hasNextPage, '
       'isLoading: $isLoading'
       ')';

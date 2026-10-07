@@ -331,16 +331,16 @@ void main() {
       tester,
     ) async {
       final controller = ListSmithController<int>();
-      final reportedErrors = <Exception>[];
+      final reportedExceptions = <Exception>[];
 
-      await controller.upsertAsync(1, commit: Future.value(1), onFailure: reportedErrors.add);
+      await controller.upsertAsync(1, commit: Future.value(1), onFailure: reportedExceptions.add);
       await controller.removeAsync(
         1,
         commit: Future.error(Exception('delete failed')),
-        onFailure: reportedErrors.add,
+        onFailure: reportedExceptions.add,
       );
 
-      check(reportedErrors).length.equals(1);
+      check(reportedExceptions).length.equals(1);
     });
 
     scenarioWidgets('an invalidate() meeting a live one runs again, so a write mid-read lands', (

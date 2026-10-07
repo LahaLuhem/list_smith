@@ -67,9 +67,9 @@ class const ReloadView({super.key}) extends StatelessWidget {
                   ),
                 ),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.lastErrorListenable,
-                  builder: (_, lastError, _) =>
-                      lastError == null ? const SizedBox.shrink() : Text('$lastError'),
+                  valueListenable: viewModel.lastExceptionListenable,
+                  builder: (_, lastException, _) =>
+                      lastException == null ? const SizedBox.shrink() : Text('$lastException'),
                 ),
               ],
             ),

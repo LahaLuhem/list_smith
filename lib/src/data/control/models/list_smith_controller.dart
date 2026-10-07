@@ -63,7 +63,7 @@ class ListSmithController<T extends Object>() {
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   }) =>
       _host?.upsertAsync(draft, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -73,7 +73,7 @@ class ListSmithController<T extends Object>() {
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   }) =>
       _host?.removeAsync(item, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -96,12 +96,12 @@ class ListSmithController<T extends Object>() {
   /// With no list attached there's nothing to roll back, only a failure to pass on.
   static Future<void> _reportFailure(
     Future<Object?> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   ) async {
     try {
       await commit;
-    } on Exception catch (error) {
-      onFailure?.call(error);
+    } on Exception catch (exception) {
+      onFailure?.call(exception);
     }
   }
 }

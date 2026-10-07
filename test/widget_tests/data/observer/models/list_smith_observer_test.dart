@@ -34,7 +34,7 @@ void main() {
       await drain(tester);
 
       check(observer.events).contains('error');
-      check(observer.lastError).isA<Exception>();
+      check(observer.lastException).isA<Exception>();
     });
 
     scenarioWidgets('onReload reports refresh when the list is pulled', (tester) async {
@@ -284,8 +284,8 @@ void main() {
     scenarioWidgets('an observer that overrides only onError still gets its errors', (
       tester,
     ) async {
-      final reportedErrors = <Exception>[];
-      final observer = _ErrorsOnlyObserver(reportedErrors);
+      final reportedExceptions = <Exception>[];
+      final observer = _ErrorsOnlyObserver(reportedExceptions);
       Future<void> pumpWith(String query) => _pumpObserved(
         tester,
         observer,
@@ -302,7 +302,7 @@ void main() {
       await pumpWith('ab');
       await settle(tester);
 
-      check(reportedErrors).length.equals(1);
+      check(reportedExceptions).length.equals(1);
       check(find.text('Something went wrong').evaluate()).length.equals(1);
     });
   });
@@ -332,7 +332,8 @@ Future<void> _pumpObserved(
 );
 
 /// Overrides only `onError`, like the README's observer, so every other event runs its no-op default.
-final class _ErrorsOnlyObserver(final List<Exception> _reportedErrors) extends ListSmithObserver {
+final class _ErrorsOnlyObserver(final List<Exception> _reportedExceptions)
+    extends ListSmithObserver {
   @override
-  void onError(Exception error, StackTrace stackTrace) => _reportedErrors.add(error);
+  void onError(Exception exception, StackTrace stackTrace) => _reportedExceptions.add(exception);
 }

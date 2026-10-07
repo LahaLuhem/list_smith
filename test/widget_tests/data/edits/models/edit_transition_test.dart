@@ -530,16 +530,16 @@ void main() {
       final controller = await _pumpRows(tester);
       final createCompleter = Completer<int>();
       final deleteCompleter = Completer<void>();
-      final reportedErrors = <Exception>[];
+      final reportedExceptions = <Exception>[];
       final createdFuture = controller.upsertAsync(
         9,
         commit: createCompleter.future,
-        onFailure: reportedErrors.add,
+        onFailure: reportedExceptions.add,
       );
       final removedFuture = controller.removeAsync(
         2,
         commit: deleteCompleter.future,
-        onFailure: reportedErrors.add,
+        onFailure: reportedExceptions.add,
       );
       await tester.pump();
 
@@ -548,7 +548,7 @@ void main() {
       deleteCompleter.completeError(Exception('delete failed'));
       await (createdFuture, removedFuture).wait;
 
-      check(reportedErrors).length.equals(2);
+      check(reportedExceptions).length.equals(2);
     });
   });
 }

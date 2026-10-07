@@ -125,7 +125,7 @@ void main() {
         await pullToRefresh(tester, find.text('item 1'));
 
         check(find.text('item 1001').evaluate()).length.equals(1);
-        check(observer.lastError).isA<Exception>();
+        check(observer.lastException).isA<Exception>();
       },
     );
 

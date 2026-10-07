@@ -598,8 +598,8 @@ An `Exception` is a failure the code can handle, so catch it, and type whatever 
 
 ```dart
 // Prefer:
-} on Exception catch (error) {
-  state = state.failed(error);
+} on Exception catch (exception) {
+  state = state.failed(exception);
 }
 
 // Over: handles a bug as if it were a failure.

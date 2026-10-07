@@ -27,13 +27,13 @@ abstract interface class ListSmithControllerHost<T extends Object>._() {
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   });
 
   /// See [ListSmithController.removeAsync].
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception error)? onFailure,
+    void Function(Exception exception)? onFailure,
   });
 }
