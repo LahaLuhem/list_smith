@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, VoidCallback;
 import 'package:list_smith/list_smith.dart';
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show showPlatformToast;
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
@@ -18,11 +19,11 @@ final class EditsViewModel() extends ViewModel {
   /// Below every existing id, so the store sorts new items on top too.
   var _nextNewId = -1;
 
-  final _shouldFailDeletesNotifier = ValueNotifier(false);
+  final _shouldFailSavesNotifier = ValueNotifier(false);
 
   final controller = ListSmithController<DemoItem>();
 
-  ValueListenable<bool> get shouldFailDeletesListenable => _shouldFailDeletesNotifier;
+  ValueListenable<bool> get shouldFailSavesListenable => _shouldFailSavesNotifier;
 
   Future<(List<DemoItem>, Object?)> fetchPage(PageRequest request) async {
     await Future<void>.delayed(_latency);
@@ -39,8 +40,7 @@ final class EditsViewModel() extends ViewModel {
   void onAddPressed() {
     final newId = _nextNewId--;
     final newItem = DemoItem(id: newId, title: 'New item ${-newId}', subtitle: 'Added just now');
-    _store.insert(0, newItem);
-    controller.upsert(newItem);
+    _upsertDraft(newItem, write: () => _store.insert(0, newItem));
   }
 
   void onRenamed(DemoItem item, String title) {
@@ -48,35 +48,52 @@ final class EditsViewModel() extends ViewModel {
     if (trimmedTitle.isEmpty) return;
 
     final renamedItem = DemoItem(id: item.id, title: trimmedTitle, subtitle: item.subtitle);
-    _store[_store.indexWhere((storedItem) => storedItem.id == item.id)] = renamedItem;
-    controller.upsert(renamedItem);
+    _upsertDraft(
+      renamedItem,
+      write: () {
+        final index = _store.indexWhere((storedItem) => storedItem.id == item.id);
+        if (index >= 0) _store[index] = renamedItem; // deleted while the rename was out
+      },
+    );
   }
 
-  void onDeleted(DemoItem item) => unawaited(_removeAsync(item));
+  void onDeleted(DemoItem item) => unawaited(
+    controller.removeAsync(
+      item,
+      commit: _writeLater(() => _store.removeWhere((storedItem) => storedItem.id == item.id)),
+      onFailure: (_) => _showFailure("Couldn't delete ${item.title}"),
+    ),
+  );
 
   // A handler named like the rest, called from the switch's onChanged.
   // ignore: use_setters_to_change_properties
-  void onDeletesFailToggled({required bool value}) => _shouldFailDeletesNotifier.value = value;
+  void onSavesFailToggled({required bool value}) => _shouldFailSavesNotifier.value = value;
 
-  Future<void> _removeAsync(DemoItem item) async {
-    try {
-      await controller.removeAsync(item, commit: _deleteFromStore(item));
-    } on Exception {
-      // The row coming back says the delete failed.
-    }
+  void _upsertDraft(DemoItem draft, {required VoidCallback write}) => unawaited(
+    controller.upsertAsync(
+      draft,
+      commit: _writeLater(write).then((_) => draft),
+      onFailure: (_) => _showFailure("Couldn't save ${draft.title}"),
+    ),
+  );
+
+  /// A save can fail after the screen has gone.
+  void _showFailure(String message) {
+    if (context.mounted) unawaited(showPlatformToast(context: context, message: message));
   }
 
-  Future<void> _deleteFromStore(DemoItem item) async {
-    final shouldFail = _shouldFailDeletesNotifier.value;
+  /// Runs [write] after a server's delay, or fails then if saves were failing when it was asked.
+  Future<void> _writeLater(VoidCallback write) async {
+    final shouldFail = _shouldFailSavesNotifier.value;
     await Future<void>.delayed(_latency);
 
-    if (shouldFail) throw Exception('Simulated delete failure');
-    _store.removeWhere((storedItem) => storedItem.id == item.id);
+    if (shouldFail) throw Exception('Simulated save failure');
+    write();
   }
 
   @override
   void dispose() {
-    _shouldFailDeletesNotifier.dispose();
+    _shouldFailSavesNotifier.dispose();
 
     super.dispose();
   }

@@ -411,31 +411,31 @@ while rows above it come and go.
 `upsertAsync` and `removeAsync` show the edit at once and hold it while your save is out:
 
 ```dart
-try {
-  await controller.upsertAsync(draft, commit: api.save(draft));
-} on ApiException {
-  showSnackBar("Couldn't save");
-}
+controller.upsertAsync(
+  draft,
+  commit: api.save(draft),
+  onFailure: (_) => showSnackBar("Couldn't save"),
+);
 ```
 
 - The draft shows over every page until `commit` answers, whatever the list reads meanwhile.
 - Then the item `commit` returned shows, and lasts like any edit. It has to keep the draft's id, which
   an assert checks. If your server picks ids, create first, then `upsert` what it returns.
-- If `commit` fails, the draft goes, what it covered comes back, and the error is rethrown.
+- If `commit` fails, the draft goes, what it covered comes back, and `onFailure` gets the exception.
+  Nothing throws, so a call you don't await is safe. An `Error`, a bug in your save, is undone too,
+  then goes on to your app.
 - `reset()` drops every draft, and a save answering after that changes nothing.
 
-`removeAsync` fits `Dismissible.onDismissed`. Catch its error, or it lands as an unhandled one:
+`removeAsync` fits `Dismissible.onDismissed` as it is:
 
 ```dart
 itemBuilder: (context, task, index) => Dismissible(
   key: ValueKey(task.id),
-  onDismissed: (_) async {
-    try {
-      await controller.removeAsync(task, commit: api.delete(task));
-    } on ApiException {
-      showSnackBar("Couldn't delete");
-    }
-  },
+  onDismissed: (_) => controller.removeAsync(
+    task,
+    commit: api.delete(task),
+    onFailure: (_) => showSnackBar("Couldn't delete"),
+  ),
   child: TaskTile(task),
 ),
 ```

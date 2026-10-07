@@ -29,6 +29,8 @@ publishes automatically.
   echoing or overriding it.
 - **"Small" choices count.** The bar isn't "is this architecturally significant", it's "could a
   reasonable maintainer disagree with my pick". If yes, ask.
+- **A public API's shape always needs an explicit OK,** plan or no plan.
+  [AGENTS.md](AGENTS.md#guidelines-for-any-ai-agent) has the rule.
 - **Exception:** obvious single-answer fixes (a typo, a clear bug with one correct patch, a lint
   error). Do them.
 

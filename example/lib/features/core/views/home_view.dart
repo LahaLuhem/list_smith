@@ -99,7 +99,7 @@ class const HomeView({super.key}) extends StatelessWidget {
             icon: const PlatformIcon(PlatformIcons.pencil),
             title: 'Edits',
             description:
-                'Swipe to rename or delete, add on top: upsert() and removeAsync(), no refetch.',
+                'Swipe to rename or delete, add on top, each shown before its save answers.',
             pageBuilder: (_) => const EditsView(),
           ),
         ],
