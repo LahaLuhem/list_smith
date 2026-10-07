@@ -297,6 +297,7 @@ void main() {
 
       check(find.text('Item 1').evaluate()).isEmpty();
       check(find.text('New item 1').evaluate()).length.equals(1);
+      await tester.pump(const Duration(seconds: 1)); // the delete answering
     });
 
     scenarioWidgets("the edits demo's Delete shrinks the row away", (tester) async {
@@ -343,7 +344,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
-    scenarioWidgets('with deletes failing, a row swiped away comes back on a pull', (tester) async {
+    scenarioWidgets('with deletes failing, a row swiped away comes back by itself', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -363,14 +364,13 @@ void main() {
         const Offset(-700, 0),
         const Duration(milliseconds: 300),
       );
-      for (var frame = 0; frame < 6; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
+      // The dismissal then the resize take 300ms each, and the delete fails 500ms after.
+      for (var frame = 0; frame < 8 && find.text('Item 1').evaluate().isNotEmpty; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
       }
       check(find.text('Item 1').evaluate()).isEmpty();
-
-      await tester.fling(find.text('Item 2'), const Offset(0, 300), 1000);
       for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 100));
       }
 
       check(find.text('Item 1').evaluate()).length.equals(1);

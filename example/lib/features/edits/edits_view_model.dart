@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
@@ -50,25 +52,26 @@ final class EditsViewModel() extends ViewModel {
     controller.upsert(renamedItem);
   }
 
-  void onDeletePressed(DemoItem item) {
-    if (_deleteFromStore(item)) controller.remove(item);
-  }
-
-  /// The row has to go before the store answers, so a failed delete only shows after a pull.
-  void onDismissed(DemoItem item) {
-    controller.remove(item);
-    _deleteFromStore(item);
-  }
+  void onDeleted(DemoItem item) => unawaited(_removeAsync(item));
 
   // A handler named like the rest, called from the switch's onChanged.
   // ignore: use_setters_to_change_properties
   void onDeletesFailToggled({required bool value}) => _shouldFailDeletesNotifier.value = value;
 
-  bool _deleteFromStore(DemoItem item) {
-    if (_shouldFailDeletesNotifier.value) return false;
-    _store.removeWhere((storedItem) => storedItem.id == item.id);
+  Future<void> _removeAsync(DemoItem item) async {
+    try {
+      await controller.removeAsync(item, commit: _deleteFromStore(item));
+    } on Exception {
+      // The row coming back says the delete failed.
+    }
+  }
 
-    return true;
+  Future<void> _deleteFromStore(DemoItem item) async {
+    final shouldFail = _shouldFailDeletesNotifier.value;
+    await Future<void>.delayed(_latency);
+
+    if (shouldFail) throw Exception('Simulated delete failure');
+    _store.removeWhere((storedItem) => storedItem.id == item.id);
   }
 
   @override
