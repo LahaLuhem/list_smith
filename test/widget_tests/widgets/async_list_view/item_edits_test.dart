@@ -561,6 +561,37 @@ void main() {
       check(resetRows).deepEquals(_rows(['1 a', '2 b']));
       check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
     });
+
+    scenarioWidgets('saves answering after the list is gone still reach their callers', (
+      tester,
+    ) async {
+      final (_, controller) = await pumpRows(tester);
+      final saveCompleter = Completer<_Row>();
+      final createCompleter = Completer<_Row>();
+      final deleteCompleter = Completer<void>();
+      final savedFuture = controller.upsertAsync((
+        id: 1,
+        label: 'mine',
+      ), commit: saveCompleter.future);
+      final createdFuture = controller.upsertAsync((
+        id: 9,
+        label: 'new',
+      ), commit: createCompleter.future);
+      final removedFuture = controller.removeAsync((
+        id: 2,
+        label: 'b',
+      ), commit: deleteCompleter.future);
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox()); // the list goes
+
+      saveCompleter.complete((id: 1, label: 'saved'));
+      check(await savedFuture).equals((id: 1, label: 'saved'));
+      createCompleter.completeError(Exception('save failed'));
+      await check(createdFuture).throws<Exception>();
+      deleteCompleter.completeError(Exception('delete failed'));
+      await check(removedFuture).throws<Exception>();
+    });
   });
 }
 

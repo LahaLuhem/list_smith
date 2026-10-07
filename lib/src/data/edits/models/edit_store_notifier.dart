@@ -42,26 +42,9 @@ final class EditStoreNotifier<T extends Object>()
     _moveOn();
   }
 
-  /// Shows [editedItem] until [commit] answers, then the answer. A failure brings back what it covered.
-  Future<R> bookPending<R extends T?>(Object itemId, T? editedItem, Future<R> commit) async {
-    final pendingBookedEdit = _BookedEdit(
-      item: editedItem,
-      stamp: _pendingStamp,
-      bookedAt: _nextStamp,
-    );
-    _bookedEditsById[itemId] = (_bookedEditsById.remove(itemId) ?? [])..add(pendingBookedEdit);
-
-    _moveOn();
-
-    try {
-      final answeredItem = await commit;
-      _settle(itemId, pendingBookedEdit, answeredItem);
-
-      return answeredItem;
-    } finally {
-      _drop(itemId, pendingBookedEdit); // a no-op once settled
-    }
-  }
+  /// Shows nothing until [PendingEdit.book].
+  PendingEdit<T> pendingEdit(Object itemId, T? editedItem) =>
+      PendingEdit._(this, itemId, editedItem);
 
   /// Drops the edits every page in [readStamps] was read after, since the server's copy has caught up.
   void dropCaughtUp(Iterable<int> readStamps) {
@@ -106,6 +89,19 @@ final class EditStoreNotifier<T extends Object>()
   void dispose() {
     _bookedEditsById.clear(); // so a late answer finds nothing
     super.dispose();
+  }
+
+  _BookedEdit<T> _bookPending(Object itemId, T? editedItem) {
+    final pendingBookedEdit = _BookedEdit(
+      item: editedItem,
+      stamp: _pendingStamp,
+      bookedAt: _nextStamp,
+    );
+    _bookedEditsById[itemId] = (_bookedEditsById.remove(itemId) ?? [])..add(pendingBookedEdit);
+
+    _moveOn();
+
+    return pendingBookedEdit;
   }
 
   void _settle(Object itemId, _BookedEdit<T> pendingBookedEdit, T? answeredItem) {
@@ -156,6 +152,50 @@ final class EditStoreNotifier<T extends Object>()
 
   /// After every read. The web's largest exact int.
   static const _pendingStamp = 0x1FFFFFFFFFFFFF;
+}
+
+/// An edit whose save is still out. A save that answers before [book] gets booked as settled.
+final class PendingEdit<T extends Object>._(
+  final EditStoreNotifier<T> _editStoreNotifier,
+  final Object _itemId,
+  final T? _editedItem,
+) {
+  _BookedEdit<T>? _pendingBookedEdit;
+  ({T? item})? _earlyAnswer;
+  var _isDropped = false;
+
+  /// Shows it over every page, read before it or after.
+  void book() {
+    if (_pendingBookedEdit != null || _isDropped) return;
+
+    _pendingBookedEdit = _editStoreNotifier._bookPending(_itemId, _editedItem);
+    final earlyAnswer = _earlyAnswer;
+    if (earlyAnswer != null) settle(earlyAnswer.item);
+  }
+
+  /// Shows what the save gave back instead, until its pages are read again.
+  void settle(T? answeredItem) {
+    final pendingBookedEdit = _pendingBookedEdit;
+    if (pendingBookedEdit == null) {
+      _earlyAnswer = (item: answeredItem);
+
+      return;
+    }
+
+    _editStoreNotifier._settle(_itemId, pendingBookedEdit, answeredItem);
+  }
+
+  /// Takes it back, so what it covered shows again.
+  void drop() {
+    final pendingBookedEdit = _pendingBookedEdit;
+    if (pendingBookedEdit == null) {
+      _isDropped = true;
+
+      return;
+    }
+
+    _editStoreNotifier._drop(_itemId, pendingBookedEdit);
+  }
 }
 
 /// [bookedAt] orders the items' slots.

@@ -581,45 +581,55 @@ class _AsyncListViewState<T extends Object>()
   void upsert(T item) => _bookGrowingIn(item, () => _edit(item, item));
 
   @override
-  Future<T> upsertAsync(T draft, {required Future<T> commit}) {
+  Future<T> upsertAsync(T draft, {required Future<T> commit}) async {
     final itemIdGetter = widget.source.itemIdGetter;
     final draftId = itemIdGetter(draft);
+    final pendingEdit = _editStoreNotifier.pendingEdit(draftId, draft);
+    _bookGrowingIn(draft, pendingEdit.book);
 
-    return _bookGrowingIn(
-      draft,
-      () => _editStoreNotifier.bookPending(
-        draftId,
-        draft,
-        commit.then((savedItem) {
-          assert(
-            itemIdGetter(savedItem) == draftId,
-            "upsertAsync needs the saved item to keep the draft's id.",
-          );
+    try {
+      final savedItem = await commit;
+      assert(
+        itemIdGetter(savedItem) == draftId,
+        "upsertAsync needs the saved item to keep the draft's id.",
+      );
+      pendingEdit.settle(savedItem);
 
-          return savedItem;
-        }),
-      ),
-    );
+      return savedItem;
+    } finally {
+      pendingEdit.drop(); // a no-op once settled
+    }
   }
 
   @override
-  Future<void> removeAsync(T item, {required Future<void> commit}) => _editStoreNotifier
-      .bookPending(widget.source.itemIdGetter(item), null, commit.then((_) => null));
+  Future<void> removeAsync(T item, {required Future<void> commit}) async {
+    final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null)
+      ..book();
 
-  R _bookGrowingIn<R>(T item, R Function() book) {
+    try {
+      await commit;
+      pendingEdit.settle(null);
+    } finally {
+      pendingEdit.drop(); // a no-op once settled
+    }
+  }
+
+  void _bookGrowingIn(T item, VoidCallback book) {
     final animation = _editAnimation;
-    if (animation == null) return book();
+    if (animation == null) {
+      book();
+
+      return;
+    }
 
     final id = widget.source.itemIdGetter(item);
     final wasShown = _isShown(id);
-    final bookingOutcome = book();
+    book();
     _rowTransitionsNotifier.upsert(
       id,
       isNewRow: !wasShown && _isShown(id),
       duration: animation.duration,
     );
-
-    return bookingOutcome;
   }
 
   @override
