@@ -604,6 +604,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   expires, so a `likes + 1` would count twice.
 - **`upsert` and `remove` are sync and `void`,** since the change is already true on the server or
   in the store. `upsertAsync` and `removeAsync` are for one that isn't yet.
+- **A failed save never throws.** `onFailure` gets the exception and the future completes, like the
+  other verbs, so a call nobody awaits needs no try/catch. An `Error` is undone too, then goes on to
+  the app.
 - **A pending edit counts as true from the far future,** `2^53 - 1`, the web's largest exact int, so
   it covers every page, read before it or after. Its save's answer stamps it from the counter then,
   so the display pass, expiry and new-item placement need nothing new.

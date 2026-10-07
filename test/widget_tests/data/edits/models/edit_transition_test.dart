@@ -395,7 +395,7 @@ void main() {
       final leavingHeight = _heightOf(2);
       check(leavingHeight).isLessThan(50);
       deleteCompleter.completeError(Exception('delete failed'));
-      await check(removedFuture).throws<Exception>();
+      await removedFuture;
       await tester.pump(); // a restarted ticker's 1st frame has no time in it
       await tester.pump(const Duration(milliseconds: 50));
       final returningHeight = _heightOf(2);
@@ -417,7 +417,7 @@ void main() {
       await tester.pump();
       check(shownToggleRows()).deepEquals(['off 1', 'off 3']); // premise: the exit is over
       deleteCompleter.completeError(Exception('delete failed'));
-      await check(removedFuture).throws<Exception>();
+      await removedFuture;
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 150));
       final growingHeight = _heightOf(2);
@@ -448,7 +448,7 @@ void main() {
         await tester.pump();
         if (example.isCoveredByNewerEdit) controller.upsert(example.item);
         saveCompleter.completeError(Exception('save failed'));
-        await check(savedFuture).throws<Exception>();
+        await savedFuture;
         await _startExit(tester);
         await tester.pump(const Duration(milliseconds: 150));
         final failedHeight = _heightOf(example.item);
@@ -524,22 +524,31 @@ void main() {
       },
     );
 
-    scenarioWidgets('saves failing after the list is gone still reach their callers', (
+    scenarioWidgets('saves failing after the list is gone still finish, failures reported', (
       tester,
     ) async {
       final controller = await _pumpRows(tester);
       final createCompleter = Completer<int>();
       final deleteCompleter = Completer<void>();
-      final createdFuture = controller.upsertAsync(9, commit: createCompleter.future);
-      final removedFuture = controller.removeAsync(2, commit: deleteCompleter.future);
+      final reportedErrors = <Exception>[];
+      final createdFuture = controller.upsertAsync(
+        9,
+        commit: createCompleter.future,
+        onFailure: reportedErrors.add,
+      );
+      final removedFuture = controller.removeAsync(
+        2,
+        commit: deleteCompleter.future,
+        onFailure: reportedErrors.add,
+      );
       await tester.pump();
 
       await tester.pumpWidget(const SizedBox()); // the list goes
-
       createCompleter.completeError(Exception('save failed'));
-      await check(createdFuture).throws<Exception>();
       deleteCompleter.completeError(Exception('delete failed'));
-      await check(removedFuture).throws<Exception>();
+      await (createdFuture, removedFuture).wait;
+
+      check(reportedErrors).length.equals(2);
     });
   });
 }

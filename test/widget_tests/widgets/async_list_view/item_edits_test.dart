@@ -470,9 +470,7 @@ void main() {
       check(find.text('item 10', skipOffstage: false).evaluate()).isEmpty();
     });
 
-    scenarioWidgets('once the save answers, what it gave back shows and the caller gets it', (
-      tester,
-    ) async {
+    scenarioWidgets('once the save answers, what it gave back shows', (tester) async {
       final (server, controller) = await pumpRows(tester);
       final saveCompleter = Completer<_Row>();
       final savedFuture = controller.upsertAsync((
@@ -485,34 +483,60 @@ void main() {
 
       server.store[0] = (id: 1, label: 'saved');
       saveCompleter.complete((id: 1, label: 'saved'));
-      final savedItem = await savedFuture;
+      await savedFuture;
       await tester.pump();
 
-      check(savedItem).equals((id: 1, label: 'saved'));
       check(_shownRows()).deepEquals(_rows(['1 saved', '2 b']));
     });
 
-    scenarioWidgets(
-      "a failed save brings back the list's own copy, not the caller's, and rethrows",
-      (tester) async {
-        final (server, controller) = await pumpRows(tester);
-        server.store[0] = (id: 1, label: 'theirs'); // another writer
-        await controller.refresh();
-        await drain(tester, frames: 12);
-        final saveCompleter = Completer<_Row>();
-        final savedFuture = controller.upsertAsync((
-          id: 1,
-          label: 'mine',
-        ), commit: saveCompleter.future);
+    scenarioOutlineWidgets<
+      Future<void> Function(ListSmithController<_Row>, void Function(Exception error) onFailure)
+    >(
+      'a failed save goes to onFailure instead of throwing',
+      examples: {
+        'upsertAsync': (controller, onFailure) => controller.upsertAsync(
+          (id: 1, label: 'mine'),
+          commit: Future.error(Exception('save failed')),
+          onFailure: onFailure,
+        ),
+        'removeAsync': (controller, onFailure) => controller.removeAsync(
+          (id: 2, label: 'b'),
+          commit: Future.error(Exception('delete failed')),
+          onFailure: onFailure,
+        ),
+      },
+      outline: (tester, edit) async {
+        final (_, controller) = await pumpRows(tester);
+        final reportedErrors = <Exception>[];
+
+        await edit(controller, reportedErrors.add);
         await tester.pump();
 
-        saveCompleter.completeError(Exception('save failed'));
-        await check(savedFuture).throws<Exception>();
-        await tester.pump();
-
-        check(_shownRows()).deepEquals(_rows(['1 theirs', '2 b']));
+        check(reportedErrors).length.equals(1);
+        check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
       },
     );
+
+    scenarioWidgets("a failed save brings back the list's own copy, not the caller's", (
+      tester,
+    ) async {
+      final (server, controller) = await pumpRows(tester);
+      server.store[0] = (id: 1, label: 'theirs'); // another writer
+      await controller.refresh();
+      await drain(tester, frames: 12);
+      final saveCompleter = Completer<_Row>();
+      final savedFuture = controller.upsertAsync((
+        id: 1,
+        label: 'mine',
+      ), commit: saveCompleter.future);
+      await tester.pump();
+
+      saveCompleter.completeError(Exception('save failed'));
+      await savedFuture;
+      await tester.pump();
+
+      check(_shownRows()).deepEquals(_rows(['1 theirs', '2 b']));
+    });
 
     scenarioWidgets('a failed save of an item no page has loaded leaves nothing on top', (
       tester,
@@ -533,7 +557,7 @@ void main() {
       check(_shownRows().first).equals('item 15'); // premise
 
       saveCompleter.completeError(Exception('save failed'));
-      await check(savedFuture).throws<Exception>();
+      await savedFuture;
       await tester.pump();
 
       check(_shownRows().first).equals('item 1');
@@ -575,35 +599,37 @@ void main() {
       check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
     });
 
-    scenarioWidgets('saves answering after the list is gone still reach their callers', (
+    scenarioWidgets('saves answering after the list is gone still finish, failures reported', (
       tester,
     ) async {
       final (_, controller) = await pumpRows(tester);
       final saveCompleter = Completer<_Row>();
       final createCompleter = Completer<_Row>();
       final deleteCompleter = Completer<void>();
+      final reportedErrors = <Exception>[];
       final savedFuture = controller.upsertAsync((
         id: 1,
         label: 'mine',
       ), commit: saveCompleter.future);
-      final createdFuture = controller.upsertAsync((
-        id: 9,
-        label: 'new',
-      ), commit: createCompleter.future);
-      final removedFuture = controller.removeAsync((
-        id: 2,
-        label: 'b',
-      ), commit: deleteCompleter.future);
+      final createdFuture = controller.upsertAsync(
+        (id: 9, label: 'new'),
+        commit: createCompleter.future,
+        onFailure: reportedErrors.add,
+      );
+      final removedFuture = controller.removeAsync(
+        (id: 2, label: 'b'),
+        commit: deleteCompleter.future,
+        onFailure: reportedErrors.add,
+      );
       await tester.pump();
 
       await tester.pumpWidget(const SizedBox()); // the list goes
-
       saveCompleter.complete((id: 1, label: 'saved'));
-      check(await savedFuture).equals((id: 1, label: 'saved'));
       createCompleter.completeError(Exception('save failed'));
-      await check(createdFuture).throws<Exception>();
       deleteCompleter.completeError(Exception('delete failed'));
-      await check(removedFuture).throws<Exception>();
+      await (savedFuture, createdFuture, removedFuture).wait;
+
+      check(reportedErrors).length.equals(2);
     });
   });
 }

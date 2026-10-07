@@ -12,7 +12,7 @@ import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'edits_view_model.dart';
 
-/// `ListSmithController.upsert` and `removeAsync`, behind flutter_slidable's swipe actions.
+/// `ListSmithController.upsertAsync` and `removeAsync`, behind flutter_slidable's swipe actions.
 class const EditsView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -30,12 +30,12 @@ class const EditsView({super.key}) extends StatelessWidget {
               children: [
                 const Text('Swipe a row left for Rename and Delete, or all the way to delete it.'),
                 ValueListenableBuilder(
-                  valueListenable: viewModel.shouldFailDeletesListenable,
-                  builder: (context, shouldFailDeletes, _) => BoolKnob(
-                    label: 'Deletes fail',
-                    subtitle: 'A deleted row comes back when its delete fails',
-                    value: shouldFailDeletes,
-                    onChanged: (value) => viewModel.onDeletesFailToggled(value: value),
+                  valueListenable: viewModel.shouldFailSavesListenable,
+                  builder: (context, shouldFailSaves, _) => BoolKnob(
+                    label: 'Saves fail',
+                    subtitle: 'Every save fails after a moment, and its edit rolls back',
+                    value: shouldFailSaves,
+                    onChanged: (value) => viewModel.onSavesFailToggled(value: value),
                   ),
                 ),
                 PlatformButton(onPressed: viewModel.onAddPressed, child: const Text('Add an item')),

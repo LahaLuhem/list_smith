@@ -581,11 +581,23 @@ class _AsyncListViewState<T extends Object>()
   void upsert(T item) => _bookGrowingIn(item, () => _edit(item, item));
 
   @override
-  Future<T> upsertAsync(T draft, {required Future<T> commit}) async {
+  Future<void> upsertAsync(
+    T draft, {
+    required Future<T> commit,
+    void Function(Exception error)? onFailure,
+  }) async {
     final itemIdGetter = widget.source.itemIdGetter;
     final draftId = itemIdGetter(draft);
     final pendingEdit = _editStoreNotifier.pendingEdit(draftId, draft);
     final isNewRow = _bookGrowingIn(draft, pendingEdit.book);
+    void rollBack() {
+      // A create that didn't stick leaves like a remove.
+      if (isNewRow && pendingEdit.isNewest) {
+        _bookShrinkingOut(draft, pendingEdit.drop);
+      } else {
+        pendingEdit.drop();
+      }
+    }
 
     final T savedItem;
     try {
@@ -594,30 +606,39 @@ class _AsyncListViewState<T extends Object>()
         itemIdGetter(savedItem) == draftId,
         "upsertAsync needs the saved item to keep the draft's id.",
       );
+    } on Exception catch (error) {
+      rollBack();
+      onFailure?.call(error);
+
+      return;
     } on Object {
-      // A create that didn't stick leaves like a remove.
-      if (isNewRow && pendingEdit.isNewest) {
-        _bookShrinkingOut(draft, pendingEdit.drop);
-      } else {
-        pendingEdit.drop();
-      }
+      rollBack(); // an Error is a bug, so it goes on to the app after
 
       rethrow;
     }
     pendingEdit.settle(savedItem);
-
-    return savedItem;
   }
 
   @override
-  Future<void> removeAsync(T item, {required Future<void> commit}) async {
+  Future<void> removeAsync(
+    T item, {
+    required Future<void> commit,
+    void Function(Exception error)? onFailure,
+  }) async {
     final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null);
     _bookShrinkingOut(item, pendingEdit.book);
+    // Comes back like an upsert.
+    void rollBack() => _bookGrowingIn(item, pendingEdit.drop);
 
     try {
       await commit;
+    } on Exception catch (error) {
+      rollBack();
+      onFailure?.call(error);
+
+      return;
     } on Object {
-      _bookGrowingIn(item, pendingEdit.drop); // comes back like an upsert
+      rollBack(); // an Error is a bug, so it goes on to the app after
 
       rethrow;
     }

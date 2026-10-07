@@ -59,13 +59,24 @@ class ListSmithController<T extends Object>() {
   void remove(T item) => _host?.remove(item);
 
   /// [upsert] before your server has it: [draft] shows until [commit] answers, then the answer does. On
-  /// failure the draft goes and the error is rethrown. The id can't change.
-  Future<T> upsertAsync(T draft, {required Future<T> commit}) =>
-      _host?.upsertAsync(draft, commit: commit) ?? commit;
+  /// failure the draft goes and [onFailure] gets the exception, so nothing throws. The id can't change.
+  Future<void> upsertAsync(
+    T draft, {
+    required Future<T> commit,
+    void Function(Exception error)? onFailure,
+  }) =>
+      _host?.upsertAsync(draft, commit: commit, onFailure: onFailure) ??
+      _reportFailure(commit, onFailure);
 
-  /// [remove] before your server has it. On failure the item comes back and the error is rethrown.
-  Future<void> removeAsync(T item, {required Future<void> commit}) =>
-      _host?.removeAsync(item, commit: commit) ?? commit;
+  /// [remove] before your server has it. On failure the item comes back and [onFailure] gets the
+  /// exception.
+  Future<void> removeAsync(
+    T item, {
+    required Future<void> commit,
+    void Function(Exception error)? onFailure,
+  }) =>
+      _host?.removeAsync(item, commit: commit, onFailure: onFailure) ??
+      _reportFailure(commit, onFailure);
 
   /// Binds this controller to the list it drives. One controller, one list.
   @internal
@@ -81,4 +92,16 @@ class ListSmithController<T extends Object>() {
   /// Unbinds the list, leaving this controller inert. Called when that list is disposed.
   @internal
   void detach() => _host = null;
+
+  /// With no list attached there's nothing to roll back, only a failure to pass on.
+  static Future<void> _reportFailure(
+    Future<Object?> commit,
+    void Function(Exception error)? onFailure,
+  ) async {
+    try {
+      await commit;
+    } on Exception catch (error) {
+      onFailure?.call(error);
+    }
+  }
 }

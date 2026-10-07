@@ -153,6 +153,10 @@ people out most often:
   (an API shape, public vs `lib/src/`, a new dependency, a widget's parameter model) stops and
   asks: options, trade-offs, the one you'd pick and why, then wait. Small choices compound. Mark
   your recommendation `★` so the user can reply by echoing or overriding it.
+- **Confirm a public API's shape explicitly before building it,** even inside an agreed plan: its
+  signatures, parameter and return types, and how a failure reaches the caller (a throw, a callback,
+  a result). Each gets its own question with alternatives and an explicit OK. A decision-table row
+  with only one answer, or credited to an earlier issue, isn't confirmed.
 - **A report's "expected behaviour" is one user's case, not the spec.** Design what's best for the
   package, and keep the reporter's case reachable through config where it's legitimate.
 - **Refactor first when a change needs a better shape.** The enabling, behaviour-preserving

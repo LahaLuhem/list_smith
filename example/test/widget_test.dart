@@ -344,7 +344,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
-    scenarioWidgets('with deletes failing, a row swiped away comes back by itself', (tester) async {
+    scenarioWidgets('a save failing after the edits demo is gone changes nothing', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -359,6 +359,76 @@ void main() {
 
       await tester.tap(find.byType(PlatformSwitch));
       await tester.pump();
+      await tester.tap(find.text('Add an item'));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox()); // gone at once, before the save answers
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      check(tester.takeException()).isNull();
+    });
+
+    scenarioWidgets('with saves failing, each edit rolls back and says so', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      // In the list, not the rename dialog's field.
+      Finder rowText(String text) =>
+          find.descendant(of: find.byType(Slidable), matching: find.text(text));
+      // A toast lasts 4s, and the next one waits for it.
+      Future<void> waitOutTheToast() async {
+        for (var frame = 0; frame < 10; frame++) {
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+      }
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Edits'), 100);
+      await tester.tap(find.text('Edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      await tester.tap(find.byType(PlatformSwitch));
+      await tester.pump();
+
+      await tester.tap(find.text('Add an item'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300)); // the new row grows in
+      check(rowText('New item 1').evaluate()).length.equals(1);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      check(rowText('New item 1').evaluate()).isEmpty();
+      check(find.text("Couldn't save New item 1").evaluate()).length.equals(1);
+      await waitOutTheToast();
+
+      // Short of a full swipe, so the row opens on its actions.
+      await tester.timedDrag(
+        find.text('Item 2'),
+        const Offset(-300, 0),
+        const Duration(milliseconds: 300),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Rename'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      await tester.enterText(find.byType(EditableText), 'Renamed row');
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      check(rowText('Renamed row').evaluate()).length.equals(1);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      check(rowText('Renamed row').evaluate()).isEmpty();
+      check(rowText('Item 2').evaluate()).length.equals(1);
+      check(find.text("Couldn't save Renamed row").evaluate()).length.equals(1);
+      await waitOutTheToast();
+
       await tester.timedDrag(
         find.text('Item 1'),
         const Offset(-700, 0),
@@ -374,6 +444,7 @@ void main() {
       }
 
       check(find.text('Item 1').evaluate()).length.equals(1);
+      check(find.text("Couldn't delete Item 1").evaluate()).length.equals(1);
     });
   });
 }

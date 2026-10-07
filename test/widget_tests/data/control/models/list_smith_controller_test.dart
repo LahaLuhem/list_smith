@@ -327,14 +327,20 @@ void main() {
       check(controller.refresh).throws<AssertionError>();
     });
 
-    scenarioWidgets('an async edit with no list attached still answers with its save', (
+    scenarioWidgets('an async edit with no list attached still reports a failed save', (
       tester,
     ) async {
       final controller = ListSmithController<int>();
+      final reportedErrors = <Exception>[];
 
-      check(await controller.upsertAsync(1, commit: Future.value(2))).equals(2);
-      await check(controller.removeAsync(1, commit: Future.error(Exception('delete failed'))))
-          .throws<Exception>();
+      await controller.upsertAsync(1, commit: Future.value(1), onFailure: reportedErrors.add);
+      await controller.removeAsync(
+        1,
+        commit: Future.error(Exception('delete failed')),
+        onFailure: reportedErrors.add,
+      );
+
+      check(reportedErrors).length.equals(1);
     });
 
     scenarioWidgets('an invalidate() meeting a live one runs again, so a write mid-read lands', (
