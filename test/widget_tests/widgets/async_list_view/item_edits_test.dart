@@ -317,6 +317,251 @@ void main() {
       },
     );
   });
+
+  feature('ListSmith.async edits whose save is still out', () {
+    Future<(FakeServer<_Row>, ListSmithController<_Row>)> pumpRows(
+      WidgetTester tester, {
+      Refresh refresh = const PullToRefresh(reload: ReloadToCurrentDepth()),
+    }) async {
+      final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
+      final controller = await _pumpList<_Row>(
+        tester,
+        fetchPage: server.offsetEarlyFetcher,
+        itemIdGetter: _byRowId,
+        labelOf: _rowLabel,
+        endPolicy: const FixedPageCountPolicy(pageCount: 1),
+        refresh: refresh,
+      );
+      await drain(tester);
+
+      return (server, controller);
+    }
+
+    scenarioOutlineWidgets<
+      ({Refresh refresh, Future<void> Function(ListSmithController<_Row>) reread})
+    >(
+      'a draft stays through a re-read while its save is out',
+      examples: {
+        'a depth reload': (
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+          reread: (controller) => controller.refresh(),
+        ),
+        'a pull that starts over': (
+          refresh: const PullToRefresh(),
+          reread: (controller) => controller.refresh(),
+        ),
+        'invalidate()': (
+          refresh: const PullToRefresh(),
+          reread: (controller) => controller.invalidate(),
+        ),
+      },
+      outline: (tester, example) async {
+        final (server, controller) = await pumpRows(tester, refresh: example.refresh);
+
+        unawaited(controller.upsertAsync((id: 1, label: 'mine'), commit: Completer<_Row>().future));
+        await tester.pump();
+        await example.reread(controller);
+        await drain(tester, frames: 12);
+
+        check(server.attempts[0]).equals(2); // premise: re-read
+        check(_shownRows()).deepEquals(_rows(['1 mine', '2 b']));
+      },
+    );
+
+    scenarioOutlineWidgets<SearchCachePolicy>(
+      'a draft stays through a search and back while its save is out',
+      examples: const {
+        'ReplaceCachePolicy': ReplaceCachePolicy(),
+        'KeepCachePolicy': KeepCachePolicy(),
+      },
+      outline: (tester, cachePolicy) async {
+        final server = FakeServer<_Row>([
+          (id: 1, label: 'a'),
+          (id: 2, label: 'b'),
+          (id: 3, label: 'c'),
+        ]);
+        final controller = ListSmithController<_Row>();
+        Future<void> pumpQuery(String query) => _pumpList<_Row>(
+          tester,
+          controller: controller,
+          fetchPage: server.offsetEarlyFetcher,
+          itemIdGetter: _byRowId,
+          labelOf: _rowLabel,
+          endPolicy: const FixedPageCountPolicy(pageCount: 1),
+          query: query,
+          search: AsyncSearch(
+            fetchPage: SearchPageFetcher(
+              (_) async => server.store.where((row) => row.id.isOdd).toList(growable: false),
+            ),
+            cachePolicy: cachePolicy,
+          ),
+        );
+        await pumpQuery('');
+        await drain(tester);
+
+        unawaited(controller.upsertAsync((id: 1, label: 'mine'), commit: Completer<_Row>().future));
+        await tester.pump();
+        await pumpQuery('odd');
+        await settle(tester);
+        final resultRows = _shownRows();
+        await pumpQuery('');
+        await settle(tester);
+        await drain(tester, frames: 12);
+
+        check(resultRows).deepEquals(_rows(['1 mine', '3 c']));
+        check(_shownRows()).deepEquals(_rows(['1 mine', '2 b', '3 c']));
+      },
+    );
+
+    scenarioOutlineWidgets<
+      ({void Function(ListSmithController<_Row>) edit, List<String> shownRows})
+    >(
+      'a new item and a delete hold through a re-read while their save is out',
+      examples: {
+        'a new item': (
+          edit: (controller) => unawaited(
+            controller.upsertAsync((id: 9, label: 'new'), commit: Completer<_Row>().future),
+          ),
+          shownRows: _rows(['9 new', '1 a', '2 b']),
+        ),
+        'a delete': (
+          edit: (controller) => unawaited(
+            controller.removeAsync((id: 2, label: 'b'), commit: Completer<void>().future),
+          ),
+          shownRows: _rows(['1 a']),
+        ),
+      },
+      outline: (tester, example) async {
+        final (server, controller) = await pumpRows(tester);
+
+        example.edit(controller);
+        await tester.pump();
+        await controller.refresh();
+        await drain(tester, frames: 12);
+
+        check(server.attempts[0]).equals(2); // premise: re-read
+        check(_shownRows()).deepEquals(example.shownRows);
+      },
+    );
+
+    scenarioWidgets('a delete stays hidden on pages loaded while its save is out', (tester) async {
+      final server = FakeServer(_range(1, 20));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetEarlyFetcher,
+        itemIdGetter: _byValue,
+        pageSize: 10,
+        rowHeight: 300, // tall enough that page 1 waits for a scroll
+        scrollController: scrollController,
+      );
+      await drain(tester, frames: 12);
+      check(server.asked(1)).isFalse();
+
+      unawaited(controller.removeAsync(10, commit: Completer<void>().future)); // page 0's last row
+      server.store.insert(0, 0); // pushes 10 onto page 1
+      await tester.pump();
+      scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      await drain(tester, frames: 12);
+
+      check(server.asked(1)).isTrue();
+      check(find.text('item 9', skipOffstage: false).evaluate()).isNotEmpty(); // 10's spot is built
+      check(find.text('item 10', skipOffstage: false).evaluate()).isEmpty();
+    });
+
+    scenarioWidgets('once the save answers, what it gave back shows and the caller gets it', (
+      tester,
+    ) async {
+      final (server, controller) = await pumpRows(tester);
+      final saveCompleter = Completer<_Row>();
+      final savedFuture = controller.upsertAsync((
+        id: 1,
+        label: 'mine',
+      ), commit: saveCompleter.future);
+      await tester.pump();
+      await controller.refresh(); // re-read while the save is out
+      await drain(tester, frames: 12);
+
+      server.store[0] = (id: 1, label: 'saved');
+      saveCompleter.complete((id: 1, label: 'saved'));
+      final savedItem = await savedFuture;
+      await tester.pump();
+
+      check(savedItem).equals((id: 1, label: 'saved'));
+      check(_shownRows()).deepEquals(_rows(['1 saved', '2 b']));
+    });
+
+    scenarioWidgets(
+      "a failed save brings back the list's own copy, not the caller's, and rethrows",
+      (tester) async {
+        final (server, controller) = await pumpRows(tester);
+        server.store[0] = (id: 1, label: 'theirs'); // another writer
+        await controller.refresh();
+        await drain(tester, frames: 12);
+        final saveCompleter = Completer<_Row>();
+        final savedFuture = controller.upsertAsync((
+          id: 1,
+          label: 'mine',
+        ), commit: saveCompleter.future);
+        await tester.pump();
+
+        saveCompleter.completeError(Exception('save failed'));
+        await check(savedFuture).throws<Exception>();
+        await tester.pump();
+
+        check(_shownRows()).deepEquals(_rows(['1 theirs', '2 b']));
+      },
+    );
+
+    scenarioWidgets('a failed save of an item no page has loaded leaves nothing on top', (
+      tester,
+    ) async {
+      final server = FakeServer(_range(1, 20));
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetEarlyFetcher,
+        itemIdGetter: _byValue,
+        pageSize: 10,
+        rowHeight: 300, // tall enough that page 1 waits for a scroll
+      );
+      await drain(tester, frames: 12);
+      check(server.asked(1)).isFalse();
+      final saveCompleter = Completer<int>();
+      final savedFuture = controller.upsertAsync(15, commit: saveCompleter.future);
+      await tester.pump();
+      check(_shownRows().first).equals('item 15'); // premise
+
+      saveCompleter.completeError(Exception('save failed'));
+      await check(savedFuture).throws<Exception>();
+      await tester.pump();
+
+      check(_shownRows().first).equals('item 1');
+    });
+
+    scenarioWidgets('reset() mid-save drops the draft, and its late answer changes nothing', (
+      tester,
+    ) async {
+      final (_, controller) = await pumpRows(tester);
+      final saveCompleter = Completer<_Row>();
+      final savedFuture = controller.upsertAsync((
+        id: 9,
+        label: 'new',
+      ), commit: saveCompleter.future);
+      await tester.pump();
+      check(_shownRows().first).equals('item 9 new');
+
+      await controller.reset();
+      await drain(tester, frames: 12);
+      final resetRows = _shownRows();
+      saveCompleter.complete((id: 9, label: 'new'));
+      await savedFuture;
+      await tester.pump();
+
+      check(resetRows).deepEquals(_rows(['1 a', '2 b']));
+      check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
+    });
+  });
 }
 
 Future<ListSmithController<T>> _pumpList<T extends Object>(

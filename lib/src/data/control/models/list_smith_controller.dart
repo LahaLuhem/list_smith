@@ -58,6 +58,15 @@ class ListSmithController<T extends Object>() {
   /// Hides every loaded copy of [item] by its id, until those pages are read again.
   void remove(T item) => _host?.remove(item);
 
+  /// [upsert] before your server has it: [draft] shows until [commit] answers, then the answer does. On
+  /// failure the draft goes and the error is rethrown. The id can't change.
+  Future<T> upsertAsync(T draft, {required Future<T> commit}) =>
+      _host?.upsertAsync(draft, commit: commit) ?? commit;
+
+  /// [remove] before your server has it. On failure the item comes back and the error is rethrown.
+  Future<void> removeAsync(T item, {required Future<void> commit}) =>
+      _host?.removeAsync(item, commit: commit) ?? commit;
+
   /// Binds this controller to the list it drives. One controller, one list.
   @internal
   void attach(ListSmithControllerHost<T> host) {
