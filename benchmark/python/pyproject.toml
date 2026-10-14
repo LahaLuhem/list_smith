@@ -19,7 +19,7 @@ dependencies = [
     # seaborn gives publication-quality stats plots for ~zero boilerplate. Pulls pandas transitively.
     "seaborn>=0.13,<1.0",
     # pyarrow backs polars.DataFrame.to_pandas(), the bridge to seaborn's pandas-only plotting API.
-    "pyarrow>=25.0.0,<26.0",
+    "pyarrow>=25.0.0,<27.0",
 ]
 
 [dependency-groups]
