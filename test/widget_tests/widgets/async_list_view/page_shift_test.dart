@@ -229,6 +229,50 @@ void main() {
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
     });
 
+    scenarioOutlineWidgets<_SignalFetcherGetter>(
+      'the same on a withSignal list',
+      examples: _signalFetchers,
+      outline: (tester, fetcherOf) async {
+        final server = FakeServer(_range(0, 14));
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
+        final controller = await _pumpList(
+          tester,
+          fetchPage: fetcherOf(server),
+          scrollController: scrollController,
+        );
+        check(server.asked(3)).isFalse();
+
+        server.store.remove(1);
+        controller.remove(1);
+        await tester.pump();
+
+        check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+      },
+    );
+
+    scenarioWidgets('the same after a depth reload, with an offset as the cursor', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetCursorFetcher,
+        scrollController: scrollController,
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 12);
+      check(server.attempts[2]).equals(2); // premise: the reload wrote page 2, the one read again
+
+      server.store.remove(4);
+      controller.remove(4);
+      await tester.pump();
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
     scenarioWidgets('with a removal still saving, the list still stops at its 1st empty page', (
       tester,
     ) async {
@@ -302,6 +346,37 @@ void main() {
 
         check(await _allShownItems(tester, scrollController))
             .deepEquals(server.store.take(_pageSize * 2));
+      },
+    );
+
+    scenarioOutlineWidgets<_SignalFetcherGetter>(
+      'the same on a withSignal list',
+      examples: _signalFetchers,
+      outline: (tester, fetcherOf) async {
+        final server = FakeServer(_range(0, 8));
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
+        final controller = await _pumpList(
+          tester,
+          fetchPage: fetcherOf(server),
+          scrollController: scrollController,
+          rowHeight: _shortRowHeight,
+          endPolicy: const FixedPageCountPolicy(pageCount: 3),
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+        );
+        final lastPageHoldCompleter = server.hold(2, attempt: 2);
+        unawaited(controller.refresh());
+        await tester.idle();
+        await drain(tester, frames: 4);
+        check(server.attempts[2]).equals(2); // premise: pages 0 and 1 are back, page 2 is out
+
+        server.store.remove(4); // from page 1, so reading it again needs its own signal
+        controller.remove(4);
+        await tester.pump();
+        await release(tester, [lastPageHoldCompleter]);
+
+        check(await _allShownItems(tester, scrollController))
+            .deepEquals(server.store.take(_pageSize * 3));
       },
     );
 
@@ -515,6 +590,14 @@ final _rowRemovers = <String, _RowRemover>{
   'its save already answered': (controller) => controller.remove(1),
   'its save still out': (controller) =>
       unawaited(controller.removeAsync(1, commit: Completer<void>().future)),
+};
+
+/// Picks one of the server's `withSignal` fetchers.
+typedef _SignalFetcherGetter = PageFetcher<int> Function(FakeServer<int> server);
+
+final _signalFetchers = <String, _SignalFetcherGetter>{
+  'paged by number with a hasMore flag': (server) => server.hasMoreFetcher,
+  'with an offset as the cursor': (server) => server.offsetCursorFetcher,
 };
 
 const _pageSize = 3;

@@ -12,6 +12,9 @@ final class const LoadedPage<T extends Object>({
 
   /// The edit counter when this page's fetch went out.
   required final int readStamp,
+
+  /// The signal its fetch went out with, sent again when it's read again.
+  final Object? previousSignal,
 }) {
   /// Creates it.
   this;

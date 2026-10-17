@@ -31,8 +31,10 @@ void main() {
       await release(tester, [holdCompleter]);
 
       check(_shownRows()).deepEquals(_rows(_range(1, 8)));
-      // Each page picks up where the one before it ended, so none is asked for twice.
-      final cursors = server.requests.skip(1).map((request) => request.previousSignal);
+      // Each next page picks up where the one before it ended, so none is asked for twice.
+      final cursors = server.requests
+          .where((request) => request.trigger == .nextPage)
+          .map((request) => request.previousSignal);
       check(cursors.toSet()).length.equals(cursors.length);
     });
 
@@ -139,6 +141,34 @@ void main() {
         check(find.text('item 14').evaluate()).isNotEmpty();
       },
     );
+
+    scenarioWidgets('the same when the page before is read again', (tester) async {
+      final server = FakeServer(_range(0, 13));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.keysetFetcher,
+        itemIdGetter: _byValue,
+        pageSize: 5,
+        rowHeight: 300, // tall enough that page 2 waits for a scroll
+        endPolicy: const _ShortLastPagePolicy(),
+        scrollController: scrollController,
+      );
+      await drain(tester, frames: 12);
+      check(server.asked(2)).isFalse();
+
+      server.store.remove(7); // so page 2 is short, and page 1 read again ends on page 2's 1st row
+      controller.remove(7);
+      for (var pass = 0; pass < 4; pass++) {
+        await drain(tester, frames: 6);
+        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      }
+      await drain(tester, frames: 12);
+
+      check(find.text('item 13').evaluate()).isNotEmpty();
+      check(server.asked(3)).isFalse();
+    });
 
     scenarioOutlineWidgets<EmptyPageBehaviour>(
       'removing everything on screen loads the next page, whatever onEmptyPage says',
