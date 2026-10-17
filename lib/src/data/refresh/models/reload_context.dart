@@ -24,8 +24,9 @@ abstract interface class ReloadContext<T extends Object>._() {
   /// and the 1st page. Throws if the fetch fails.
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal);
 
-  /// Replaces the loaded pages with [pages] in one go, recording [lastSignal] as the new end signal.
-  void commit(List<List<T>> pages, {Object? lastSignal});
+  /// Replaces the loaded pages with [pages] in one go, recording [lastSignal] as the new end signal. It
+  /// may read pages again first, so await it.
+  Future<void> commit(List<List<T>> pages, {Object? lastSignal});
 
   /// Throws away the loaded pages and re-fetches only the 1st, the [ResetToFirstPage] behaviour.
   /// Completes once that page lands or fails, or the list moves on first.

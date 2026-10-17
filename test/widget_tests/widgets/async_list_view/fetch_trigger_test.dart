@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -121,6 +123,41 @@ void main() {
 
       check(triggers.length).equals(depth);
       check(triggers.toSet()).deepEquals(const {FetchTrigger.invalidated});
+    });
+
+    scenarioWidgets("a reload's read lining its pages up reports the reload's trigger", (
+      tester,
+    ) async {
+      final server = FakeServer(List.generate(9, (index) => index));
+      final controller = ListSmithController<int>();
+      await pumpListSmith(
+        tester,
+        ListSmith<int>.async(
+          fetchPage: server.offsetLateFetcher,
+          pageSize: 3,
+          itemIdGetter: (item) => item,
+          endPolicy: const FixedPageCountPolicy(pageCount: 2),
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+          controller: controller,
+          itemBuilder: (_, item, _) => SizedBox(height: 20, child: Text('item $item')),
+        ),
+      );
+      await drain(tester, frames: 12);
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(1); // while page 1 is out, so page 0 is read again to line it up
+      controller.remove(1);
+      await tester.pump();
+      await release(tester, [secondPageHoldCompleter]);
+
+      check(
+        server.requests
+            .where((request) => request.pageIndex == 0)
+            .map((request) => request.trigger),
+      ).deepEquals(const [FetchTrigger.initialLoad, FetchTrigger.refresh, FetchTrigger.refresh]);
     });
 
     scenarioWidgets('after a reset(), page 0 reports invalidated and the pages after it nextPage', (

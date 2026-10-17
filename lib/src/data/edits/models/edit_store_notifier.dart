@@ -47,10 +47,14 @@ final class EditStoreNotifier<T extends Object>()
       PendingEdit._(this, itemId, editedItem);
 
   /// The items removed after a read stamped [readStamp], counting removals still saving.
-  Iterable<Object> idsRemovedSince(int readStamp) => _bookedEditsById.entries
+  /// With [bookedBy], only the ones booked by then.
+  Iterable<Object> idsRemovedSince(int readStamp, {int? bookedBy}) => _bookedEditsById.entries
       .where(
         (entry) => entry.value.any(
-          (bookedEdit) => bookedEdit.item == null && bookedEdit.stamp > readStamp,
+          (bookedEdit) =>
+              bookedEdit.item == null &&
+              bookedEdit.stamp > readStamp &&
+              (bookedBy == null || bookedEdit.bookedAt <= bookedBy),
         ),
       )
       .map((entry) => entry.key);
