@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/utils/neutral_theme.dart';
 
@@ -6,6 +7,7 @@ import '/src/utils/neutral_theme.dart';
 ///
 /// The widgets layer ships no button, so this hand-rolls one. Internal: restyling means overriding the
 /// error builder wholesale, not this.
+@internal
 class const NeutralRetryButton({
   /// Runs on tap, to re-attempt the failed load.
   required final VoidCallback onRetry,

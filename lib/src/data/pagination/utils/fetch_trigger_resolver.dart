@@ -1,6 +1,9 @@
+import 'package:meta/meta.dart';
+
 import '../enums/fetch_trigger.dart';
 
 /// The [FetchTrigger] for a fetch of [pageIndex]: [pending] when a restart passes one, else derived.
+@internal
 FetchTrigger resolveTrigger({
   required int pageIndex,
   required FetchTrigger? pending,

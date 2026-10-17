@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
@@ -18,6 +19,7 @@ import 'defaults/neutral_no_results_indicator.dart';
 /// and renders it with a plain `ListView`.
 ///
 /// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
+@internal
 class const SyncListView<T extends Object>({
   /// The items and the predicate that filters them.
   required final SyncSource<T> source,

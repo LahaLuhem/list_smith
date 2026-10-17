@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/utils/neutral_theme.dart';
 
@@ -8,6 +9,7 @@ import '/src/utils/neutral_theme.dart';
 ///
 /// The widgets layer ships no progress indicator, so this hand-rolls one. Picks up the ambient foreground
 /// colour via [neutralForegroundOf], so it drops into any app unchanged.
+@internal
 class const NeutralProgressIndicator({
   /// Diameter, in logical pixels.
   final double size = 24,

@@ -1,6 +1,7 @@
 part of '../edit_transition.dart';
 
 /// Edit transitions on. Built through [EditTransition.new].
+@internal
 final class const AnimatedEditTransition._({
   /// How long a row takes to come in or go out.
   required final Duration duration,

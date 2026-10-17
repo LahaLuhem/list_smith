@@ -4,6 +4,7 @@ part of '../list_source.dart';
 /// out.
 ///
 /// Everything async-only lives here rather than on the widget, so the sync path carries no inert fields.
+@internal
 final class const AsyncSource<T extends Object>({
   /// Fetches each page in normal (non-search) mode.
   required final PageFetcher<T> fetchPage,

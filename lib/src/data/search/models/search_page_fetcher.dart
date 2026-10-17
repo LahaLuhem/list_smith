@@ -2,6 +2,8 @@
 /// @docImport '/src/data/pagination/models/page_fetcher.dart';
 library;
 
+import 'package:meta/meta.dart';
+
 import 'search_page_request.dart';
 
 /// Fetches one page of search results, from the [SearchPageRequest] describing it.
@@ -14,7 +16,7 @@ final class const SearchPageFetcher<T extends Object>._(
   final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch, {
 
   /// Whether this fetcher came from [SearchPageFetcher.withSignal].
-  required final bool reportsSignal,
+  @internal required final bool reportsSignal,
 }) {
   /// Wraps a function returning one page of results for the request's query and page.
   factory(Future<Iterable<T>> Function(SearchPageRequest request) fetch) =>

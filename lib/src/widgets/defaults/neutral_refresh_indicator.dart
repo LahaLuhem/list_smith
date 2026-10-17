@@ -5,6 +5,7 @@ import '/src/data/refresh/models/list_smith_refresh_state.dart';
 import 'neutral_progress_indicator.dart';
 
 /// The neutral pull indicator. Override `indicatorBuilder` to replace it.
+@internal
 class const NeutralRefreshIndicator({
   /// The pull it follows.
   required final ListSmithRefreshState state,

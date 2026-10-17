@@ -264,6 +264,11 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   `implements` that mocktail and mockito mocks need. `ListSmithController` is one: an unattached
   real one asserts on `refresh()`. Adding a method to an open class keeps those mocks compiling, and
   only breaks a hand-written fake.
+- **Inline logic with one caller.** A private helper called from one place reads better in it.
+  Extract once a 2nd caller shows up, or when it's a cleaner seam to test, as `@visibleForTesting`.
+- **Members stay private.** One another library has to reach takes `@internal`, or
+  `@visibleForTesting` when only tests need it. A type only the package uses takes `@internal`
+  itself, which covers its members, and a member a subclass must not override takes `@nonVirtual`.
 
 ---
 

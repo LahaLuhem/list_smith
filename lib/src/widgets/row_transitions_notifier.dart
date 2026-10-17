@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
@@ -10,6 +11,7 @@ import '/src/data/presentation/typedefs/item_builder.dart';
 ///
 /// An exit holds its removal back until it ends, so the leaving row stays in the display, exactly where
 /// it was, and a later edit on the same id turns it round.
+@internal
 final class RowTransitionsNotifier<T extends Object>({
   /// Ticks the controllers.
   required final TickerProvider vsync,
@@ -72,7 +74,17 @@ final class RowTransitionsNotifier<T extends Object>({
     // A frame on, so a row that shrank itself (a Dismissible, a Slidable) reads as empty. Those throw
     // if kept in the tree once they're done.
     SchedulerBinding.instance
-      ..addPostFrameCallback((_) => _startExit(id, axis))
+      ..addPostFrameCallback((_) {
+        final exitingTransition = _transitions[id];
+        // Settled, or brought back by an upsert, meanwhile.
+        if (exitingTransition == null || exitingTransition.bookRemoval == null) return;
+
+        if ((_rows[id]?._extentAlong(axis) ?? 0) == 0) {
+          _finishExit(id);
+        } else {
+          _animate(exitingTransition, isEntering: false);
+        }
+      })
       ..ensureVisualUpdate();
   }
 
@@ -103,7 +115,17 @@ final class RowTransitionsNotifier<T extends Object>({
 
   _Transition _start(Object id, Duration duration, {required double value}) {
     final controller = AnimationController(vsync: vsync, duration: duration, value: value)
-      ..addStatusListener((status) => _onStatus(id, status));
+      ..addStatusListener((status) {
+        final transition = _transitions[id];
+        if (transition == null) return;
+
+        final isLeaving = transition.bookRemoval != null;
+        if (status.isDismissed && isLeaving) _finishExit(id);
+        if (status.isCompleted && !isLeaving) {
+          _transitions.remove(id)?.controller.dispose();
+          notifyListeners();
+        }
+      });
 
     return _transitions[id] = _Transition(controller);
   }
@@ -115,38 +137,12 @@ final class RowTransitionsNotifier<T extends Object>({
     notifyListeners();
   }
 
-  void _startExit(Object id, Axis axis) {
-    final transition = _transitions[id];
-    // Settled, or brought back by an upsert, meanwhile.
-    if (transition == null || transition.bookRemoval == null) return;
-
-    if ((_rows[id]?._extentAlong(axis) ?? 0) == 0) {
-      _finishExit(id);
-    } else {
-      _animate(transition, isEntering: false);
-    }
-  }
-
-  void _onStatus(Object id, AnimationStatus status) {
-    final transition = _transitions[id];
-    if (transition == null) return;
-
-    final isLeaving = transition.bookRemoval != null;
-    if (status.isDismissed && isLeaving) _finishExit(id);
-    if (status.isCompleted && !isLeaving) _finishEntry(id);
-  }
-
   void _finishExit(Object id) {
     final transition = _transitions.remove(id);
     if (transition == null) return;
 
     transition.controller.dispose();
     transition.bookRemoval?.call();
-    notifyListeners();
-  }
-
-  void _finishEntry(Object id) {
-    _transitions.remove(id)?.controller.dispose();
     notifyListeners();
   }
 

@@ -80,6 +80,7 @@ class ListSmithController<T extends Object>() {
 
   /// Binds this controller to the list it drives. One controller, one list.
   @internal
+  @nonVirtual
   void attach(ListSmithControllerHost<T> host) {
     assert(
       _host == null,
@@ -91,6 +92,7 @@ class ListSmithController<T extends Object>() {
 
   /// Unbinds the list, leaving this controller inert. Called when that list is disposed.
   @internal
+  @nonVirtual
   void detach() => _host = null;
 
   /// With no list attached there's nothing to roll back, only a failure to pass on.

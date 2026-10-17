@@ -9,6 +9,7 @@ final class const ShowEmptySurface() extends EmptyPageBehaviour {
   this;
 
   @override
+  @internal
   bool shouldAdvance(EmptyPageContext context) => false;
 
   @override

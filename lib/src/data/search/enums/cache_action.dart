@@ -1,9 +1,12 @@
 /// @docImport '../extensions/search_cache_policy_resolver_extension.dart';
 library;
 
+import 'package:meta/meta.dart';
+
 /// What the async search view does to its paging controller when the list enters or leaves search.
 ///
 /// The pure half, worked out by [SearchCachePolicyResolverExtension]. The view runs it.
+@internal
 enum CacheAction() {
   /// Clear the paging state and refetch page 0: a clean load of the new mode.
   refresh,

@@ -2,6 +2,8 @@
 /// @docImport 'pagination_end_policy.dart';
 library;
 
+import 'package:meta/meta.dart';
+
 import 'page_request.dart';
 
 /// Fetches one page of items for an async list, from the [PageRequest] describing it.
@@ -17,7 +19,7 @@ final class const PageFetcher<T extends Object>._(
   final Future<(Iterable<T>, Object?)> Function(PageRequest request) _fetch, {
 
   /// Whether this fetcher came from [PageFetcher.withSignal].
-  required final bool reportsSignal,
+  @internal required final bool reportsSignal,
 }) {
   /// Wraps a function returning one page of items, leaving the end to [PaginationEndPolicy].
   factory(Future<Iterable<T>> Function(PageRequest request) fetch) =>

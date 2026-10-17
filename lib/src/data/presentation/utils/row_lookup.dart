@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
@@ -7,14 +8,28 @@ import '/src/data/pagination/typedefs/item_id_getter.dart';
 ///
 /// A row is looked for at the index it was last built at, so rows that didn't move cost a check each.
 /// The 1st row that did move builds an id-to-index map, and the rest of the build reuses it.
+@internal
 final class RowLookup<T extends Object>(
   final List<LoadedPage<T>> _pages,
   final ItemIdGetter<T> _itemIdGetter,
 ) {
   /// Where each page starts in the flat list, then the total, so reading by index needs no flatten.
-  late final List<int> _pageStarts = _startsOfPages();
+  late final List<int> _pageStarts = _pages.fold([
+    0,
+  ], (starts, page) => starts..add(starts.last + page.items.length));
 
-  late final Map<Object, int> _indexById = _mapIds();
+  late final Map<Object, int> _indexById = () {
+    final indexById = <Object, int>{};
+    var index = 0;
+    // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
+    for (final page in _pages) {
+      for (final item in page.items) {
+        indexById[_itemIdGetter(item)] = index++;
+      }
+    }
+
+    return indexById;
+  }();
 
   /// Creates it over one build's pages.
   this;
@@ -36,20 +51,4 @@ final class RowLookup<T extends Object>(
       lastIndex < _pageStarts.last && _itemIdGetter(itemAt(lastIndex)) == id
       ? lastIndex
       : _indexById[id];
-
-  List<int> _startsOfPages() =>
-      _pages.fold([0], (starts, page) => starts..add(starts.last + page.items.length));
-
-  Map<Object, int> _mapIds() {
-    final indexById = <Object, int>{};
-    var index = 0;
-    // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
-    for (final page in _pages) {
-      for (final item in page.items) {
-        indexById[_itemIdGetter(item)] = index++;
-      }
-    }
-
-    return indexById;
-  }
 }

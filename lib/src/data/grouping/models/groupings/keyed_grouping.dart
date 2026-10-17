@@ -4,6 +4,7 @@ part of '../grouping.dart';
 ///
 /// The key is erased to `Object`. The private constructor is what keeps that safe: every key reaching
 /// [headerFor] came from this instance's own [groupOf].
+@internal
 final class const KeyedGrouping<T extends Object>._({
   /// Pulls an item's group key.
   @override @internal required final GroupKeyOf<T, Object> groupOf,

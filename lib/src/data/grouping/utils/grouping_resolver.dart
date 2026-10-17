@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '../models/group_order_policy.dart';
 import '../typedefs/group_key_of.dart';
@@ -8,6 +9,7 @@ import '../typedefs/group_key_of.dart';
 ///
 /// The sync path's ordering step. Async never calls it. Leans on `groupListsBy` keeping groups in first-insertion
 /// order.
+@internal
 List<T> bucketByGroup<T extends Object>(Iterable<T> items, GroupKeyOf<T, Object> keyOf) =>
     items.groupListsBy(keyOf).values.flattened.toList(growable: false);
 
@@ -15,6 +17,7 @@ List<T> bucketByGroup<T extends Object>(Iterable<T> items, GroupKeyOf<T, Object>
 ///
 /// [policy] gets first look and can reject out-of-order items. Walks [items] once, twice while the order
 /// is being checked.
+@internal
 BoolList resolveHeaderFlags<T extends Object>(
   Iterable<T> items,
   GroupKeyOf<T, Object> keyOf,
@@ -43,6 +46,7 @@ BoolList resolveHeaderFlags<T extends Object>(
 ///
 /// A loop on purpose: this runs per item on every build, and the chain version measured several times
 /// slower (`APPENDIX.md#scan-loops`). Packed, since the item builder reads it per row.
+@internal
 BoolList headerFlagsByFirstSighting<T extends Object>(
   Iterable<T> items,
   GroupKeyOf<T, Object> keyOf,
@@ -64,6 +68,7 @@ BoolList headerFlagsByFirstSighting<T extends Object>(
 ///
 /// The async path's order check. Sync never needs one, [bucketByGroup] already guarantees it. A loop
 /// for the same reason as [headerFlagsByFirstSighting], and it bails at the 1st repeat.
+@visibleForTesting
 bool groupsAreContiguous<T extends Object>(Iterable<T> items, GroupKeyOf<T, Object> keyOf) {
   final seenKeys = <Object>{};
   Object? runKey;

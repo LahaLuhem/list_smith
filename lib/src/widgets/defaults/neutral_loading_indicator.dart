@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import 'neutral_progress_indicator.dart';
 
@@ -6,6 +7,7 @@ import 'neutral_progress_indicator.dart';
 ///
 /// A [NeutralProgressIndicator], centred and larger for the 1st page. Pass [isCompact] for the smaller
 /// padded footer form.
+@internal
 class const NeutralLoadingIndicator({
   /// Render the compact footer form rather than the full-viewport one.
   final bool isCompact = false,
