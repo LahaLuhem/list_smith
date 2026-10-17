@@ -12,6 +12,7 @@ void main() {
     fetchPage: PageFetcher((_) async => const <int>[]),
     itemIdGetter: (item) => item,
     editTransition: const NoEditTransition(),
+    order: const UnknownOrder(),
     pageSize: 20,
     endPolicy: const StopOnEmptyPagesPolicy(),
     onEmptyPage: const ShowEmptySurface(),

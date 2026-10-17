@@ -8,6 +8,7 @@ import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
@@ -330,6 +331,23 @@ class _AsyncListViewState<T extends Object>()
         ),
       };
       final pageItems = items.toList(growable: false);
+      if (kDebugMode) {
+        final comparator = isSearchMode ? null : source.order.comparator;
+        if (comparator != null &&
+            pageItems.indexed
+                .skip(1)
+                .any((row) => comparator(pageItems[row.$1 - 1], row.$2) >= 0)) {
+          // Reported, not thrown, so the page still lands.
+          FlutterError.reportError(
+            FlutterErrorDetails(
+              exception: FlutterError(
+                "Page $pageKey isn't in the list's order. Match the server's, ties included.",
+              ),
+              library: 'list_smith',
+            ),
+          );
+        }
+      }
       if (generation == _generation) {
         // Only its own, since a read beside it may have just failed.
         if (_lastFailedPageIndex == pageKey) _lastFailedPageIndex = null;
@@ -417,11 +435,19 @@ class _AsyncListViewState<T extends Object>()
         shownIds: seenIds,
       );
     } else {
+      // Search results come in the server's own order.
+      final comparator = isSearchMode ? null : widget.source.order.comparator;
       final (pages: displayPages, :shownIds) = _editStoreNotifier.applyTo(
         pages,
         itemIdGetter: itemIdGetter,
         groupOf: widget.grouping.groupOf,
         acceptsNewItems: !isSearchMode, // only the server knows what matches the query
+        sortedPlacement: comparator == null
+            ? null
+            : (
+                comparator: comparator,
+                mayHaveRowsAfter: state.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
+              ),
       );
       display = (state: state.copyWith(pages: displayPages), shownIds: shownIds);
     }

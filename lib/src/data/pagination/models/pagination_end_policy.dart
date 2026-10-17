@@ -23,4 +23,7 @@ abstract class const PaginationEndPolicy() {
   /// Whether this policy reads [EndContext.lastPageSignal], so list_smith asserts the fetcher returns
   /// one. Defaults to `false`.
   bool get requiresSignal => false;
+
+  /// Whether the end it reports is where the data ends, rather than a cap. Defaults to `true`.
+  bool get stopsAtDataEnd => true;
 }

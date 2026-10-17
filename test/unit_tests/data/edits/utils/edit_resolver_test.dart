@@ -7,6 +7,7 @@ import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 
 typedef _Row = ({int id, String label});
 typedef _Placed = ({int id, int group});
+typedef _Ranked = ({int id, int rank});
 
 void main() {
   final resolutionFeature = BddFeature('Edit resolution');
@@ -25,6 +26,32 @@ void main() {
     groupOf: null,
     acceptsNewItems: acceptsNewItems,
   ).pages.expand((page) => page.items).map((item) => item.label).toList(growable: false);
+
+  /// [pages] resolved by rank, read at stamp 0 unless [readStamps] says otherwise.
+  ({List<int> shown, Set<Object> reported}) resolveRanked(
+    List<List<_Ranked>> pages, {
+    required Map<Object, ItemEdit<_Ranked>> edits,
+    List<int>? readStamps,
+    bool mayHaveRowsAfter = true,
+  }) {
+    final (pages: displayPages, :shownIds) = resolveDisplayPages(
+      pages: pages
+          .mapIndexed(
+            (index, items) => LoadedPage(items: items, readStamp: readStamps?[index] ?? 0),
+          )
+          .toList(growable: false),
+      edits: edits,
+      itemIdGetter: (item) => item.id,
+      groupOf: null,
+      acceptsNewItems: true,
+      sortedPlacement: (comparator: _byRank, mayHaveRowsAfter: mayHaveRowsAfter),
+    );
+
+    return (
+      shown: displayPages.expand((page) => page.items).map((item) => item.id).toList(),
+      reported: shownIds,
+    );
+  }
 
   const editKey = 'edit';
   const shownKey = 'shown';
@@ -324,4 +351,75 @@ void main() {
         check(shownIds).unorderedEquals(pages.expand((page) => page.items).map((item) => item.id));
         check(shownIds).unorderedEquals(context.example.val(shownIdsKey) as List<int>);
       });
+
+  const rankedPages = [
+    [(id: 0, rank: 0), (id: 1, rank: 10)],
+    [(id: 2, rank: 20), (id: 3, rank: 30)],
+  ];
+
+  Bdd(resolutionFeature)
+      .scenario(
+        'with an order, an edit that moves its row or adds one lands where the order puts it',
+      )
+      .given('rows 0 to 3 ranked 0 to 30, over 2 pages')
+      .when('<$editKey> is made')
+      .then('the list is <$shownKey>')
+      .example(
+        val(editKey, const <Object, ItemEdit<_Ranked>>{1: (item: (id: 1, rank: 25), stamp: 1)}),
+        val(shownKey, const [0, 2, 1, 3]),
+      )
+      .example(
+        val(editKey, const <Object, ItemEdit<_Ranked>>{9: (item: (id: 9, rank: 15), stamp: 1)}),
+        val(shownKey, const [0, 1, 9, 2, 3]),
+      )
+      .run((context) {
+        final (:shown, reported: _) = resolveRanked(
+          rankedPages,
+          edits: context.example.val(editKey) as Map<Object, ItemEdit<_Ranked>>,
+        );
+
+        check(shown).deepEquals(context.example.val(shownKey) as List<int>);
+      });
+
+  const mayHaveRowsAfterKey = 'may have rows after';
+
+  Bdd(resolutionFeature)
+      .scenario('with an order, a row sorting after every loaded one waits while rows may follow')
+      .given('rows 0 to 3 ranked 0 to 30, and whether rows <$mayHaveRowsAfterKey>')
+      .when('row 1 is re-ranked to 99')
+      .then('the list shows and reports <$shownKey>')
+      .example(val(mayHaveRowsAfterKey, true), val(shownKey, const [0, 2, 3]))
+      .example(val(mayHaveRowsAfterKey, false), val(shownKey, const [0, 2, 3, 1]))
+      .run((context) {
+        final (:shown, :reported) = resolveRanked(
+          rankedPages,
+          edits: const {1: (item: (id: 1, rank: 99), stamp: 1)},
+          mayHaveRowsAfter: context.example.val(mayHaveRowsAfterKey) as bool,
+        );
+
+        check(shown).deepEquals(context.example.val(shownKey) as List<int>);
+        check(reported).unorderedEquals(shown);
+      });
+
+  Bdd(resolutionFeature)
+      .scenario(
+        "with an order, a page read after the edit shows the server's copy where it sent it",
+      )
+      .given('row 1 ranked 10 on a page read before the edit, and ranked 35 on one read after')
+      .when('the edit ranks it 25')
+      .then('it shows once, where the later page has it')
+      .run((_) {
+        final (:shown, reported: _) = resolveRanked(
+          const [
+            [(id: 0, rank: 0), (id: 1, rank: 10)],
+            [(id: 2, rank: 20), (id: 3, rank: 30), (id: 1, rank: 35)],
+          ],
+          edits: const {1: (item: (id: 1, rank: 25), stamp: 1)},
+          readStamps: const [0, 2],
+        );
+
+        check(shown).deepEquals(const [0, 2, 3, 1]);
+      });
 }
+
+int _byRank(_Ranked a, _Ranked b) => a.rank.compareTo(b.rank);

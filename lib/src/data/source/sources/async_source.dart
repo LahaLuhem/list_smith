@@ -29,6 +29,9 @@ final class const AsyncSource<T extends Object>({
 
   /// Whether the rows edits add and take animate.
   required final EditTransition editTransition,
+
+  /// How the server sorts the list, which edits are placed by.
+  required final ItemOrder<T> order,
 }) extends ListSource<T> {
   /// Creates it.
   this;
@@ -44,6 +47,7 @@ final class const AsyncSource<T extends Object>({
       'onEmptyPage: $onEmptyPage, '
       'refresh: $refresh, '
       'search: $search, '
-      'editTransition: $editTransition'
+      'editTransition: $editTransition, '
+      'order: $order'
       ')';
 }

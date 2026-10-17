@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
@@ -46,7 +45,7 @@ void main() {
       server.store.remove(1);
       controller.remove(1);
       await tester.pump(); // the exit starts a frame on
-      await _scrollToEnd(tester, scrollController); // no time passes, so the exit is still running
+      await scrollToEnd(tester, scrollController); // no time passes, so the exit is still running
       final isAskedMidExit = server.asked(3);
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -121,7 +120,7 @@ void main() {
       final saveCompleter = Completer<void>();
       unawaited(controller.removeAsync(1, commit: saveCompleter.future));
       await tester.pump();
-      await _scrollToEnd(tester, scrollController);
+      await scrollToEnd(tester, scrollController);
       check(server.asked(3)).isTrue();
 
       server.store.remove(1);
@@ -146,7 +145,7 @@ void main() {
       controller.remove(4);
       unawaited(controller.removeAsync(1, commit: saveCompleter.future));
       await tester.pump();
-      await _scrollToEnd(tester, scrollController);
+      await scrollToEnd(tester, scrollController);
       check(server.asked(3)).isTrue();
 
       saveCompleter.completeError(Exception('save failed'));
@@ -288,7 +287,7 @@ void main() {
       server.store.remove(1);
       unawaited(controller.removeAsync(1, commit: Completer<void>().future));
       await tester.pump();
-      await _scrollToEnd(tester, scrollController);
+      await scrollToEnd(tester, scrollController);
 
       final firstEmptyPageIndex = (server.store.length / _pageSize).ceil();
       check(server.asked(firstEmptyPageIndex)).isTrue();
@@ -660,39 +659,7 @@ SearchPageFetcher<int> _evenRowsFetcher(FakeServer<int> server, List<int> pageIn
           .take(request.pageSize);
     });
 
-/// Jumps to the end until it stops growing, since the list only knows its end once rows are laid out.
-Future<void> _scrollToEnd(WidgetTester tester, ScrollController scrollController) async {
-  double? lastMaxScrollExtent;
-  for (var pass = 0; pass < 20; pass++) {
-    final maxScrollExtent = scrollController.position.maxScrollExtent;
-    if (maxScrollExtent == lastMaxScrollExtent) return;
-    lastMaxScrollExtent = maxScrollExtent;
-    scrollController.jumpTo(maxScrollExtent);
-    await tester.idle();
-    await drain(tester);
-  }
-}
-
-/// Every row the list shows once it has reached its end, top to bottom, read a screen at a time.
-Future<List<int>> _allShownItems(WidgetTester tester, ScrollController scrollController) async {
-  await _scrollToEnd(tester, scrollController);
-  scrollController.jumpTo(0);
-  await tester.pump();
-  final shownItems = <int>{};
-  while (true) {
-    shownItems.addAll(
-      find
-          .textContaining(RegExp('^item '))
-          .evaluate()
-          .map((element) => int.parse((element.widget as Text).data!.split(' ').last)),
-    );
-    final position = scrollController.position;
-    if (position.pixels >= position.maxScrollExtent) return shownItems.toList(growable: false);
-    scrollController.jumpTo(
-      math.min(position.pixels + position.viewportDimension, position.maxScrollExtent),
-    );
-    await tester.pump();
-  }
-}
+Future<List<int>> _allShownItems(WidgetTester tester, ScrollController scrollController) async =>
+    (await allShownTexts(tester, scrollController, 'item ')).map(int.parse).toList(growable: false);
 
 List<int> _range(int from, int to) => List.generate(to - from + 1, (index) => from + index);

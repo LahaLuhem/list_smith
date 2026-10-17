@@ -18,6 +18,7 @@ void main() {
         itemIdGetter: (item) => item.id,
         groupOf: null,
         acceptsNewItems: true,
+        sortedPlacement: null,
       )
       .pages
       .expand((page) => page.items)

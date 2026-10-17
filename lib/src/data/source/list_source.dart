@@ -1,6 +1,7 @@
 import 'package:meta/meta.dart';
 
 import '/src/data/edits/models/edit_transition.dart';
+import '/src/data/edits/models/item_order.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/page_fetcher.dart';
 import '/src/data/pagination/models/pagination_end_policy.dart';

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -44,4 +46,43 @@ Future<void> pullToRefresh(
     await tester.pump(const Duration(milliseconds: 100));
   }
   await drain(tester, frames: 16);
+}
+
+/// Jumps to the end until it stops growing, since the list only knows its end once rows are laid out.
+Future<void> scrollToEnd(WidgetTester tester, ScrollController scrollController) async {
+  double? lastMaxScrollExtent;
+  for (var pass = 0; pass < 20; pass++) {
+    final maxScrollExtent = scrollController.position.maxScrollExtent;
+    if (maxScrollExtent == lastMaxScrollExtent) return;
+    lastMaxScrollExtent = maxScrollExtent;
+    scrollController.jumpTo(maxScrollExtent);
+    await tester.idle();
+    await drain(tester);
+  }
+}
+
+/// What follows [prefix] in each row, top to bottom, once the list has reached its end.
+Future<List<String>> allShownTexts(
+  WidgetTester tester,
+  ScrollController scrollController,
+  String prefix,
+) async {
+  await scrollToEnd(tester, scrollController);
+  scrollController.jumpTo(0);
+  await tester.pump();
+  final shownTexts = <String>{};
+  while (true) {
+    shownTexts.addAll(
+      find
+          .textContaining(RegExp('^$prefix'))
+          .evaluate()
+          .map((element) => (element.widget as Text).data!.replaceFirst(prefix, '')),
+    );
+    final position = scrollController.position;
+    if (position.pixels >= position.maxScrollExtent) return shownTexts.toList(growable: false);
+    scrollController.jumpTo(
+      math.min(position.pixels + position.viewportDimension, position.maxScrollExtent),
+    );
+    await tester.pump();
+  }
 }
