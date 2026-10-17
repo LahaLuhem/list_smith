@@ -12,8 +12,7 @@ import '/features/core/repos/demo_repository.dart';
 final class EditsViewModel() extends ViewModel {
   static const _latency = Duration(milliseconds: 500);
 
-  /// Sorted by id and read after the last id seen, so a delete can't make the next page skip a row
-  /// the way an offset would.
+  /// Sorted by id and read after the last id seen, so no delete above can shift the next page.
   final _store = DemoRepository().items.toList();
 
   /// Below every existing id, so the store sorts new items on top too.
