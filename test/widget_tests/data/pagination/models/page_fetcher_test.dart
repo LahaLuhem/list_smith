@@ -90,6 +90,84 @@ void main() {
       check(received).deepEquals(const [null, 's1']);
     });
   });
+
+  feature('ListSmith.async hasMore pagination', () {
+    scenarioWidgets('ends once a page says hasMore is false, without asking for another page', (
+      tester,
+    ) async {
+      final server = FakeServer(List.generate(6, (index) => index));
+      await _pumpPaged(tester, server.hasMoreFetcher);
+
+      check(server.requests.map((request) => request.pageIndex)).deepEquals([0, 1]);
+      check(find.text('No more items').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('its fetches get no previousSignal, since they page by number', (tester) async {
+      final server = FakeServer(List.generate(9, (index) => index));
+      await _pumpPaged(tester, server.hasMoreFetcher);
+
+      check(server.requests).length.equals(3);
+      check(server.requests.map((request) => request.previousSignal)).every((it) => it.isNull());
+    });
+
+    scenarioWidgets('the end policy can still end it first', (tester) async {
+      final server = FakeServer(List.generate(9, (index) => index));
+      await _pumpPaged(
+        tester,
+        server.hasMoreFetcher,
+        endPolicy: const FixedPageCountPolicy(pageCount: 1),
+      );
+
+      check(server.requests.map((request) => request.pageIndex)).deepEquals([0]);
+      check(find.text('No more items').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('search ends on its own hasMore flag', (tester) async {
+      final searchPageIndexes = <int>[];
+      final searchFetchPage = SearchPageFetcher<int>.withHasMore((request) async {
+        searchPageIndexes.add(request.pageIndex);
+
+        return (const [99], hasMore: false);
+      });
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: PageFetcher((_) async => const [1, 2, 3]),
+          itemIdGetter: (item) => item,
+          search: AsyncSearch(fetchPage: searchFetchPage),
+          query: 'q',
+          searchDebounce: const Duration(milliseconds: 20),
+          refresh: const NoRefresh(),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await settle(tester);
+
+      check(searchPageIndexes).deepEquals([0]);
+      check(find.text('No more items').evaluate()).length.equals(1);
+    });
+  });
+}
+
+/// Pumps a list of 3 a page over [fetchPage] and lets it load.
+Future<void> _pumpPaged(
+  WidgetTester tester,
+  PageFetcher<int> fetchPage, {
+  PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+}) async {
+  await pumpListSmith(
+    tester,
+    ListSmith.async(
+      fetchPage: fetchPage,
+      pageSize: 3,
+      itemIdGetter: (item) => item,
+      endPolicy: endPolicy,
+      refresh: const NoRefresh(),
+      itemBuilder: (_, item, _) => Text('item $item'),
+    ),
+  );
+  await drain(tester, frames: 12);
 }
 
 /// A fake cursor-paged backend: 3 pages chained by opaque string cursors, then a `null` cursor that

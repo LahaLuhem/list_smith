@@ -279,5 +279,55 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1); // page 0 old kept
       check(find.text('item 2').evaluate()).length.equals(0); // no fresh commit
     });
+
+    scenarioWidgets('a withHasMore source reloads its pages in parallel', (tester) async {
+      final server = FakeServer(List.generate(9, (index) => index));
+      final controller = await _pumpHasMoreList(tester, server);
+      final holdCompleters = List.generate(3, (page) => server.hold(page, attempt: 2));
+
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      check(server.attempts).deepEquals({0: 2, 1: 2, 2: 2}); // every page out before any is back
+      await release(tester, holdCompleters);
+    });
+
+    scenarioWidgets('after a reload, a withHasMore list still ends where its last page said', (
+      tester,
+    ) async {
+      final server = FakeServer(List.generate(9, (index) => index));
+      final controller = await _pumpHasMoreList(tester, server);
+      check(server.asked(3)).isFalse(); // premise: page 2's flag ended the list
+
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 12);
+
+      check(server.attempts[2]).equals(2);
+      check(server.asked(3)).isFalse();
+    });
   });
+}
+
+/// [server]'s rows, 3 a page through `withHasMore`, reloading every page at once.
+Future<ListSmithController<int>> _pumpHasMoreList(
+  WidgetTester tester,
+  FakeServer<int> server,
+) async {
+  final controller = ListSmithController<int>();
+  await pumpListSmith(
+    tester,
+    ListSmith.async(
+      fetchPage: server.hasMoreFetcher,
+      pageSize: 3,
+      itemIdGetter: (item) => item,
+      refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
+      controller: controller,
+      itemBuilder: (_, item, _) => Text('item $item'),
+    ),
+  );
+  await drain(tester, frames: 12);
+
+  return controller;
 }

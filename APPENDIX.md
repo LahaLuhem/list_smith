@@ -351,21 +351,25 @@ renames.
 - **Why open, not sealed.** A sealed policy forced list_smith to enumerate every strategy. Opening
   it makes the common page-derivable rules a few lines of consumer code, and tests call
   `hasReachedEnd` directly.
-- **The signal is a fetcher output, orthogonal to the policy.** A `hasMore` flag lives in the
-  network response, which only the fetcher sees, so the policy decides and the fetcher supplies.
-  `PageFetcher` and `SearchPageFetcher` are small callable classes with 2 constructors: `.new`
-  returns items only, `.withSignal` returns `(items, Object? signal)`. The common path pays a
-  one-constructor wrap, so `T` stays the consumer's DTO rather than a `Response<T>` wrapper.
-- **The signal is erased to `Object?`.** `ExplicitHasMorePolicy` reads it as a bool, a consumer's
-  cursor policy as their cursor. Erasure, grouping's key trick, avoids a 2nd `ListSmith` generic.
-  A return value beat a mutation channel (a `Completer` or sink): it fits the package's
-  value-object grain and, unlike a `void` completer, can carry a cursor.
+- **The signal is a fetcher output, orthogonal to the policy.** It lives in the network response,
+  which only the fetcher sees, so the policy decides and the fetcher supplies. `PageFetcher` and
+  `SearchPageFetcher` are small callable classes with 3 constructors: `.new` returns items only,
+  `.withHasMore` returns `(items, hasMore: bool)`, `.withSignal` returns `(items, Object? signal)`.
+  The common path pays a one-constructor wrap, so `T` stays the consumer's DTO rather than a
+  `Response<T>` wrapper.
+- **A `hasMore` flag ends the list from the fetcher.** It means one thing, so `withHasMore` types it
+  as a `bool` and acts on it, with no policy to pair, so `ExplicitHasMorePolicy` is deprecated. It
+  pages by number, so it gets no `previousSignal` and a depth reload fetches its pages in parallel.
+- **The signal is erased to `Object?`.** A consumer's cursor policy reads it as their cursor.
+  Erasure, grouping's key trick, avoids a 2nd `ListSmith` generic. A return value beat a mutation
+  channel (a `Completer` or sink): it fits the package's value-object grain and, unlike a `void`
+  completer, can carry a cursor.
 - **list_smith owns the signal's lifecycle, so policies stay pure.** The last fetch's signal lives
   in `_lastPageSignal`, which is not derivable from the paging state. It feeds each
   `EndContext.lastPageSignal`, resets on refresh, and snapshots with the normal state across a
   `KeepCachePolicy` toggle, so every policy is a pure function of its `EndContext` with no
-  consumer-side reset wiring. A guard asserts a signal policy is paired with a `.withSignal`
-  fetcher.
+  consumer-side reset wiring. A guard asserts a signal policy is paired with a fetcher that returns
+  a signal.
 - **Layout:** `PageFetcher` and `SearchPageFetcher` live under `models/` now that they are classes.
   `typedefs/` keeps only real typedefs.
 

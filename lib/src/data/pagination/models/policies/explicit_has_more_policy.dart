@@ -1,12 +1,10 @@
 part of '../pagination_end_policy.dart';
 
-/// Ends pagination as soon as a page's fetcher reports `hasMore: false`.
-///
-/// Needs a `withSignal` fetcher whose signal is that bool. Stopping on the flag saves the trailing empty
-/// page a count-based policy has to fetch to find the end. For a next-cursor source reach for [StopOnNullSignalPolicy]
-/// instead.
+/// Ends pagination once a `withSignal` fetcher's signal is `false`.
+@Deprecated('Return the flag from PageFetcher.withHasMore instead. It goes at the next major.')
 final class const ExplicitHasMorePolicy() extends PaginationEndPolicy {
   /// Creates it.
+  @Deprecated('Return the flag from PageFetcher.withHasMore instead. It goes at the next major.')
   this;
 
   @override

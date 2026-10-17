@@ -51,13 +51,11 @@ final class const ReloadToCurrentDepth({
     }
 
     var didFail = false;
-    Future<List<T>?> fetchOrNull(int index) async {
+    Future<(List<T>, Object?)?> fetchOrNull(int index) async {
       if (didFail || context.isStale) return null; // its read would go to waste
 
       try {
-        final (items, _) = await context.fetch(index, null);
-
-        return items;
+        return await context.fetch(index, null);
       } on Exception {
         didFail = true; // the observer already saw the error
 
@@ -67,14 +65,18 @@ final class const ReloadToCurrentDepth({
 
     // A pool as wide as the depth is "all at once", so a null concurrency needs no branch of its own.
     final pool = Pool(concurrency ?? depth);
-    final freshPages = await Iterable.generate(
+    final freshReads = await Iterable.generate(
       depth,
       (index) => pool.withResource(() => fetchOrNull(index)),
     ).wait;
     await pool.close();
     if (didFail || context.isStale) return; // nothing whole to commit
 
-    await context.commit(freshPages.nonNulls.toList(growable: false));
+    final pageReads = freshReads.nonNulls.toList(growable: false);
+    await context.commit(
+      pageReads.map((read) => read.$1).toList(growable: false),
+      lastSignal: pageReads.last.$2, // a hasMore flag can end the list
+    );
   }
 
   @override

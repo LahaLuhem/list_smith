@@ -33,11 +33,18 @@ final class FakeServer<T extends Object>(Iterable<T> items) {
     return page;
   });
 
-  /// [offsetLateFetcher] through `withSignal`, reporting whether rows follow, like a `hasMore` field.
-  PageFetcher<T> get hasMoreFetcher => PageFetcher.withSignal((request) async {
+  /// [offsetLateFetcher] through `withHasMore`.
+  PageFetcher<T> get hasMoreFetcher => PageFetcher.withHasMore((request) async {
     await _arrive(request);
 
-    return (_window(request), store.length > (request.pageIndex + 1) * request.pageSize);
+    return (_window(request), hasMore: _hasRowsAfter(request));
+  });
+
+  /// [hasMoreFetcher] through `withSignal`.
+  PageFetcher<T> get hasMoreSignalFetcher => PageFetcher.withSignal((request) async {
+    await _arrive(request);
+
+    return (_window(request), _hasRowsAfter(request));
   });
 
   /// Cursor paging on the next offset, like many opaque cursors underneath.
@@ -53,6 +60,9 @@ final class FakeServer<T extends Object>(Iterable<T> items) {
       .skip(request.pageIndex * request.pageSize)
       .take(request.pageSize)
       .toList(growable: false);
+
+  bool _hasRowsAfter(PageRequest request) =>
+      store.length > (request.pageIndex + 1) * request.pageSize;
 
   Future<void> _arrive(PageRequest request) async {
     requests.add(request);
