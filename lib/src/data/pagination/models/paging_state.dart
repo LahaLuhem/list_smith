@@ -65,6 +65,7 @@ final class const PagingState<T extends Object>({
           (page) => LoadedPage(
             items: page.items.where(predicate).toList(growable: false),
             readStamp: page.readStamp,
+            previousSignal: page.previousSignal,
           ),
         )
         .toList(growable: false),

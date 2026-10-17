@@ -749,10 +749,10 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   between the 2 reads could lose a row. A removal that comes in while the page is out gets the same
   read.
 - **The read reports `invalidated`,** since a page cache would answer `nextPage` with its old copy.
-- **Always on.** A list whose pages don't shift, like a calendar paged by day, pays a wasted read
-  per page after a removal.
-- **Not on a `withSignal` list.** Its cursor is taken to name a row, which doesn't shift, and
-  list_smith keeps no cursor to read the page before with.
+- **Always on, cursors included.** list_smith can't tell a cursor naming a row from an offset or a
+  `hasMore` flag, so each page read again gets the signal it first went out with. A list whose pages
+  don't shift, like a calendar or a cursor on the last row, pays a wasted read per page after a
+  removal.
 - **Another writer's deletes still shift an offset,** since list_smith never hears of them. Paging by
   the last row covers those, so the README points there.
 
@@ -771,7 +771,6 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   the server already had it, so stopping the count once page `k` landed lost rows.
 - **A failed line-up read keeps the old list,** like a failed page. Its reads are part of the run,
   so they report its trigger.
-- **Not on a `withSignal` list,** for the reason in [#removal-reread](#removal-reread).
 
 ---
 

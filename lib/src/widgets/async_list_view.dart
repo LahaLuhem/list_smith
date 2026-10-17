@@ -196,6 +196,7 @@ class _AsyncListViewState<T extends Object>()
       return;
     }
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
+    final previousSignal = _lastPageSignal;
     final pages = loadingState.pages ?? const [];
     final itemIdGetter = widget.source.itemIdGetter;
     late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
@@ -212,7 +213,7 @@ class _AsyncListViewState<T extends Object>()
     try {
       final pageFuture = _fetchPageRaw(
         pageIndex,
-        _lastPageSignal,
+        previousSignal,
         resolveTrigger(
           pageIndex: pageIndex,
           pending: trigger,
@@ -221,7 +222,7 @@ class _AsyncListViewState<T extends Object>()
       );
       // Future.wait, not .wait, so a failed read reaches the error surface as itself.
       final pageReads = await Future.wait(
-        _rereadsBefore(pageIndex, rereadCount).followedBy([pageFuture]),
+        _rereadsBefore(pages, rereadCount).followedBy([pageFuture]),
         eagerError: true,
       );
       if (generation != _generation) return;
@@ -231,13 +232,14 @@ class _AsyncListViewState<T extends Object>()
       // If a removal could have reached the server while this page was out, read the pages before again.
       final rereads = landedRemovedIds.isNotEmpty && (isRemovalOpen || hasRemovalAfterRead())
           ? await Future.wait(
-              _rereadsBefore(pageIndex, rereadCountFor(landedRemovedIds)),
+              _rereadsBefore(pages, rereadCountFor(landedRemovedIds)),
               eagerError: true,
             )
           : pageReads.take(rereadCount);
       if (generation != _generation) return;
 
       _lastPageSignal = signal;
+      late final knownIds = loadedIds.union(pageItems.map(itemIdGetter).toSet());
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
         pages: [
@@ -246,10 +248,11 @@ class _AsyncListViewState<T extends Object>()
             // Only the rows the list lacks, so the end policy still counts what this page sent.
             items: rereads
                 .expand((read) => read.$1)
-                .whereNot((item) => loadedIds.contains(itemIdGetter(item)))
+                .whereNot((item) => knownIds.contains(itemIdGetter(item)))
                 .followedBy(pageItems)
                 .toList(growable: false),
             readStamp: readStamp,
+            previousSignal: previousSignal,
           ),
         ],
         isLoading: false,
@@ -344,17 +347,16 @@ class _AsyncListViewState<T extends Object>()
 
   Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
     final lastPage = pages.lastOrNull;
-    // A signal carries its own place, so only index-based pages shift.
-    if (lastPage == null || _isSignalBased) return const {};
+    if (lastPage == null) return const {};
 
     return _idsRemovedSince(lastPage.readStamp).toSet();
   }
 
-  Iterable<Future<(List<T>, Object?)>> _rereadsBefore(int pageIndex, int count) =>
-      Iterable.generate(count, (offset) => pageIndex - count + offset).map(
+  Iterable<Future<(List<T>, Object?)>> _rereadsBefore(List<LoadedPage<T>> pages, int count) =>
+      Iterable.generate(count, (offset) => pages.length - count + offset).map(
         (rereadPageIndex) => _fetchPageRaw(
           rereadPageIndex,
-          null,
+          pages[rereadPageIndex].previousSignal,
           resolveTrigger(
             pageIndex: rereadPageIndex,
             pending: null,
@@ -850,6 +852,9 @@ final class _ReloadRun<T extends Object>(
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
+  /// The signal each re-fetch went out with.
+  final _previousSignals = <int, Object?>{};
+
   @override
   int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
 
@@ -859,6 +864,7 @@ final class _ReloadRun<T extends Object>(
   @override
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
     _readStamps[index] = _engine._editStoreNotifier.value;
+    _previousSignals[index] = previousSignal;
 
     return _engine._fetchPageRaw(index, previousSignal, trigger);
   }
@@ -879,10 +885,8 @@ final class _ReloadRun<T extends Object>(
           (row) => row.id,
           (index, row) => math.min(index ?? row.index, row.index),
         );
-    // A signal carries its own place, so only index-based pages can skip rows.
-    final boundaryCount = isSignalBased ? 0 : pages.length - 1;
     final rereadIndexes = SplayTreeSet.of(
-      Iterable.generate(boundaryCount, (offset) => offset + 1).expand((boundaryIndex) {
+      Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
         // Booked any time after the page before went out, since the server may have had it sooner.
         final crossedCount = _engine
             ._idsRemovedSince(_readStamps[boundaryIndex - 1]!)
@@ -899,7 +903,9 @@ final class _ReloadRun<T extends Object>(
       try {
         // After every page landed, so each read sees whatever the pages either side of it saw.
         rereads = await Future.wait(
-          rereadIndexes.map((index) => _engine._fetchPageRaw(index, null, trigger)),
+          rereadIndexes.map(
+            (index) => _engine._fetchPageRaw(index, _previousSignals[index], trigger),
+          ),
           eagerError: true,
         );
       } on Exception {
@@ -935,6 +941,7 @@ final class _ReloadRun<T extends Object>(
             (index, items) => LoadedPage(
               items: [...?slidItemsByPageIndex[index], ...items],
               readStamp: _readStamps[index]!, // every page came through [fetch]
+              previousSignal: _previousSignals[index],
             ),
           )
           .toList(growable: false),

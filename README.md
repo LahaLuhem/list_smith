@@ -214,7 +214,8 @@ ListSmith.async(
 ```
 
 The cursor is opaque to list_smith (an `Object?`), so cast it back in the closure. Search gets its
-own cursor the same way, through `SearchPageFetcher.withSignal`.
+own cursor the same way, through `SearchPageFetcher.withSignal`. A cursor can come more than once,
+for a retry or a page read again after a removal, so it has to stay valid.
 
 </details>
 
@@ -319,8 +320,8 @@ Worth knowing:
 - **The reload commits only a list it read whole.** If a page fails after your fetcher's own
   retries, the list stays as it was. Pages read at different times can lose or repeat rows where
   they meet.
-- **A removal you make mid-reload loses no row,** on a list paged by number or offset. Each page
-  break it pulled rows across costs one more read, and if that fails, the list stays as it was too.
+- **A removal you make mid-reload loses no row.** Each page break it pulled rows across costs one
+  more read, and if that fails, the list stays as it was too.
 - **`withSignal` sources reload sequentially.** Page `k` needs page `k-1`, so the reload walks in
   order and `concurrency` is ignored.
 - **A page still loading when the pull happens is dropped and asked again.** Its answer was aimed at
@@ -401,16 +402,13 @@ and removing every row on the screen loads the next page.
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
 while rows above it come and go.
 
-A removal moves every row after it up a place on your server. On a list paged by number or offset,
-the next page also reads the page before it again, so the rows that moved up still show. That read
-reports `invalidated`.
+A removal moves every row after it up a place on your server, so the next page also reads the page
+before it again, keeping the rows that moved up. That read reports `invalidated`.
 
 list_smith can't make up for:
 
 - what it never hears about, like someone else's deletes
 - an `upsert` your server sorts somewhere else
-- any change on a `withSignal` list, whose cursor it expects to name a row. Paging by number with a
-  `hasMore` flag isn't covered.
 
 For a list others edit too, ask for the rows after the last one loaded:
 

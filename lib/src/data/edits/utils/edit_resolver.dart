@@ -43,7 +43,13 @@ const _opensOnTop = -1;
         movedIds.add(id);
       }
     }
-    displayPages.add(LoadedPage(items: displayPage, readStamp: page.readStamp));
+    displayPages.add(
+      LoadedPage(
+        items: displayPage,
+        readStamp: page.readStamp,
+        previousSignal: page.previousSignal,
+      ),
+    );
   }
   if (displayPages.isEmpty) return (pages: displayPages, shownIds: shownIds);
 
