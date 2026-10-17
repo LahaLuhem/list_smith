@@ -40,6 +40,8 @@ renames.
 - [Edit transitions animate the rows edits add and take](#edit-transitions)
 - [list_smith pages on its own](#own-paging)
 - [Where a pull can start](#pull-surfaces)
+- [A removal reads the page before again](#removal-reread)
+- [A depth reload commits a whole list, lined up](#depth-reload-whole)
 
 <!-- TOC end -->
 
@@ -732,6 +734,44 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Every surface sits in the list and gets its visible space,** unmeasured, so a `LayoutBuilder` or
   `Expanded` works and a short one can't scroll. A taller one scrolls itself. Built outside it, a
   surface would take the list out of the tree and detach the app's `ScrollController`.
+
+---
+
+<a id="removal-reread"></a>
+## A removal reads the page before again
+
+- **Decision:** once rows the list holds were removed, the next page also reads the page or pages
+  before it and keeps the rows that moved up. An index or offset names a row only while nothing
+  above it changes, so the next page would start a row late per removal, and the rows it skipped
+  would never reach the app.
+- **Removals still saving or animating out count,** since the server may already have them. While
+  one is out, the page before is read once the page lands rather than beside it, or a save landing
+  between the 2 reads could lose a row. A removal that comes in while the page is out gets the same
+  read.
+- **The read reports `invalidated`,** since a page cache would answer `nextPage` with its old copy.
+- **Always on.** A list whose pages don't shift, like a calendar paged by day, pays a wasted read
+  per page after a removal.
+- **Not on a `withSignal` list.** Its cursor is taken to name a row, which doesn't shift, and
+  list_smith keeps no cursor to read the page before with.
+- **Another writer's deletes still shift an offset,** since list_smith never hears of them. Paging by
+  the last row covers those, so the README points there.
+
+---
+
+<a id="depth-reload-whole"></a>
+## A depth reload commits a whole list, lined up
+
+- **Decision:** `ReloadToCurrentDepth` commits only once every page reloaded, else the old list
+  stays. An old page kept beside fresh ones was read at another time, so rows go missing or repeat
+  where they meet. `onError` and `ReloadOnError` do nothing now, and go at the next major.
+- **Lined up before it commits.** A removal booked any time after page `k - 1` went out could have
+  pulled rows up past page `k`'s start. Once every page landed, page `k - 1` is read again, and each
+  row the fresh pages lack goes in front of the page after the fresh row it follows.
+- **"Any time after" has no end.** A slow `remove()` or an exit ending late reaches list_smith after
+  the server already had it, so stopping the count once page `k` landed lost rows.
+- **A failed line-up read keeps the old list,** like a failed page. Its reads are part of the run,
+  so they report its trigger.
+- **Not on a `withSignal` list,** for the reason in [#removal-reread](#removal-reread).
 
 ---
 

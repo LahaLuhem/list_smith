@@ -319,6 +319,8 @@ Worth knowing:
 - **The reload commits only a list it read whole.** If a page fails after your fetcher's own
   retries, the list stays as it was. Pages read at different times can lose or repeat rows where
   they meet.
+- **A removal you make mid-reload loses no row,** on a list paged by number or offset. Each page
+  break it pulled rows across costs one more read, and if that fails, the list stays as it was too.
 - **`withSignal` sources reload sequentially.** Page `k` needs page `k-1`, so the reload walks in
   order and `concurrency` is ignored.
 - **A page still loading when the pull happens is dropped and asked again.** Its answer was aimed at
@@ -399,8 +401,26 @@ and removing every row on the screen loads the next page.
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
 while rows above it come and go.
 
-> On an offset-paged list, a deletion on your server moves every later row up a place, so the next
-> page skips one. Use cursor paging for a list you edit, for now.
+A removal moves every row after it up a place on your server. On a list paged by number or offset,
+the next page also reads the page before it again, so the rows that moved up still show. That read
+reports `invalidated`.
+
+list_smith can't make up for:
+
+- what it never hears about, like someone else's deletes
+- an `upsert` your server sorts somewhere else
+- any change on a `withSignal` list, whose cursor it expects to name a row. Paging by number with a
+  `hasMore` flag isn't covered.
+
+For a list others edit too, ask for the rows after the last one loaded:
+
+```dart
+fetchPage: PageFetcher.withSignal((request) async {
+  final tasks = await api.tasks(after: request.previousSignal as String?, limit: request.pageSize);
+  return (tasks, tasks.isEmpty ? null : tasks.last.id);  // the last row, not an offset
+}),
+endPolicy: const StopOnNullSignalPolicy(),
+```
 
 ### Before your server answers
 
