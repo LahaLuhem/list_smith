@@ -3,6 +3,8 @@
 /// @docImport 'pagination_end_policy.dart';
 library;
 
+import 'package:meta/meta.dart';
+
 import 'empty_page_context.dart';
 
 part 'empty_page_behaviours/advance_to_first_non_empty.dart';
@@ -19,5 +21,6 @@ sealed class const EmptyPageBehaviour() {
   this;
 
   /// Whether to page past the current empty page. Called after each page lands.
+  @internal
   bool shouldAdvance(EmptyPageContext context);
 }

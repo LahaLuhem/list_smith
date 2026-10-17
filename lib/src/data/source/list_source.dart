@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 import '/src/data/edits/models/edit_transition.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
 import '/src/data/pagination/models/page_fetcher.dart';
@@ -14,6 +16,7 @@ part 'sources/sync_source.dart';
 ///
 /// [AsyncSource] (paginated, optionally searchable) or [SyncSource] (in-memory search). Each named constructor
 /// builds one, so no parameter is ever silently inert on the wrong mode.
+@internal
 sealed class const ListSource<T extends Object>() {
   /// Const base constructor.
   this;

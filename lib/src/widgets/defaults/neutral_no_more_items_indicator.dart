@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/utils/neutral_theme.dart';
 
 /// The neutral footer for a fully-loaded list. Override `noMoreItemsBuilder` to replace it.
+@internal
 class const NeutralNoMoreItemsIndicator({super.key}) extends StatelessWidget {
   static const double _padding = 16;
 

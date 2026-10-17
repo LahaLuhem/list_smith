@@ -9,6 +9,7 @@ import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
@@ -44,6 +45,7 @@ import 'row_transitions_notifier.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging state and every fetch into it, wires
 /// pull-to-refresh, and runs feed and search as 2 views on that one state.
+@internal
 class const AsyncListView<T extends Object>({
   /// The fetchers, end policy and search cache policy.
   required final AsyncSource<T> source,
@@ -475,19 +477,7 @@ class _AsyncListViewState<T extends Object>()
     };
 
     _searchModeNotifier.value = isSearchMode;
-    final restoredSnapshot = _applyCacheAction(cacheAction);
-
-    final observer = widget.observer;
-    observer?.onQueryCommitted(committedQuery);
-    if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
-    if (restoredSnapshot == null) observer?.onReload(.queryChanged); // reset, not restored
-    // Paid after the query facts, so the observer's events stay in order.
-    final debt = restoredSnapshot?.debt;
-    if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
-  }
-
-  /// Applies [cacheAction]. Hands back the snapshot it put back, or null when the stream restarted.
-  _NormalSnapshot<T>? _applyCacheAction(CacheAction cacheAction) {
+    _NormalSnapshot<T>? restoredSnapshot;
     switch ((cacheAction, _normalSnapshot)) {
       case (.restoreNormal, final snapshot?):
         _rowTransitionsNotifier.settle();
@@ -501,8 +491,7 @@ class _AsyncListViewState<T extends Object>()
         if (snapshot.state.status == .loadingFirstPage && snapshot.debt == null) {
           _startRun(.initialLoad, (run) => run.reset());
         }
-
-        return snapshot;
+        restoredSnapshot = snapshot;
       case (.snapshotThenRefresh, _):
         // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
         final runningReload = _runningReload;
@@ -517,9 +506,15 @@ class _AsyncListViewState<T extends Object>()
       case (.refresh, _) || (.restoreNormal, null):
       // Nothing to keep. The restart below is the whole action.
     }
-    _startRun(.queryChanged, (run) => run.reset());
+    if (restoredSnapshot == null) _startRun(.queryChanged, (run) => run.reset());
 
-    return null;
+    final observer = widget.observer;
+    observer?.onQueryCommitted(committedQuery);
+    if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
+    if (restoredSnapshot == null) observer?.onReload(.queryChanged); // reset, not restored
+    // Paid after the query facts, so the observer's events stay in order.
+    final debt = restoredSnapshot?.debt;
+    if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
   }
 
   /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
@@ -871,32 +866,8 @@ final class _ReloadRun<T extends Object>(
   @override
   Future<void> commit(List<List<T>> pages, {Object? lastSignal}) async {
     if (isStale) return;
-    final List<List<T>> linedUpPages;
-    try {
-      // A signal carries its own place, so only index-based pages can skip rows.
-      linedUpPages = isSignalBased ? pages : await _lineUp(pages);
-    } on Exception {
-      return; // the old list stays, the observer already saw the error
-    }
-    if (isStale) return;
-
-    _engine._commit(
-      // Every page came through [fetch], so each has its stamp.
-      linedUpPages
-          .mapIndexed((index, items) => LoadedPage(items: items, readStamp: _readStamps[index]!))
-          .toList(growable: false),
-      lastSignal: lastSignal,
-    );
-    _epoch = _engine._generation;
-  }
-
-  /// [pages] with the rows their reads skipped put back.
-  Future<List<List<T>>> _lineUp(List<List<T>> pages) async {
-    final engine = _engine;
-    final itemIdGetter = engine.widget.source.itemIdGetter;
-    final removedIds = engine._idsRemovedSince(_readStamps.values.min).toSet();
-    if (removedIds.isEmpty) return pages;
-
+    final itemIdGetter = _engine.widget.source.itemIdGetter;
+    final removedIds = _engine._idsRemovedSince(_readStamps.values.min).toSet();
     // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after.
     late final removedPageIndexById = (_startState?.pages ?? const [])
         .map((page) => page.items)
@@ -908,48 +879,68 @@ final class _ReloadRun<T extends Object>(
           (row) => row.id,
           (index, row) => math.min(index ?? row.index, row.index),
         );
+    // A signal carries its own place, so only index-based pages can skip rows.
+    final boundaryCount = isSignalBased ? 0 : pages.length - 1;
     final rereadIndexes = SplayTreeSet.of(
-      Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
+      Iterable.generate(boundaryCount, (offset) => offset + 1).expand((boundaryIndex) {
         // Booked any time after the page before went out, since the server may have had it sooner.
-        final crossedCount = engine
+        final crossedCount = _engine
             ._idsRemovedSince(_readStamps[boundaryIndex - 1]!)
             .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
             .length;
-        final count = engine._rereadCount(crossedCount, boundaryIndex);
+        final count = _engine._rereadCount(crossedCount, boundaryIndex);
 
         return Iterable.generate(count, (offset) => boundaryIndex - count + offset);
       }),
     );
-    if (rereadIndexes.isEmpty) return pages;
-
-    // After every page landed, so each read sees whatever the pages either side of it saw.
-    final rereadItems = await Future.wait(
-      rereadIndexes.map((index) => engine._fetchPageRaw(index, null, trigger)),
-      eagerError: true,
-    );
-    final rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereadItems.map((read) => read.$1));
-    final freshPageIndexById = pages.indexed
-        .expand((indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)))
-        .groupFoldBy<Object, int>((row) => row.id, (index, row) => index ?? row.index);
     final slidItemsByPageIndex = <int, List<T>>{};
-    final placedIds = <Object>{};
-    for (final run in rereadIndexes.splitBetween((index, nextIndex) => nextIndex != index + 1)) {
-      // A skipped row goes in front of the page after the fresh row it follows.
-      var pageIndex = run.first;
-      for (final item in run.expand((index) => rereadItemsByIndex[index]!)) {
-        final id = itemIdGetter(item);
-        final freshPageIndex = freshPageIndexById[id];
-        if (freshPageIndex != null) {
-          pageIndex = freshPageIndex + 1;
-        } else if (pageIndex < pages.length && placedIds.add(id)) {
-          (slidItemsByPageIndex[pageIndex] ??= []).add(item);
+    if (rereadIndexes.isNotEmpty) {
+      final List<(List<T>, Object?)> rereads;
+      try {
+        // After every page landed, so each read sees whatever the pages either side of it saw.
+        rereads = await Future.wait(
+          rereadIndexes.map((index) => _engine._fetchPageRaw(index, null, trigger)),
+          eagerError: true,
+        );
+      } on Exception {
+        return; // the old list stays, the observer already saw the error
+      }
+      if (isStale) return;
+
+      final rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereads.map((read) => read.$1));
+      final freshPageIndexById = pages.indexed
+          .expand(
+            (indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)),
+          )
+          .groupFoldBy<Object, int>((row) => row.id, (index, row) => index ?? row.index);
+      final placedIds = <Object>{};
+      for (final run in rereadIndexes.splitBetween((index, nextIndex) => nextIndex != index + 1)) {
+        // A skipped row goes in front of the page after the fresh row it follows.
+        var pageIndex = run.first;
+        for (final item in run.expand((index) => rereadItemsByIndex[index]!)) {
+          final id = itemIdGetter(item);
+          final freshPageIndex = freshPageIndexById[id];
+          if (freshPageIndex != null) {
+            pageIndex = freshPageIndex + 1;
+          } else if (pageIndex < pages.length && placedIds.add(id)) {
+            (slidItemsByPageIndex[pageIndex] ??= []).add(item);
+          }
         }
       }
     }
 
-    return pages
-        .mapIndexed((index, items) => [...?slidItemsByPageIndex[index], ...items])
-        .toList(growable: false);
+    _engine._commit(
+      pages
+          .mapIndexed(
+            (index, items) => LoadedPage(
+              items: [...?slidItemsByPageIndex[index], ...items],
+              readStamp: _readStamps[index]!, // every page came through [fetch]
+            ),
+          )
+          .toList(growable: false),
+      lastSignal: lastSignal,
+    );
+    _epoch = _engine._generation;
   }
 
   @override

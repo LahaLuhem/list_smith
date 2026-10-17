@@ -14,6 +14,7 @@ final class const AdvanceToFirstNonEmpty({
   this : assert(maxPages == null || maxPages > 0, 'maxPages must be positive when set.');
 
   @override
+  @internal
   bool shouldAdvance(EmptyPageContext context) {
     final pageCap = maxPages;
 

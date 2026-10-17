@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
+
 /// Collapses a fast-changing search query into one committed value.
 ///
 /// [onCommitted] only ever runs from the timer, never during `build`, so a `setState` in it is safe.
+@internal
 class QueryDebouncer({
   /// Called with the new committed, trimmed query once a scheduled change elapses.
   required final void Function(String committedQuery) onCommitted,

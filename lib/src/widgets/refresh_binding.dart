@@ -13,6 +13,7 @@ import 'defaults/neutral_refresh_indicator.dart';
 /// Decides when the indicator exists and where it sits, so [indicatorBuilder] or [NeutralRefreshIndicator]
 /// only draws it. The controller type never leaks past here, so the mechanism stays swappable. Whether
 /// refresh happens at all is the engine's call: it leaves this wrapper out when refresh is off.
+@internal
 class const RefreshBinding({
   /// The scrollable the gesture drives.
   required final Widget child,
@@ -68,9 +69,22 @@ class _RefreshBindingState() extends State<RefreshBinding> {
     notificationPredicate: _isForIndicator,
     child: NotificationListener(onNotification: _trackBounce, child: widget.child),
     builder: (context, child, controller) {
-      final state = _stateOf(controller);
       // A pull always starts at the list's start, so its direction also says which edge it came from.
       final pullDirection = controller.direction;
+      final refreshPhase = switch (controller.state) {
+        .idle => null,
+        .dragging => ListSmithRefreshPhase.dragging,
+        .armed => ListSmithRefreshPhase.armed,
+        .loading => ListSmithRefreshPhase.refreshing,
+        .settling || .canceling || .complete || .finalizing => ListSmithRefreshPhase.settling,
+      };
+      final state = refreshPhase == null
+          ? null
+          : ListSmithRefreshState(
+              phase: refreshPhase,
+              value: controller.value,
+              pullDirection: pullDirection,
+            );
       final isVertical = axisDirectionToAxis(pullDirection) == .vertical;
       final revealedExtent = clampDouble(controller.value, 0, 1) * widget.indicatorExtent;
 
@@ -106,24 +120,4 @@ class _RefreshBindingState() extends State<RefreshBinding> {
       );
     },
   );
-
-  static ListSmithRefreshState? _stateOf(IndicatorController controller) {
-    final refreshPhase = _refreshPhaseOf(controller.state);
-
-    return refreshPhase == null
-        ? null
-        : ListSmithRefreshState(
-            phase: refreshPhase,
-            value: controller.value,
-            pullDirection: controller.direction,
-          );
-  }
-
-  static ListSmithRefreshPhase? _refreshPhaseOf(IndicatorState state) => switch (state) {
-    .idle => null,
-    .dragging => .dragging,
-    .armed => .armed,
-    .loading => .refreshing,
-    .settling || .canceling || .complete || .finalizing => .settling,
-  };
 }

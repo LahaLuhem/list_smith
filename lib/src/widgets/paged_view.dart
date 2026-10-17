@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/pagination/models/paging_state.dart';
@@ -19,6 +20,7 @@ import 'defaults/neutral_no_results_indicator.dart';
 import 'keyed_paged_list_view.dart';
 
 /// The async list, with every surface filled by our neutral default or the consumer's override.
+@internal
 class const PagedView<T extends Object>({
   /// Drives which surface renders.
   required final PagingState<T> state,
@@ -87,9 +89,36 @@ class const PagedView<T extends Object>({
   @override
   Widget build(BuildContext context) => KeyedPagedListView(
     state: state,
-    itemBuilder: _effectiveItemBuilder(),
+    // The group look-back only walks the pages when grouping is on, since decorate takes it as a callback.
+    itemBuilder: grouping.decorate(
+      itemBuilder,
+      flattenItems: () => state.pages?.expand((page) => page.items) ?? const Iterable.empty(),
+      axis: scrollConfig.scrollDirection,
+    ),
     itemIdGetter: itemIdGetter,
-    surfaces: _surfaces(),
+    // The error surfaces read `state.exception!`, non-null because only an error status builds them.
+    surfaces: (
+      firstPageLoading: (context) =>
+          firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
+      firstPageError: (_) => _ResolvedError(
+        exception: state.exception!,
+        onRetry: onRetry,
+        builder: firstPageErrorBuilder,
+      ),
+      noItemsFound: (context) => isSearchMode
+          ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
+          : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
+      newPageLoading: (context) =>
+          newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
+      newPageError: (_) => _ResolvedError(
+        exception: state.exception!,
+        onRetry: onRetry,
+        builder: newPageErrorBuilder,
+        isCompact: true,
+      ),
+      noMoreItems: (context) =>
+          noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
+    ),
     onNearEnd: onNearEnd,
     separatorBuilder: separatorBuilder,
     controller: scrollConfig.controller,
@@ -102,39 +131,6 @@ class const PagedView<T extends Object>({
     ),
     padding: scrollConfig.padding,
     scrollCacheExtent: scrollConfig.scrollCacheExtent,
-  );
-
-  /// The item builder the rows use. The group look-back only walks the pages when grouping is on, since
-  /// [Grouping.decorate] takes it as a callback.
-  ItemBuilder<T> _effectiveItemBuilder() => grouping.decorate(
-    itemBuilder,
-    flattenItems: () => state.pages?.expand((page) => page.items) ?? const Iterable.empty(),
-    axis: scrollConfig.scrollDirection,
-  );
-
-  /// Every surface. The error ones read `state.exception!`, non-null because only an error status builds
-  /// them.
-  PagedSurfaces _surfaces() => (
-    firstPageLoading: (context) =>
-        firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
-    firstPageError: (_) => _ResolvedError(
-      exception: state.exception!,
-      onRetry: onRetry,
-      builder: firstPageErrorBuilder,
-    ),
-    noItemsFound: (context) => isSearchMode
-        ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
-        : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
-    newPageLoading: (context) =>
-        newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
-    newPageError: (_) => _ResolvedError(
-      exception: state.exception!,
-      onRetry: onRetry,
-      builder: newPageErrorBuilder,
-      isCompact: true,
-    ),
-    noMoreItems: (context) =>
-        noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
   );
 }
 

@@ -11,6 +11,7 @@ import '../utils/edit_resolver.dart';
 /// keep reading what the server sent.
 ///
 /// Every change that shows moves its value, since the display memo keys on it.
+@internal
 final class EditStoreNotifier<T extends Object>()
     extends ChangeNotifier
     implements ValueListenable<int> {
@@ -164,6 +165,7 @@ final class EditStoreNotifier<T extends Object>()
 }
 
 /// An edit whose save is still out. A save that answers before [book] gets booked as settled.
+@internal
 final class PendingEdit<T extends Object>._(
   final EditStoreNotifier<T> _editStoreNotifier,
   final Object _itemId,

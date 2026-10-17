@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/utils/neutral_theme.dart';
 import 'neutral_retry_button.dart';
@@ -7,6 +8,7 @@ import 'neutral_retry_button.dart';
 ///
 /// A heading, the error's own description, and a [NeutralRetryButton]. Full-viewport for the 1st page,
 /// or pass [isCompact] for the tighter footer used when a later page fails below the items already loaded.
+@internal
 class const NeutralErrorIndicator({
   /// What the load failed with.
   required final Exception exception,

@@ -7,6 +7,7 @@ import 'loaded_page.dart';
 ///
 /// Compared by identity, so every write is a change a listener sees.
 @immutable
+@internal
 final class const PagingState<T extends Object>({
   /// The pages loaded so far, in order, so page `i` sits at index `i`. Null until the 1st one lands.
   final List<LoadedPage<T>>? pages,

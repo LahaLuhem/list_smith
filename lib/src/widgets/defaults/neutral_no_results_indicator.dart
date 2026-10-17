@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/utils/neutral_theme.dart';
 
@@ -6,6 +7,7 @@ import '/src/utils/neutral_theme.dart';
 ///
 /// The query is deliberately not echoed, to stay overflow- and translation-safe. Override `noResultsBuilder`
 /// to replace it.
+@internal
 class const NeutralNoResultsIndicator({super.key}) extends StatelessWidget {
   /// Creates it.
   this;

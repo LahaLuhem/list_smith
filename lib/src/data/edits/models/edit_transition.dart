@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 part 'edit_transitions/animated_edit_transition.dart';
 part 'edit_transitions/no_edit_transition.dart';

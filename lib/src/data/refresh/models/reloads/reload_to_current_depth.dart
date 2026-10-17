@@ -22,36 +22,35 @@ final class const ReloadToCurrentDepth({
 
   @override
   @internal
-  Future<void> run<T extends Object>(ReloadContext<T> context) {
+  Future<void> run<T extends Object>(ReloadContext<T> context) async {
     final depth = context.depth;
-    if (depth == 0) return context.reset();
+    if (depth == 0) {
+      await context.reset();
 
-    return context.isSignalBased
-        ? _reloadSequential(context, depth)
-        : _reloadParallel(context, depth);
-  }
-
-  Future<void> _reloadSequential<T extends Object>(ReloadContext<T> context, int depth) async {
-    final freshPages = <List<T>>[];
-    Object? signal;
-
-    try {
-      for (var index = 0; index < depth; index++) {
-        if (context.isStale) return;
-        final (items, pageSignal) = await context.fetch(index, signal);
-        freshPages.add(items);
-        signal = pageSignal;
-      }
-    } on Exception {
-      return; // keep the old pages, the observer already saw the error
+      return;
     }
 
-    await context.commit(freshPages, lastSignal: signal);
-  }
+    // Page k needs page k-1's signal, so one page at a time.
+    if (context.isSignalBased) {
+      final freshPages = <List<T>>[];
+      Object? signal;
+      try {
+        for (var index = 0; index < depth; index++) {
+          if (context.isStale) return;
+          final (items, pageSignal) = await context.fetch(index, signal);
+          freshPages.add(items);
+          signal = pageSignal;
+        }
+      } on Exception {
+        return; // keep the old pages, the observer already saw the error
+      }
 
-  Future<void> _reloadParallel<T extends Object>(ReloadContext<T> context, int depth) async {
+      await context.commit(freshPages, lastSignal: signal);
+
+      return;
+    }
+
     var didFail = false;
-
     Future<List<T>?> fetchOrNull(int index) async {
       if (didFail || context.isStale) return null; // its read would go to waste
 

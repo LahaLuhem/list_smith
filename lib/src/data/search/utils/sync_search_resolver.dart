@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 import '../typedefs/sync_search_predicate.dart';
 
 /// Runs a sync search over [items]: what's visible for [query], and whether a search is on at all, so
@@ -5,6 +7,7 @@ import '../typedefs/sync_search_predicate.dart';
 ///
 /// [query] is trimmed. Empty, or shorter than [minSearchLength], counts as no search: everything stays
 /// visible and `isSearching` is `false`. Visible items come back lazy.
+@internal
 ({Iterable<T> visibleItems, bool isSearching}) resolveSyncSearch<T extends Object>(
   List<T> items,
   SyncSearchPredicate<T> searchBy,

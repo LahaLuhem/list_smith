@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/grouping/typedefs/group_key_of.dart';
 import '/src/data/pagination/models/loaded_page.dart';
@@ -10,6 +11,7 @@ const _opensOnTop = -1;
 
 /// The pages as they render, edits applied, and the ids in them. An edit only covers a page read
 /// before it, since a page read after already has the server's answer. [edits] runs oldest to newest.
+@internal
 ({List<LoadedPage<T>> pages, Set<Object> shownIds}) resolveDisplayPages<T extends Object>({
   required List<LoadedPage<T>> pages,
   required Map<Object, ItemEdit<T>> edits,
@@ -55,70 +57,45 @@ const _opensOnTop = -1;
       .nonNulls // a removal has nothing to place
       .toList(growable: false);
   if (toPlace.isNotEmpty) {
-    _placeAll(displayPages, toPlace, groupOf);
+    // Oldest first, where inserting one by one would put each: at the start of its group, newest first,
+    // and a group that isn't loaded opening on top, the one opened last highest.
+    if (groupOf == null) {
+      displayPages.first.items.insertAll(0, toPlace.reversed);
+    } else {
+      final neededKeys = toPlace.map(groupOf).toSet();
+      final starts = <Object, int>{};
+      var flatIndex = 0;
+      // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
+      scan:
+      for (final page in displayPages) {
+        for (final item in page.items) {
+          final key = groupOf(item);
+          if (neededKeys.contains(key)) starts[key] ??= flatIndex;
+          if (starts.length == neededKeys.length) break scan;
+          flatIndex++;
+        }
+      }
+      final byStart = toPlace.groupListsBy((item) => starts[groupOf(item)] ?? _opensOnTop);
+      final openingGroups = (byStart.remove(_opensOnTop) ?? []).groupListsBy(groupOf);
+      // The last start first, so an insert can't shift the starts still to come.
+      final joinings = byStart.entries.sorted((a, b) => b.key.compareTo(a.key));
+      for (final MapEntry(key: start, value: joiners) in joinings) {
+        var offset = start;
+        for (final page in displayPages) {
+          if (offset <= page.items.length) {
+            page.items.insertAll(offset, joiners.reversed);
+            break;
+          }
+          offset -= page.items.length;
+        }
+      }
+      displayPages.first.items.insertAll(
+        0,
+        openingGroups.values.toList().reversed.expand((group) => group.reversed),
+      );
+    }
     shownIds.addAll(toPlace.map(itemIdGetter)); // the new ones weren't on a page
   }
 
   return (pages: displayPages, shownIds: shownIds);
-}
-
-/// Puts [items], oldest first, where inserting them one by one would: each at the start of its group,
-/// newest first, and a group that isn't loaded opening on top, the one opened last highest.
-void _placeAll<T extends Object>(
-  List<LoadedPage<T>> pages,
-  List<T> items,
-  GroupKeyOf<T, Object>? groupOf,
-) {
-  if (groupOf == null) {
-    pages.first.items.insertAll(0, items.reversed);
-
-    return;
-  }
-
-  final starts = _groupStarts(pages, items.map(groupOf).toSet(), groupOf);
-  final byStart = items.groupListsBy((item) => starts[groupOf(item)] ?? _opensOnTop);
-  final openingGroups = (byStart.remove(_opensOnTop) ?? []).groupListsBy(groupOf);
-  // The last start first, so an insert can't shift the starts still to come.
-  final joinings = byStart.entries.sorted((a, b) => b.key.compareTo(a.key));
-  for (final MapEntry(key: start, value: joiners) in joinings) {
-    _insertAt(pages, start, joiners.reversed);
-  }
-  pages.first.items.insertAll(
-    0,
-    openingGroups.values.toList().reversed.expand((group) => group.reversed),
-  );
-}
-
-/// The flat index where each group in [needed] first shows. Stops once it has them all.
-Map<Object, int> _groupStarts<T extends Object>(
-  List<LoadedPage<T>> pages,
-  Set<Object> needed,
-  GroupKeyOf<T, Object> groupOf,
-) {
-  final starts = <Object, int>{};
-  var flatIndex = 0;
-  // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
-  for (final page in pages) {
-    for (final item in page.items) {
-      final key = groupOf(item);
-      if (needed.contains(key)) starts[key] ??= flatIndex;
-      if (starts.length == needed.length) return starts;
-      flatIndex++;
-    }
-  }
-
-  return starts;
-}
-
-/// Turns a flat [index] into a page and an offset.
-void _insertAt<T extends Object>(List<LoadedPage<T>> pages, int index, Iterable<T> items) {
-  var offset = index;
-  for (final page in pages) {
-    if (offset <= page.items.length) {
-      page.items.insertAll(offset, items);
-
-      return;
-    }
-    offset -= page.items.length;
-  }
 }

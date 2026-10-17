@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:meta/meta.dart';
 
 import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
@@ -8,6 +9,7 @@ import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/utils/row_lookup.dart';
 
 /// What the list shows instead of its rows, or after them, defaults already filled in.
+@internal
 typedef PagedSurfaces = ({
   WidgetBuilder firstPageLoading,
   WidgetBuilder firstPageError,
@@ -19,6 +21,7 @@ typedef PagedSurfaces = ({
 
 /// The async list: [state]'s rows, or the surface its status calls for. A row follows its item, so
 /// when rows above it come or go, it keeps its state and anything it's animating.
+@internal
 class const KeyedPagedListView<T extends Object>({
   /// What renders, edits and de-dup already applied.
   required final PagingState<T> state,
@@ -58,41 +61,39 @@ class const KeyedPagedListView<T extends Object>({
       .ongoing || .subsequentPageError || .completed => null,
     };
 
-    return firstPageBuilder != null
-        ? _SurfaceSlot(
-            key: ValueKey(status), // so one surface replacing another starts fresh
-            // So a short surface has nothing to scroll.
-            trailingPaddingExtent: _trailingPaddingExtentOf(context),
-            child: firstPageBuilder(context),
-          )
-        // One shape whatever the footer shows: the end, a new page loading, or its error.
-        : _KeyedRows(
-            rowLookup: RowLookup<T>(state.pages ?? const [], itemIdGetter),
-            itemIdGetter: itemIdGetter,
-            itemBuilder: itemBuilder,
-            footerBuilder: switch (status) {
-              .subsequentPageError => surfaces.newPageError,
-              .completed => surfaces.noMoreItems,
-              _ => surfaces.newPageLoading,
-            },
-            separatorBuilder: separatorBuilder,
-            // Only here does scrolling ask for more, so a failed page waits for Retry.
-            onNearEnd: status != .ongoing ? null : onNearEnd,
-          );
-  }
+    if (firstPageBuilder != null) {
+      // As [BoxScrollView] pads: [padding], else the safe area.
+      final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
+        Directionality.maybeOf(context),
+      );
 
-  /// As [BoxScrollView] pads: [padding], else the safe area.
-  double _trailingPaddingExtentOf(BuildContext context) {
-    final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
-      Directionality.maybeOf(context),
+      return _SurfaceSlot(
+        key: ValueKey(status), // so one surface replacing another starts fresh
+        // So a short surface has nothing to scroll.
+        trailingPaddingExtent: switch (getDirection(context)) {
+          .down => resolvedInsets.bottom,
+          .up => resolvedInsets.top,
+          .right => resolvedInsets.right,
+          .left => resolvedInsets.left,
+        },
+        child: firstPageBuilder(context),
+      );
+    }
+
+    // One shape whatever the footer shows: the end, a new page loading, or its error.
+    return _KeyedRows(
+      rowLookup: RowLookup<T>(state.pages ?? const [], itemIdGetter),
+      itemIdGetter: itemIdGetter,
+      itemBuilder: itemBuilder,
+      footerBuilder: switch (status) {
+        .subsequentPageError => surfaces.newPageError,
+        .completed => surfaces.noMoreItems,
+        _ => surfaces.newPageLoading,
+      },
+      separatorBuilder: separatorBuilder,
+      // Only here does scrolling ask for more, so a failed page waits for Retry.
+      onNearEnd: status != .ongoing ? null : onNearEnd,
     );
-
-    return switch (getDirection(context)) {
-      .down => resolvedInsets.bottom,
-      .up => resolvedInsets.top,
-      .right => resolvedInsets.right,
-      .left => resolvedInsets.left,
-    };
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 ///
 /// A class rather than a record, since a record costs the de-dup pass about half again.
 @immutable
+@internal
 final class const LoadedPage<T extends Object>({
   /// The items, as the server sent them.
   required final List<T> items,
