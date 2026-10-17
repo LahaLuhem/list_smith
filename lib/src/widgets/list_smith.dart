@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/edits/models/edit_transition.dart';
+import '/src/data/edits/models/item_order.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/models/empty_page_behaviour.dart';
@@ -90,6 +91,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     EmptyPageBehaviour onEmptyPage = const ShowEmptySurface(),
     Search<T> search = const NoSearch(),
     EditTransition editTransition = const NoEditTransition(),
+    ItemOrder<T> order = const UnknownOrder(),
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = const Duration(milliseconds: 300),
@@ -126,6 +128,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          search: search,
          itemIdGetter: itemIdGetter,
          editTransition: editTransition,
+         order: order,
        );
 
   /// Creates a sync, in-memory searchable list over [items].

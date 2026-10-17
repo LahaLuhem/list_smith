@@ -14,5 +14,8 @@ final class const FixedPageCountPolicy({
   bool hasReachedEnd(EndContext context) => context.pageCount >= pageCount;
 
   @override
+  bool get stopsAtDataEnd => false;
+
+  @override
   String toString() => 'FixedPageCountPolicy(pageCount: $pageCount)';
 }

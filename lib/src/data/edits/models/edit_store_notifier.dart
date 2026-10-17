@@ -84,6 +84,7 @@ final class EditStoreNotifier<T extends Object>()
     required ItemIdGetter<T> itemIdGetter,
     required GroupKeyOf<T, Object>? groupOf,
     required bool acceptsNewItems,
+    required SortedPlacement<T>? sortedPlacement,
   }) => resolveDisplayPages(
     pages: pages,
     edits: _newestItemEditsById ??= _bookedEditsById.map(
@@ -93,6 +94,7 @@ final class EditStoreNotifier<T extends Object>()
     itemIdGetter: itemIdGetter,
     groupOf: groupOf,
     acceptsNewItems: acceptsNewItems,
+    sortedPlacement: sortedPlacement,
   );
 
   @override

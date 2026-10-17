@@ -756,6 +756,7 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `drain(tester, {frames})` | pumps a fixed number of frames |
 | `settle(tester, {debounce})` | advances past a search debounce, then drains |
 | `pullToRefresh(tester, anchor, {offset})` | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
+| `scrollToEnd(tester, controller)`, `allShownTexts(tester, controller, prefix)` | scrolls until the list stops growing, and reads every row's text there, top to bottom |
 | `containsIgnoreCase` | sync-search predicate |
 | `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
 | `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |

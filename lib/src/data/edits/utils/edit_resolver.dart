@@ -9,8 +9,13 @@ import '../typedefs/item_edit.dart';
 /// The start given to a group that isn't loaded, whose items open on top instead.
 const _opensOnTop = -1;
 
+/// The server's order, and whether rows may follow the loaded ones.
+@internal
+typedef SortedPlacement<T extends Object> = ({Comparator<T> comparator, bool mayHaveRowsAfter});
+
 /// The pages as they render, edits applied, and the ids in them. An edit only covers a page read
 /// before it, since a page read after already has the server's answer. [edits] runs oldest to newest.
+/// With [sortedPlacement], an edit that moves its row and a new item go where the order puts them.
 @internal
 ({List<LoadedPage<T>> pages, Set<Object> shownIds}) resolveDisplayPages<T extends Object>({
   required List<LoadedPage<T>> pages,
@@ -18,7 +23,9 @@ const _opensOnTop = -1;
   required ItemIdGetter<T> itemIdGetter,
   required GroupKeyOf<T, Object>? groupOf,
   required bool acceptsNewItems,
+  SortedPlacement<T>? sortedPlacement,
 }) {
+  final comparator = sortedPlacement?.comparator;
   final shownIds = <Object>{};
   final movedIds = <Object>{};
   final displayPages = <LoadedPage<T>>[];
@@ -35,6 +42,17 @@ const _opensOnTop = -1;
       }
 
       final editedItem = edit.item;
+      if (comparator != null) {
+        // Placed later, so a page read after the edit still shows the server's copy.
+        if (editedItem == null || shownIds.contains(id) || movedIds.contains(id)) continue;
+        if (comparator(item, editedItem) == 0) {
+          shownIds.add(id);
+          displayPage.add(editedItem);
+        } else {
+          movedIds.add(id);
+        }
+        continue;
+      }
       // A fresher copy further down still shows.
       if (editedItem == null || !shownIds.add(id)) continue;
       if (groupOf == null || groupOf(item) == groupOf(editedItem)) {
@@ -57,6 +75,33 @@ const _opensOnTop = -1;
   final oldestRead = pages.map((page) => page.readStamp).min;
   bool isNew(Object id, ItemEdit<T> edit) =>
       acceptsNewItems && !shownIds.contains(id) && edit.stamp > oldestRead;
+  if (sortedPlacement != null) {
+    final placedItems = edits.entries
+        .where(
+          (entry) =>
+              !shownIds.contains(entry.key) &&
+              (movedIds.contains(entry.key) || isNew(entry.key, entry.value)),
+        )
+        .map((entry) => entry.value.item)
+        .nonNulls
+        .toList(growable: false);
+    for (final item in placedItems) {
+      // Pages run in order, so its spot is in the 1st one that doesn't end before it.
+      final page = displayPages.firstWhereOrNull(
+        (page) => page.items.isNotEmpty && sortedPlacement.comparator(page.items.last, item) >= 0,
+      );
+      if (page != null) {
+        page.items.insert(lowerBound(page.items, item, compare: sortedPlacement.comparator), item);
+      } else if (sortedPlacement.mayHaveRowsAfter) {
+        continue; // it belongs to a page not loaded yet
+      } else {
+        displayPages.last.items.add(item);
+      }
+      shownIds.add(itemIdGetter(item));
+    }
+
+    return (pages: displayPages, shownIds: shownIds);
+  }
   final toPlace = edits.entries
       .where((entry) => movedIds.contains(entry.key) || isNew(entry.key, entry.value))
       .map((entry) => entry.value.item)
