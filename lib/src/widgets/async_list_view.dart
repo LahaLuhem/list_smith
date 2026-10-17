@@ -337,9 +337,8 @@ class _AsyncListViewState<T extends Object>()
       math.min((removedCount / widget.source.pageSize).ceil(), maxCount);
 
   /// Rows still going out count too.
-  Iterable<Object> _idsRemovedSince(int readStamp, {int? bookedBy}) => _editStoreNotifier
-      .idsRemovedSince(readStamp, bookedBy: bookedBy)
-      .followedBy(_rowTransitionsNotifier.leavingIds);
+  Iterable<Object> _idsRemovedSince(int readStamp) =>
+      _editStoreNotifier.idsRemovedSince(readStamp).followedBy(_rowTransitionsNotifier.leavingIds);
 
   Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
     final lastPage = pages.lastOrNull;
@@ -856,9 +855,6 @@ final class _ReloadRun<T extends Object>(
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
-  /// When each re-fetch landed.
-  final _landStamps = <int, int>{};
-
   @override
   int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
 
@@ -866,12 +862,10 @@ final class _ReloadRun<T extends Object>(
   bool get isSignalBased => _engine._isSignalBased;
 
   @override
-  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) async {
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
     _readStamps[index] = _engine._editStoreNotifier.value;
-    final read = await _engine._fetchPageRaw(index, previousSignal, trigger);
-    _landStamps[index] = _engine._editStoreNotifier.value;
 
-    return read;
+    return _engine._fetchPageRaw(index, previousSignal, trigger);
   }
 
   @override
@@ -916,8 +910,9 @@ final class _ReloadRun<T extends Object>(
         );
     final rereadIndexes = SplayTreeSet.of(
       Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
+        // Booked any time after the page before went out, since the server may have had it sooner.
         final crossedCount = engine
-            ._idsRemovedSince(_readStamps[boundaryIndex - 1]!, bookedBy: _landStamps[boundaryIndex])
+            ._idsRemovedSince(_readStamps[boundaryIndex - 1]!)
             .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
             .length;
         final count = engine._rereadCount(crossedCount, boundaryIndex);
