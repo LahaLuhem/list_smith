@@ -333,6 +333,92 @@ void main() {
           .deepEquals(server.store.take(_pageSize * 2));
     });
 
+    scenarioWidgets('the same when it lands while the page before is out', (tester) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetEarlyFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 2),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final firstPageHoldCompleter = server.hold(0, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(1); // page 0 was read as it went out, so before this
+      controller.remove(1);
+      await tester.pump();
+      await release(tester, [firstPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(server.store.take(_pageSize * 2));
+    });
+
+    scenarioWidgets('the same when the app tells the list only after the next page landed', (
+      tester,
+    ) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 3),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      final lastPageHoldCompleter = server.hold(2, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(1); // the app's delete call reaches the server while page 1 is out
+      await release(tester, [secondPageHoldCompleter]);
+      check(server.attempts[2]).equals(2);
+      controller.remove(1);
+      await tester.pump();
+      await release(tester, [lastPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
+    scenarioWidgets('the same when its exit ends after the next page landed', (tester) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        isTransitionOn: true,
+        endPolicy: const FixedPageCountPolicy(pageCount: 3),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      unawaited(controller.removeAsync(1, commit: Completer<void>().future));
+      await tester.pump(); // the exit starts a frame on
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      final lastPageHoldCompleter = server.hold(2, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(1); // the save reaches the server while page 1 is out
+      await release(tester, [secondPageHoldCompleter]);
+      check(server.attempts[2]).equals(2);
+      await tester.pump(const Duration(milliseconds: 400));
+      await release(tester, [lastPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
     scenarioWidgets('a read that cannot line the pages up keeps the old list', (tester) async {
       final server = FakeServer(_range(0, 8));
       final scrollController = ScrollController();
@@ -359,35 +445,6 @@ void main() {
       check(server.attempts[0]).equals(3);
       check(await _allShownItems(tester, scrollController))
           .deepEquals(_range(0, 5).where((item) => item != 1));
-    });
-
-    scenarioWidgets('a removal mid-reload reads again only around the pages read after it', (
-      tester,
-    ) async {
-      final server = FakeServer(_range(0, 8));
-      final scrollController = ScrollController();
-      addTearDown(scrollController.dispose);
-      final controller = await _pumpList(
-        tester,
-        fetchPage: server.offsetLateFetcher,
-        scrollController: scrollController,
-        rowHeight: _shortRowHeight,
-        endPolicy: const FixedPageCountPolicy(pageCount: 3),
-        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
-      );
-      final lastPageHoldCompleter = server.hold(2, attempt: 2);
-      unawaited(controller.refresh());
-      await tester.idle();
-      await drain(tester, frames: 4);
-      check(server.attempts[2]).equals(2);
-
-      server.store.remove(1);
-      controller.remove(1);
-      await tester.pump();
-      await release(tester, [lastPageHoldCompleter]);
-
-      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
-      check(server.attempts[0]).equals(2); // read with page 1 before the removal, so they line up
     });
 
     scenarioWidgets('a removal below a boundary reads nothing again above it', (tester) async {

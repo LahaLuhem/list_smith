@@ -47,23 +47,19 @@ final class EditStoreNotifier<T extends Object>()
       PendingEdit._(this, itemId, editedItem);
 
   /// The items removed after a read stamped [readStamp], counting removals still saving.
-  /// With [bookedBy], only the ones booked by then.
-  Iterable<Object> idsRemovedSince(int readStamp, {int? bookedBy}) => _bookedEditsById.entries
+  Iterable<Object> idsRemovedSince(int readStamp) => _bookedEditsById.entries
       .where(
         (entry) => entry.value.any(
-          (bookedEdit) =>
-              bookedEdit.item == null &&
-              bookedEdit.stamp > readStamp &&
-              (bookedBy == null || bookedEdit.bookedAt <= bookedBy),
+          (bookedEdit) => bookedEdit.item == null && bookedEdit.stamp > readStamp,
         ),
       )
       .map((entry) => entry.key);
 
   /// Drops the edits every page in [readStamps] was read after, since the server's copy has caught up.
   void dropCaughtUp(Iterable<int> readStamps) {
-    if (readStamps.isEmpty) return;
+    final oldestReadStamp = readStamps.minOrNull;
+    if (oldestReadStamp == null) return;
 
-    final oldestReadStamp = readStamps.min;
     for (final bookedEdits in _bookedEditsById.values) {
       bookedEdits.removeWhere((bookedEdit) => bookedEdit.stamp <= oldestReadStamp);
     }
