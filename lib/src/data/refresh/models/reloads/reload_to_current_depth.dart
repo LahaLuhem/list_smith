@@ -3,19 +3,18 @@ part of '../reload.dart';
 /// Re-fetches every loaded page, so a pull keeps the user's scroll depth instead of snapping back to
 /// the start.
 ///
-/// [concurrency] and [onError] only apply to index-based sources. A `PageFetcher.withSignal` source
-/// needs page `k-1` before page `k`, so its reload walks in order and is always atomic. Depth is still
-/// kept, just without the tuning.
+/// If a page fails, the list stays as it was, since pages read at different times can lose or repeat
+/// rows where they meet.
 ///
 /// A page still loading when the pull happens is dropped and asked again, so stale data can't land on
 /// top of the fresh pages.
 final class const ReloadToCurrentDepth({
   /// How many page fetches may run at once: `1` (the default) sequential, `null` all together, `K` at
-  /// most `K` in flight. Ignored for `withSignal` sources.
+  /// most `K` in flight. A `withSignal` source ignores it, since page `k` needs page `k-1`.
   final int? concurrency = 1,
 
-  /// How the reload settles when a page fetch fails. Best-effort by default. Ignored for `withSignal`
-  /// sources, which are always atomic.
+  /// Ignored.
+  @Deprecated('Does nothing now. Remove it, it goes at the next major.')
   final ReloadOnError onError = .commitSucceeded,
 }) extends Reload {
   /// Creates it.
@@ -24,15 +23,14 @@ final class const ReloadToCurrentDepth({
   @override
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) {
-    final oldPages = context.loadedPages;
-    if (oldPages.isEmpty) return context.reset();
+    final depth = context.depth;
+    if (depth == 0) return context.reset();
 
     return context.isSignalBased
-        ? _reloadSequential(context, oldPages.length)
-        : _reloadParallel(context, oldPages);
+        ? _reloadSequential(context, depth)
+        : _reloadParallel(context, depth);
   }
 
-  /// Atomic, in-order reload for a `withSignal` source. Any failure keeps the old pages untouched.
   Future<void> _reloadSequential<T extends Object>(ReloadContext<T> context, int depth) async {
     final freshPages = <List<T>>[];
     Object? signal;
@@ -51,17 +49,11 @@ final class const ReloadToCurrentDepth({
     context.commit(freshPages, lastSignal: signal);
   }
 
-  /// Concurrency-bounded reload for an index-based source, settled per [onError].
-  Future<void> _reloadParallel<T extends Object>(
-    ReloadContext<T> context,
-    List<List<T>> oldPages,
-  ) async {
-    final isAtomic = onError == .allOrNothing;
+  Future<void> _reloadParallel<T extends Object>(ReloadContext<T> context, int depth) async {
     var didFail = false;
 
-    // Null marks a page that failed or was skipped. Under allOrNothing, one failure skips the rest.
     Future<List<T>?> fetchOrNull(int index) async {
-      if ((isAtomic && didFail) || context.isStale) return null;
+      if (didFail || context.isStale) return null; // its read would go to waste
 
       try {
         final (items, _) = await context.fetch(index, null);
@@ -75,19 +67,17 @@ final class const ReloadToCurrentDepth({
     }
 
     // A pool as wide as the depth is "all at once", so a null concurrency needs no branch of its own.
-    final pool = Pool(concurrency ?? oldPages.length);
+    final pool = Pool(concurrency ?? depth);
     final freshPages = await Iterable.generate(
-      oldPages.length,
+      depth,
       (index) => pool.withResource(() => fetchOrNull(index)),
     ).wait;
     await pool.close();
-    if (isAtomic && didFail) return; // keep the old pages untouched
+    if (didFail || context.isStale) return; // nothing whole to commit
 
-    context.commit(
-      freshPages.mapIndexed((index, page) => page ?? oldPages[index]).toList(growable: false),
-    );
+    context.commit(freshPages.nonNulls.toList(growable: false));
   }
 
   @override
-  String toString() => 'ReloadToCurrentDepth(concurrency: $concurrency, onError: $onError)';
+  String toString() => 'ReloadToCurrentDepth(concurrency: $concurrency)';
 }

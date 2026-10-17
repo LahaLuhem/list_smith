@@ -539,8 +539,7 @@ class _AsyncListViewState<T extends Object>()
 
   // The engine side of a reload, reached through a [_ReloadRun].
 
-  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential, atomic
-  /// reload.
+  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential reload.
   bool get _isSignalBased => switch (widget.source.search) {
     final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
       asyncSearch.fetchPage.reportsSignal,
@@ -850,17 +849,13 @@ final class _ReloadRun<T extends Object>(
   @override
   bool get isStale => _engine._generation != _epoch;
 
-  /// What this run started from, for the pages a best-effort commit keeps.
   PagingState<T>? _startState;
 
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
   @override
-  List<List<T>> get loadedPages =>
-      ((_startState ??= _engine._pagingStateNotifier.value).pages ?? const [])
-          .map((page) => page.items)
-          .toList(growable: false);
+  int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
 
   @override
   bool get isSignalBased => _engine._isSignalBased;
@@ -875,17 +870,13 @@ final class _ReloadRun<T extends Object>(
   @override
   void commit(List<List<T>> pages, {Object? lastSignal}) {
     if (isStale) return;
-    final startPages = _startState?.pages ?? const [];
-    // A page whose re-fetch failed is the old one, handed back as is, so it keeps its old stamp. Every
-    // other page came through [fetch].
-    final committedPages = pages
-        .mapIndexed(
-          (index, items) => index < startPages.length && identical(items, startPages[index].items)
-              ? startPages[index]
-              : LoadedPage(items: items, readStamp: _readStamps[index]!),
-        )
-        .toList(growable: false);
-    _engine._commit(committedPages, lastSignal: lastSignal);
+    _engine._commit(
+      // Every page came through [fetch], so each has its stamp.
+      pages
+          .mapIndexed((index, items) => LoadedPage(items: items, readStamp: _readStamps[index]!))
+          .toList(growable: false),
+      lastSignal: lastSignal,
+    );
     _epoch = _engine._generation;
   }
 
