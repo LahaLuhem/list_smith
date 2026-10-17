@@ -52,12 +52,6 @@ class const ReloadView({super.key}) extends StatelessWidget {
                     onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
                   ),
                 ),
-                BoolKnob(
-                  label: 'Atomic (all-or-nothing)',
-                  subtitle: 'One failure keeps all the old pages',
-                  value: viewModel.atomic,
-                  onChanged: (value) => viewModel.onAtomicToggled(value: value),
-                ),
                 ValueListenableBuilder(
                   valueListenable: viewModel.isRefreshingListenable,
                   builder: (context, isRefreshing, _) => PlatformButton(

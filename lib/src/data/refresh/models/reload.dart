@@ -2,7 +2,6 @@ library;
 
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:pool/pool.dart';
 

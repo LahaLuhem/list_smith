@@ -1,18 +1,15 @@
 /// @docImport '../models/reload.dart';
 library;
 
-/// How a [ReloadToCurrentDepth] reload settles when a page fetch fails, after the fetcher's own retries.
-///
-/// Index-based sources only. A `withSignal` source reloads in order and is always atomic, since a broken
-/// cursor chain can't be half-committed, so this is ignored there.
+/// How a [ReloadToCurrentDepth] reload used to settle a failed page.
+@Deprecated('Does nothing now. Remove it, it goes at the next major.')
 enum ReloadOnError() {
-  /// Keep every page that reloaded and leave the rest as they were. Best-effort, the default.
-  ///
-  /// A stale page beside fresh neighbours can seam: de-dup by id drops the duplicates, gaps heal on
-  /// the next refresh.
+  /// Kept the pages that reloaded, beside the old one that failed.
   commitSucceeded,
 
-  /// Commit only if every page reloads. On any failure keep the old data and report the error, so the
-  /// list never mixes fresh and stale pages.
-  allOrNothing,
+  /// Committed only once every page reloaded, as every depth reload now does.
+  allOrNothing;
+
+  @Deprecated('Does nothing now. Remove it, it goes at the next major.')
+  this;
 }

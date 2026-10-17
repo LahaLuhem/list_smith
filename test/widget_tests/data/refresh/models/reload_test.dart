@@ -47,9 +47,7 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('best-effort keeps the failed page old and commits the rest fresh', (
-      tester,
-    ) async {
+    scenarioWidgets('one failed page keeps every page old', (tester) async {
       final fetcher = valuedFetcher(failPageOnReload: 1);
 
       await pumpListSmith(
@@ -66,15 +64,14 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // Pages 0 and 2 reloaded (fresh attempt-2 values). Page 1's fetch failed so its old value stays.
-      check(find.text('item 2').evaluate()).length.equals(1); // page 0 fresh
-      check(find.text('item 1001').evaluate()).length.equals(1); // page 1 kept old
-      check(find.text('item 2002').evaluate()).length.equals(1); // page 2 fresh
-      check(find.text('item 1002').evaluate()).length
-          .equals(0); // page 1's failed fresh never shows
+      // One page failed, so nothing is committed: the pre-refresh values all remain.
+      check(find.text('item 1').evaluate()).length.equals(1); // page 0 still old
+      check(find.text('item 1001').evaluate()).length.equals(1); // page 1 still old
+      check(find.text('item 2001').evaluate()).length.equals(1); // page 2 still old
+      check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
     });
 
-    scenarioWidgets('all-or-nothing keeps every page old when one fails', (tester) async {
+    scenarioWidgets('a failed page stops the reload asking for the pages after it', (tester) async {
       final fetcher = valuedFetcher(failPageOnReload: 1);
 
       await pumpListSmith(
@@ -83,9 +80,7 @@ void main() {
           fetchPage: fetcher.fetchPage,
           itemIdGetter: (item) => item,
           endPolicy: const FixedPageCountPolicy(pageCount: 3),
-          refresh: const PullToRefresh(
-            reload: ReloadToCurrentDepth(concurrency: null, onError: .allOrNothing),
-          ),
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );
@@ -93,17 +88,13 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
 
-      // One page failed, so nothing is committed: the pre-refresh values all remain.
-      check(find.text('item 1').evaluate()).length.equals(1); // page 0 still old
-      check(find.text('item 1001').evaluate()).length.equals(1); // page 1 still old
-      check(find.text('item 2001').evaluate()).length.equals(1); // page 2 still old
-      check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
+      // One at a time, so page 2 would go out after page 1 failed, only to be thrown away.
+      check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 1});
     });
 
-    scenarioOutlineWidgets<ReloadOnError>(
+    scenarioWidgets(
       'a failed page reaches the observer, though the list still shows its old rows',
-      examples: const {'best-effort': .commitSucceeded, 'all-or-nothing': .allOrNothing},
-      outline: (tester, onError) async {
+      (tester) async {
         final fetcher = valuedFetcher(failPageOnReload: 1);
         final observer = RecordingListSmithObserver();
 
@@ -113,9 +104,7 @@ void main() {
             fetchPage: fetcher.fetchPage,
             itemIdGetter: (item) => item,
             endPolicy: const FixedPageCountPolicy(pageCount: 3),
-            refresh: PullToRefresh(
-              reload: ReloadToCurrentDepth(concurrency: null, onError: onError),
-            ),
+            refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
             observer: observer,
             itemBuilder: (_, item, _) => Text('item $item'),
           ),

@@ -70,7 +70,7 @@ void main() {
     );
 
     scenarioOutlineWidgets<bool>(
-      'a page whose re-fetch fails keeps the edit',
+      'a reload that fails keeps the edit',
       examples: const {'made before the reload': true, 'made while it runs': false},
       outline: (tester, isBefore) async {
         final server = FakeServer(_range(0, 5));
@@ -92,7 +92,7 @@ void main() {
         await tester.pump();
         await release(tester, [holdCompleter]);
 
-        check(server.attempts[1]).equals(2); // the page after it did reload
+        check(server.attempts[0]).equals(2); // the reload ran, and its 1st page failed
         check(_shownRows()).deepEquals(_rows([0, 2, 3, 4, 5]));
       },
     );

@@ -91,8 +91,7 @@ class const HomeView({super.key}) extends StatelessWidget {
           _DemoTile(
             icon: Icon(platformValue(material: Icons.refresh, cupertino: CupertinoIcons.refresh)),
             title: 'Reload',
-            description:
-                'Pull-to-refresh strategies: keep scroll depth or reset, best-effort or atomic.',
+            description: 'Pull-to-refresh strategies: keep scroll depth or reset.',
             pageBuilder: (_) => const ReloadView(),
           ),
           _DemoTile(

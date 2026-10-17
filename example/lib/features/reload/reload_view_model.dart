@@ -25,15 +25,12 @@ final class ReloadViewModel() extends ViewModel {
 
   var _keepDepth = true;
   var _concurrency = 1;
-  var _atomic = false;
 
   bool get keepDepth => _keepDepth;
 
   int get concurrency => _concurrency;
 
-  bool get atomic => _atomic;
-
-  /// Fails every load of the 1st page after its first, to exercise the error policy.
+  /// Fails every load of the 1st page after its first, to show what a failed reload does.
   ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
 
   /// The latest reload's error, since a reload that keeps depth leaves the rows as they were.
@@ -42,12 +39,8 @@ final class ReloadViewModel() extends ViewModel {
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
   ValueListenable<bool> get isRefreshingListenable => _isRefreshingNotifier;
 
-  Reload get reload => _keepDepth
-      ? ReloadToCurrentDepth(
-          concurrency: _concurrency,
-          onError: _atomic ? .allOrNothing : .commitSucceeded,
-        )
-      : const ResetToFirstPage();
+  Reload get reload =>
+      _keepDepth ? ReloadToCurrentDepth(concurrency: _concurrency) : const ResetToFirstPage();
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     final PageRequest(:pageIndex, :pageSize) = request;
@@ -78,11 +71,6 @@ final class ReloadViewModel() extends ViewModel {
 
   void onConcurrencyChanged(double value) {
     _concurrency = value.round();
-    notifyListeners();
-  }
-
-  void onAtomicToggled({required bool value}) {
-    _atomic = value;
     notifyListeners();
   }
 

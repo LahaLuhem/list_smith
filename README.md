@@ -307,23 +307,20 @@ had loaded instead:
 ```dart
 refresh: const PullToRefresh(
   reload: ReloadToCurrentDepth(
-    concurrency: 4,             // fetches in flight: 1 (default) serial, null all at once, K bounded
-    onError: .commitSucceeded,  // best-effort default, or .allOrNothing
+    concurrency: 4,  // fetches in flight: 1 (default) serial, null all at once, K bounded
   ),
 )
 ```
 
-`concurrency` trades speed against backend load. `onError` handles a page-fetch that fails after
-your fetcher's own retries: `commitSucceeded` keeps whatever reloaded and leaves the failed page as
-it was, `allOrNothing` commits only if every page succeeds.
+`concurrency` trades speed against backend load.
 
 Worth knowing:
 
-- **Best-effort can seam.** A kept-old page beside fresh neighbours can duplicate or gap if the data
-  shifted meanwhile. De-dup drops the duplicates, and gaps heal on the next refresh.
-- **`withSignal` sources reload sequentially and atomically.** Page `k` needs page `k-1`, so the
-  reload walks in order and any failure keeps the old list whole. `concurrency` and `onError` are
-  ignored there. Scroll depth is still kept.
+- **The reload commits only a list it read whole.** If a page fails after your fetcher's own
+  retries, the list stays as it was. Pages read at different times can lose or repeat rows where
+  they meet.
+- **`withSignal` sources reload sequentially.** Page `k` needs page `k-1`, so the reload walks in
+  order and `concurrency` is ignored.
 - **A page still loading when the pull happens is dropped and asked again.** Its answer was aimed at
   pre-refresh data. Costs one extra request.
 
@@ -782,8 +779,8 @@ the refresh committed. Same when the feed returns after a search.
 a double-tapped button sends 1 request.
 
 **An edit outlives a reload already in flight.** A page fetched before your edit shows the edit when
-it lands, and so does one whose re-fetch failed. Otherwise a row you just deleted would come back
-mid-reload.
+it lands, and so does the list a failed reload leaves as it was. Otherwise a row you just deleted
+would come back mid-reload.
 
 </details>
 
