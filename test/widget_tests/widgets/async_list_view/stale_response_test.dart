@@ -315,6 +315,43 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('a page waiting on a read of the page before it does not land after a reset', (
+      tester,
+    ) async {
+      final server = FakeServer(List.generate(15, (index) => index));
+      final pageHoldCompleter = server.hold(2, attempt: 1);
+      final rereadHoldCompleter = server.hold(1, attempt: 2);
+      final firstPageHoldCompleter = server.hold(0, attempt: 2);
+      final controller = ListSmithController<int>();
+      await pumpListSmith(
+        tester,
+        ListSmith<int>.async(
+          fetchPage: server.offsetLateFetcher,
+          pageSize: 3,
+          itemIdGetter: (item) => item,
+          controller: controller,
+          itemBuilder: (_, item, _) => SizedBox(height: 20, child: Text('item $item')),
+        ),
+      );
+      await drain(tester, frames: 12);
+
+      server.store.remove(1);
+      controller.remove(1); // while page 2 is out, so once it lands the page before is read again
+      await release(tester, [pageHoldCompleter]);
+      check(server.attempts[1]).equals(2);
+      unawaited(controller.refresh());
+      await drain(tester, frames: 4);
+      await release(tester, [rereadHoldCompleter]);
+      await release(tester, [firstPageHoldCompleter]);
+      await drain(tester, frames: 12);
+
+      final shownItems = find
+          .textContaining(RegExp('^item '))
+          .evaluate()
+          .map((element) => (element.widget as Text).data);
+      check(shownItems).deepEquals(server.store.map((item) => 'item $item'));
+    });
+
     scenarioWidgets('a held page does not land on top of a depth-reload commit', (tester) async {
       final holdCompleter = Completer<void>();
       final controller = ListSmithController();
