@@ -76,6 +76,11 @@ final class RowTransitionsNotifier<T extends Object>({
       ..ensureVisualUpdate();
   }
 
+  /// The rows going out, whose removals aren't booked yet.
+  Iterable<Object> get leavingIds => _transitions.entries
+      .where((entry) => entry.value.bookRemoval != null)
+      .map((entry) => entry.key);
+
   /// Ends every transition now, booking what the exits held back, so none carries onto a fresh list.
   void settle() {
     if (_transitions.isEmpty) return;

@@ -14,7 +14,7 @@ final class EditsViewModel() extends ViewModel {
 
   /// Sorted by id and read after the last id seen, so a delete can't make the next page skip a row
   /// the way an offset would.
-  final _store = [...DemoRepository().items];
+  final _store = DemoRepository().items.toList();
 
   /// Below every existing id, so the store sorts new items on top too.
   var _nextNewId = -1;

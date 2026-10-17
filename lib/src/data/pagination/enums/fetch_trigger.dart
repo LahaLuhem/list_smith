@@ -21,7 +21,7 @@ enum FetchTrigger() {
   /// A reload from a committed query change, entering or leaving search included.
   queryChanged,
 
-  /// A re-read you asked for via [ListSmithController.invalidate] or [ListSmithController.reset], because
-  /// your data changed locally. Treat it like a cold page, not a refresh.
+  /// Your data changed locally, so a page gets read again: you called [ListSmithController.invalidate]
+  /// or [ListSmithController.reset], or removed rows above it. Treat it like a cold page, not a refresh.
   invalidated,
 }

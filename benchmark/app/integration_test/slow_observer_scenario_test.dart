@@ -10,6 +10,7 @@ library;
 
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -99,7 +100,7 @@ void main() {
 }
 
 Map<String, dynamic> _buildRecord(int delayMillis, List<int> latencies, int totalPageLoads) {
-  final sorted = [...latencies]..sort();
+  final sorted = latencies.sorted(Comparable.compare);
   final median = sorted.isEmpty ? 0 : sorted[sorted.length ~/ 2];
 
   return <String, dynamic>{

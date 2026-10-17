@@ -71,4 +71,24 @@ void main() {
 
         check(trigger).equals(context.example.val(triggerKey) as FetchTrigger);
       });
+
+  Bdd(triggerResolutionFeature)
+      .scenario('a page read again because rows above it went reports invalidated')
+      .given('page <$pageKey>, read again, and a last-failed <$failedKey>')
+      .when('the trigger is resolved')
+      .then('it is <$triggerKey>')
+      .example(val(pageKey, 2), val(failedKey, null), val(triggerKey, FetchTrigger.invalidated))
+      .example(val(pageKey, 0), val(failedKey, null), val(triggerKey, FetchTrigger.invalidated))
+      // A retry outranks it.
+      .example(val(pageKey, 2), val(failedKey, 2), val(triggerKey, FetchTrigger.retry))
+      .run((context) {
+        final trigger = resolveTrigger(
+          pageIndex: context.example.val(pageKey) as int,
+          pending: null,
+          lastFailedPageIndex: context.example.val(failedKey) as int?,
+          isReread: true,
+        );
+
+        check(trigger).equals(context.example.val(triggerKey) as FetchTrigger);
+      });
 }

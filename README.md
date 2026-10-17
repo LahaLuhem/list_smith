@@ -128,7 +128,7 @@ out of the cache rather defeats the pull. `request.trigger` says which it was.
 | `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
 | `retry`        | this page's last attempt threw, and Retry was tapped                        |
 | `queryChanged` | a committed search query changed, entering or leaving search included       |
-| `invalidated`  | you called `invalidate()` or `reset()` on the controller: your data changed |
+| `invalidated`  | your data changed: you called `invalidate()` or `reset()`, or removed rows  |
 
 ```dart
 fetchPage: PageFetcher((request) => repo.load(
@@ -145,8 +145,7 @@ fetchPage: PageFetcher((request) => repo.load(
 ```
 
 It reports the fact and stops there. Bypass, revalidate, or serve stale: your call. `invalidated`
-only ever fires because you called `invalidate()` or `reset()`, so a network-only source routes it
-like `initialLoad`.
+means your data changed, so a network-only source routes it like `initialLoad`.
 
 </details>
 

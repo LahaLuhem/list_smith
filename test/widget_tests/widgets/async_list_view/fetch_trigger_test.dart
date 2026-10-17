@@ -176,6 +176,55 @@ void main() {
       check(triggers[1]).equals(.retry);
     });
 
+    scenarioWidgets(
+      'a page read again after a removal reports invalidated, the next one nextPage',
+      (tester) async {
+        final server = FakeServer(List.generate(15, (index) => index));
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
+        final controller = await _pumpTallRows(tester, server, scrollController);
+
+        final requestCountBefore = server.requests.length;
+        server.store.remove(1);
+        controller.remove(1);
+        scrollController.jumpTo(scrollController.position.maxScrollExtent);
+        await tester.idle();
+        await drain(tester, frames: 12);
+
+        final requestsAfter = server.requests.skip(requestCountBefore);
+        final rereadRequests = requestsAfter.where((request) => request.pageIndex < 3);
+        check(rereadRequests.map((request) => request.trigger))
+            .deepEquals(const [FetchTrigger.invalidated]);
+        check(requestsAfter.firstWhere((request) => request.pageIndex == 3).trigger)
+            .equals(.nextPage);
+      },
+    );
+
+    scenarioWidgets('a page read again whose last attempt threw reports retry', (tester) async {
+      final server = FakeServer(List.generate(15, (index) => index))..failing.add((2, 2));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpTallRows(tester, server, scrollController);
+      // Page 3 answers only after the read beside it fails.
+      final pageHoldCompleter = server.hold(3, attempt: 1);
+
+      server.store.remove(1);
+      controller.remove(1);
+      scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      await tester.idle();
+      await drain(tester, frames: 12);
+      check(server.attempts[2]).equals(2); // premise: the read again threw
+      await release(tester, [pageHoldCompleter]);
+      scrollController.jumpTo(scrollController.position.maxScrollExtent);
+      await tester.pump();
+      await tester.tap(find.text('Retry'));
+      await tester.idle();
+      await drain(tester, frames: 12);
+
+      final retriedRequest = server.requests.lastWhere((request) => request.pageIndex == 2);
+      check(retriedRequest.trigger).equals(.retry);
+    });
+
     scenarioWidgets('a committed query change reports queryChanged on both fetchers', (
       tester,
     ) async {
@@ -326,6 +375,29 @@ void main() {
       check(seenFetches[1]).equals((page: 1, trigger: FetchTrigger.nextPage));
     });
   });
+}
+
+/// Pages of 3 rows 300 px tall, so pages 0 to 2 load at mount and page 3 waits for a scroll.
+Future<ListSmithController<int>> _pumpTallRows(
+  WidgetTester tester,
+  FakeServer<int> server,
+  ScrollController scrollController,
+) async {
+  final controller = ListSmithController<int>();
+  await pumpListSmith(
+    tester,
+    ListSmith<int>.async(
+      fetchPage: server.offsetLateFetcher,
+      pageSize: 3,
+      itemIdGetter: (item) => item,
+      scroll: ListScrollConfig(controller: scrollController),
+      controller: controller,
+      itemBuilder: (_, item, _) => SizedBox(height: 300, child: Text('item $item')),
+    ),
+  );
+  await drain(tester, frames: 12);
+
+  return controller;
 }
 
 /// A fetcher recording each request's [FetchTrigger] into [triggers], serving [pages] pages of 3
