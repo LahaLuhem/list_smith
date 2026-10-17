@@ -46,7 +46,7 @@ final class const ReloadToCurrentDepth({
       return; // keep the old pages, the observer already saw the error
     }
 
-    context.commit(freshPages, lastSignal: signal);
+    await context.commit(freshPages, lastSignal: signal);
   }
 
   Future<void> _reloadParallel<T extends Object>(ReloadContext<T> context, int depth) async {
@@ -75,7 +75,7 @@ final class const ReloadToCurrentDepth({
     await pool.close();
     if (didFail || context.isStale) return; // nothing whole to commit
 
-    context.commit(freshPages.nonNulls.toList(growable: false));
+    await context.commit(freshPages.nonNulls.toList(growable: false));
   }
 
   @override

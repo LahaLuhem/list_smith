@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
@@ -196,13 +197,9 @@ class _AsyncListViewState<T extends Object>()
     final pages = loadingState.pages ?? const [];
     final itemIdGetter = widget.source.itemIdGetter;
     late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
-    // Enough pages to hold the rows that moved up into the removed rows' places.
     int rereadCountFor(Set<Object> removedIds) => removedIds.isEmpty
         ? 0
-        : math.min(
-            (removedIds.intersection(loadedIds).length / widget.source.pageSize).ceil(),
-            pages.length,
-          );
+        : _rereadCount(removedIds.intersection(loadedIds).length, pages.length);
     // A save still out counts too, since the server may not have it yet.
     bool hasRemovalAfterRead() => _idsRemovedSince(readStamp).any(loadedIds.contains);
     final removedIds = _idsRemovedSinceLastRead(pages);
@@ -335,9 +332,14 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
+  /// Enough pages to hold the rows that moved up into the removed rows' places.
+  int _rereadCount(int removedCount, int maxCount) =>
+      math.min((removedCount / widget.source.pageSize).ceil(), maxCount);
+
   /// Rows still going out count too.
-  Iterable<Object> _idsRemovedSince(int readStamp) =>
-      _editStoreNotifier.idsRemovedSince(readStamp).followedBy(_rowTransitionsNotifier.leavingIds);
+  Iterable<Object> _idsRemovedSince(int readStamp, {int? bookedBy}) => _editStoreNotifier
+      .idsRemovedSince(readStamp, bookedBy: bookedBy)
+      .followedBy(_rowTransitionsNotifier.leavingIds);
 
   Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
     final lastPage = pages.lastOrNull;
@@ -854,6 +856,9 @@ final class _ReloadRun<T extends Object>(
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
+  /// When each re-fetch landed.
+  final _landStamps = <int, int>{};
+
   @override
   int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
 
@@ -861,23 +866,95 @@ final class _ReloadRun<T extends Object>(
   bool get isSignalBased => _engine._isSignalBased;
 
   @override
-  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) async {
     _readStamps[index] = _engine._editStoreNotifier.value;
+    final read = await _engine._fetchPageRaw(index, previousSignal, trigger);
+    _landStamps[index] = _engine._editStoreNotifier.value;
 
-    return _engine._fetchPageRaw(index, previousSignal, trigger);
+    return read;
   }
 
   @override
-  void commit(List<List<T>> pages, {Object? lastSignal}) {
+  Future<void> commit(List<List<T>> pages, {Object? lastSignal}) async {
     if (isStale) return;
+    final List<List<T>> linedUpPages;
+    try {
+      // A signal carries its own place, so only index-based pages can skip rows.
+      linedUpPages = isSignalBased ? pages : await _lineUp(pages);
+    } on Exception {
+      return; // the old list stays, the observer already saw the error
+    }
+    if (isStale) return;
+
     _engine._commit(
       // Every page came through [fetch], so each has its stamp.
-      pages
+      linedUpPages
           .mapIndexed((index, items) => LoadedPage(items: items, readStamp: _readStamps[index]!))
           .toList(growable: false),
       lastSignal: lastSignal,
     );
     _epoch = _engine._generation;
+  }
+
+  /// [pages] with the rows their reads skipped put back.
+  Future<List<List<T>>> _lineUp(List<List<T>> pages) async {
+    final engine = _engine;
+    final itemIdGetter = engine.widget.source.itemIdGetter;
+    final removedIds = engine._idsRemovedSince(_readStamps.values.min).toSet();
+    if (removedIds.isEmpty) return pages;
+
+    // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after.
+    late final removedPageIndexById = (_startState?.pages ?? const [])
+        .map((page) => page.items)
+        .indexed
+        .followedBy(pages.indexed)
+        .expand((indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)))
+        .where((row) => removedIds.contains(row.id))
+        .groupFoldBy<Object, int>(
+          (row) => row.id,
+          (index, row) => math.min(index ?? row.index, row.index),
+        );
+    final rereadIndexes = SplayTreeSet.of(
+      Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
+        final crossedCount = engine
+            ._idsRemovedSince(_readStamps[boundaryIndex - 1]!, bookedBy: _landStamps[boundaryIndex])
+            .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
+            .length;
+        final count = engine._rereadCount(crossedCount, boundaryIndex);
+
+        return Iterable.generate(count, (offset) => boundaryIndex - count + offset);
+      }),
+    );
+    if (rereadIndexes.isEmpty) return pages;
+
+    // After every page landed, so each read sees whatever the pages either side of it saw.
+    final rereadItems = await Future.wait(
+      rereadIndexes.map((index) => engine._fetchPageRaw(index, null, trigger)),
+      eagerError: true,
+    );
+    final rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereadItems.map((read) => read.$1));
+    final freshPageIndexById = pages.indexed
+        .expand((indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)))
+        .groupFoldBy<Object, int>((row) => row.id, (index, row) => index ?? row.index);
+    final slidItemsByPageIndex = <int, List<T>>{};
+    final placedIds = <Object>{};
+    for (final run in rereadIndexes.splitBetween((index, nextIndex) => nextIndex != index + 1)) {
+      // A skipped row goes in front of the page after the fresh row it follows.
+      var pageIndex = run.first;
+      for (final item in run.expand((index) => rereadItemsByIndex[index]!)) {
+        final id = itemIdGetter(item);
+        final freshPageIndex = freshPageIndexById[id];
+        if (freshPageIndex != null) {
+          pageIndex = freshPageIndex + 1;
+        } else if (pageIndex < pages.length && placedIds.add(id)) {
+          (slidItemsByPageIndex[pageIndex] ??= []).add(item);
+        }
+      }
+    }
+
+    return pages
+        .mapIndexed((index, items) => [...?slidItemsByPageIndex[index], ...items])
+        .toList(growable: false);
   }
 
   @override

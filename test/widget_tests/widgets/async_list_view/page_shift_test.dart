@@ -271,6 +271,184 @@ void main() {
       check(server.attempts.values).every((it) => it.isLessOrEqual(2));
     });
   });
+
+  feature('ListSmith.async depth reloads after removals', () {
+    scenarioOutlineWidgets<int?>(
+      'the rows a removal pulls up still show when it lands mid-reload',
+      examples: const {'one page at a time': 1, 'all at once': null},
+      outline: (tester, concurrency) async {
+        final server = FakeServer(_range(0, 8));
+        final scrollController = ScrollController();
+        addTearDown(scrollController.dispose);
+        final controller = await _pumpList(
+          tester,
+          fetchPage: server.offsetLateFetcher,
+          scrollController: scrollController,
+          rowHeight: _shortRowHeight,
+          endPolicy: const FixedPageCountPolicy(pageCount: 2),
+          refresh: PullToRefresh(reload: ReloadToCurrentDepth(concurrency: concurrency)),
+        );
+        final firstPageHoldCompleter = server.hold(0, attempt: 2);
+        final secondPageHoldCompleter = server.hold(1, attempt: 2);
+        unawaited(controller.refresh());
+        await tester.idle();
+        await drain(tester, frames: 4);
+        await release(tester, [firstPageHoldCompleter]);
+
+        server.store.remove(1); // after page 0 is read, before page 1 is
+        controller.remove(1);
+        await tester.pump();
+        await release(tester, [secondPageHoldCompleter]);
+
+        check(await _allShownItems(tester, scrollController))
+            .deepEquals(server.store.take(_pageSize * 2));
+      },
+    );
+
+    scenarioWidgets('the same when its save is out from before the reload', (tester) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 2),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      unawaited(controller.removeAsync(1, commit: Completer<void>().future));
+      await tester.pump();
+      final firstPageHoldCompleter = server.hold(0, attempt: 2);
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+      await release(tester, [firstPageHoldCompleter]);
+
+      server.store.remove(1); // the save reaches the server between the 2 reads
+      await release(tester, [secondPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(server.store.take(_pageSize * 2));
+    });
+
+    scenarioWidgets('a read that cannot line the pages up keeps the old list', (tester) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 2),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      server.failing.add((0, 3));
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(1);
+      controller.remove(1);
+      await tester.pump();
+      await release(tester, [secondPageHoldCompleter]);
+
+      check(server.attempts[0]).equals(3);
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(_range(0, 5).where((item) => item != 1));
+    });
+
+    scenarioWidgets('a removal mid-reload reads again only around the pages read after it', (
+      tester,
+    ) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 3),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final lastPageHoldCompleter = server.hold(2, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+      check(server.attempts[2]).equals(2);
+
+      server.store.remove(1);
+      controller.remove(1);
+      await tester.pump();
+      await release(tester, [lastPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+      check(server.attempts[0]).equals(2); // read with page 1 before the removal, so they line up
+    });
+
+    scenarioWidgets('a removal below a boundary reads nothing again above it', (tester) async {
+      final server = FakeServer(_range(0, 8));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 2),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.remove(4);
+      controller.remove(4);
+      await tester.pump();
+      await release(tester, [secondPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(server.store.take(_pageSize * 2));
+      check(server.attempts[0]).equals(2);
+    });
+
+    scenarioWidgets('many removals mid-reload still leave every row in order', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 3),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      void remove(int item) {
+        server.store.remove(item);
+        controller.remove(item);
+      }
+
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      final lastPageHoldCompleter = server.hold(2, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+      remove(0);
+      await release(tester, [secondPageHoldCompleter]);
+      // More than a page's worth, so the pages read again for the 2 boundaries overlap.
+      _range(1, 4).forEach(remove);
+      await release(tester, [lastPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(server.store.take(_pageSize * 3));
+    });
+  });
 }
 
 /// Removes row 1, which the server already dropped.
@@ -297,6 +475,8 @@ Future<ListSmithController<int>> _pumpList(
   ListSmithController<int>? controller,
   double rowHeight = _rowHeight,
   bool isTransitionOn = false,
+  PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
+  Refresh refresh = const PullToRefresh(),
   Search<int> search = const NoSearch(),
   String query = '',
 }) async {
@@ -314,6 +494,8 @@ Future<ListSmithController<int>> _pumpList(
                   SizeTransition(sizeFactor: animation, alignment: .topStart, child: child),
             )
           : const NoEditTransition(),
+      endPolicy: endPolicy,
+      refresh: refresh,
       search: search,
       query: query,
       searchDebounce: const Duration(milliseconds: 20),
