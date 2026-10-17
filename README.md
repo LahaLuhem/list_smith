@@ -151,14 +151,27 @@ means your data changed, so a network-only source routes it like `initialLoad`.
 
 ### Where the data ends
 
-An empty page meaning "the end" is the sensible default. When your backend signals it another way,
-swap the policy. Pick by how your source behaves, not by mechanism:
+An empty page meaning "the end" is the sensible default. Does your backend send a `hasMore` flag?
+Return it from `PageFetcher.withHasMore` (and `SearchPageFetcher.withHasMore` if the list searches)
+and the list ends on it, saving the trailing empty page it would fetch to find the end:
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher.withHasMore((request) async {
+    final response = await api.load(request.pageIndex, request.pageSize);
+    return (response.items, hasMore: response.hasMore);
+  }),
+  itemIdGetter: (item) => item.id,
+  itemBuilder: (context, item, index) => Text(item.title),
+)
+```
+
+For anything else, swap the policy. Pick by how your source behaves, not by mechanism:
 
 | Policy                               | Reach for it when                                                    |
 |--------------------------------------|----------------------------------------------------------------------|
 | `StopOnEmptyPagesPolicy` *(default)* | your source runs dry (a short, then empty, page). Do nothing.        |
 | `FixedPageCountPolicy`               | you want a hard cap: a "top 100", or a teaser of N pages.            |
-| `ExplicitHasMorePolicy`              | your backend returns a `hasMore` / `isLast` flag per response.       |
 | `StopOnNullSignalPolicy`             | your backend is cursor-based, returning `null` when there's no more. |
 
 The 2 count-based tweaks are one line each:
@@ -168,21 +181,8 @@ endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),  // tolerate up t
 endPolicy: const FixedPageCountPolicy(pageCount: 5),            // stop after 5 pages
 ```
 
-The 2 signal-based ones read a value off each fetch, so they need `PageFetcher.withSignal` (and
-`SearchPageFetcher.withSignal` if the list searches). Stopping on the flag saves the trailing empty
-page a count-based policy fetches to find the end:
-
-```dart
-ListSmith.async(
-  fetchPage: PageFetcher.withSignal((request) async {
-    final response = await api.load(request.pageIndex, request.pageSize);
-    return (response.items, response.hasMore);
-  }),
-  itemIdGetter: (item) => item.id,
-  endPolicy: const ExplicitHasMorePolicy(),
-  itemBuilder: (context, item, index) => Text(item.title),
-)
-```
+`StopOnNullSignalPolicy` reads the cursor off each fetch, so it needs `PageFetcher.withSignal`, as
+cursor pagination below shows.
 
 None of these fit? `PaginationEndPolicy` is an open contract. Its context carries the per-page
 counts, the page size, and the last fetch's signal:

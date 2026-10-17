@@ -107,11 +107,13 @@ class ListSmith<T extends Object> extends StatelessWidget {
          'A query was set without search. Pass search: AsyncSearch(...) to turn it on.',
        ),
        assert(
-         !endPolicy.requiresSignal || fetchPage.reportsSignal,
+         !endPolicy.requiresSignal || fetchPage.signalKind != .none,
          'This end policy needs a signal-reporting fetcher. Build fetchPage with PageFetcher.withSignal.',
        ),
        assert(
-         !endPolicy.requiresSignal || search is! AsyncSearch<T> || search.fetchPage.reportsSignal,
+         !endPolicy.requiresSignal ||
+             search is! AsyncSearch<T> ||
+             search.fetchPage.signalKind != .none,
          'This end policy needs a signal-reporting search fetcher. Build the AsyncSearch fetcher with SearchPageFetcher.withSignal.',
        ),
        grouping = grouping ?? NoGrouping<T>(),

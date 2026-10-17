@@ -1,5 +1,7 @@
 // Test-local fixtures share the file with the scenarios that use them.
 // ignore_for_file: prefer-match-file-name
+// Pins the deprecated ExplicitHasMorePolicy until it goes.
+// ignore_for_file: deprecated_member_use_from_same_package
 
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';

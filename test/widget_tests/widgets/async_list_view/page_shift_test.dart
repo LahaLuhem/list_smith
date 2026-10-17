@@ -596,7 +596,7 @@ final _rowRemovers = <String, _RowRemover>{
 typedef _SignalFetcherGetter = PageFetcher<int> Function(FakeServer<int> server);
 
 final _signalFetchers = <String, _SignalFetcherGetter>{
-  'paged by number with a hasMore flag': (server) => server.hasMoreFetcher,
+  'paged by number with a hasMore flag': (server) => server.hasMoreSignalFetcher,
   'with an offset as the cursor': (server) => server.offsetCursorFetcher,
 };
 

@@ -15,9 +15,8 @@ base class const PageRequest({
   /// Why this page was asked for, so a caching repository can route the fetch.
   required final FetchTrigger trigger,
 
-  /// The end signal the previous page's fetcher returned, or `null` for the 1st page and for a fetcher
-  /// that reports none (a plain [PageFetcher.new]). A cursor source reads its cursor here, and can get
-  /// it again for a retry or a page read again after a removal.
+  /// The signal the previous page's `withSignal` fetcher returned, else `null`. The same cursor can
+  /// come again, for a retry or a re-read after a removal.
   final Object? previousSignal,
 }) {
   /// Creates it.

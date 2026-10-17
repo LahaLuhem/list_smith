@@ -1,3 +1,6 @@
+// Pins the deprecated ExplicitHasMorePolicy until it goes.
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';

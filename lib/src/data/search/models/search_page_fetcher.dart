@@ -1,30 +1,37 @@
-/// @docImport '/src/data/pagination/models/end_context.dart';
 /// @docImport '/src/data/pagination/models/page_fetcher.dart';
 library;
 
 import 'package:meta/meta.dart';
 
+import '/src/data/pagination/enums/signal_kind.dart';
 import 'search_page_request.dart';
 
 /// Fetches one page of search results, from the [SearchPageRequest] describing it.
 ///
-/// [PageFetcher] with the committed query on the request, and the same 2 builders: [SearchPageFetcher.new]
-/// for items only, [SearchPageFetcher.withSignal] to return an end signal too. The end policy reads
-/// that signal as [EndContext.lastPageSignal] and the next fetch gets it as [SearchPageRequest.previousSignal],
-/// so a cursor-driven search works the same way.
+/// [PageFetcher] with the committed query on the request, and the same 3 builders.
 final class const SearchPageFetcher<T extends Object>._(
   final Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) _fetch, {
 
-  /// Whether this fetcher came from [SearchPageFetcher.withSignal].
-  @internal required final bool reportsSignal,
+  /// What it returns beside its items.
+  @internal required final SignalKind signalKind,
 }) {
   /// Wraps a function returning one page of results for the request's query and page.
   factory(Future<Iterable<T>> Function(SearchPageRequest request) fetch) =>
-      SearchPageFetcher._((request) async => (await fetch(request), null), reportsSignal: false);
+      SearchPageFetcher._((request) async => (await fetch(request), null), signalKind: .none);
 
-  /// Wraps a function returning one page of results plus an end signal.
+  /// Wraps a function returning one page of results and whether more follow. `hasMore: false` ends
+  /// the results.
+  factory withHasMore(
+    Future<(Iterable<T>, {bool hasMore})> Function(SearchPageRequest request) fetch,
+  ) => SearchPageFetcher._((request) async {
+    final (items, :hasMore) = await fetch(request);
+
+    return (items, hasMore);
+  }, signalKind: .hasMore);
+
+  /// Wraps a function returning one page of results and a signal, like the next cursor.
   factory withSignal(Future<(Iterable<T>, Object?)> Function(SearchPageRequest request) fetch) =>
-      SearchPageFetcher._(fetch, reportsSignal: true);
+      SearchPageFetcher._(fetch, signalKind: .cursor);
 
   /// Fetches the page [request] describes, as its items and an optional end signal.
   Future<(Iterable<T>, Object?)> call(SearchPageRequest request) => _fetch(request);

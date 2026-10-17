@@ -2,8 +2,8 @@ part of '../pagination_end_policy.dart';
 
 /// Ends pagination when a page's fetcher returns a `null` end signal, after at least 1 page.
 ///
-/// The cursor counterpart to [ExplicitHasMorePolicy]: needs a `withSignal` fetcher whose signal is the
-/// next cursor. A `null` before the 1st page has loaded ends nothing.
+/// Needs a `withSignal` fetcher whose signal is the next cursor. A `null` before the 1st page has loaded
+/// ends nothing.
 final class const StopOnNullSignalPolicy() extends PaginationEndPolicy {
   /// Creates it.
   this;

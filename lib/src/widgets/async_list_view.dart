@@ -19,6 +19,7 @@ import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
 import '/src/data/pagination/enums/paging_status.dart';
+import '/src/data/pagination/enums/signal_kind.dart';
 import '/src/data/pagination/models/empty_page_context.dart';
 import '/src/data/pagination/models/end_context.dart';
 import '/src/data/pagination/models/loaded_page.dart';
@@ -180,6 +181,13 @@ class _AsyncListViewState<T extends Object>()
 
   bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
 
+  /// What the current mode's fetcher returns beside its items.
+  SignalKind get _signalKind => switch (widget.source.search) {
+    final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
+      asyncSearch.fetchPage.signalKind,
+    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.signalKind,
+  };
+
   /// Fetches the next page into the current stream, unless one is already on its way or the stream has
   /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
   Future<void> _fetchNextPage({FetchTrigger? trigger}) async {
@@ -196,7 +204,7 @@ class _AsyncListViewState<T extends Object>()
       return;
     }
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
-    final previousSignal = _lastPageSignal;
+    final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
     final pages = loadingState.pages ?? const [];
     final itemIdGetter = widget.source.itemIdGetter;
     late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
@@ -377,7 +385,10 @@ class _AsyncListViewState<T extends Object>()
       lastPageSignal: _lastPageSignal,
     );
 
-    return widget.source.endPolicy.hasReachedEnd(endContext) ? null : pages.length;
+    return widget.source.endPolicy.hasReachedEnd(endContext) ||
+            _signalKind.endsList(_lastPageSignal)
+        ? null
+        : pages.length;
   }
 
   /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
@@ -536,13 +547,6 @@ class _AsyncListViewState<T extends Object>()
   }
 
   // The engine side of a reload, reached through a [_ReloadRun].
-
-  /// Whether the current stream's fetcher threads a per-page signal, which forces a sequential reload.
-  bool get _isSignalBased => switch (widget.source.search) {
-    final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
-      asyncSearch.fetchPage.reportsSignal,
-    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.reportsSignal,
-  };
 
   /// Replaces the loaded pages with [pages] atomically, recording [lastSignal] as the new end signal.
   void _commit(List<LoadedPage<T>> pages, {Object? lastSignal}) {
@@ -859,7 +863,7 @@ final class _ReloadRun<T extends Object>(
   int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
 
   @override
-  bool get isSignalBased => _engine._isSignalBased;
+  bool get isSignalBased => _engine._signalKind.threadsSignal;
 
   @override
   Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
