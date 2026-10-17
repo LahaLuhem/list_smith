@@ -514,9 +514,9 @@ renames.
   enhanced-enum field.
 - **`retry` costs a field, and the alternative is a lie.** A fetch clears `error` as it starts, and
   so does a depth reload's commit, so a retry isn't derivable from paging state.
-  One `_lastFailedPageIndex`, cleared on success and on restart. Without it a retry reports
-  `nextPage` and the repository serves the cached miss that just failed. `queryChanged` is its own
-  value for the same reason, rather than folded into `initialLoad`.
+  One `_lastFailedPageIndex`, cleared when that page succeeds and on restart. Without it a retry
+  reports `nextPage` and the repository serves the cached miss that just failed. `queryChanged` is
+  its own value for the same reason, rather than folded into `initialLoad`.
 - **`restoreNormal` drops the retry marker,** or a failed search page could mark the restored list's
   next page as a retry. `commit()` needn't: a reload commits exactly `depth` pages, so the next fetch
   is `depth` and can't collide with a lower failed index.

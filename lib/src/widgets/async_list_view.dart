@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
@@ -192,9 +193,20 @@ class _AsyncListViewState<T extends Object>()
       return;
     }
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
+    final pages = loadingState.pages ?? const [];
+    final itemIdGetter = widget.source.itemIdGetter;
+    late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
+    final removedIds = _idsRemovedSinceLastRead(pages);
+    // Enough pages to hold the rows that moved up into the removed rows' places.
+    final rereadCount = removedIds.isEmpty
+        ? 0
+        : math.min(
+            (removedIds.intersection(loadedIds).length / widget.source.pageSize).ceil(),
+            pages.length,
+          );
 
     try {
-      final (items, signal) = await _fetchPageRaw(
+      final pageFuture = _fetchPageRaw(
         pageIndex,
         _lastPageSignal,
         resolveTrigger(
@@ -203,14 +215,32 @@ class _AsyncListViewState<T extends Object>()
           lastFailedPageIndex: _lastFailedPageIndex,
         ),
       );
+      // Future.wait, not .wait, so a failed read reaches the error surface as itself.
+      final pageReads = await Future.wait(
+        Iterable.generate(
+          rereadCount,
+          (offset) => _reread(pageIndex - rereadCount + offset),
+        ).followedBy([pageFuture]),
+        eagerError: true,
+      );
       if (generation != _generation) return;
 
+      final (pageItems, signal) = pageReads.last;
       _lastPageSignal = signal;
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
         pages: [
           ...?latestState.pages,
-          LoadedPage(items: items, readStamp: readStamp),
+          LoadedPage(
+            // Only the rows the list lacks, so the end policy still counts what this page sent.
+            items: pageReads
+                .take(rereadCount)
+                .expand((read) => read.$1)
+                .whereNot((item) => loadedIds.contains(itemIdGetter(item)))
+                .followedBy(pageItems)
+                .toList(growable: false),
+            readStamp: readStamp,
+          ),
         ],
         isLoading: false,
       );
@@ -280,7 +310,8 @@ class _AsyncListViewState<T extends Object>()
       };
       final pageItems = items.toList(growable: false);
       if (generation == _generation) {
-        _lastFailedPageIndex = null;
+        // Only its own, since a read beside it may have just failed.
+        if (_lastFailedPageIndex == pageKey) _lastFailedPageIndex = null;
         widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
       }
 
@@ -292,6 +323,29 @@ class _AsyncListViewState<T extends Object>()
       rethrow;
     }
   }
+
+  /// Rows still going out count too.
+  Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
+    final lastPage = pages.lastOrNull;
+    // A signal carries its own place, so only index-based pages shift.
+    if (lastPage == null || _isSignalBased) return const {};
+
+    return _editStoreNotifier
+        .idsRemovedSince(lastPage.readStamp)
+        .followedBy(_rowTransitionsNotifier.leavingIds)
+        .toSet();
+  }
+
+  Future<(List<T>, Object?)> _reread(int pageIndex) => _fetchPageRaw(
+    pageIndex,
+    null,
+    resolveTrigger(
+      pageIndex: pageIndex,
+      pending: null,
+      lastFailedPageIndex: _lastFailedPageIndex,
+      isReread: true,
+    ),
+  );
 
   /// The index of the page after [pages], which is their count, or null once [AsyncSource.endPolicy]
   /// reports the end.

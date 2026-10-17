@@ -2,6 +2,7 @@
 // ignore_for_file: prefer-match-file-name
 
 import 'package:checks/checks.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
@@ -109,7 +110,7 @@ void main() {
       await settle(tester);
 
       // Cause, then the mode edge, then the reload it started. Page loads left out.
-      check(observer.events.where((event) => !event.startsWith('pageLoaded')).toList())
+      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')).toList())
           .deepEquals(['queryCommitted(ab)', 'searchModeChanged(true)', 'reload(queryChanged)']);
     });
 
@@ -213,7 +214,7 @@ void main() {
       await pump('');
       await settle(tester);
 
-      check(observer.events.where((event) => !event.startsWith('pageLoaded')).toList())
+      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')).toList())
           .deepEquals(['queryCommitted()', 'searchModeChanged(false)', 'reload(refresh)']);
     });
 

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -108,7 +109,7 @@ double _maxMillis(List<int> micros) {
 double _percentileMillis(List<int> micros, int percentile) {
   if (micros.isEmpty) return 0;
 
-  final sorted = [...micros]..sort();
+  final sorted = micros.sorted(Comparable.compare);
   final index = ((percentile / 100) * (sorted.length - 1)).round().clamp(0, sorted.length - 1);
 
   return sorted[index] / 1000.0;

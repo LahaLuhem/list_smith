@@ -25,6 +25,7 @@ dev_dependencies:
     sdk: flutter
   flutter_driver:
     sdk: flutter
+  collection: ^1.19.1
 
 flutter:
   uses-material-design: true

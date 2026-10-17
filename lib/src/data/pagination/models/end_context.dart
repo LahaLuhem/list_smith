@@ -23,7 +23,7 @@ final class const EndContext({
   int get pageCount => pageItemCounts.length;
 
   /// The item count of the most recent page, or `0` before the 1st one.
-  int get lastPageItemCount => pageItemCounts.isEmpty ? 0 : pageItemCounts.last;
+  int get lastPageItemCount => pageItemCounts.lastOrNull ?? 0;
 
   /// How many empty pages sit at the end of [pageItemCounts], in a row.
   int get trailingEmptyRun => pageItemCounts.reversed.takeWhile((count) => count == 0).length;
