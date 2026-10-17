@@ -196,14 +196,15 @@ class _AsyncListViewState<T extends Object>()
     final pages = loadingState.pages ?? const [];
     final itemIdGetter = widget.source.itemIdGetter;
     late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
-    final removedIds = _idsRemovedSinceLastRead(pages);
     // Enough pages to hold the rows that moved up into the removed rows' places.
-    final rereadCount = removedIds.isEmpty
+    int rereadCountFor(Set<Object> removedIds) => removedIds.isEmpty
         ? 0
         : math.min(
             (removedIds.intersection(loadedIds).length / widget.source.pageSize).ceil(),
             pages.length,
           );
+    final removedIds = _idsRemovedSinceLastRead(pages);
+    final rereadCount = rereadCountFor(removedIds);
 
     try {
       final pageFuture = _fetchPageRaw(
@@ -217,15 +218,22 @@ class _AsyncListViewState<T extends Object>()
       );
       // Future.wait, not .wait, so a failed read reaches the error surface as itself.
       final pageReads = await Future.wait(
-        Iterable.generate(
-          rereadCount,
-          (offset) => _reread(pageIndex - rereadCount + offset),
-        ).followedBy([pageFuture]),
+        _rereadsBefore(pageIndex, rereadCount).followedBy([pageFuture]),
         eagerError: true,
       );
       if (generation != _generation) return;
 
       final (pageItems, signal) = pageReads.last;
+      final landedRemovedIds = _idsRemovedSinceLastRead(pages);
+      // A removal came in while this page was out, so read the pages before again now that it's in.
+      final rereads = landedRemovedIds.difference(removedIds).any(loadedIds.contains)
+          ? await Future.wait(
+              _rereadsBefore(pageIndex, rereadCountFor(landedRemovedIds)),
+              eagerError: true,
+            )
+          : pageReads.take(rereadCount);
+      if (generation != _generation) return;
+
       _lastPageSignal = signal;
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
@@ -233,8 +241,7 @@ class _AsyncListViewState<T extends Object>()
           ...?latestState.pages,
           LoadedPage(
             // Only the rows the list lacks, so the end policy still counts what this page sent.
-            items: pageReads
-                .take(rereadCount)
+            items: rereads
                 .expand((read) => read.$1)
                 .whereNot((item) => loadedIds.contains(itemIdGetter(item)))
                 .followedBy(pageItems)
@@ -336,16 +343,19 @@ class _AsyncListViewState<T extends Object>()
         .toSet();
   }
 
-  Future<(List<T>, Object?)> _reread(int pageIndex) => _fetchPageRaw(
-    pageIndex,
-    null,
-    resolveTrigger(
-      pageIndex: pageIndex,
-      pending: null,
-      lastFailedPageIndex: _lastFailedPageIndex,
-      isReread: true,
-    ),
-  );
+  Iterable<Future<(List<T>, Object?)>> _rereadsBefore(int pageIndex, int count) =>
+      Iterable.generate(count, (offset) => pageIndex - count + offset).map(
+        (rereadPageIndex) => _fetchPageRaw(
+          rereadPageIndex,
+          null,
+          resolveTrigger(
+            pageIndex: rereadPageIndex,
+            pending: null,
+            lastFailedPageIndex: _lastFailedPageIndex,
+            isReread: true,
+          ),
+        ),
+      );
 
   /// The index of the page after [pages], which is their count, or null once [AsyncSource.endPolicy]
   /// reports the end.

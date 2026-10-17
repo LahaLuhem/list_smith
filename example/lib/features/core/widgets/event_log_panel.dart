@@ -18,7 +18,7 @@ class const EventLogPanel({
       children: [
         const Divider(height: 1),
         Padding(
-          padding: const .fromLTRB(16, 4, 8, 0),
+          padding: const .only(left: 16, top: 4, right: 8),
           child: Row(
             children: [
               const Expanded(
@@ -38,7 +38,7 @@ class const EventLogPanel({
             builder: (context, events, _) => events.isEmpty
                 ? const Center(child: Text('No events yet'))
                 : ListView.builder(
-                    padding: const .fromLTRB(16, 0, 16, 8),
+                    padding: const .only(left: 16, right: 16, bottom: 8),
                     itemCount: events.length,
                     itemBuilder: (_, index) => Padding(
                       padding: const .symmetric(vertical: 2),
