@@ -203,8 +203,12 @@ class _AsyncListViewState<T extends Object>()
             (removedIds.intersection(loadedIds).length / widget.source.pageSize).ceil(),
             pages.length,
           );
+    // A save still out counts too, since the server may not have it yet.
+    bool hasRemovalAfterRead() => _idsRemovedSince(readStamp).any(loadedIds.contains);
     final removedIds = _idsRemovedSinceLastRead(pages);
-    final rereadCount = rereadCountFor(removedIds);
+    // A removal still out can reach the server between 2 reads sent together, so read the page first.
+    final isRemovalOpen = removedIds.isNotEmpty && hasRemovalAfterRead();
+    final rereadCount = isRemovalOpen ? 0 : rereadCountFor(removedIds);
 
     try {
       final pageFuture = _fetchPageRaw(
@@ -225,8 +229,8 @@ class _AsyncListViewState<T extends Object>()
 
       final (pageItems, signal) = pageReads.last;
       final landedRemovedIds = _idsRemovedSinceLastRead(pages);
-      // A removal came in while this page was out, so read the pages before again now that it's in.
-      final rereads = landedRemovedIds.difference(removedIds).any(loadedIds.contains)
+      // If a removal could have reached the server while this page was out, read the pages before again.
+      final rereads = landedRemovedIds.isNotEmpty && (isRemovalOpen || hasRemovalAfterRead())
           ? await Future.wait(
               _rereadsBefore(pageIndex, rereadCountFor(landedRemovedIds)),
               eagerError: true,
@@ -332,15 +336,15 @@ class _AsyncListViewState<T extends Object>()
   }
 
   /// Rows still going out count too.
+  Iterable<Object> _idsRemovedSince(int readStamp) =>
+      _editStoreNotifier.idsRemovedSince(readStamp).followedBy(_rowTransitionsNotifier.leavingIds);
+
   Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
     final lastPage = pages.lastOrNull;
     // A signal carries its own place, so only index-based pages shift.
     if (lastPage == null || _isSignalBased) return const {};
 
-    return _editStoreNotifier
-        .idsRemovedSince(lastPage.readStamp)
-        .followedBy(_rowTransitionsNotifier.leavingIds)
-        .toSet();
+    return _idsRemovedSince(lastPage.readStamp).toSet();
   }
 
   Iterable<Future<(List<T>, Object?)>> _rereadsBefore(int pageIndex, int count) =>

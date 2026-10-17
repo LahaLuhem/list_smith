@@ -106,6 +106,56 @@ void main() {
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
     });
 
+    scenarioWidgets('the same when a save already out lands while the next page is out', (
+      tester,
+    ) async {
+      final server = FakeServer(_range(0, 14));
+      final pageHoldCompleter = server.hold(3, attempt: 1);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+      );
+      final saveCompleter = Completer<void>();
+      unawaited(controller.removeAsync(1, commit: saveCompleter.future));
+      await tester.pump();
+      await _scrollToEnd(tester, scrollController);
+      check(server.asked(3)).isTrue();
+
+      server.store.remove(1);
+      await release(tester, [pageHoldCompleter]);
+      saveCompleter.complete();
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
+    scenarioWidgets('the same when a later save fails while the next page is out', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final pageHoldCompleter = server.hold(3, attempt: 1);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+      );
+      final saveCompleter = Completer<void>();
+      server.store.remove(4);
+      controller.remove(4);
+      unawaited(controller.removeAsync(1, commit: saveCompleter.future));
+      await tester.pump();
+      await _scrollToEnd(tester, scrollController);
+      check(server.asked(3)).isTrue();
+
+      saveCompleter.completeError(Exception('save failed'));
+      await tester.pump();
+      await release(tester, [pageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
     scenarioWidgets('removing every row on screen shows the rows after them, not the empty one', (
       tester,
     ) async {
@@ -199,6 +249,26 @@ void main() {
       final firstEmptyPageIndex = (server.store.length / _pageSize).ceil();
       check(server.asked(firstEmptyPageIndex)).isTrue();
       check(server.asked(firstEmptyPageIndex + 1)).isFalse();
+    });
+
+    scenarioWidgets('while a save is out, each page reads the page before again only once', (
+      tester,
+    ) async {
+      final server = FakeServer(_range(0, 14));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+      );
+
+      server.store.remove(1);
+      unawaited(controller.removeAsync(1, commit: Completer<void>().future));
+      await tester.pump();
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+      check(server.attempts.values).every((it) => it.isLessOrEqual(2));
     });
   });
 }

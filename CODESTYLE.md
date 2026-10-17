@@ -496,6 +496,11 @@ A fixed number of differently-typed futures takes the record form, `(f1, f2).wai
 destructures directly. A dynamic number of same-typed ones takes `futures.wait`. Either way a
 failure arrives as a `ParallelWaitError` carrying the per-slot values, which `Future.wait` loses.
 
+The exception is a failure that has to reach an `on Exception` handler as itself, like a failed
+page read on its way to the error surface. Keep `Future.wait(…, eagerError: true)` there. A
+`ParallelWaitError` is an `Error`, so that handler misses it, and `wait` only fails once every
+future is done.
+
 <a id="idioms-future-syncvalue"></a>
 ### `Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value
 
