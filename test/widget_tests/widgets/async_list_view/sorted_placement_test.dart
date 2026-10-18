@@ -1,6 +1,8 @@
 // Test-local fixtures share the file with the scenarios that use them.
 // ignore_for_file: prefer-match-file-name
 
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +89,87 @@ void main() {
             .deepEquals(_namesOf(server).take(example.shownCount));
       },
     );
+
+    scenarioWidgets('the rows a move pulls up still show when the next page loads', (tester) async {
+      final server = FakeServer(_rows());
+      final scrollController = _scrollController();
+      final controller = await _pumpSorted(tester, server, scrollController);
+
+      _rename(server, controller, 1, 'n99');
+      await tester.pump();
+
+      check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server));
+    });
+
+    scenarioOutlineWidgets<({String name, int pageCount})>(
+      'the same when it lands mid-reload',
+      examples: const {
+        'past the reloaded pages': (name: 'n99', pageCount: 2),
+        'into a later reloaded page': (name: 'n17', pageCount: 3),
+      },
+      outline: (tester, example) async {
+        final server = FakeServer(_rows());
+        final scrollController = _scrollController();
+        final controller = await _pumpSorted(
+          tester,
+          server,
+          scrollController,
+          rowHeight: _shortRowHeight,
+          endPolicy: FixedPageCountPolicy(pageCount: example.pageCount),
+        );
+        final secondPageHoldCompleter = server.hold(1, attempt: 2);
+        unawaited(controller.invalidate());
+        await tester.idle();
+        await drain(tester, frames: 4);
+
+        _rename(server, controller, 1, example.name); // after page 0 is read, before page 1 is
+        await tester.pump();
+        await release(tester, [secondPageHoldCompleter]);
+
+        check(await _allShownNames(tester, scrollController))
+            .deepEquals(_namesOf(server).take(example.pageCount * 3));
+      },
+    );
+
+    scenarioWidgets('the same for a row created before the reload', (tester) async {
+      final server = FakeServer(_rows());
+      final scrollController = _scrollController();
+      final controller = await _pumpSorted(
+        tester,
+        server,
+        scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 2),
+      );
+      _create(server, controller, (id: 100, team: 'A', name: 'n03'));
+      await tester.pump();
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      unawaited(controller.invalidate());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      _rename(server, controller, 100, 'n99'); // after page 0 is read, before page 1 is
+      await tester.pump();
+      await release(tester, [secondPageHoldCompleter]);
+
+      check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server).take(6));
+    });
+
+    scenarioWidgets('an edit that leaves its row in place reads no page again', (tester) async {
+      final server = FakeServer(_rows());
+      final scrollController = _scrollController();
+      final controller = await _pumpSorted(tester, server, scrollController);
+      check(server.asked(3)).isFalse(); // page 3 waits for a scroll
+
+      final row = server.store[1];
+      final retaggedRow = (id: row.id, team: 'Z', name: row.name);
+      server.store[1] = retaggedRow;
+      controller.upsert(retaggedRow);
+      await tester.pump();
+      await scrollToEnd(tester, scrollController);
+
+      check(server.attempts.values).every((it) => it.equals(1));
+    });
 
     scenarioWidgets('a row placement moves keeps its state', (tester) async {
       final server = FakeServer(_rows());
