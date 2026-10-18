@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import '/src/data/grouping/typedefs/group_key_of.dart';
 import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '../typedefs/item_edit.dart';
 import '../utils/edit_resolver.dart';
+import 'item_edit.dart';
 
 /// The local edits, kept beside the loaded pages rather than in them, so the end policy and the reloads
 /// keep reading what the server sent.
@@ -21,6 +21,9 @@ final class EditStoreNotifier<T extends Object>()
   Map<Object, ItemEdit<T>>? _newestItemEditsById;
 
   var _stamp = 0;
+
+  /// Edits at or below it are dropped. Edits start at 1.
+  var _droppedThroughStamp = 0;
 
   /// Creates it.
   this;
@@ -55,26 +58,34 @@ final class EditStoreNotifier<T extends Object>()
   PendingEdit<T> pendingEdit(Object itemId, T? editedItem) =>
       PendingEdit._(this, itemId, editedItem);
 
-  /// The items an edit after a read stamped [readStamp] took out of their place, saves still out
-  /// included. [leavesPlacePredicate] judges each edit by the item it replaced and its own.
-  Iterable<Object> idsRemovedSince(
+  /// Each item's newest edit after [readStamp] that took it out of its place, by stamp, saves still
+  /// out included.
+  Map<Object, int> removalStampsSince(
     int readStamp, {
     required bool Function(Object itemId, T? replacedItem, T? editedItem) leavesPlacePredicate,
-  }) => _bookedEditsById.entries
-      .where(
-        (entry) => entry.value.any(
-          (bookedEdit) =>
-              bookedEdit.stamp > readStamp &&
-              leavesPlacePredicate(entry.key, bookedEdit.replacedItem, bookedEdit.item),
-        ),
-      )
-      .map((entry) => entry.key);
+  }) {
+    final removalStampsById = <Object, int>{};
+    // A loop, a chain is 3.5x slower (APPENDIX.md#edit-store-scans).
+    _bookedEditsById.forEach((itemId, bookedEdits) {
+      // Oldest 1st, so the newest wins.
+      for (final bookedEdit in bookedEdits) {
+        if (bookedEdit.stamp > readStamp &&
+            leavesPlacePredicate(itemId, bookedEdit.replacedItem, bookedEdit.item)) {
+          removalStampsById[itemId] = bookedEdit.stamp;
+        }
+      }
+    });
+
+    return removalStampsById;
+  }
 
   /// Drops the edits every page in [readStamps] was read after, since the server's copy has caught up.
   void dropCaughtUp(Iterable<int> readStamps) {
     final oldestReadStamp = readStamps.minOrNull;
-    if (oldestReadStamp == null) return;
+    // Stamps only grow, so an older threshold drops nothing.
+    if (oldestReadStamp == null || oldestReadStamp <= _droppedThroughStamp) return;
 
+    _droppedThroughStamp = oldestReadStamp;
     for (final bookedEdits in _bookedEditsById.values) {
       bookedEdits.removeWhere((bookedEdit) => bookedEdit.stamp <= oldestReadStamp);
     }
@@ -103,7 +114,7 @@ final class EditStoreNotifier<T extends Object>()
     pages: pages,
     edits: _newestItemEditsById ??= _bookedEditsById.map(
       (itemId, bookedEdits) =>
-          MapEntry(itemId, (item: bookedEdits.last.item, stamp: bookedEdits.last.stamp)),
+          MapEntry(itemId, ItemEdit(item: bookedEdits.last.item, stamp: bookedEdits.last.stamp)),
     ),
     itemIdGetter: itemIdGetter,
     groupOf: groupOf,

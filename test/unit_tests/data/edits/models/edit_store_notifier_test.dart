@@ -71,6 +71,27 @@ void main() {
       });
 
   Bdd(storeFeature)
+      .scenario("a removal's stamp is its item's newest edit after the read")
+      .given('item 1 removed at edit 1, item 2 changed at edit 2, then item 2 removed while saving')
+      .when('asking for the removals since edit 1, every edit taking its item out of place')
+      .then('only item 2 shows, at its save still out')
+      .run((_) {
+        final editStoreNotifier = EditStoreNotifier<int>()
+          ..book(1, null)
+          ..book(2, 20);
+        editStoreNotifier.pendingEdit(2, null).book();
+
+        final removalStampsById = editStoreNotifier.removalStampsSince(
+          1,
+          leavesPlacePredicate: (_, _, _) => true,
+        );
+
+        check(removalStampsById.keys).deepEquals([2]);
+        check(removalStampsById[2]).isNotNull().isGreaterThan(editStoreNotifier.value);
+        editStoreNotifier.dispose();
+      });
+
+  Bdd(storeFeature)
       .scenario('a draft shows over every page while its save is out')
       .given('item 1 as the server sent it, on a page read before the draft and one read after')
       .when('a draft of it is out')
