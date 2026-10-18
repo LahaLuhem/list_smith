@@ -213,15 +213,13 @@ class _AsyncListViewState<T extends Object>()
     final removedIdsGetter = _removedIdsGetterFor(loadedItems);
     Set<Object> idsRemovedSinceLastRead() =>
         pages.isEmpty ? const {} : removedIdsGetter(pages.last.readStamp);
-    int rereadCountFor(Set<Object> removedIds) => removedIds.isEmpty
-        ? 0
-        : rereadPageCount(
-            removedIds.intersection(loadedIds).length,
-            pageSize: widget.source.pageSize,
-            maxCount: pages.length,
-          );
+    int rereadCountFor(Set<Object> removedIds) => rereadPageCount(
+      removedIds.length,
+      pageSize: widget.source.pageSize,
+      maxCount: pages.length,
+    );
     // A save still out counts too, since the server may not have it yet.
-    bool hasRemovalAfterRead() => removedIdsGetter(readStamp).any(loadedIds.contains);
+    bool hasRemovalAfterRead() => removedIdsGetter(readStamp).isNotEmpty;
     final removedIds = idsRemovedSinceLastRead();
     // A removal still out can reach the server between 2 reads sent together, so read the page first.
     final isRemovalOpen = removedIds.isNotEmpty && hasRemovalAfterRead();
@@ -371,8 +369,8 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
-  /// The rows removed after a read, and those still going out. Under an order, a row of [loadedItems] an
-  /// edit sorts elsewhere counts too.
+  /// The rows of [loadedItems] that left their place after a read: removed, or under an order, sorted
+  /// elsewhere. New items an earlier edit showed count too, and so do rows still going out.
   Set<Object> Function(int readStamp) _removedIdsGetterFor(Iterable<T> loadedItems) {
     final comparator = _isSearchQuery(_debouncer.committedQuery)
         ? null
@@ -382,15 +380,15 @@ class _AsyncListViewState<T extends Object>()
       widget.source.itemIdGetter,
       (firstItem, item) => firstItem ?? item,
     );
-    bool movesItem(Object itemId, T editedItem) {
-      if (comparator == null) return false;
-      final loadedItem = loadedItemsById[itemId];
+    bool leavesPlace(Object itemId, T? replacedItem, T? editedItem) {
+      final listedItem = loadedItemsById[itemId] ?? replacedItem;
+      if (listedItem == null) return false;
 
-      return loadedItem != null && comparator(loadedItem, editedItem) != 0;
+      return editedItem == null || (comparator != null && comparator(listedItem, editedItem) != 0);
     }
 
     return (readStamp) => _editStoreNotifier
-        .idsRemovedSince(readStamp, movesItemPredicate: movesItem)
+        .idsRemovedSince(readStamp, leavesPlacePredicate: leavesPlace)
         .followedBy(_rowTransitionsNotifier.leavingIds)
         .toSet();
   }

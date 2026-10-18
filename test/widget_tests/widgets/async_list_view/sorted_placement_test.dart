@@ -101,6 +101,23 @@ void main() {
       check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server));
     });
 
+    scenarioWidgets('the same for a new item renamed once a later page loaded', (tester) async {
+      final server = FakeServer(_rows());
+      final pageHoldCompleter = server.hold(4, attempt: 1);
+      final scrollController = _scrollController();
+      final controller = await _pumpSorted(tester, server, scrollController);
+      _create(server, controller, (id: 100, team: 'A', name: 'n03'));
+      await tester.pump();
+      await scrollToEnd(tester, scrollController);
+      check(server.asked(4)).isTrue(); // premise: page 3 was read after it, page 4 waits
+
+      _rename(server, controller, 100, 'n99');
+      await tester.pump();
+      await release(tester, [pageHoldCompleter]);
+
+      check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server));
+    });
+
     scenarioOutlineWidgets<({String name, int pageCount})>(
       'the same when it lands mid-reload',
       examples: const {
