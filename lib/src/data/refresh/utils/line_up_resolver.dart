@@ -23,7 +23,8 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
   required int pageSize,
 }) {
   final removedIds = removedIdsGetter(readStamps.values.min);
-  // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after.
+  // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after. A new
+  // item on no page counts above them all.
   late final removedPageIndexById = oldPages.indexed
       .followedBy(freshPages.indexed)
       .expand((indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)))
@@ -37,7 +38,7 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
     Iterable.generate(freshPages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
       // Booked any time after the page before went out, since the server may have had it sooner.
       final crossedCount = removedIdsGetter(readStamps[boundaryIndex - 1]!)
-          .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
+          .where((id) => (removedPageIndexById[id] ?? 0) < boundaryIndex)
           .length;
       final count = rereadPageCount(crossedCount, pageSize: pageSize, maxCount: boundaryIndex);
 

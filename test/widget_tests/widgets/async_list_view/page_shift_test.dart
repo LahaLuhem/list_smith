@@ -155,6 +155,30 @@ void main() {
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
     });
 
+    scenarioWidgets('the same for a new item a later page was read after', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final pageHoldCompleter = server.hold(4, attempt: 1);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+      );
+      server.store.insert(1, 100);
+      controller.upsert(100);
+      await tester.pump();
+      await scrollToEnd(tester, scrollController);
+      check(server.asked(4)).isTrue(); // premise: page 3 was read after it, page 4 waits
+
+      server.store.remove(100);
+      controller.remove(100);
+      await tester.pump();
+      await release(tester, [pageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
     scenarioWidgets('removing every row on screen shows the rows after them, not the empty one', (
       tester,
     ) async {
@@ -312,6 +336,25 @@ void main() {
 
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
       check(server.attempts.values).every((it) => it.isLessOrEqual(2));
+    });
+
+    scenarioWidgets('a new item alone reads no page again', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+      );
+      check(server.asked(3)).isFalse(); // page 3 waits for a scroll
+
+      server.store.insert(1, 100);
+      controller.upsert(100);
+      await tester.pump();
+      await scrollToEnd(tester, scrollController);
+
+      check(server.attempts.values).every((it) => it.equals(1));
     });
   });
 
@@ -491,6 +534,37 @@ void main() {
       await release(tester, [lastPageHoldCompleter]);
 
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
+    });
+
+    scenarioWidgets('the same for a new item on no page', (tester) async {
+      final server = FakeServer(_range(0, 14));
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      final controller = await _pumpList(
+        tester,
+        fetchPage: server.offsetLateFetcher,
+        scrollController: scrollController,
+        rowHeight: _shortRowHeight,
+        endPolicy: const FixedPageCountPolicy(pageCount: 3),
+        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+      );
+      final secondPageHoldCompleter = server.hold(1, attempt: 2);
+      final lastPageHoldCompleter = server.hold(2, attempt: 2);
+      unawaited(controller.refresh());
+      await tester.idle();
+      await drain(tester, frames: 4);
+
+      server.store.insert(1, 100); // after page 0 is read, so the reload reads it on no page
+      controller.upsert(100);
+      await tester.pump();
+      await release(tester, [secondPageHoldCompleter]);
+      server.store.remove(100);
+      controller.remove(100);
+      await tester.pump();
+      await release(tester, [lastPageHoldCompleter]);
+
+      check(await _allShownItems(tester, scrollController))
+          .deepEquals(server.store.take(_pageSize * 3));
     });
 
     scenarioWidgets('a read that cannot line the pages up keeps the old list', (tester) async {

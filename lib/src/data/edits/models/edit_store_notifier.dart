@@ -36,9 +36,17 @@ final class EditStoreNotifier<T extends Object>()
 
   /// An edit the server already has, so it wins over any still out. Null removes.
   void book(Object itemId, T? editedItem) {
+    final replacedItem = _bookedEditsById[itemId]?.last.item;
     _bookedEditsById
       ..remove(itemId) // re-booked at the end, so the newest new item lands on top
-      ..[itemId] = [_BookedEdit(item: editedItem, stamp: _nextStamp, bookedAt: _nextStamp)];
+      ..[itemId] = [
+        _BookedEdit(
+          item: editedItem,
+          stamp: _nextStamp,
+          bookedAt: _nextStamp,
+          replacedItem: replacedItem,
+        ),
+      ];
 
     _moveOn();
   }
@@ -47,19 +55,18 @@ final class EditStoreNotifier<T extends Object>()
   PendingEdit<T> pendingEdit(Object itemId, T? editedItem) =>
       PendingEdit._(this, itemId, editedItem);
 
-  /// The items removed after a read stamped [readStamp], saves still out included. An upsert counts when
-  /// [movesItemPredicate] says it moved its item, since that leaves a gap too.
+  /// The items an edit after a read stamped [readStamp] took out of their place, saves still out
+  /// included. [leavesPlacePredicate] judges each edit by the item it replaced and its own.
   Iterable<Object> idsRemovedSince(
     int readStamp, {
-    required bool Function(Object itemId, T editedItem) movesItemPredicate,
+    required bool Function(Object itemId, T? replacedItem, T? editedItem) leavesPlacePredicate,
   }) => _bookedEditsById.entries
       .where(
-        (entry) => entry.value.any((bookedEdit) {
-          final editedItem = bookedEdit.item;
-
-          return bookedEdit.stamp > readStamp &&
-              (editedItem == null || movesItemPredicate(entry.key, editedItem));
-        }),
+        (entry) => entry.value.any(
+          (bookedEdit) =>
+              bookedEdit.stamp > readStamp &&
+              leavesPlacePredicate(entry.key, bookedEdit.replacedItem, bookedEdit.item),
+        ),
       )
       .map((entry) => entry.key);
 
@@ -115,6 +122,7 @@ final class EditStoreNotifier<T extends Object>()
       item: editedItem,
       stamp: _pendingStamp,
       bookedAt: _nextStamp,
+      replacedItem: _bookedEditsById[itemId]?.last.item,
     );
     _bookedEditsById[itemId] = (_bookedEditsById.remove(itemId) ?? [])..add(pendingBookedEdit);
 
@@ -134,6 +142,7 @@ final class EditStoreNotifier<T extends Object>()
         item: answeredItem,
         stamp: _nextStamp,
         bookedAt: pendingBookedEdit.bookedAt,
+        replacedItem: pendingBookedEdit.replacedItem,
       )
       ..removeRange(0, index); // nothing under a settled edit shows again
 
@@ -226,9 +235,10 @@ final class PendingEdit<T extends Object>._(
   }
 }
 
-/// [bookedAt] orders the items' slots.
+/// [bookedAt] orders the items' slots. [replacedItem] is what the edit before it showed, if any.
 final class _BookedEdit<T extends Object>({
   required final T? item,
   required final int stamp,
   required final int bookedAt,
+  required final T? replacedItem,
 });

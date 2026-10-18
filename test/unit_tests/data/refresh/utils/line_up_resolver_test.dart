@@ -19,10 +19,15 @@ void main() {
       .example(val(satKey, 'the old page 0 only'), val(bookedKey, 2), val(readsKey, const [0]))
       .example(val(satKey, 'fresh page 0'), val(bookedKey, 1), val(readsKey, const <int>[]))
       .example(val(satKey, 'fresh page 1'), val(bookedKey, 2), val(readsKey, const <int>[]))
+      .example(val(satKey, 'no page, as a new item'), val(bookedKey, 2), val(readsKey, const [0]))
       .run((context) {
         final satLabel = context.example.val(satKey);
         final bookedStamp = context.example.val(bookedKey) as int;
-        final removedId = satLabel == 'fresh page 1' ? 4 : 1;
+        final removedId = switch (satLabel) {
+          'fresh page 1' => 4,
+          'no page, as a new item' => 100,
+          _ => 1,
+        };
 
         final rereadIndexes = resolveRereadIndexes<int>(
           oldPages: const [
