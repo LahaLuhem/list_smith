@@ -39,20 +39,15 @@ typedef SortedPlacement<T extends Object> = ({Comparator<T> comparator, bool may
   final placingItems = edits.entries
       .where(
         (entry) =>
-            movedIds.contains(entry.key) ||
-            (acceptsNewItems && !shownIds.contains(entry.key) && entry.value.stamp > oldestRead),
+            !shownIds.contains(entry.key) &&
+            (movedIds.contains(entry.key) || (acceptsNewItems && entry.value.stamp > oldestRead)),
       )
       .map((entry) => entry.value.item)
       .nonNulls // a removal has nothing to place
       .toList(growable: false);
   final placedItems = sortedPlacement == null
       ? _placeAtGroupStarts(displayPages, placingItems, groupOf)
-      // Bar a moved row a later page already shows.
-      : _placeSorted(
-          displayPages,
-          placingItems.whereNot((item) => shownIds.contains(itemIdGetter(item))),
-          sortedPlacement,
-        );
+      : _placeSorted(displayPages, placingItems, sortedPlacement);
   shownIds.addAll(placedItems.map(itemIdGetter));
 
   return (pages: displayPages, shownIds: shownIds);
@@ -93,9 +88,7 @@ _applyEdits<T extends Object>(
             shownIds.add(id);
             displayPage.add(editedItem);
           } else {
-            movedIds.add(id);
-            // Unsorted, it hides later copies. Sorted, a later page's server copy wins.
-            if (comparator == null) shownIds.add(id);
+            movedIds.add(id); // placed later, unless a later page shows the server's copy
           }
         }
 

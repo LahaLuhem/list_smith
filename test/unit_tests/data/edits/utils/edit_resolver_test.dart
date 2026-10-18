@@ -261,6 +261,32 @@ void main() {
       });
 
   Bdd(resolutionFeature)
+      .scenario(
+        "with groups, a page read after a group change shows the server's copy where it sent it",
+      )
+      .given('item 1 in group 0 on a page read before the edit, and in group 1 on one read after')
+      .when('the edit moves it into group 1')
+      .then('it shows once, where the later page has it')
+      .run((_) {
+        final pages = resolveDisplayPages<_Placed>(
+          pages: const [
+            LoadedPage(items: [(id: 0, group: 0), (id: 1, group: 0)], readStamp: 0),
+            LoadedPage(
+              items: [(id: 10, group: 1), (id: 1, group: 1), (id: 11, group: 1)],
+              readStamp: 2,
+            ),
+          ],
+          edits: {1: const ItemEdit(item: (id: 1, group: 1), stamp: 1)},
+          itemIdGetter: (item) => item.id,
+          groupOf: (item) => item.group,
+          acceptsNewItems: true,
+        ).pages;
+
+        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+            .deepEquals(const [0, 10, 1, 11]);
+      });
+
+  Bdd(resolutionFeature)
       .scenario('while searching, a new item stays out but edits to results still apply')
       .given('search results, rows 1 and 2')
       .when('row 1 is edited, row 2 removed and a new row 9 added')
