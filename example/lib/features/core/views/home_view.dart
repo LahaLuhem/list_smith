@@ -15,6 +15,7 @@ import '/features/grouping/grouping_view.dart';
 import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
 import '/features/reload/reload_view.dart';
+import '/features/sorted_edits/sorted_edits_view.dart';
 import '/features/sync_search/sync_search_view.dart';
 import '../widgets/demo_scaffold.dart';
 import 'home_view_model.dart';
@@ -100,6 +101,14 @@ class const HomeView({super.key}) extends StatelessWidget {
             description:
                 'Swipe to rename or delete, add on top, each shown before its save answers.',
             pageBuilder: (_) => const EditsView(),
+          ),
+          _DemoTile(
+            icon: Icon(
+              platformValue(material: Icons.sort_by_alpha, cupertino: CupertinoIcons.sort_down),
+            ),
+            title: 'Sorted edits',
+            description: 'Rename a row or add one, and it lands where the server sorts it.',
+            pageBuilder: (_) => const SortedEditsView(),
           ),
         ],
       ),

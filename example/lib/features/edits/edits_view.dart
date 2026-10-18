@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:list_smith/list_smith.dart';
@@ -10,6 +12,7 @@ import '/features/core/data/constants/const_theme.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_scaffold.dart';
+import '/features/core/widgets/title_dialog.dart';
 import 'edits_view_model.dart';
 
 /// `ListSmithController.upsertAsync` and `removeAsync`, behind flutter_slidable's swipe actions.
@@ -73,7 +76,14 @@ class const _EditableRow({required final DemoItem item, required final EditsView
       dismissible: DismissiblePane(onDismissed: () => viewModel.onDeleted(item)),
       children: [
         SlidableAction(
-          onPressed: _onRenamePressed,
+          onPressed: (context) => unawaited(
+            showTitleDialog(
+              context,
+              heading: 'Rename',
+              hint: item.title,
+              onSaved: (title) => viewModel.onRenamed(item, title),
+            ),
+          ),
           backgroundColor: ConstTheme.seedColor,
           icon: _iconOf(PlatformIcons.pencil),
           label: 'Rename',
@@ -88,31 +98,6 @@ class const _EditableRow({required final DemoItem item, required final EditsView
     ),
     child: PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
   );
-
-  Future<void> _onRenamePressed(BuildContext context) async {
-    var title = '';
-    final newTitle = await showPlatformAlertDialog<String>(
-      context: context,
-      title: const Text('Rename'),
-      content: PlatformTextField(
-        hintText: item.title,
-        autofocus: true,
-        onChanged: (value) => title = value,
-      ),
-      actions: [
-        PlatformDialogAction(
-          onPressed: (context) => Navigator.maybeOf(context)?.pop(),
-          child: const Text('Cancel'),
-        ),
-        PlatformDialogAction(
-          isDefaultAction: true,
-          onPressed: (context) => Navigator.maybeOf(context)?.pop(title),
-          child: const Text('Save'),
-        ),
-      ],
-    );
-    if (newTitle != null) viewModel.onRenamed(item, newTitle);
-  }
 
   static IconData _iconOf(PlatformIcons icon) =>
       platformValue(material: icon.material, cupertino: icon.cupertino);

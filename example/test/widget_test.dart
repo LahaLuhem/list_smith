@@ -446,5 +446,90 @@ void main() {
       check(find.text('Item 1').evaluate()).length.equals(1);
       check(find.text("Couldn't delete Item 1").evaluate()).length.equals(1);
     });
+
+    scenarioWidgets('the sorted edits demo moves a renamed row to where its server sorts it', (
+      tester,
+    ) async {
+      // The hint and button stack above the list, so give it room.
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      double rowTopOf(String text) => tester.getTopLeft(find.text(text)).dy;
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Sorted edits'), 100);
+      await tester.tap(find.text('Sorted edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      await tester.tap(find.text('Item 2'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      await tester.enterText(find.byType(EditableText), 'Item 5a');
+      await tester.tap(find.text('Save'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+
+      check(rowTopOf('Item 5a'))
+        ..isGreaterThan(rowTopOf('Item 5'))
+        ..isLessThan(rowTopOf('Item 6'));
+
+      await tester.pump(const Duration(seconds: 1)); // the save answering
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      // Read again, so now it's the server's copy.
+      check(rowTopOf('Item 5a'))
+        ..isGreaterThan(rowTopOf('Item 5'))
+        ..isLessThan(rowTopOf('Item 6'));
+    });
+
+    scenarioWidgets('the sorted edits demo adds an item where its server sorts it, not on top', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      double rowTopOf(String text) => tester.getTopLeft(find.text(text)).dy;
+
+      await pumpExampleApp(tester);
+
+      await tester.scrollUntilVisible(find.text('Sorted edits'), 100);
+      await tester.tap(find.text('Sorted edits'));
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      await tester.tap(find.text('Add an item'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      await tester.enterText(find.byType(EditableText), 'Item 3a');
+      await tester.tap(find.text('Save'));
+      // The new row grows in.
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+
+      check(rowTopOf('Item 3a'))
+        ..isGreaterThan(rowTopOf('Item 3'))
+        ..isLessThan(rowTopOf('Item 4'));
+
+      await tester.pump(const Duration(seconds: 1)); // the save answering
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      for (var frame = 0; frame < 10; frame++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      check(rowTopOf('Item 3a'))
+        ..isGreaterThan(rowTopOf('Item 3'))
+        ..isLessThan(rowTopOf('Item 4'));
+    });
   });
 }
