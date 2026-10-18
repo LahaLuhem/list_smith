@@ -208,13 +208,17 @@ class _AsyncListViewState<T extends Object>()
     final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
     final pages = loadingState.pages ?? const [];
     final itemIdGetter = widget.source.itemIdGetter;
-    late final loadedIds = pages.expand((page) => page.items).map(itemIdGetter).toSet();
+    final loadedItems = pages.expand((page) => page.items);
+    late final loadedIds = loadedItems.map(itemIdGetter).toSet();
+    final removedIdsGetter = _removedIdsGetterFor(loadedItems);
+    Set<Object> idsRemovedSinceLastRead() =>
+        pages.isEmpty ? const {} : removedIdsGetter(pages.last.readStamp);
     int rereadCountFor(Set<Object> removedIds) => removedIds.isEmpty
         ? 0
         : _rereadCount(removedIds.intersection(loadedIds).length, pages.length);
     // A save still out counts too, since the server may not have it yet.
-    bool hasRemovalAfterRead() => _idsRemovedSince(readStamp).any(loadedIds.contains);
-    final removedIds = _idsRemovedSinceLastRead(pages);
+    bool hasRemovalAfterRead() => removedIdsGetter(readStamp).any(loadedIds.contains);
+    final removedIds = idsRemovedSinceLastRead();
     // A removal still out can reach the server between 2 reads sent together, so read the page first.
     final isRemovalOpen = removedIds.isNotEmpty && hasRemovalAfterRead();
     final rereadCount = isRemovalOpen ? 0 : rereadCountFor(removedIds);
@@ -237,7 +241,7 @@ class _AsyncListViewState<T extends Object>()
       if (generation != _generation) return;
 
       final (pageItems, signal) = pageReads.last;
-      final landedRemovedIds = _idsRemovedSinceLastRead(pages);
+      final landedRemovedIds = idsRemovedSinceLastRead();
       // If a removal could have reached the server while this page was out, read the pages before again.
       final rereads = landedRemovedIds.isNotEmpty && (isRemovalOpen || hasRemovalAfterRead())
           ? await Future.wait(
@@ -367,15 +371,28 @@ class _AsyncListViewState<T extends Object>()
   int _rereadCount(int removedCount, int maxCount) =>
       math.min((removedCount / widget.source.pageSize).ceil(), maxCount);
 
-  /// Rows still going out count too.
-  Iterable<Object> _idsRemovedSince(int readStamp) =>
-      _editStoreNotifier.idsRemovedSince(readStamp).followedBy(_rowTransitionsNotifier.leavingIds);
+  /// The rows removed after a read, and those still going out. Under an order, a row of [loadedItems] an
+  /// edit sorts elsewhere counts too.
+  Set<Object> Function(int readStamp) _removedIdsGetterFor(Iterable<T> loadedItems) {
+    final comparator = _isSearchQuery(_debouncer.committedQuery)
+        ? null
+        : widget.source.order.comparator;
+    // The 1st copy, since a row read either side of its move down sits in 2 pages.
+    late final loadedItemsById = loadedItems.groupFoldBy<Object, T>(
+      widget.source.itemIdGetter,
+      (firstItem, item) => firstItem ?? item,
+    );
+    bool movesItem(Object itemId, T editedItem) {
+      if (comparator == null) return false;
+      final loadedItem = loadedItemsById[itemId];
 
-  Set<Object> _idsRemovedSinceLastRead(List<LoadedPage<T>> pages) {
-    final lastPage = pages.lastOrNull;
-    if (lastPage == null) return const {};
+      return loadedItem != null && comparator(loadedItem, editedItem) != 0;
+    }
 
-    return _idsRemovedSince(lastPage.readStamp).toSet();
+    return (readStamp) => _editStoreNotifier
+        .idsRemovedSince(readStamp, movesItemPredicate: movesItem)
+        .followedBy(_rowTransitionsNotifier.leavingIds)
+        .toSet();
   }
 
   Iterable<Future<(List<T>, Object?)>> _rereadsBefore(List<LoadedPage<T>> pages, int count) =>
@@ -903,7 +920,8 @@ final class _ReloadRun<T extends Object>(
   Future<void> commit(List<List<T>> pages, {Object? lastSignal}) async {
     if (isStale) return;
     final itemIdGetter = _engine.widget.source.itemIdGetter;
-    final removedIds = _engine._idsRemovedSince(_readStamps.values.min).toSet();
+    final removedIdsGetter = _engine._removedIdsGetterFor(pages.flattened);
+    final removedIds = removedIdsGetter(_readStamps.values.min);
     // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after.
     late final removedPageIndexById = (_startState?.pages ?? const [])
         .map((page) => page.items)
@@ -918,8 +936,7 @@ final class _ReloadRun<T extends Object>(
     final rereadIndexes = SplayTreeSet.of(
       Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
         // Booked any time after the page before went out, since the server may have had it sooner.
-        final crossedCount = _engine
-            ._idsRemovedSince(_readStamps[boundaryIndex - 1]!)
+        final crossedCount = removedIdsGetter(_readStamps[boundaryIndex - 1]!)
             .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
             .length;
         final count = _engine._rereadCount(crossedCount, boundaryIndex);

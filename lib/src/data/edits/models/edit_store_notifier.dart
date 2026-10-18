@@ -47,12 +47,19 @@ final class EditStoreNotifier<T extends Object>()
   PendingEdit<T> pendingEdit(Object itemId, T? editedItem) =>
       PendingEdit._(this, itemId, editedItem);
 
-  /// The items removed after a read stamped [readStamp], counting removals still saving.
-  Iterable<Object> idsRemovedSince(int readStamp) => _bookedEditsById.entries
+  /// The items removed after a read stamped [readStamp], saves still out included. An upsert counts when
+  /// [movesItemPredicate] says it moved its item, since that leaves a gap too.
+  Iterable<Object> idsRemovedSince(
+    int readStamp, {
+    required bool Function(Object itemId, T editedItem) movesItemPredicate,
+  }) => _bookedEditsById.entries
       .where(
-        (entry) => entry.value.any(
-          (bookedEdit) => bookedEdit.item == null && bookedEdit.stamp > readStamp,
-        ),
+        (entry) => entry.value.any((bookedEdit) {
+          final editedItem = bookedEdit.item;
+
+          return bookedEdit.stamp > readStamp &&
+              (editedItem == null || movesItemPredicate(entry.key, editedItem));
+        }),
       )
       .map((entry) => entry.key);
 
