@@ -1,7 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
-import 'package:list_smith/src/data/edits/typedefs/item_edit.dart';
+import 'package:list_smith/src/data/edits/models/item_edit.dart';
 import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
 import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
 
@@ -66,7 +66,7 @@ void main() {
       .run((context) {
         final isRemoval = context.example.val(editKey) == 'a removal';
         ItemEdit<_Row> editOf(int id) =>
-            (item: isRemoval ? null : (id: id, label: 'mine'), stamp: 3);
+            ItemEdit(item: isRemoval ? null : (id: id, label: 'mine'), stamp: 3);
 
         final labels = resolveLabels(
           [
@@ -92,7 +92,7 @@ void main() {
             [(id: 2, label: 'b'), (id: 3, label: 'c')],
           ],
           readStamps: const [0, 0],
-          edits: {2: (item: null, stamp: 1)},
+          edits: {2: const ItemEdit(item: null, stamp: 1)},
         );
 
         check(labels).deepEquals(const ['a', 'c']);
@@ -110,8 +110,8 @@ void main() {
           ],
           readStamps: const [0],
           edits: {
-            8: (item: (id: 8, label: 'older'), stamp: 1),
-            9: (item: (id: 9, label: 'newer'), stamp: 2),
+            8: const ItemEdit(item: (id: 8, label: 'older'), stamp: 1),
+            9: const ItemEdit(item: (id: 9, label: 'newer'), stamp: 2),
           },
         );
 
@@ -154,7 +154,7 @@ void main() {
         final labels = resolveLabels(
           pages,
           readStamps: readStamps,
-          edits: {9: (item: (id: 9, label: 'mine'), stamp: 2)},
+          edits: {9: const ItemEdit(item: (id: 9, label: 'mine'), stamp: 2)},
         );
 
         check(labels).deepEquals(context.example.val(shownKey) as List<String>);
@@ -162,7 +162,7 @@ void main() {
 
   /// Adds [items] one after another, each newer than every page.
   Map<Object, ItemEdit<int>> addedInTurn(List<int> items) => Map.fromEntries(
-    items.mapIndexed((index, item) => MapEntry(item, (item: item, stamp: index + 1))),
+    items.mapIndexed((index, item) => MapEntry(item, ItemEdit(item: item, stamp: index + 1))),
   );
 
   /// Resolves int pages grouped by the tens digit, every page read before the edits.
@@ -250,7 +250,7 @@ void main() {
               readStamp: 0,
             ),
           ],
-          edits: {0: (item: (id: 0, group: 1), stamp: 1)},
+          edits: {0: const ItemEdit(item: (id: 0, group: 1), stamp: 1)},
           itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: true,
@@ -272,9 +272,9 @@ void main() {
           ],
           readStamps: const [0],
           edits: {
-            1: (item: (id: 1, label: 'mine'), stamp: 1),
-            2: (item: null, stamp: 2),
-            9: (item: (id: 9, label: 'new'), stamp: 3),
+            1: const ItemEdit(item: (id: 1, label: 'mine'), stamp: 1),
+            2: const ItemEdit(item: null, stamp: 2),
+            9: const ItemEdit(item: (id: 9, label: 'new'), stamp: 3),
           },
           acceptsNewItems: false,
         );
@@ -294,7 +294,7 @@ void main() {
             [(id: 2, label: 'b'), (id: 3, label: 'c')],
           ],
           readStamps: const [0, 0],
-          edits: {1: (item: (id: 1, label: 'mine'), stamp: 1)},
+          edits: {1: const ItemEdit(item: (id: 1, label: 'mine'), stamp: 1)},
         );
 
         check(labels).deepEquals(const ['mine', 'b', 'c']);
@@ -312,25 +312,31 @@ void main() {
       .then('it reports <$shownIdsKey>, the ids on its pages')
       .example(
         val(changeKey, 'a new item'),
-        val(editsKey, const <Object, ItemEdit<_Placed>>{12: (item: (id: 12, group: 1), stamp: 1)}),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{
+          12: ItemEdit(item: (id: 12, group: 1), stamp: 1),
+        }),
         val(acceptsNewItemsKey, true),
         val(shownIdsKey, const [0, 1, 10, 11, 12]),
       )
       .example(
         val(changeKey, 'a new item while searching'),
-        val(editsKey, const <Object, ItemEdit<_Placed>>{12: (item: (id: 12, group: 1), stamp: 1)}),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{
+          12: ItemEdit(item: (id: 12, group: 1), stamp: 1),
+        }),
         val(acceptsNewItemsKey, false),
         val(shownIdsKey, const [0, 1, 10, 11]),
       )
       .example(
         val(changeKey, 'a removal'),
-        val(editsKey, const <Object, ItemEdit<_Placed>>{1: (item: null, stamp: 1)}),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{1: ItemEdit(item: null, stamp: 1)}),
         val(acceptsNewItemsKey, true),
         val(shownIdsKey, const [0, 10, 11]),
       )
       .example(
         val(changeKey, 'a move to another group'),
-        val(editsKey, const <Object, ItemEdit<_Placed>>{0: (item: (id: 0, group: 1), stamp: 1)}),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{
+          0: ItemEdit(item: (id: 0, group: 1), stamp: 1),
+        }),
         val(acceptsNewItemsKey, true),
         val(shownIdsKey, const [0, 1, 10, 11]),
       )
@@ -365,11 +371,15 @@ void main() {
       .when('<$editKey> is made')
       .then('the list is <$shownKey>')
       .example(
-        val(editKey, const <Object, ItemEdit<_Ranked>>{1: (item: (id: 1, rank: 25), stamp: 1)}),
+        val(editKey, const <Object, ItemEdit<_Ranked>>{
+          1: ItemEdit(item: (id: 1, rank: 25), stamp: 1),
+        }),
         val(shownKey, const [0, 2, 1, 3]),
       )
       .example(
-        val(editKey, const <Object, ItemEdit<_Ranked>>{9: (item: (id: 9, rank: 15), stamp: 1)}),
+        val(editKey, const <Object, ItemEdit<_Ranked>>{
+          9: ItemEdit(item: (id: 9, rank: 15), stamp: 1),
+        }),
         val(shownKey, const [0, 1, 9, 2, 3]),
       )
       .run((context) {
@@ -393,7 +403,7 @@ void main() {
       .run((context) {
         final (:shown, :reported) = resolveRanked(
           rankedPages,
-          edits: const {1: (item: (id: 1, rank: 99), stamp: 1)},
+          edits: const {1: ItemEdit(item: (id: 1, rank: 99), stamp: 1)},
           mayHaveRowsAfter: context.example.val(mayHaveRowsAfterKey) as bool,
         );
 
@@ -414,7 +424,7 @@ void main() {
             [(id: 0, rank: 0), (id: 1, rank: 10)],
             [(id: 2, rank: 20), (id: 3, rank: 30), (id: 1, rank: 35)],
           ],
-          edits: const {1: (item: (id: 1, rank: 25), stamp: 1)},
+          edits: const {1: ItemEdit(item: (id: 1, rank: 25), stamp: 1)},
           readStamps: const [0, 2],
         );
 

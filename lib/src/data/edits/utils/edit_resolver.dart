@@ -4,7 +4,7 @@ import 'package:meta/meta.dart';
 import '/src/data/grouping/typedefs/group_key_of.dart';
 import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '../typedefs/item_edit.dart';
+import '../models/item_edit.dart';
 
 /// The start given to a group that isn't loaded, whose items open on top instead.
 const _opensOnTop = -1;

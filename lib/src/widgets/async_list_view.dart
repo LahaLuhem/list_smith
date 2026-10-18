@@ -369,8 +369,8 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
-  /// The rows of [loadedItems] that left their place after a read: removed, or under an order, sorted
-  /// elsewhere. New items an earlier edit showed count too, and so do rows still going out.
+  /// The rows that left their place after a read: removed, going out, or sorted elsewhere by an edit.
+  /// [loadedItems] and new items count.
   Set<Object> Function(int readStamp) _removedIdsGetterFor(Iterable<T> loadedItems) {
     final comparator = _isSearchQuery(_debouncer.committedQuery)
         ? null
@@ -387,10 +387,31 @@ class _AsyncListViewState<T extends Object>()
       return editedItem == null || (comparator != null && comparator(listedItem, editedItem) != 0);
     }
 
-    return (readStamp) => _editStoreNotifier
-        .idsRemovedSince(readStamp, leavesPlacePredicate: leavesPlace)
-        .followedBy(_rowTransitionsNotifier.leavingIds)
-        .toSet();
+    // One scan per edit, unless a call asks for an older stamp.
+    ({int editStamp, int readStamp, Map<Object, int> removalStampsById})? removalScanMemo;
+
+    return (readStamp) {
+      final editStamp = _editStoreNotifier.value;
+      var removalScan = removalScanMemo;
+      if (removalScan == null ||
+          removalScan.editStamp != editStamp ||
+          removalScan.readStamp > readStamp) {
+        removalScan = removalScanMemo = (
+          editStamp: editStamp,
+          readStamp: readStamp,
+          removalStampsById: _editStoreNotifier.removalStampsSince(
+            readStamp,
+            leavesPlacePredicate: leavesPlace,
+          ),
+        );
+      }
+
+      return removalScan.removalStampsById.entries
+          .where((entry) => entry.value > readStamp)
+          .map((entry) => entry.key)
+          .followedBy(_rowTransitionsNotifier.leavingIds)
+          .toSet();
+    };
   }
 
   Iterable<Future<(List<T>, Object?)>> _rereadsBefore(List<LoadedPage<T>> pages, int count) =>
