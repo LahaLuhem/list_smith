@@ -5,6 +5,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
+import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/slider_knob.dart';
 import 'reload_view_model.dart';
@@ -17,71 +18,56 @@ class const ReloadView({super.key}) extends StatelessWidget {
     viewModel: ReloadViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Reload',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          Padding(
-            padding: const .all(16),
-            child: Column(
-              crossAxisAlignment: .stretch,
-              spacing: 8,
-              children: [
-                const Text('Scroll down a few pages, then pull to refresh.'),
-                BoolKnob(
-                  label: 'Keep scroll depth',
-                  subtitle: 'Reloads every loaded page, not just the 1st',
-                  value: viewModel.keepDepth,
-                  onChanged: (value) => viewModel.onKeepDepthToggled(value: value),
-                ),
-                SliderKnob(
-                  label: 'Reload concurrency',
-                  subtitle: 'Pages reloaded at once',
-                  valueText: '${viewModel.concurrency}',
-                  value: viewModel.concurrency.toDouble(),
-                  min: 1,
-                  max: 4,
-                  divisions: 3,
-                  onChanged: viewModel.onConcurrencyChanged,
-                ),
-                ValueListenableBuilder(
-                  valueListenable: viewModel.shouldInjectFailuresListenable,
-                  builder: (context, shouldInjectFailures, _) => BoolKnob(
-                    label: 'Inject a failure on reload',
-                    subtitle: 'The 1st page fails to reload',
-                    value: shouldInjectFailures,
-                    onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
-                  ),
-                ),
-                ValueListenableBuilder(
-                  valueListenable: viewModel.isRefreshingListenable,
-                  builder: (context, isRefreshing, _) => PlatformButton(
-                    onPressed: viewModel.onRefreshPressed,
-                    isEnabled: !isRefreshing,
-                    child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
-                  ),
-                ),
-                ValueListenableBuilder(
-                  valueListenable: viewModel.lastExceptionListenable,
-                  builder: (_, lastException, _) =>
-                      lastException == null ? const SizedBox.shrink() : Text('$lastException'),
-                ),
-              ],
-            ),
+      hint: 'Scroll down a few pages, then pull to refresh.',
+      controls: [
+        BoolKnob(
+          label: 'Keep scroll depth',
+          subtitle: 'Reloads every loaded page, not just the 1st',
+          value: viewModel.keepDepth,
+          onChanged: (value) => viewModel.onKeepDepthToggled(value: value),
+        ),
+        SliderKnob(
+          label: 'Reload concurrency',
+          subtitle: 'Pages reloaded at once',
+          valueText: '${viewModel.concurrency}',
+          value: viewModel.concurrency.toDouble(),
+          min: 1,
+          max: 4,
+          divisions: 3,
+          onChanged: viewModel.onConcurrencyChanged,
+        ),
+        ValueListenableBuilder(
+          valueListenable: viewModel.shouldInjectFailuresListenable,
+          builder: (context, shouldInjectFailures, _) => BoolKnob(
+            label: 'Inject a failure on reload',
+            subtitle: 'The 1st page fails to reload',
+            value: shouldInjectFailures,
+            onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
           ),
-          Expanded(
-            child: ListSmith.async(
-              fetchPage: PageFetcher(viewModel.fetchPage),
-              itemIdGetter: (item) => item.id,
-              pageSize: 12,
-              refresh: PullToRefresh(reload: viewModel.reload),
-              controller: viewModel.controller,
-              observer: viewModel.observer,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, item, _) =>
-                  PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
-            ),
+        ),
+        ValueListenableBuilder(
+          valueListenable: viewModel.isRefreshingListenable,
+          builder: (context, isRefreshing, _) => PlatformButton(
+            onPressed: viewModel.onRefreshPressed,
+            isEnabled: !isRefreshing,
+            child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
           ),
-        ],
+        ),
+        ValueListenableBuilder(
+          valueListenable: viewModel.lastExceptionListenable,
+          builder: (_, lastException, _) =>
+              lastException == null ? const SizedBox.shrink() : Text('$lastException'),
+        ),
+      ],
+      list: ListSmith.async(
+        fetchPage: PageFetcher(viewModel.fetchPage),
+        itemIdGetter: (item) => item.id,
+        pageSize: 12,
+        refresh: PullToRefresh(reload: viewModel.reload),
+        controller: viewModel.controller,
+        observer: viewModel.observer,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (_, item, _) => DemoItemTile(item: item),
       ),
     ),
   );

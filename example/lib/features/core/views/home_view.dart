@@ -26,7 +26,7 @@ class const HomeView({super.key}) extends StatelessWidget {
     viewModel: HomeViewModel(),
     viewBuilder: (context, _) => DemoScaffold(
       title: 'list_smith',
-      body: ListView(
+      list: ListView(
         padding: const .symmetric(vertical: 8),
         children: [
           _DemoTile(

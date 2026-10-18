@@ -11,6 +11,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import '/features/core/data/constants/const_theme.dart';
 import '/features/core/data/models/demo_item.dart';
 import '/features/core/widgets/bool_knob.dart';
+import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/title_dialog.dart';
 import 'edits_view_model.dart';
@@ -22,45 +23,27 @@ class const EditsView({super.key}) extends StatelessWidget {
     viewModel: EditsViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Edits',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          Padding(
-            padding: const .all(16),
-            child: Column(
-              crossAxisAlignment: .stretch,
-              spacing: 8,
-              children: [
-                const Text('Swipe a row left for Rename and Delete, or all the way to delete it.'),
-                ValueListenableBuilder(
-                  valueListenable: viewModel.shouldFailSavesListenable,
-                  builder: (context, shouldFailSaves, _) => BoolKnob(
-                    label: 'Saves fail',
-                    subtitle: 'Every save fails after a moment, and its edit rolls back',
-                    value: shouldFailSaves,
-                    onChanged: (value) => viewModel.onSavesFailToggled(value: value),
-                  ),
-                ),
-                PlatformButton(onPressed: viewModel.onAddPressed, child: const Text('Add an item')),
-              ],
-            ),
+      hint: 'Swipe a row left for Rename and Delete, or all the way to delete it.',
+      controls: [
+        ValueListenableBuilder(
+          valueListenable: viewModel.shouldFailSavesListenable,
+          builder: (context, shouldFailSaves, _) => BoolKnob(
+            label: 'Saves fail',
+            subtitle: 'Every save fails after a moment, and its edit rolls back',
+            value: shouldFailSaves,
+            onChanged: (value) => viewModel.onSavesFailToggled(value: value),
           ),
-          Expanded(
-            child: ListSmith.async(
-              fetchPage: PageFetcher.withSignal(viewModel.fetchPage),
-              endPolicy: const StopOnNullSignalPolicy(),
-              itemIdGetter: (item) => item.id,
-              controller: viewModel.controller,
-              editTransition: EditTransition(
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (child, animation) =>
-                    SizeTransition(sizeFactor: animation, child: child),
-              ),
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, item, _) => _EditableRow(item: item, viewModel: viewModel),
-            ),
-          ),
-        ],
+        ),
+        PlatformButton(onPressed: viewModel.onAddPressed, child: const Text('Add an item')),
+      ],
+      list: ListSmith.async(
+        fetchPage: PageFetcher.withSignal(viewModel.fetchPage),
+        endPolicy: const StopOnNullSignalPolicy(),
+        itemIdGetter: (item) => item.id,
+        controller: viewModel.controller,
+        editTransition: ConstTheme.sizeEditTransition,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (_, item, _) => _EditableRow(item: item, viewModel: viewModel),
       ),
     ),
   );
@@ -96,7 +79,7 @@ class const _EditableRow({required final DemoItem item, required final EditsView
         ),
       ],
     ),
-    child: PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
+    child: DemoItemTile(item: item),
   );
 
   static IconData _iconOf(PlatformIcons icon) =>

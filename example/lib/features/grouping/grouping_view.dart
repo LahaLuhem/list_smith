@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
-import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
+import '/features/core/widgets/demo_search_bar.dart';
 import 'grouping_view_model.dart';
 
 /// `ListSmith.sync` plus `Grouping.by`. The fixture cycles 3 categories per row, so the raw list is
@@ -15,35 +16,21 @@ class const GroupingView({super.key}) extends StatelessWidget {
     viewModel: GroupingViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Grouping',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          const Padding(
-            padding: .all(16),
-            child: Text('Search, and the sections re-form over the matches.'),
+      hint: 'Search, and the sections re-form over the matches.',
+      controls: [DemoSearchBar(onChanged: viewModel.onQueryChanged)],
+      list: ValueListenableBuilder(
+        valueListenable: viewModel.queryListenable,
+        builder: (_, query, _) => ListSmith.sync(
+          items: viewModel.items,
+          searchBy: (item, query) => item.matches(query),
+          query: query,
+          grouping: Grouping.by(
+            groupBy: viewModel.categoryOf,
+            headerBuilder: (_, category) => _SectionHeader(label: category),
           ),
-          Padding(
-            padding: const .symmetric(horizontal: 16),
-            child: PlatformSearchBar(hintText: 'Search items', onChanged: viewModel.onQueryChanged),
-          ),
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: viewModel.queryListenable,
-              builder: (_, query, _) => ListSmith.sync(
-                items: viewModel.items,
-                searchBy: (item, query) => item.matches(query),
-                query: query,
-                grouping: Grouping.by(
-                  groupBy: viewModel.categoryOf,
-                  headerBuilder: (_, category) => _SectionHeader(label: category),
-                ),
-                separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (_, item, _) =>
-                    PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
-              ),
-            ),
-          ),
-        ],
+          separatorBuilder: (_, _) => const Divider(height: 1),
+          itemBuilder: (_, item, _) => DemoItemTile(item: item),
+        ),
       ),
     ),
   );

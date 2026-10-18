@@ -1,34 +1,13 @@
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
+import '/features/core/mixins/failure_injection_mixin.dart';
 import '/features/core/repos/demo_repository.dart';
 
-/// The failure flag is a scoped [ValueNotifier], so flipping it rebuilds the toggle, not the list. See
-/// `CODESTYLE.md` *State management*.
-final class CustomSurfacesViewModel() extends ViewModel {
+final class CustomSurfacesViewModel() extends ViewModel with FailureInjectionMixin {
   final _repository = DemoRepository();
-  final _shouldInjectFailuresNotifier = ValueNotifier(false);
 
-  ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
-
-  // Torn off as an onChanged callback, so it can't be a setter.
-  // ignore: use_setters_to_change_properties
-  void onInjectFailuresToggled({required bool value}) =>
-      _shouldInjectFailuresNotifier.value = value;
-
-  Future<List<DemoItem>> fetchPage(PageRequest request) async {
-    final page = await _repository.fetchPage(request.pageIndex, request.pageSize);
-    if (_shouldInjectFailuresNotifier.value) throw Exception('Simulated network failure');
-
-    return page;
-  }
-
-  @override
-  void dispose() {
-    _shouldInjectFailuresNotifier.dispose();
-
-    super.dispose();
-  }
+  Future<List<DemoItem>> fetchPage(PageRequest request) =>
+      withInjectedFailures(_repository.fetchPage(request.pageIndex, request.pageSize));
 }

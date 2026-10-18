@@ -52,8 +52,8 @@ Feature-first MVVM, mirroring the sibling examples:
 - `lib/features/<feature>/`: one folder per demo, holding `<feature>_view.dart` +
   `<feature>_view_model.dart`, plus a `widgets/` subfolder for widgets used only by that feature.
 - `lib/features/core/`: shared building blocks: `data/models/` (immutable models), `data/constants/`
-  (theme), `repos/` (fake data sources), `views/` (the home hub), `widgets/` (`DemoScaffold`, the
-  knobs).
+  (theme), `mixins/` (view-model state several demos share), `repos/` (fake data sources), `views/`
+  (the home hub), `widgets/` (`DemoScaffold`, the row tile, the knobs).
 
 One primary public class per file, file name matching, as in the package. Cross-feature imports
 take the package-root form (`/features/...`), same-feature ones stay relative.
@@ -61,9 +61,9 @@ take the package-root form (`/features/...`), same-feature ones stay relative.
 ### Views and view-models
 
 - A view is a `StatelessWidget` whose `build` returns
-  `MVVM.builder(viewModel: XxxViewModel(), viewBuilder: ...)`, wrapping its body in a
-  `DemoScaffold(title: ...)`. Its dartdoc names the list_smith API the demo exercises and stops
-  there (see [`AGENTS.md`](AGENTS.md), where a demo's explanation goes).
+  `MVVM.builder(viewModel: XxxViewModel(), viewBuilder: ...)`, handing its hint, controls and list
+  to a `DemoScaffold(title: ...)`, which spaces them. Its dartdoc names the list_smith API the demo
+  exercises and stops there (see [`AGENTS.md`](AGENTS.md), where a demo's explanation goes).
 - A view-model is a `final class XxxViewModel extends ViewModel`. Expose state through getters and
   name mutation handlers `on<Thing>Changed` / `on<Thing>Toggled`. A boolean handler takes a named
   `{required bool value}`, per `avoid_positional_boolean_parameters`, and the view adapts it:
