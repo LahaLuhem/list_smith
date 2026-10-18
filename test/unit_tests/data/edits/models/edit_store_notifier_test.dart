@@ -71,23 +71,27 @@ void main() {
       });
 
   Bdd(storeFeature)
-      .scenario("a removal's stamp is its item's newest edit after the read")
-      .given('item 1 removed at edit 1, item 2 changed at edit 2, then item 2 removed while saving')
-      .when('asking for the removals since edit 1, every edit taking its item out of place')
-      .then('only item 2 shows, at its save still out')
+      .scenario('a removal still saving, or a row still going out, counts after every read')
+      .given(
+        'item 1 removed, item 2 changed then removed while saving, item 3 changed and going out',
+      )
+      .when('asking which items left after the latest read')
+      .then("item 2's save and item 3's exit count, item 1 doesn't")
       .run((_) {
         final editStoreNotifier = EditStoreNotifier<int>()
           ..book(1, null)
-          ..book(2, 20);
+          ..book(2, 20)
+          ..book(3, 30);
         editStoreNotifier.pendingEdit(2, null).book();
+        final readStamp = editStoreNotifier.value;
 
-        final removalStampsById = editStoreNotifier.removalStampsSince(
-          1,
+        final removalStamps = editStoreNotifier.removalStampsSince(
+          0,
+          goingOutIds: const [3],
           leavesPlacePredicate: (_, _, _) => true,
         );
 
-        check(removalStampsById.keys).deepEquals([2]);
-        check(removalStampsById[2]).isNotNull().isGreaterThan(editStoreNotifier.value);
+        check(removalStamps.after(readStamp)).unorderedEquals([2, 3]);
         editStoreNotifier.dispose();
       });
 

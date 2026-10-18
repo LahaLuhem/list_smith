@@ -4,7 +4,6 @@
 library;
 
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -15,6 +14,7 @@ import 'package:multi_value_listenable_builder_typed/multi_value_listenable_buil
 import '/src/data/control/models/list_smith_controller.dart';
 import '/src/data/control/models/list_smith_controller_host.dart';
 import '/src/data/edits/models/edit_transition.dart';
+import '/src/data/edits/models/removal_stamps.dart';
 import '/src/data/grouping/models/grouping.dart';
 import '/src/data/observer/models/list_smith_observer.dart';
 import '/src/data/pagination/enums/fetch_trigger.dart';
@@ -204,67 +204,37 @@ class _AsyncListViewState<T extends Object>()
 
       return;
     }
+    final pages = loadingState.pages ?? const [];
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
     final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
-    final pages = loadingState.pages ?? const [];
-    final itemIdGetter = widget.source.itemIdGetter;
-    final loadedItems = pages.expand((page) => page.items);
-    late final loadedIds = loadedItems.map(itemIdGetter).toSet();
-    final removedIdsGetter = _removedIdsGetterFor(loadedItems);
-    Set<Object> idsRemovedSinceLastRead() =>
-        pages.isEmpty ? const {} : removedIdsGetter(pages.last.readStamp);
-    int rereadCountFor(Set<Object> removedIds) => rereadPageCount(
-      removedIds.length,
-      pageSize: widget.source.pageSize,
-      maxCount: pages.length,
-    );
-    // A save still out counts too, since the server may not have it yet.
-    bool hasRemovalAfterRead() => removedIdsGetter(readStamp).isNotEmpty;
-    final removedIds = idsRemovedSinceLastRead();
-    // A removal still out can reach the server between 2 reads sent together, so read the page first.
-    final isRemovalOpen = removedIds.isNotEmpty && hasRemovalAfterRead();
-    final rereadCount = isRemovalOpen ? 0 : rereadCountFor(removedIds);
 
     try {
-      final pageFuture = _fetchPageRaw(
+      final pageRead = await _readWithRereads(
+        pages,
         pageIndex,
-        previousSignal,
-        resolveTrigger(
-          pageIndex: pageIndex,
-          pending: trigger,
-          lastFailedPageIndex: _lastFailedPageIndex,
-        ),
+        readStamp: readStamp,
+        previousSignal: previousSignal,
+        trigger: trigger,
       );
-      // Future.wait, not .wait, so a failed read reaches the error surface as itself.
-      final pageReads = await Future.wait(
-        _rereadsBefore(pages, rereadCount).followedBy([pageFuture]),
-        eagerError: true,
-      );
-      if (generation != _generation) return;
+      if (pageRead == null || generation != _generation) return;
 
-      final (pageItems, signal) = pageReads.last;
-      final landedRemovedIds = idsRemovedSinceLastRead();
-      // If a removal could have reached the server while this page was out, read the pages before again.
-      final rereads = landedRemovedIds.isNotEmpty && (isRemovalOpen || hasRemovalAfterRead())
-          ? await Future.wait(
-              _rereadsBefore(pages, rereadCountFor(landedRemovedIds)),
-              eagerError: true,
-            )
-          : pageReads.take(rereadCount);
-      if (generation != _generation) return;
-
+      final (:items, :signal, :rereadItems) = pageRead;
       _lastPageSignal = signal;
-      late final knownIds = loadedIds.union(pageItems.map(itemIdGetter).toSet());
+      final itemIdGetter = widget.source.itemIdGetter;
+      late final knownIds = pages
+          .expand((page) => page.items)
+          .followedBy(items)
+          .map(itemIdGetter)
+          .toSet();
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
         pages: [
           ...?latestState.pages,
           LoadedPage(
             // Only the rows the list lacks, so the end policy still counts what this page sent.
-            items: rereads
-                .expand((read) => read.$1)
+            items: rereadItems
                 .whereNot((item) => knownIds.contains(itemIdGetter(item)))
-                .followedBy(pageItems)
+                .followedBy(items)
                 .toList(growable: false),
             readStamp: readStamp,
             previousSignal: previousSignal,
@@ -278,6 +248,57 @@ class _AsyncListViewState<T extends Object>()
         _pagingStateNotifier.value = _pagingStateNotifier.value.failed(exception);
       }
     }
+  }
+
+  /// Reads page [pageIndex], and again the pages before it that removals since [pages] were read could
+  /// have shifted. Null once the list moved on.
+  Future<({List<T> items, Object? signal, Iterable<T> rereadItems})?> _readWithRereads(
+    List<LoadedPage<T>> pages,
+    int pageIndex, {
+    required int readStamp,
+    required Object? previousSignal,
+    required FetchTrigger? trigger,
+  }) async {
+    final generation = _generation;
+    final loadedItems = pages.expand((page) => page.items);
+    final lastReadStamp = pages.lastOrNull?.readStamp ?? readStamp;
+    int rereadCountFor(RemovalStamps removalStamps) => rereadPageCount(
+      removalStamps.after(lastReadStamp).length,
+      pageSize: widget.source.pageSize,
+      maxCount: pages.length,
+    );
+    final removalStamps = _removalStampsSince(lastReadStamp, loadedItems);
+    // A removal still out can reach the server between 2 reads sent together, so the page goes 1st.
+    final isRemovalOut = removalStamps.after(readStamp).isNotEmpty;
+    final rereadCount = isRemovalOut ? 0 : rereadCountFor(removalStamps);
+
+    final pageFuture = _fetchPageRaw(
+      pageIndex,
+      previousSignal,
+      resolveTrigger(
+        pageIndex: pageIndex,
+        pending: trigger,
+        lastFailedPageIndex: _lastFailedPageIndex,
+      ),
+    );
+    // Future.wait, not .wait, so a failed read reaches the error surface as itself.
+    final pageReads = await Future.wait(
+      _rereadsBefore(pages, rereadCount).followedBy([pageFuture]),
+      eagerError: true,
+    );
+    if (generation != _generation) return null;
+
+    final landedRemovalStamps = _removalStampsSince(lastReadStamp, loadedItems);
+    // Then the pages before, if a removal was out or came in while the page was.
+    final lateRereadCount = isRemovalOut || landedRemovalStamps.after(readStamp).isNotEmpty
+        ? rereadCountFor(landedRemovalStamps)
+        : 0;
+    final rereads = lateRereadCount == 0
+        ? pageReads.take(rereadCount)
+        : await Future.wait(_rereadsBefore(pages, lateRereadCount), eagerError: true);
+    final (items, signal) = pageReads.last;
+
+    return (items: items, signal: signal, rereadItems: rereads.expand((read) => read.$1));
   }
 
   /// Books the next page for after this frame, since a row's build is what asks. Once per frame.
@@ -337,23 +358,7 @@ class _AsyncListViewState<T extends Object>()
         ),
       };
       final pageItems = items.toList(growable: false);
-      if (kDebugMode) {
-        final comparator = isSearchMode ? null : source.order.comparator;
-        if (comparator != null &&
-            pageItems.indexed
-                .skip(1)
-                .any((row) => comparator(pageItems[row.$1 - 1], row.$2) >= 0)) {
-          // Reported, not thrown, so the page still lands.
-          FlutterError.reportError(
-            FlutterErrorDetails(
-              exception: FlutterError(
-                "Page $pageKey isn't in the list's order. Match the server's, ties included.",
-              ),
-              library: 'list_smith',
-            ),
-          );
-        }
-      }
+      if (kDebugMode && !isSearchMode) _reportIfOutOfOrder(pageKey, pageItems);
       if (generation == _generation) {
         // Only its own, since a read beside it may have just failed.
         if (_lastFailedPageIndex == pageKey) _lastFailedPageIndex = null;
@@ -369,9 +374,25 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
-  /// The rows that left their place after a read: removed, going out, or sorted elsewhere by an edit.
-  /// [loadedItems] and new items count.
-  Set<Object> Function(int readStamp) _removedIdsGetterFor(Iterable<T> loadedItems) {
+  /// Reports a page not strictly in the list's order, rather than throwing, so it still lands.
+  void _reportIfOutOfOrder(int pageKey, List<T> pageItems) {
+    final comparator = widget.source.order.comparator;
+    // A tie is out of order too.
+    if (comparator == null || pageItems.isSorted((a, b) => comparator(a, b) < 0 ? -1 : 1)) return;
+
+    FlutterError.reportError(
+      FlutterErrorDetails(
+        exception: FlutterError(
+          "Page $pageKey isn't in the list's order. Match the server's, ties included.",
+        ),
+        library: 'list_smith',
+      ),
+    );
+  }
+
+  /// The rows that left their place after [readStamp]: removed, going out, or sorted elsewhere by an
+  /// edit. [loadedItems] and new items count.
+  RemovalStamps _removalStampsSince(int readStamp, Iterable<T> loadedItems) {
     final comparator = _isSearchQuery(_debouncer.committedQuery)
         ? null
         : widget.source.order.comparator;
@@ -380,38 +401,18 @@ class _AsyncListViewState<T extends Object>()
       widget.source.itemIdGetter,
       (firstItem, item) => firstItem ?? item,
     );
-    bool leavesPlace(Object itemId, T? replacedItem, T? editedItem) {
-      final listedItem = loadedItemsById[itemId] ?? replacedItem;
-      if (listedItem == null) return false;
 
-      return editedItem == null || (comparator != null && comparator(listedItem, editedItem) != 0);
-    }
+    return _editStoreNotifier.removalStampsSince(
+      readStamp,
+      goingOutIds: _rowTransitionsNotifier.leavingIds,
+      leavesPlacePredicate: (itemId, replacedItem, editedItem) {
+        final listedItem = loadedItemsById[itemId] ?? replacedItem;
+        if (listedItem == null) return false;
 
-    // One scan per edit, unless a call asks for an older stamp.
-    ({int editStamp, int readStamp, Map<Object, int> removalStampsById})? removalScanMemo;
-
-    return (readStamp) {
-      final editStamp = _editStoreNotifier.value;
-      var removalScan = removalScanMemo;
-      if (removalScan == null ||
-          removalScan.editStamp != editStamp ||
-          removalScan.readStamp > readStamp) {
-        removalScan = removalScanMemo = (
-          editStamp: editStamp,
-          readStamp: readStamp,
-          removalStampsById: _editStoreNotifier.removalStampsSince(
-            readStamp,
-            leavesPlacePredicate: leavesPlace,
-          ),
-        );
-      }
-
-      return removalScan.removalStampsById.entries
-          .where((entry) => entry.value > readStamp)
-          .map((entry) => entry.key)
-          .followedBy(_rowTransitionsNotifier.leavingIds)
-          .toSet();
-    };
+        return editedItem == null ||
+            (comparator != null && comparator(listedItem, editedItem) != 0);
+      },
+    );
   }
 
   Iterable<Future<(List<T>, Object?)>> _rereadsBefore(List<LoadedPage<T>> pages, int count) =>
@@ -448,7 +449,6 @@ class _AsyncListViewState<T extends Object>()
   /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
   /// in it. The paging state's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
   _Display<T> _displayFor(PagingState<T> state) {
-    final itemIdGetter = widget.source.itemIdGetter;
     final pages = state.pages;
     if (pages == null) return (state: state, shownIds: const {});
 
@@ -462,34 +462,43 @@ class _AsyncListViewState<T extends Object>()
       return displayMemo.display;
     }
 
-    final _Display<T> display;
-    if (_editStoreNotifier.isEmpty) {
-      // No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
-      final seenIds = <Object>{};
-      display = (
-        state: state.filterItems((item) => seenIds.add(itemIdGetter(item))),
-        shownIds: seenIds,
-      );
-    } else {
-      // Search results come in the server's own order.
-      final comparator = isSearchMode ? null : widget.source.order.comparator;
-      final (pages: displayPages, :shownIds) = _editStoreNotifier.applyTo(
-        pages,
-        itemIdGetter: itemIdGetter,
-        groupOf: widget.grouping.groupOf,
-        acceptsNewItems: !isSearchMode, // only the server knows what matches the query
-        sortedPlacement: comparator == null
-            ? null
-            : (
-                comparator: comparator,
-                mayHaveRowsAfter: state.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
-              ),
-      );
-      display = (state: state.copyWith(pages: displayPages), shownIds: shownIds);
-    }
+    final display = _editStoreNotifier.isEmpty
+        ? _dedupedDisplay(state)
+        : _editedDisplay(state, pages, isSearchMode: isSearchMode);
     _displayMemo = (raw: state, editStamp: editStamp, isSearchMode: isSearchMode, display: display);
 
     return display;
+  }
+
+  /// No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
+  _Display<T> _dedupedDisplay(PagingState<T> state) {
+    final itemIdGetter = widget.source.itemIdGetter;
+    final seenIds = <Object>{};
+
+    return (state: state.filterItems((item) => seenIds.add(itemIdGetter(item))), shownIds: seenIds);
+  }
+
+  _Display<T> _editedDisplay(
+    PagingState<T> state,
+    List<LoadedPage<T>> pages, {
+    required bool isSearchMode,
+  }) {
+    // Search results come in the server's own order.
+    final comparator = isSearchMode ? null : widget.source.order.comparator;
+    final (pages: displayPages, :shownIds) = _editStoreNotifier.applyTo(
+      pages,
+      itemIdGetter: widget.source.itemIdGetter,
+      groupOf: widget.grouping.groupOf,
+      acceptsNewItems: !isSearchMode, // only the server knows what matches the query
+      sortedPlacement: comparator == null
+          ? null
+          : (
+              comparator: comparator,
+              mayHaveRowsAfter: state.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
+            ),
+    );
+
+    return (state: state.copyWith(pages: displayPages), shownIds: shownIds);
   }
 
   /// Parked pages count too, so a feed kept while searching comes back with its edits.
@@ -943,7 +952,7 @@ final class _ReloadRun<T extends Object>(
       oldPages: (_startState?.pages ?? const []).map((page) => page.items),
       freshPages: pages,
       readStamps: _readStamps,
-      removedIdsGetter: _engine._removedIdsGetterFor(pages.flattened),
+      removalStamps: _engine._removalStampsSince(_readStamps.values.min, pages.flattened),
       itemIdGetter: source.itemIdGetter,
       pageSize: source.pageSize,
     );

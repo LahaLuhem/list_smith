@@ -1,5 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
+import 'package:list_smith/src/data/edits/models/removal_stamps.dart';
 import 'package:list_smith/src/data/refresh/utils/line_up_resolver.dart';
 
 void main() {
@@ -43,7 +44,7 @@ void main() {
                   [3, 4, 5],
                 ],
           readStamps: const {0: 1, 1: 3},
-          removedIdsGetter: (readStamp) => bookedStamp > readStamp ? {removedId} : {},
+          removalStamps: RemovalStamps({removedId: bookedStamp}),
           itemIdGetter: (item) => item,
           pageSize: 3,
         );
@@ -65,7 +66,7 @@ void main() {
             [4, 5],
           ],
           readStamps: const {0: 1, 1: 2, 2: 3},
-          removedIdsGetter: (_) => {0, 1, 2},
+          removalStamps: const RemovalStamps({0: 4, 1: 4, 2: 4}),
           itemIdGetter: (item) => item,
           pageSize: 2,
         );
