@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith_example/features/core/widgets/title_dialog.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformApp;
 
-import 'support/bdd.dart';
+import 'support/support.dart';
 
 void main() {
   feature('Title dialog', () {
