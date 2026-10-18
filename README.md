@@ -20,6 +20,7 @@
 - [Pull to refresh](#pull-to-refresh)
     * [Refreshing from code](#refreshing-from-code)
 - [Editing loaded items](#editing-loaded-items)
+    * [When your server sorts the list](#when-your-server-sorts-the-list)
     * [Before your server answers](#before-your-server-answers)
     * [Animating edits](#animating-edits)
 - [Search](#search)
@@ -193,6 +194,9 @@ class ShortLastPage extends PaginationEndPolicy {
   bool hasReachedEnd(EndContext c) => c.lastPageItemCount < c.pageSize;
 }
 ```
+
+A policy that can stop before the data does, like a cap, overrides `stopsAtDataEnd` to return
+`false`, so a [sorted list](#when-your-server-sorts-the-list) doesn't show rows past it.
 
 <details>
 <summary><b>Cursor pagination</b></summary>
@@ -403,12 +407,15 @@ Rows follow their item, so a row keeps its own state, like an open tile or a swi
 while rows above it come and go.
 
 A removal moves every row after it up a place on your server, so the next page also reads the page
-before it again, keeping the rows that moved up. That read reports `invalidated`.
+before it again, keeping the rows that moved up. Removing a new item counts too, and so does an edit
+that moves a row on a [sorted list](#when-your-server-sorts-the-list). That read reports
+`invalidated`.
 
 list_smith can't make up for:
 
 - what it never hears about, like someone else's deletes
-- an `upsert` your server sorts somewhere else
+- an `upsert` your server sorts somewhere else, unless you pass its
+  [order](#when-your-server-sorts-the-list)
 
 For a list others edit too, ask for the rows after the last one loaded:
 
@@ -419,6 +426,32 @@ fetchPage: PageFetcher.withSignal((request) async {
 }),
 endPolicy: const StopOnNullSignalPolicy(),
 ```
+
+### When your server sorts the list
+
+Pass the server's order, and an edit lands where the server sorts it: a rename moves its row, and a
+new item goes to its spot instead of the top.
+
+```dart
+ListSmith.async(
+  fetchPage: PageFetcher(...),
+  itemIdGetter: (task) => task.id,
+  itemBuilder: ...,
+  controller: controller,
+  order: SortedBy((a, b) {
+    final byDue = a.due.compareTo(b.due);
+    return byDue != 0 ? byDue : a.id.compareTo(b.id);  // break ties like your server
+  }),
+)
+```
+
+- Match your server's sort exactly, ties included. In debug, a page that isn't strictly in that
+  order gets reported.
+- A row sorting after every loaded one waits for its page. Once the data has ended it shows last,
+  though never past a `FixedPageCountPolicy` cap.
+- On a [grouped](#grouping) list, sort by the group first.
+- Search results keep the order they came in.
+- A moved row jumps to its place, keeping its state.
 
 ### Before your server answers
 

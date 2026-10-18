@@ -43,6 +43,7 @@ renames.
 - [A removal reads the page before again](#removal-reread)
 - [A depth reload commits a whole list, lined up](#depth-reload-whole)
 - [The edit store walks its edits by stamp, unsorted](#edit-store-scans)
+- [An order places edits where the server sorts them](#sorted-placement)
 
 <!-- TOC end -->
 
@@ -627,7 +628,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   in-flight page's cursor, so the next page repeats. The edit store moves its own counter instead,
   on every change that shows, since the display memo keys on it.
 - **New items** join the start of their group, else the top, since async groups have to stay
-  together. They stay out of search results: only the server knows what matches.
+  together, unless an order places them ([#sorted-placement](#sorted-placement)). They stay out of
+  search results: only the server knows what matches.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
   setting is about the server sending an empty page, not the user deleting rows.
 - **A removal can land late.** Under an `EditTransition` it's booked when the row's exit ends
@@ -749,6 +751,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   before it and keeps the rows that moved up. An index or offset names a row only while nothing
   above it changes, so the next page would start a row late per removal, and the rows it skipped
   would never reach the app.
+- **Moves and new items count too.** An edit that sorts a row elsewhere leaves the same gap. A row
+  is judged by its loaded copy, or a new item by the copy its edit replaced, so an edit that keeps
+  its place reads nothing more.
 - **Removals still saving or animating out count,** since the server may already have them. While
   one is out, the page before is read once the page lands rather than beside it, or a save landing
   between the 2 reads could lose a row. A removal that comes in while the page is out gets the same
@@ -772,6 +777,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Lined up before it commits.** A removal booked any time after page `k - 1` went out could have
   pulled rows up past page `k`'s start. Once every page landed, page `k - 1` is read again, and each
   row the fresh pages lack goes in front of the page after the fresh row it follows.
+- **Moves are judged against the fresh pages,** since the old list may lack a new item. A row read
+  either side of its move down sits in 2 of them, and the 1st copy is where it was. A new item on no
+  page counts above every boundary.
 - **"Any time after" has no end.** A slow `remove()` or an exit ending late reaches list_smith after
   the server already had it, so stopping the count once page `k` landed lost rows.
 - **A failed line-up read keeps the old list,** like a failed page. Its reads are part of the run,
@@ -791,6 +799,28 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Look again** once that walk passes about 1 ms, or sessions keep tens of thousands of edits.
 - **`ItemEdit` is a class.** A record typed by `T` costs about 10x a class to build, and each edit
   rebuilds one per live edit.
+
+---
+
+<a id="sorted-placement"></a>
+## An order places edits where the server sorts them
+
+- **Decision:** `ListSmith.async(order: SortedBy(comparator))`, defaulting to `UnknownOrder`, a
+  sealed seam like the others ([#opt-in-idioms](#opt-in-idioms)). A `Comparator<T>` covers any
+  fields and direction.
+- **What moves:** a new item, and an edit the comparator doesn't rank equal to the row's loaded
+  copy. Each goes into the 1st page that doesn't end before it, by binary search, which is cheaper
+  than finding group starts.
+- **A row sorting after every loaded one waits for its page** while more may follow.
+  `PaginationEndPolicy.stopsAtDataEnd` says whether a reported end is the data's, so a cap doesn't
+  show rows past it.
+- **A page read after the edit shows the server's copy,** sorted or not.
+- **The feed only.** Search results come by relevance, so they keep their own placement.
+- **Each page read is checked in debug** to be strictly in order, ties included, and reported rather
+  than thrown so it still lands. Not across pages, where another writer's edit between 2 reads
+  would trip it.
+- **Groups:** the order sorts by group first. One that doesn't trips grouping's contiguity assert.
+- **Moves jump.** Animating one would need 2 copies of one keyed row at once.
 
 ---
 
