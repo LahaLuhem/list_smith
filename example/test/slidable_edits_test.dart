@@ -4,7 +4,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
 
-import 'support/bdd.dart';
+import 'support/support.dart';
 
 void main() {
   feature('Slidable rows under edit transitions', () {
@@ -48,9 +48,7 @@ void main() {
             ),
           ),
         );
-        for (var frame = 0; frame < 5; frame++) {
-          await tester.pump();
-        }
+        await drain(tester);
 
         await tester.timedDrag(
           find.text('item 2'),
@@ -58,9 +56,7 @@ void main() {
           const Duration(milliseconds: 300),
         );
         // The pane's dismissal, then its shrink, take 300ms each.
-        for (var frame = 0; frame < 7; frame++) {
-          await tester.pump(const Duration(milliseconds: 100));
-        }
+        await drain(tester, frames: 7, step: const Duration(milliseconds: 100));
         await tester.pump();
         await tester.pump();
 

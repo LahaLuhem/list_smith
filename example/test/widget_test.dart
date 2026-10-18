@@ -3,15 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart' show Slidable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith_example/features/core/widgets/bool_knob.dart';
-import 'package:list_smith_example/main.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
 
-import 'support/bdd.dart';
-
-Future<void> pumpExampleApp(WidgetTester tester) async {
-  await tester.pumpWidget(const ListSmithExampleApp());
-  await tester.pump();
-}
+import 'support/support.dart';
 
 void main() {
   feature('list_smith example app', () {
@@ -30,11 +24,8 @@ void main() {
     });
 
     scenarioWidgets('custom surfaces: the custom loader shows, then items load', (tester) async {
-      await pumpExampleApp(tester);
-
-      await tester.tap(find.text('Custom surfaces'));
+      await openDemo(tester, 'Custom surfaces');
       // Fixed pumps, so the loader is still up when it's checked.
-      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       check(find.text('Loading…').evaluate()).length.equals(1);
@@ -46,28 +37,15 @@ void main() {
     });
 
     scenarioWidgets('playground pages past its empty first page to the data', (tester) async {
-      // The playground stacks its knob panel above the list, so give the list room to render items under
-      // the knobs, but not so tall it over-fetches pages to fill the viewport.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.tap(find.text('Playground'));
-      await tester.pump();
+      await openDemo(tester, 'Playground', surfaceSize: tallSurfaceSize);
       // Page 0 is empty, so advance-past-empty fetches page 0 then page 1. Give both time.
-      for (var frame = 0; frame < 12; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 12, step: const Duration(milliseconds: 300));
 
       check(find.text('Item 21').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('sync search filters the in-memory list as you type', (tester) async {
-      await pumpExampleApp(tester);
-
-      await tester.tap(find.text('Sync search'));
-      await tester.pump();
+      await openDemo(tester, 'Sync search');
       await tester.pump(const Duration(milliseconds: 400));
 
       check(find.text('Item 1').evaluate()).length.equals(1);
@@ -81,10 +59,7 @@ void main() {
     });
 
     scenarioWidgets('async search switches to paginated search results', (tester) async {
-      await pumpExampleApp(tester);
-
-      await tester.tap(find.text('Async search'));
-      await tester.pump();
+      await openDemo(tester, 'Async search');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
@@ -107,12 +82,7 @@ void main() {
     });
 
     scenarioWidgets('observer logs a page-loaded event as the feed loads', (tester) async {
-      await pumpExampleApp(tester);
-
-      // Observer sits near the bottom of the hub, so scroll it into view before tapping.
-      await tester.scrollUntilVisible(find.text('Observer'), 100);
-      await tester.tap(find.text('Observer'));
-      await tester.pump();
+      await openDemo(tester, 'Observer');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
@@ -122,10 +92,7 @@ void main() {
     });
 
     scenarioWidgets('grouping shows the in-memory list in labelled sections', (tester) async {
-      await pumpExampleApp(tester);
-
-      await tester.tap(find.text('Grouping'));
-      await tester.pump();
+      await openDemo(tester, 'Grouping');
       await tester.pump(const Duration(milliseconds: 400));
 
       check(find.text('Item 1').evaluate()).length.equals(1);
@@ -136,27 +103,15 @@ void main() {
     scenarioWidgets(
       'cache routing serves the cold load from the network, then bypasses on a pull',
       (tester) async {
-        // Intro, knob, list, clear-cache row and log panel stack up, so give the list room.
-        await tester.binding.setSurfaceSize(const Size(800, 1200));
-        addTearDown(() => tester.binding.setSurfaceSize(null));
-
-        await pumpExampleApp(tester);
-
-        await tester.scrollUntilVisible(find.text('Cache routing'), 100);
-        await tester.tap(find.text('Cache routing'));
-        await tester.pump();
-        for (var frame = 0; frame < 8; frame++) {
-          await tester.pump(const Duration(milliseconds: 300));
-        }
+        await openDemo(tester, 'Cache routing', surfaceSize: tallSurfaceSize);
+        await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
         // The cold load reported initialLoad and went to the network, stamping its rows.
         check(find.textContaining('initialLoad · network').evaluate().length).isGreaterThan(0);
         check(find.textContaining('from fetch #1').evaluate().length).isGreaterThan(0);
 
         await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
-        for (var frame = 0; frame < 10; frame++) {
-          await tester.pump(const Duration(milliseconds: 300));
-        }
+        await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
         // The pull reported refresh, so the fetch skipped the cache and re-stamped the 1st page.
         check(find.textContaining('refresh · network (bypassed)').evaluate().length)
@@ -169,16 +124,9 @@ void main() {
     );
 
     scenarioWidgets('reload demo loads its stamped feed', (tester) async {
-      await pumpExampleApp(tester);
-
-      // Reload sits at the bottom of the hub, so scroll it into view before tapping.
-      await tester.scrollUntilVisible(find.text('Reload'), 100);
-      await tester.tap(find.text('Reload'));
-      await tester.pump();
+      await openDemo(tester, 'Reload');
       // The feed fetches with a 500ms latency, so pump enough for the 1st pages to settle.
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       check(find.text('Item 1').evaluate()).length.equals(1);
       // Each item carries its per-page fetch stamp, "load #1" on the 1st load.
@@ -186,24 +134,12 @@ void main() {
     });
 
     scenarioWidgets('the reload demo refreshes from code, with no pull', (tester) async {
-      // The knob panel plus its button needs the taller surface to sit above the list unclipped.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Reload'), 100);
-      await tester.tap(find.text('Reload'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Reload', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
       check(find.textContaining('load #1').evaluate().length).isGreaterThan(0);
 
       await tester.tap(find.text('Refresh from code'));
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       // The button ran the pull's own reload (depth kept by default), so every page is re-stamped.
       check(find.textContaining('load #2').evaluate().length).isGreaterThan(0);
@@ -212,17 +148,8 @@ void main() {
 
     scenarioWidgets('the reload demo shows an injected failure after a pull', (tester) async {
       // Phone-sized, so only the 1st page loads before the pull.
-      await tester.binding.setSurfaceSize(const Size(390, 844));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Reload'), 100);
-      await tester.tap(find.text('Reload'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Reload', surfaceSize: const Size(390, 844));
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       final injectKnobFinder = find.ancestor(
         of: find.text('Inject a failure on reload'),
@@ -233,9 +160,7 @@ void main() {
       );
       await tester.pump();
       await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
       check(find.textContaining('Simulated reload failure').evaluate()).isNotEmpty();
     });
@@ -243,18 +168,8 @@ void main() {
     scenarioWidgets('the edits demo adds on top, renames in place and swipes a row away', (
       tester,
     ) async {
-      // The intro, knob and button stack above the list, so give it room.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Edits'), 100);
-      await tester.tap(find.text('Edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       await tester.tap(find.text('Add an item'));
       await tester.pump();
@@ -272,14 +187,10 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.text('Rename'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
       await tester.enterText(find.byType(EditableText), 'Renamed row');
       await tester.tap(find.text('Save'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
 
       check(find.text('Item 2').evaluate()).isEmpty();
       check(tester.getTopLeft(find.text('Renamed row')).dy).equals(renamedRowTop);
@@ -291,9 +202,7 @@ void main() {
         const Duration(milliseconds: 300),
       );
       // The dismissal then the resize take 300ms each.
-      for (var frame = 0; frame < 6; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 6, step: const Duration(milliseconds: 200));
 
       check(find.text('Item 1').evaluate()).isEmpty();
       check(find.text('New item 1').evaluate()).length.equals(1);
@@ -301,17 +210,8 @@ void main() {
     });
 
     scenarioWidgets("the edits demo's Delete shrinks the row away", (tester) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Edits'), 100);
-      await tester.tap(find.text('Edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       final fullHeight = tester
           .getSize(find.ancestor(of: find.text('Item 3'), matching: find.byType(Slidable)))
@@ -336,60 +236,36 @@ void main() {
       check(tester.getSize(leavingFinder.first).height)
         ..isGreaterThan(0)
         ..isLessThan(fullHeight);
-      for (var frame = 0; frame < 4; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await drain(tester, frames: 4, step: const Duration(milliseconds: 100));
       check(tester.takeException()).isNull();
       check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty();
       await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
     scenarioWidgets('a save failing after the edits demo is gone changes nothing', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Edits'), 100);
-      await tester.tap(find.text('Edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       await tester.tap(find.byType(PlatformSwitch));
       await tester.pump();
       await tester.tap(find.text('Add an item'));
       await tester.pump();
       await tester.pumpWidget(const SizedBox()); // gone at once, before the save answers
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
 
       check(tester.takeException()).isNull();
     });
 
     scenarioWidgets('with saves failing, each edit rolls back and says so', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
       // In the list, not the rename dialog's field.
       Finder rowText(String text) =>
           find.descendant(of: find.byType(Slidable), matching: find.text(text));
       // A toast lasts 4s, and the next one waits for it.
-      Future<void> waitOutTheToast() async {
-        for (var frame = 0; frame < 10; frame++) {
-          await tester.pump(const Duration(milliseconds: 500));
-        }
-      }
+      Future<void> waitOutTheToast() =>
+          drain(tester, frames: 10, step: const Duration(milliseconds: 500));
 
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Edits'), 100);
-      await tester.tap(find.text('Edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       await tester.tap(find.byType(PlatformSwitch));
       await tester.pump();
@@ -398,9 +274,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300)); // the new row grows in
       check(rowText('New item 1').evaluate()).length.equals(1);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
       check(rowText('New item 1').evaluate()).isEmpty();
       check(find.text("Couldn't save New item 1").evaluate()).length.equals(1);
       await waitOutTheToast();
@@ -413,17 +287,13 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.text('Rename'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
       await tester.enterText(find.byType(EditableText), 'Renamed row');
       await tester.tap(find.text('Save'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       check(rowText('Renamed row').evaluate()).length.equals(1);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
       check(rowText('Renamed row').evaluate()).isEmpty();
       check(rowText('Item 2').evaluate()).length.equals(1);
       check(find.text("Couldn't save Renamed row").evaluate()).length.equals(1);
@@ -439,9 +309,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       check(find.text('Item 1').evaluate()).isEmpty();
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
 
       check(find.text('Item 1').evaluate()).length.equals(1);
       check(find.text("Couldn't delete Item 1").evaluate()).length.equals(1);
@@ -450,29 +318,16 @@ void main() {
     scenarioWidgets('the sorted edits demo moves a renamed row to where its server sorts it', (
       tester,
     ) async {
-      // The hint and button stack above the list, so give it room.
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
       double rowTopOf(String text) => tester.getTopLeft(find.text(text)).dy;
 
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Sorted edits'), 100);
-      await tester.tap(find.text('Sorted edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Sorted edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       await tester.tap(find.text('Item 2'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
       await tester.enterText(find.byType(EditableText), 'Item 5a');
       await tester.tap(find.text('Save'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
 
       check(rowTopOf('Item 5a'))
         ..isGreaterThan(rowTopOf('Item 5'))
@@ -480,9 +335,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1)); // the save answering
       await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
       // Read again, so now it's the server's copy.
       check(rowTopOf('Item 5a'))
@@ -493,29 +346,17 @@ void main() {
     scenarioWidgets('the sorted edits demo adds an item where its server sorts it, not on top', (
       tester,
     ) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1200));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
       double rowTopOf(String text) => tester.getTopLeft(find.text(text)).dy;
 
-      await pumpExampleApp(tester);
-
-      await tester.scrollUntilVisible(find.text('Sorted edits'), 100);
-      await tester.tap(find.text('Sorted edits'));
-      await tester.pump();
-      for (var frame = 0; frame < 8; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await openDemo(tester, 'Sorted edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
       await tester.tap(find.text('Add an item'));
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
       await tester.enterText(find.byType(EditableText), 'Item 3a');
       await tester.tap(find.text('Save'));
       // The new row grows in.
-      for (var frame = 0; frame < 3; frame++) {
-        await tester.pump(const Duration(milliseconds: 200));
-      }
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
 
       check(rowTopOf('Item 3a'))
         ..isGreaterThan(rowTopOf('Item 3'))
@@ -523,9 +364,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1)); // the save answering
       await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 10; frame++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
       check(rowTopOf('Item 3a'))
         ..isGreaterThan(rowTopOf('Item 3'))

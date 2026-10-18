@@ -87,3 +87,6 @@ throws on desktop and web, which is why the example targets Android and iOS.
 Widget tests use the local Gherkin helper in `test/support/bdd.dart` with `checks`, under the
 package's rules: [`CODESTYLE.md`](../CODESTYLE.md#test-style). That helper is a byte-identical copy
 of the package's, since a local one can't cross a package boundary, so edit both.
+
+Import `test/support/support.dart`, which adds the example's own harness: `openDemo` taps a demo
+open from the hub, and `drain` pumps a run of frames. No scenario hand-rolls either.
