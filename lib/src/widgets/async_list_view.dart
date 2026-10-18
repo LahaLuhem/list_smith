@@ -5,7 +5,6 @@ library;
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -34,6 +33,7 @@ import '/src/data/presentation/typedefs/no_results_builder.dart';
 import '/src/data/refresh/models/refresh.dart';
 import '/src/data/refresh/models/reload.dart';
 import '/src/data/refresh/models/reload_context.dart';
+import '/src/data/refresh/utils/line_up_resolver.dart';
 import '/src/data/search/enums/cache_action.dart';
 import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
 import '/src/data/search/models/search.dart';
@@ -215,7 +215,11 @@ class _AsyncListViewState<T extends Object>()
         pages.isEmpty ? const {} : removedIdsGetter(pages.last.readStamp);
     int rereadCountFor(Set<Object> removedIds) => removedIds.isEmpty
         ? 0
-        : _rereadCount(removedIds.intersection(loadedIds).length, pages.length);
+        : rereadPageCount(
+            removedIds.intersection(loadedIds).length,
+            pageSize: widget.source.pageSize,
+            maxCount: pages.length,
+          );
     // A save still out counts too, since the server may not have it yet.
     bool hasRemovalAfterRead() => removedIdsGetter(readStamp).any(loadedIds.contains);
     final removedIds = idsRemovedSinceLastRead();
@@ -366,10 +370,6 @@ class _AsyncListViewState<T extends Object>()
       rethrow;
     }
   }
-
-  /// Enough pages to hold the rows that moved up into the removed rows' places.
-  int _rereadCount(int removedCount, int maxCount) =>
-      math.min((removedCount / widget.source.pageSize).ceil(), maxCount);
 
   /// The rows removed after a read, and those still going out. Under an order, a row of [loadedItems] an
   /// edit sorts elsewhere counts too.
@@ -919,74 +919,43 @@ final class _ReloadRun<T extends Object>(
   @override
   Future<void> commit(List<List<T>> pages, {Object? lastSignal}) async {
     if (isStale) return;
-    final itemIdGetter = _engine.widget.source.itemIdGetter;
-    final removedIdsGetter = _engine._removedIdsGetterFor(pages.flattened);
-    final removedIds = removedIdsGetter(_readStamps.values.min);
-    // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after.
-    late final removedPageIndexById = (_startState?.pages ?? const [])
-        .map((page) => page.items)
-        .indexed
-        .followedBy(pages.indexed)
-        .expand((indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)))
-        .where((row) => removedIds.contains(row.id))
-        .groupFoldBy<Object, int>(
-          (row) => row.id,
-          (index, row) => math.min(index ?? row.index, row.index),
-        );
-    final rereadIndexes = SplayTreeSet.of(
-      Iterable.generate(pages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
-        // Booked any time after the page before went out, since the server may have had it sooner.
-        final crossedCount = removedIdsGetter(_readStamps[boundaryIndex - 1]!)
-            .where((id) => (removedPageIndexById[id] ?? boundaryIndex) < boundaryIndex)
-            .length;
-        final count = _engine._rereadCount(crossedCount, boundaryIndex);
-
-        return Iterable.generate(count, (offset) => boundaryIndex - count + offset);
-      }),
+    final source = _engine.widget.source;
+    final rereadIndexes = resolveRereadIndexes(
+      oldPages: (_startState?.pages ?? const []).map((page) => page.items),
+      freshPages: pages,
+      readStamps: _readStamps,
+      removedIdsGetter: _engine._removedIdsGetterFor(pages.flattened),
+      itemIdGetter: source.itemIdGetter,
+      pageSize: source.pageSize,
     );
-    final slidItemsByPageIndex = <int, List<T>>{};
-    if (rereadIndexes.isNotEmpty) {
-      final List<(List<T>, Object?)> rereads;
+    final Map<int, List<T>> rereadItemsByIndex;
+    if (rereadIndexes.isEmpty) {
+      rereadItemsByIndex = const {};
+    } else {
       try {
         // After every page landed, so each read sees whatever the pages either side of it saw.
-        rereads = await Future.wait(
+        final rereads = await Future.wait(
           rereadIndexes.map(
             (index) => _engine._fetchPageRaw(index, _previousSignals[index], trigger),
           ),
           eagerError: true,
         );
+        rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereads.map((read) => read.$1));
       } on Exception {
         return; // the old list stays, the observer already saw the error
       }
       if (isStale) return;
-
-      final rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereads.map((read) => read.$1));
-      final freshPageIndexById = pages.indexed
-          .expand(
-            (indexed) => indexed.$2.map((item) => (id: itemIdGetter(item), index: indexed.$1)),
-          )
-          .groupFoldBy<Object, int>((row) => row.id, (index, row) => index ?? row.index);
-      final placedIds = <Object>{};
-      for (final run in rereadIndexes.splitBetween((index, nextIndex) => nextIndex != index + 1)) {
-        // A skipped row goes in front of the page after the fresh row it follows.
-        var pageIndex = run.first;
-        for (final item in run.expand((index) => rereadItemsByIndex[index]!)) {
-          final id = itemIdGetter(item);
-          final freshPageIndex = freshPageIndexById[id];
-          if (freshPageIndex != null) {
-            pageIndex = freshPageIndex + 1;
-          } else if (pageIndex < pages.length && placedIds.add(id)) {
-            (slidItemsByPageIndex[pageIndex] ??= []).add(item);
-          }
-        }
-      }
     }
 
     _engine._commit(
-      pages
+      resolveLinedUpPages(
+            freshPages: pages,
+            rereadItemsByIndex: rereadItemsByIndex,
+            itemIdGetter: source.itemIdGetter,
+          )
           .mapIndexed(
             (index, items) => LoadedPage(
-              items: [...?slidItemsByPageIndex[index], ...items],
+              items: items,
               readStamp: _readStamps[index]!, // every page came through [fetch]
               previousSignal: _previousSignals[index],
             ),
