@@ -2,7 +2,7 @@ name: list_smith_example
 description: "Runnable example app for the list_smith package."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 0.0.1
 
 environment:
   sdk: ">=3.13.0 <4.0.0"
@@ -21,6 +21,7 @@ dependencies:
   platform_icons: ^0.1.1
   listenable_collections: ^3.0.0
   flutter_slidable: ^4.0.3
+  collection: ^1.19.1
 
 dev_dependencies:
   flutter_test:

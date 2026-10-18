@@ -43,10 +43,7 @@ final class EditsViewModel() extends ViewModel {
   }
 
   void onRenamed(DemoItem item, String title) {
-    final trimmedTitle = title.trim();
-    if (trimmedTitle.isEmpty) return;
-
-    final renamedItem = DemoItem(id: item.id, title: trimmedTitle, subtitle: item.subtitle);
+    final renamedItem = DemoItem(id: item.id, title: title, subtitle: item.subtitle);
     _upsertDraft(
       renamedItem,
       write: () {
