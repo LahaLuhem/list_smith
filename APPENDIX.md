@@ -42,6 +42,7 @@ renames.
 - [Where a pull can start](#pull-surfaces)
 - [A removal reads the page before again](#removal-reread)
 - [A depth reload commits a whole list, lined up](#depth-reload-whole)
+- [The edit store walks its edits by stamp, unsorted](#edit-store-scans)
 
 <!-- TOC end -->
 
@@ -775,6 +776,22 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   the server already had it, so stopping the count once page `k` landed lost rows.
 - **A failed line-up read keeps the old list,** like a failed page. Its reads are part of the run,
   so they report its trigger.
+
+---
+
+<a id="edit-store-scans"></a>
+## The edit store walks its edits by stamp, unsorted
+
+- **Decision:** the edits stay in one map by item id, and "which edits came after this read" walks
+  all of them, comparing stamps. The display pass looks up every row's edit by id, so the map has to
+  stay, and a list sorted by stamp would be a 2nd copy kept in step on every write.
+- **Sorting buys little.** Stamps come from a counter, so edits arrive in order anyway. The walk runs
+  a few times per page fetch and once per boundary in a reload, and stays well under a frame at
+  10,000 live edits, where the display pass already costs more.
+- **Look again** once a page fetch's walks pass about 1 ms, or sessions keep tens of thousands of
+  edits.
+- **A record typed by `T` is slow to build.** In AOT it costs about 10x a small class, so a record
+  made per edit, like `ItemEdit`, shows in the display pass.
 
 ---
 
