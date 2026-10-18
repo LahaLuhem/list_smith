@@ -34,8 +34,7 @@ import '/src/data/refresh/models/refresh.dart';
 import '/src/data/refresh/models/reload.dart';
 import '/src/data/refresh/models/reload_context.dart';
 import '/src/data/refresh/utils/line_up_resolver.dart';
-import '/src/data/search/enums/cache_action.dart';
-import '/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
+import '/src/data/search/extensions/search_resolver_extension.dart';
 import '/src/data/search/models/search.dart';
 import '/src/data/search/models/search_page_request.dart';
 import '/src/data/source/list_source.dart';
@@ -550,55 +549,57 @@ class _AsyncListViewState<T extends Object>()
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
     final isSearchMode = _isSearchQuery(committedQuery);
-    final search = widget.source.search;
-    final cacheAction = switch (search) {
-      final AsyncSearch<T> asyncSearch => asyncSearch.cachePolicy.actionFor(
-        wasSearching: wasSearching,
-        isSearching: isSearchMode,
-      ),
-      // Search taken away lands like a cleared query: on the kept feed if there is one.
-      NoSearch() => CacheAction.restoreNormal,
-    };
+    final cacheAction = widget.source.search.cacheActionFor(
+      wasSearching: wasSearching,
+      isSearching: isSearchMode,
+    );
 
     _searchModeNotifier.value = isSearchMode;
-    _NormalSnapshot<T>? restoredSnapshot;
-    switch ((cacheAction, _normalSnapshot)) {
-      case (.restoreNormal, final snapshot?):
-        _rowTransitionsNotifier.settle();
-        _generation++;
-        _lastFailedPageIndex = null;
-        _lastPageSignal = snapshot.signal;
-        _normalSnapshot = null;
-        _pagingStateNotifier.value = snapshot.state;
-        // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches
-        // it anyway.
-        if (snapshot.state.status == .loadingFirstPage && snapshot.debt == null) {
-          _startRun(.initialLoad, (run) => run.reset());
-        }
-        restoredSnapshot = snapshot;
-      case (.snapshotThenRefresh, _):
-        // Snapshot the settled state. The re-fetch after a restore overwrites both flags anyway.
-        final runningReload = _runningReload;
-        final strandedTrigger = runningReload != null && !runningReload.isStale
-            ? runningReload.pendingAsk
-            : null;
-        _normalSnapshot = _NormalSnapshot(
-          state: _pagingStateNotifier.value.settled(),
-          signal: _lastPageSignal,
-          debt: strandedTrigger, // the reset below strands a live run, so the feed inherits its ask
-        );
-      case (.refresh, _) || (.restoreNormal, null):
-      // Nothing to keep. The restart below is the whole action.
+    final keptSnapshot = cacheAction == .restoreNormal ? _normalSnapshot : null;
+    if (keptSnapshot == null) {
+      if (cacheAction == .snapshotThenRefresh) _parkFeed();
+      _startRun(.queryChanged, (run) => run.reset());
+    } else {
+      _restoreFeed(keptSnapshot);
     }
-    if (restoredSnapshot == null) _startRun(.queryChanged, (run) => run.reset());
 
     final observer = widget.observer;
     observer?.onQueryCommitted(committedQuery);
     if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
-    if (restoredSnapshot == null) observer?.onReload(.queryChanged); // reset, not restored
+    if (keptSnapshot == null) {
+      observer?.onReload(.queryChanged); // reset, not restored
+
+      return;
+    }
     // Paid after the query facts, so the observer's events stay in order.
-    final debt = restoredSnapshot?.debt;
+    final debt = keptSnapshot.debt;
     if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
+  }
+
+  /// Puts the feed aside while searching. Settled, since a restore re-fetches over both flags anyway.
+  void _parkFeed() {
+    final runningReload = _runningReload;
+    _normalSnapshot = _NormalSnapshot(
+      state: _pagingStateNotifier.value.settled(),
+      signal: _lastPageSignal,
+      // The restart strands a live run, so the feed inherits its ask.
+      debt: runningReload != null && !runningReload.isStale ? runningReload.pendingAsk : null,
+    );
+  }
+
+  /// Puts the feed kept while searching back.
+  void _restoreFeed(_NormalSnapshot<T> snapshot) {
+    _rowTransitionsNotifier.settle();
+    _generation++;
+    _lastFailedPageIndex = null;
+    _lastPageSignal = snapshot.signal;
+    _normalSnapshot = null;
+    _pagingStateNotifier.value = snapshot.state;
+    // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
+    // anyway.
+    if (snapshot.state.status == .loadingFirstPage && snapshot.debt == null) {
+      _startRun(.initialLoad, (run) => run.reset());
+    }
   }
 
   /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
