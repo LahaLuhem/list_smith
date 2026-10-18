@@ -6,17 +6,44 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import '/app/theme_scope.dart';
 
 /// Every demo's shell. Its brightness toggle shows the neutral surfaces light and dark from any screen.
-class const DemoScaffold({required final String title, required final Widget body, super.key})
-    extends StatelessWidget {
+class const DemoScaffold({
+  required final String title,
+  required final Widget list,
+  final String? hint,
+  final List<Widget> controls = const [],
+  final List<Widget> footer = const [],
+  super.key,
+}) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => PlatformScaffold(
-    appBarData: PlatformAppBar(
-      title: Text(title),
-      materialAppBarData: const MaterialAppBarData(actions: [_BrightnessToggle()]),
-      cupertinoNavigationBarData: const CupertinoNavigationBarData(trailing: _BrightnessToggle()),
-    ),
-    body: SafeArea(child: body),
-  );
+  Widget build(BuildContext context) {
+    final hint = this.hint;
+
+    return PlatformScaffold(
+      appBarData: PlatformAppBar(
+        title: Text(title),
+        materialAppBarData: const MaterialAppBarData(actions: [_BrightnessToggle()]),
+        cupertinoNavigationBarData: const CupertinoNavigationBarData(trailing: _BrightnessToggle()),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: .stretch,
+          children: [
+            if (hint != null || controls.isNotEmpty)
+              Padding(
+                padding: const .all(16),
+                child: Column(
+                  crossAxisAlignment: .stretch,
+                  spacing: 8,
+                  children: [if (hint != null) Text(hint), ...controls],
+                ),
+              ),
+            Expanded(child: list),
+            ...footer,
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class const _BrightnessToggle() extends StatelessWidget {

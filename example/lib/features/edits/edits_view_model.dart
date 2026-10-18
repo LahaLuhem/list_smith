@@ -6,17 +6,14 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show s
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
-import '/features/core/repos/demo_repository.dart';
+import '/features/core/repos/sorted_demo_store.dart';
 
-/// [DemoRepository] is read-only, so this keeps a store of its own.
 final class EditsViewModel() extends ViewModel {
   static const _latency = Duration(milliseconds: 500);
 
-  /// Sorted by id and read after the last id seen, so no delete above can shift the next page.
-  final _store = DemoRepository().items.toList();
-
-  /// Below every existing id, so the store sorts new items on top too.
-  var _nextNewId = -1;
+  /// By id, read after the last id seen, so no delete above can shift the next page. New ids go below
+  /// every other, so new items sort on top.
+  final _store = SortedDemoStore((a, b) => a.id.compareTo(b.id));
 
   final _shouldFailSavesNotifier = ValueNotifier(false);
 
@@ -28,7 +25,7 @@ final class EditsViewModel() extends ViewModel {
     await Future<void>.delayed(_latency);
 
     final afterId = request.previousSignal as int?;
-    final remainingItems = _store
+    final remainingItems = _store.items
         .where((item) => afterId == null || item.id > afterId)
         .toList(growable: false);
     final pageItems = remainingItems.take(request.pageSize).toList(growable: false);
@@ -37,26 +34,17 @@ final class EditsViewModel() extends ViewModel {
   }
 
   void onAddPressed() {
-    final newId = _nextNewId--;
-    final newItem = DemoItem(id: newId, title: 'New item ${-newId}', subtitle: 'Added just now');
-    _upsertDraft(newItem, write: () => _store.insert(0, newItem));
+    final newId = _store.takeNewId();
+    _upsertDraft(DemoItem(id: newId, title: 'New item ${-newId}', subtitle: 'Added just now'));
   }
 
-  void onRenamed(DemoItem item, String title) {
-    final renamedItem = DemoItem(id: item.id, title: title, subtitle: item.subtitle);
-    _upsertDraft(
-      renamedItem,
-      write: () {
-        final index = _store.indexWhere((storedItem) => storedItem.id == item.id);
-        if (index >= 0) _store[index] = renamedItem; // deleted while the rename was out
-      },
-    );
-  }
+  void onRenamed(DemoItem item, String title) =>
+      _upsertDraft(DemoItem(id: item.id, title: title, subtitle: item.subtitle));
 
   void onDeleted(DemoItem item) => unawaited(
     controller.removeAsync(
       item,
-      commit: _writeLater(() => _store.removeWhere((storedItem) => storedItem.id == item.id)),
+      commit: _writeLater(() => _store.remove(item.id)),
       onFailure: (_) => _showFailure("Couldn't delete ${item.title}"),
     ),
   );
@@ -65,10 +53,10 @@ final class EditsViewModel() extends ViewModel {
   // ignore: use_setters_to_change_properties
   void onSavesFailToggled({required bool value}) => _shouldFailSavesNotifier.value = value;
 
-  void _upsertDraft(DemoItem draft, {required VoidCallback write}) => unawaited(
+  void _upsertDraft(DemoItem draft) => unawaited(
     controller.upsertAsync(
       draft,
-      commit: _writeLater(write).then((_) => draft),
+      commit: _writeLater(() => _store.put(draft)).then((_) => draft),
       onFailure: (_) => _showFailure("Couldn't save ${draft.title}"),
     ),
   );

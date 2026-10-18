@@ -5,16 +5,12 @@ import 'package:list_smith/list_smith.dart';
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
-import '/features/core/repos/demo_repository.dart';
+import '/features/core/repos/sorted_demo_store.dart';
 
-/// [DemoRepository] is read-only, so this keeps a store of its own.
 final class SortedEditsViewModel() extends ViewModel {
   static const _latency = Duration(milliseconds: 500);
 
-  final _storedItems = DemoRepository().items.sorted(_compareByTitle);
-
-  /// Below every existing id, so it's never taken.
-  var _nextNewId = -1;
+  final _store = SortedDemoStore(_compareByTitle);
 
   final controller = ListSmithController<DemoItem>();
 
@@ -23,7 +19,7 @@ final class SortedEditsViewModel() extends ViewModel {
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     await Future<void>.delayed(_latency);
 
-    return _storedItems
+    return _store.items
         .skip(request.pageIndex * request.pageSize)
         .take(request.pageSize)
         .toList(growable: false);
@@ -33,15 +29,13 @@ final class SortedEditsViewModel() extends ViewModel {
       _save(DemoItem(id: item.id, title: title, subtitle: item.subtitle));
 
   void onAdded(String title) =>
-      _save(DemoItem(id: _nextNewId--, title: title, subtitle: 'Added just now'));
+      _save(DemoItem(id: _store.takeNewId(), title: title, subtitle: 'Added just now'));
 
   void _save(DemoItem draft) => unawaited(
     controller.upsertAsync(
       draft,
       commit: Future.delayed(_latency, () {
-        _storedItems
-          ..removeWhere((item) => item.id == draft.id)
-          ..insert(lowerBound(_storedItems, draft, compare: _compareByTitle), draft);
+        _store.put(draft);
 
         return draft;
       }),

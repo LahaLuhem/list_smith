@@ -206,7 +206,15 @@ void main() {
 
       check(find.text('Item 1').evaluate()).isEmpty();
       check(find.text('New item 1').evaluate()).length.equals(1);
+
       await tester.pump(const Duration(seconds: 1)); // the delete answering
+      await tester.fling(find.text('New item 1'), const Offset(0, 300), 1000);
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
+
+      // Read again, so these are the server's copies.
+      check(find.text('Item 1').evaluate()).isEmpty();
+      check(tester.getTopLeft(find.text('New item 1')).dy)
+          .isLessThan(tester.getTopLeft(find.text('Renamed row')).dy);
     });
 
     scenarioWidgets("the edits demo's Delete shrinks the row away", (tester) async {

@@ -31,7 +31,7 @@ README points at it rather than copying it, so adding one leaves no stale list b
 
 **Adding a demo:** create `lib/features/<name>/<name>_view.dart` plus `_view_model.dart`, add a
 `_DemoTile` to the hub, and add a smoke scenario to `test/widget_test.dart`. Reuse `DemoScaffold`
-for the shell and the `core` fake sources.
+for the layout, `DemoItemTile` for the rows, and the `core` fake sources and mixins.
 
 **Where a demo's explanation goes.** Each knob explains itself in a one-line `subtitle`, and a
 screen adds one hint line on top only for a gesture nothing else shows. The hub tile's

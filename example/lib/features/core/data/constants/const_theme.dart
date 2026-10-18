@@ -1,5 +1,6 @@
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoThemeData;
-import 'package:flutter/widgets.dart' show Brightness, Color;
+import 'package:flutter/widgets.dart' show Brightness, Color, SizeTransition;
+import 'package:list_smith/list_smith.dart' show EditTransition;
 import 'package:material_ui/material_ui.dart' show ColorScheme, ThemeData;
 
 /// One seed colour drives a Material 3 light and dark scheme plus a matching Cupertino theme.
@@ -10,6 +11,11 @@ abstract final class ConstTheme._() {
 
   static final materialDark = ThemeData(
     colorScheme: ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark),
+  );
+
+  static final sizeEditTransition = EditTransition(
+    duration: const Duration(milliseconds: 250),
+    transitionBuilder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
   );
 
   /// A `null` [brightness] follows the device.

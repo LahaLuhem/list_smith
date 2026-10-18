@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
-import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
+import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'custom_surfaces_view_model.dart';
 import 'widgets/custom_empty.dart';
@@ -19,45 +19,33 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
     viewModel: CustomSurfacesViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Custom surfaces',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          const Padding(
-            padding: .all(16),
-            child: Text('Pull to refresh to see the custom indicator.'),
+      hint: 'Pull to refresh to see the custom indicator.',
+      controls: [
+        ValueListenableBuilder(
+          valueListenable: viewModel.shouldInjectFailuresListenable,
+          builder: (_, shouldInjectFailures, _) => BoolKnob(
+            label: 'Inject fetch failures',
+            subtitle: 'Shows the custom error and its Retry',
+            value: shouldInjectFailures,
+            onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
           ),
-          Padding(
-            padding: const .symmetric(horizontal: 16),
-            child: ValueListenableBuilder(
-              valueListenable: viewModel.shouldInjectFailuresListenable,
-              builder: (_, shouldInjectFailures, _) => BoolKnob(
-                label: 'Inject fetch failures',
-                subtitle: 'Shows the custom error and its Retry',
-                value: shouldInjectFailures,
-                onChanged: (value) => viewModel.onInjectFailuresToggled(value: value),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListSmith.async(
-              fetchPage: PageFetcher(viewModel.fetchPage),
-              itemIdGetter: (item) => item.id,
-              itemBuilder: (_, item, _) =>
-                  PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
-              emptyBuilder: (_) => const CustomEmpty(),
-              refresh: PullToRefresh(indicatorBuilder: (_, state) => CustomRefresh(state: state)),
-              surfaces: AsyncListSurfaces(
-                firstPageLoadingBuilder: (_) => const CustomLoading(),
-                newPageLoadingBuilder: (_) => const CustomLoading(isCompact: true),
-                firstPageErrorBuilder: (_, exception, onRetry) =>
-                    CustomError(exception: exception, onRetry: onRetry),
-                newPageErrorBuilder: (_, exception, onRetry) =>
-                    CustomError(exception: exception, onRetry: onRetry, isCompact: true),
-                noMoreItemsBuilder: (_) => const CustomEnd(),
-              ),
-            ),
-          ),
-        ],
+        ),
+      ],
+      list: ListSmith.async(
+        fetchPage: PageFetcher(viewModel.fetchPage),
+        itemIdGetter: (item) => item.id,
+        itemBuilder: (_, item, _) => DemoItemTile(item: item),
+        emptyBuilder: (_) => const CustomEmpty(),
+        refresh: PullToRefresh(indicatorBuilder: (_, state) => CustomRefresh(state: state)),
+        surfaces: AsyncListSurfaces(
+          firstPageLoadingBuilder: (_) => const CustomLoading(),
+          newPageLoadingBuilder: (_) => const CustomLoading(isCompact: true),
+          firstPageErrorBuilder: (_, exception, onRetry) =>
+              CustomError(exception: exception, onRetry: onRetry),
+          newPageErrorBuilder: (_, exception, onRetry) =>
+              CustomError(exception: exception, onRetry: onRetry, isCompact: true),
+          noMoreItemsBuilder: (_) => const CustomEnd(),
+        ),
       ),
     ),
   );

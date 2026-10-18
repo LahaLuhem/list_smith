@@ -5,6 +5,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/bool_knob.dart';
+import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import '/features/core/widgets/event_log_panel.dart';
 import 'cache_routing_view_model.dart';
@@ -16,39 +17,29 @@ class const CacheRoutingView({super.key}) extends StatelessWidget {
     viewModel: CacheRoutingViewModel(),
     viewBuilder: (context, viewModel) => DemoScaffold(
       title: 'Cache routing',
-      body: Column(
-        crossAxisAlignment: .stretch,
-        children: [
-          const Padding(
-            padding: .all(16),
-            child: Text("Pull and the stamps change, scroll back and they don't."),
+      hint: "Pull and the stamps change, scroll back and they don't.",
+      controls: [
+        ValueListenableBuilder(
+          valueListenable: viewModel.shouldRouteOnTriggerListenable,
+          builder: (_, routeOnTrigger, _) => BoolKnob(
+            label: 'Route on trigger',
+            subtitle: 'Refreshes and retries skip the cache',
+            value: routeOnTrigger,
+            onChanged: (value) => viewModel.onRouteOnTriggerToggled(value: value),
           ),
-          Padding(
-            padding: const .symmetric(horizontal: 16),
-            child: ValueListenableBuilder(
-              valueListenable: viewModel.shouldRouteOnTriggerListenable,
-              builder: (_, routeOnTrigger, _) => BoolKnob(
-                label: 'Route on trigger',
-                subtitle: 'Refreshes and retries skip the cache',
-                value: routeOnTrigger,
-                onChanged: (value) => viewModel.onRouteOnTriggerToggled(value: value),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListSmith.async(
-              fetchPage: PageFetcher(viewModel.fetchPage),
-              itemIdGetter: (item) => item.id,
-              pageSize: 12,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, item, _) =>
-                  PlatformListTile(title: Text(item.title), subtitle: Text(item.subtitle)),
-            ),
-          ),
-          _ClearCacheButton(onPressed: viewModel.clearCache),
-          EventLogPanel(events: viewModel.logListenable, onClear: viewModel.clearLog),
-        ],
+        ),
+      ],
+      list: ListSmith.async(
+        fetchPage: PageFetcher(viewModel.fetchPage),
+        itemIdGetter: (item) => item.id,
+        pageSize: 12,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (_, item, _) => DemoItemTile(item: item),
       ),
+      footer: [
+        _ClearCacheButton(onPressed: viewModel.clearCache),
+        EventLogPanel(events: viewModel.logListenable, onClear: viewModel.clearLog),
+      ],
     ),
   );
 }
