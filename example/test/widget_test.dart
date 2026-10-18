@@ -81,8 +81,8 @@ void main() {
       check(find.text('Item 1').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('observer logs a page-loaded event as the feed loads', (tester) async {
-      await openDemo(tester, 'Observer');
+    scenarioWidgets('async search logs a page-loaded event as the feed loads', (tester) async {
+      await openDemo(tester, 'Async search');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
@@ -91,9 +91,16 @@ void main() {
       check(find.textContaining('onPageLoaded').evaluate().length).isGreaterThan(0);
     });
 
-    scenarioWidgets('grouping shows the in-memory list in labelled sections', (tester) async {
-      await openDemo(tester, 'Grouping');
+    scenarioWidgets('sync search groups its list into labelled sections on a switch', (
+      tester,
+    ) async {
+      await openDemo(tester, 'Sync search');
       await tester.pump(const Duration(milliseconds: 400));
+
+      check(find.text('Alpha').evaluate()).isEmpty();
+
+      await tester.tap(find.byType(PlatformSwitch));
+      await tester.pump();
 
       check(find.text('Item 1').evaluate()).length.equals(1);
       // The 1st item (id 0) sits in the 'Alpha' section, whose header renders above it.
