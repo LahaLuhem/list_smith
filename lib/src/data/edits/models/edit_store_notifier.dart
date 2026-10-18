@@ -6,6 +6,7 @@ import '/src/data/pagination/models/loaded_page.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '../utils/edit_resolver.dart';
 import 'item_edit.dart';
+import 'removal_stamps.dart';
 
 /// The local edits, kept beside the loaded pages rather than in them, so the end policy and the reloads
 /// keep reading what the server sent.
@@ -58,10 +59,11 @@ final class EditStoreNotifier<T extends Object>()
   PendingEdit<T> pendingEdit(Object itemId, T? editedItem) =>
       PendingEdit._(this, itemId, editedItem);
 
-  /// Each item's newest edit after [readStamp] that took it out of its place, by stamp, saves still
-  /// out included.
-  Map<Object, int> removalStampsSince(
+  /// The items an edit after [readStamp] took out of their place, saves still out and [goingOutIds]
+  /// included.
+  RemovalStamps removalStampsSince(
     int readStamp, {
+    required Iterable<Object> goingOutIds,
     required bool Function(Object itemId, T? replacedItem, T? editedItem) leavesPlacePredicate,
   }) {
     final removalStampsById = <Object, int>{};
@@ -76,7 +78,10 @@ final class EditStoreNotifier<T extends Object>()
       }
     });
 
-    return removalStampsById;
+    // Last, so it wins over the row's older edits.
+    removalStampsById.addEntries(goingOutIds.map((id) => MapEntry(id, _pendingStamp)));
+
+    return RemovalStamps(removalStampsById);
   }
 
   /// Drops the edits every page in [readStamps] was read after, since the server's copy has caught up.

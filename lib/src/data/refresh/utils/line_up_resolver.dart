@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+import '/src/data/edits/models/removal_stamps.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 
 /// Enough pages to hold the rows that moved up into the removed rows' places.
@@ -18,11 +19,11 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
   required Iterable<List<T>> oldPages,
   required List<List<T>> freshPages,
   required Map<int, int> readStamps,
-  required Set<Object> Function(int readStamp) removedIdsGetter,
+  required RemovalStamps removalStamps,
   required ItemIdGetter<T> itemIdGetter,
   required int pageSize,
 }) {
-  final removedIds = removedIdsGetter(readStamps.values.min);
+  final removedIds = removalStamps.after(readStamps.values.min);
   // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after. A new
   // item on no page counts above them all.
   late final removedPageIndexById = oldPages.indexed
@@ -37,7 +38,8 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
   return SplayTreeSet.of(
     Iterable.generate(freshPages.length - 1, (offset) => offset + 1).expand((boundaryIndex) {
       // Booked any time after the page before went out, since the server may have had it sooner.
-      final crossedCount = removedIdsGetter(readStamps[boundaryIndex - 1]!)
+      final crossedCount = removalStamps
+          .after(readStamps[boundaryIndex - 1]!)
           .where((id) => (removedPageIndexById[id] ?? 0) < boundaryIndex)
           .length;
       final count = rereadPageCount(crossedCount, pageSize: pageSize, maxCount: boundaryIndex);
