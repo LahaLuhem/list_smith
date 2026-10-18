@@ -41,7 +41,7 @@ state that rebuilds a **small** part of a view. Only call `notifyListeners()` on
   forces a fresh `List` on every mutation (`value = [x, ...value]`) purely to fire the
   notification. `ListNotifier<T>` is itself a `ValueListenable<List<T>>` you mutate in place, one
   notification per change, so the getter and builder are unchanged while the writes read as
-  ordinary list ops. The Observer demo's event log uses it.
+  ordinary list ops. The Async search demo's event log uses it.
 
 ### Directory layout
 

@@ -11,8 +11,6 @@ import '/features/cache_routing/cache_routing_view.dart';
 import '/features/cursor_feed/cursor_feed_view.dart';
 import '/features/custom_surfaces/custom_surfaces_view.dart';
 import '/features/edits/edits_view.dart';
-import '/features/grouping/grouping_view.dart';
-import '/features/observer/observer_view.dart';
 import '/features/playground/playground_view.dart';
 import '/features/reload/reload_view.dart';
 import '/features/sorted_edits/sorted_edits_view.dart';
@@ -57,29 +55,16 @@ class const HomeView({super.key}) extends StatelessWidget {
           _DemoTile(
             icon: const PlatformIcon(PlatformIcons.collection),
             title: 'Sync search',
-            description: 'Client-side search over an in-memory list, with the no-results surface.',
+            description:
+                'Client-side search over an in-memory list, grouped into sections on a switch.',
             pageBuilder: (_) => const SyncSearchView(),
           ),
           _DemoTile(
             icon: const PlatformIcon(PlatformIcons.search),
             title: 'Async search',
             description:
-                'Two-view search: paginated feed to results and back, with a policy toggle.',
+                'Feed to paged search results and back, with a cache switch and an event log.',
             pageBuilder: (_) => const AsyncSearchView(),
-          ),
-          _DemoTile(
-            icon: Icon(
-              platformValue(material: Icons.segment, cupertino: CupertinoIcons.list_bullet),
-            ),
-            title: 'Grouping',
-            description: 'Bucket a list into labelled sections with Grouping.by.',
-            pageBuilder: (_) => const GroupingView(),
-          ),
-          _DemoTile(
-            icon: const PlatformIcon(PlatformIcons.eye),
-            title: 'Observer',
-            description: 'Watch lifecycle events stream into a live log via an injected observer.',
-            pageBuilder: (_) => const ObserverView(),
           ),
           _DemoTile(
             icon: Icon(platformValue(material: Icons.storage, cupertino: CupertinoIcons.tray_full)),
