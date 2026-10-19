@@ -1,6 +1,20 @@
 ## [Unreleased]
 ### Added
-- \[#70\] Edits that show before your server answers
+- \[#70\] `upsertAsync` and `removeAsync` show an edit before your save answers, and roll it back if the save fails
+- \[#71\] `order: SortedBy(...)` on `ListSmith.async` puts an edited or new item where your server sorts it
+- \[#71\] `PageFetcher.withHasMore` and `SearchPageFetcher.withHasMore` end the list on a has-more flag from your fetcher
+- \[#71\] `PaginationEndPolicy.stopsAtDataEnd` tells a page cap, like `FixedPageCountPolicy`, from the end of the data
+
+### Changed
+- \[#71\] A `ReloadToCurrentDepth` reload keeps the old list if any page fails, instead of keeping the pages that reloaded
+- \[#71\] `EndContext.pageItemCounts` is read-only, and the end check costs the same however many pages are loaded. A policy that wrote into it now throws.
+
+### Deprecated
+- \[#71\] `ExplicitHasMorePolicy`: return the flag from `PageFetcher.withHasMore` instead. It goes at the next major.
+- \[#71\] `ReloadOnError` and `ReloadToCurrentDepth.onError` do nothing now. Remove them, they go at the next major.
+
+### Fixed
+- \[#71\] A row no longer goes missing or shows twice when an edit shifts rows across a page boundary
 
 ## [2.0.1] - 2026-10-07
 ### Fixed
