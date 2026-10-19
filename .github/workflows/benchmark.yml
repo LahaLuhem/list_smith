@@ -39,40 +39,41 @@ jobs:
           python-version-file: benchmark/python/.python-version
           update-environment: true
 
+      # Which side's layout runs slow has flipped between runners, so the log keeps the CPU model.
+      - name: Runner CPU
+        run: grep -m 1 "model name" /proc/cpuinfo
+
+      # A micro's private names hash its file path, so 2 build dirs lay the same code's data out
+      # differently, and the x86 runners time the 2 layouts apart. So both sides build at one path.
+      - name: Fetch origin/main
+        run: git fetch --no-tags --depth=1 origin main
+      - name: Check out the candidate at the build path
+        run: git worktree add "$RUNNER_TEMP/tree" HEAD
       # build needs only the stdlib, so the analysis venv waits for compare.
       - name: Build micros - candidate (PR head)
-        working-directory: benchmark/python
+        working-directory: ${{ runner.temp }}/tree/benchmark/python
         run: python3 run.py build
-
-      # Skips when main has no suite yet, rather than erroring.
+      - name: Move the candidate off the build path
+        run: git worktree move "$RUNNER_TEMP/tree" "$RUNNER_TEMP/candidate-tree"
+      - name: Check out the baseline at the build path
+        run: git worktree add "$RUNNER_TEMP/tree" origin/main
       - name: Build micros - baseline (origin/main)
-        id: baseline
-        run: |
-          git fetch --no-tags --depth=1 origin main
-          git worktree add "$RUNNER_TEMP/base" origin/main
-          if [ ! -f "$RUNNER_TEMP/base/benchmark/python/run.py" ]; then
-            echo "origin/main has no benchmark suite yet, so skipping the regression gate."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          cd "$RUNNER_TEMP/base/benchmark/python"
-          python3 run.py build
+        working-directory: ${{ runner.temp }}/tree/benchmark/python
+        run: python3 run.py build
 
       # VMs vary ~2.7x run to run, so the sides alternate on 1 runner and a shift hits both.
       - name: Micros - interleaved
-        if: steps.baseline.outputs.skip != 'true'
         working-directory: benchmark/python
         run: |
           python3 run.py ab \
-            --candidate-build ../build \
-            --baseline-build "$RUNNER_TEMP/base/benchmark/build" \
+            --candidate-build "$RUNNER_TEMP/candidate-tree/benchmark/build" \
+            --baseline-build "$RUNNER_TEMP/tree/benchmark/build" \
             --candidate-out "$RUNNER_TEMP/candidate" \
             --baseline-out "$RUNNER_TEMP/baseline" \
             --scratch "$RUNNER_TEMP/ab"
 
       # A temp dir, never the committed reports/.
       - name: Compare and gate
-        if: steps.baseline.outputs.skip != 'true'
         working-directory: benchmark/python
         run: |
           uv sync
@@ -84,7 +85,7 @@ jobs:
 
       # Kept when the gate fails too, so a flagged regression or a flake can be inspected.
       - name: Upload compare artifacts
-        if: always() && steps.baseline.outputs.skip != 'true'
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: micro-compare
