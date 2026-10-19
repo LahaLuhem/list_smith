@@ -39,12 +39,11 @@ jobs:
           python-version-file: benchmark/python/.python-version
           update-environment: true
 
-      # Which side's layout runs slow has flipped between runners, so the log keeps the CPU model.
+      # Layout effects differ by CPU model.
       - name: Runner CPU
         run: grep -m 1 "model name" /proc/cpuinfo
 
-      # A micro's private names hash its file path, so 2 build dirs lay the same code's data out
-      # differently, and the x86 runners time the 2 layouts apart. So both sides build at one path.
+      # Private names hash the file path, and data order moves x86 timings.
       - name: Fetch origin/main
         run: git fetch --no-tags --depth=1 origin main
       - name: Check out the candidate at the build path
@@ -76,7 +75,6 @@ jobs:
       - name: Compare and gate
         working-directory: benchmark/python
         run: |
-          uv sync
           uv run python run.py compare \
             "$RUNNER_TEMP/baseline/aggregated.json" \
             "$RUNNER_TEMP/candidate/aggregated.json" \
