@@ -108,10 +108,8 @@ time window. Three things keep it serial:
 - Candidate and baseline **must share one runner**, because GitHub VMs vary run to run and a
   cross-machine baseline would drown real regressions in noise. Caching a baseline across runs is
   out for the same reason.
-- The 2 sides **build one after the other, at one path.** A micro's private names hash its file
-  path, so 2 build directories lay the same code's data out differently, and the x86 runners have
-  timed the 2 layouts over 20% apart. From one path, a micro the change doesn't reach builds
-  byte-identical, and `ab` skips it.
+- The 2 sides **build one after the other, at one path.** Private names hash the file path, so a
+  2nd build directory reorders the same code's data, which x86 runners have timed over 20% apart.
 - The micros **can't run concurrently**, since CPU contention corrupts the very timings being
   measured.
 

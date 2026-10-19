@@ -434,7 +434,8 @@ class _AsyncListViewState<T extends Object>()
     if (pages == null || pages.isEmpty) return 0;
 
     final endContext = EndContext(
-      pageItemCounts: pages.map((page) => page.items.length).toList(growable: false),
+      // A view, not a copy, so the check stays O(1). Pages lists never change once built.
+      pageItemCounts: UnmodifiableListView(pages.map((page) => page.items.length)),
       pageSize: widget.source.pageSize,
       lastPageSignal: _lastPageSignal,
     );

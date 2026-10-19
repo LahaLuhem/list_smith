@@ -59,10 +59,9 @@ def _paired_exes(candidate_build: Path, baseline_build: Path) -> list[tuple[str,
 
 
 def unchanged_micros(names: list[str], candidate_build: Path, baseline_build: Path) -> set[str]:
-    """Micros that are the same program on both sides, so timing them can only measure noise.
+    """Micros with the same inputs or byte-identical exes on both sides, so not worth timing.
 
-    Byte-identical exes catch an input change that never reaches the program. macOS stamps every
-    build, so there only matching input fingerprints count.
+    macOS stamps every build, so there only the inputs can match.
     """
 
     def fingerprint_of(build: Path, name: str) -> str | None:
