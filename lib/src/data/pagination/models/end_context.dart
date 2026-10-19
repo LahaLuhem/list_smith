@@ -6,7 +6,7 @@ library;
 ///
 /// Rebuilt after each page lands, so a policy stays a pure function of its input.
 final class const EndContext({
-  /// The item count of each page fetched so far, in fetch order.
+  /// The item count of each page fetched so far, in fetch order. Read-only.
   required final List<int> pageItemCounts,
 
   /// The page size the list was configured with.
@@ -26,5 +26,6 @@ final class const EndContext({
   int get lastPageItemCount => pageItemCounts.lastOrNull ?? 0;
 
   /// How many empty pages sit at the end of [pageItemCounts], in a row.
-  int get trailingEmptyRun => pageItemCounts.reversed.takeWhile((count) => count == 0).length;
+  int get trailingEmptyRun =>
+      pageItemCounts.length - 1 - pageItemCounts.lastIndexWhere((count) => count != 0);
 }
