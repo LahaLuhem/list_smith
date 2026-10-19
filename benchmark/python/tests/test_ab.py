@@ -87,11 +87,13 @@ class TestSideCommands:
 
 class TestUnchangedMicros:
     @staticmethod
-    def _build(root: Path, fingerprints: dict[str, str]) -> Path:
+    def _build(root: Path, fingerprints: dict[str, str], programs: dict[str, bytes]) -> Path:
         for name, fingerprint in fingerprints.items():
             path = fingerprint_path(root, name)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(fingerprint)
+        for name, program in programs.items():
+            (root / name).write_bytes(program)
 
         return root
 
@@ -99,9 +101,37 @@ class TestUnchangedMicros:
         self, tmp_path: Path
     ) -> None:
         """A side without one, like a build from before fingerprints, still gets timed."""
-        candidate = self._build(tmp_path / "candidate", {"same": "1", "changed": "2", "new": "3"})
-        baseline = self._build(tmp_path / "baseline", {"same": "1", "changed": "9"})
+        names = ["same", "changed", "new", "neither"]
+        candidate = self._build(
+            tmp_path / "candidate",
+            {"same": "1", "changed": "2", "new": "3"},
+            dict.fromkeys(names, b"candidate build"),
+        )
+        baseline = self._build(
+            tmp_path / "baseline",
+            {"same": "1", "changed": "9"},
+            dict.fromkeys(names, b"baseline build"),
+        )
 
-        untimed = unchanged_micros(["same", "changed", "new", "neither"], candidate, baseline)
+        untimed = unchanged_micros(names, candidate, baseline)
 
         assert untimed == {"same"}
+
+    def test_a_byte_identical_program_skips_the_timing_whatever_its_inputs(
+        self, tmp_path: Path
+    ) -> None:
+        """An input change can miss the compiled program, like a field that tree shaking drops."""
+        candidate = self._build(
+            tmp_path / "candidate",
+            {"same_program": "1", "one_byte_apart": "1"},
+            {"same_program": b"program", "one_byte_apart": b"program"},
+        )
+        baseline = self._build(
+            tmp_path / "baseline",
+            {"same_program": "2", "one_byte_apart": "2"},
+            {"same_program": b"program", "one_byte_apart": b"progran"},
+        )
+
+        untimed = unchanged_micros(["same_program", "one_byte_apart"], candidate, baseline)
+
+        assert untimed == {"same_program"}

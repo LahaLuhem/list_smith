@@ -92,9 +92,9 @@ the delta from a change.
 ## CI regression gate
 
 [`.github/workflows/benchmark.yml`](../.github/workflows/benchmark.yml) builds and runs the
-micros twice on one runner (the PR head and an `origin/main` worktree) and fails the job on a
-significant regression past the threshold. 2 things about it are deliberate, so know them before
-trying to speed it up.
+micros twice on one runner (the PR head and `origin/main`, built in turn at one path) and fails the
+job on a significant regression past the threshold. 2 things about it are deliberate, so know them
+before trying to speed it up.
 
 **It only triggers on code whose timing it measures:** `lib/**`, `benchmark/micro/**`,
 `benchmark/harness/**`, and the workflow file. A PR touching only `benchmark/python`, the host app
@@ -103,11 +103,15 @@ it back to `benchmark/**` makes every unrelated PR pay the full cost for nothing
 
 **Nearly all of it is measurement, not setup.** Cached Flutter setup and both AOT builds come to
 well under a minute. The rest is `micros x pivots x iterations x 2 sides` cells, each holding a fixed
-time window. Two things keep it serial:
+time window. Three things keep it serial:
 
 - Candidate and baseline **must share one runner**, because GitHub VMs vary run to run and a
   cross-machine baseline would drown real regressions in noise. Caching a baseline across runs is
   out for the same reason.
+- The 2 sides **build one after the other, at one path.** A micro's private names hash its file
+  path, so 2 build directories lay the same code's data out differently, and the x86 runners have
+  timed the 2 layouts over 20% apart. From one path, a micro the change doesn't reach builds
+  byte-identical, and `ab` skips it.
 - The micros **can't run concurrently**, since CPU contention corrupts the very timings being
   measured.
 
@@ -174,5 +178,6 @@ capture reproduces it rather than restamping it with today.
 On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
 interleaved so run-order drift lands on both sides equally. Each side runs a copy of its build from
 a path the same length as the other's, so neither process starts laid out differently in memory. A
-micro built from the same inputs on both sides isn't timed at all, since its code can't differ:
-`build` hashes each micro's inputs, as the compiler lists them, into `build/inputs/`.
+micro that's the same program on both sides isn't timed at all: its 2 exes are byte-identical, or
+`build` hashed the same inputs, as the compiler lists them, into `build/inputs/`. Only the input hash
+works on macOS, which stamps every build.

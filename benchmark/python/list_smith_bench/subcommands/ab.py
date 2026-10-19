@@ -12,6 +12,7 @@ would leave each side on a single draw and fix nothing.
 from __future__ import annotations
 
 import argparse
+import filecmp
 import json
 import shutil
 import subprocess
@@ -58,9 +59,10 @@ def _paired_exes(candidate_build: Path, baseline_build: Path) -> list[tuple[str,
 
 
 def unchanged_micros(names: list[str], candidate_build: Path, baseline_build: Path) -> set[str]:
-    """Micros built from the same inputs the same way on both sides, so their code can't differ.
+    """Micros that are the same program on both sides, so timing them can only measure noise.
 
-    A side without a fingerprint (a build from before fingerprints) never matches, so it's timed.
+    Byte-identical exes catch an input change that never reaches the program. macOS stamps every
+    build, so there only matching input fingerprints count.
     """
 
     def fingerprint_of(build: Path, name: str) -> str | None:
@@ -70,8 +72,11 @@ def unchanged_micros(names: list[str], candidate_build: Path, baseline_build: Pa
     return {
         name
         for name in names
-        if (candidate := fingerprint_of(candidate_build, name)) is not None
-        and candidate == fingerprint_of(baseline_build, name)
+        if (
+            (candidate_fingerprint := fingerprint_of(candidate_build, name)) is not None
+            and candidate_fingerprint == fingerprint_of(baseline_build, name)
+        )
+        or filecmp.cmp(candidate_build / name, baseline_build / name, shallow=False)
     }
 
 
@@ -140,7 +145,7 @@ def cmd_ab(args: argparse.Namespace) -> int:
         return 1
     unchanged = unchanged_micros([name for name, _, _ in pairs], candidate_build, baseline_build)
     for name in sorted(unchanged):
-        print(f"same   {name}  (built from the same inputs on both sides, so not timed)")
+        print(f"same   {name}  (the same program on both sides, so not timed)")
     pairs = [pair for pair in pairs if pair[0] not in unchanged]
 
     meta = (current_git_sha(), current_package_version())
