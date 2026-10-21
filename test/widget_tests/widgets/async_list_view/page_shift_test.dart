@@ -657,7 +657,7 @@ void main() {
 }
 
 /// Removes row 1, which the server already dropped.
-typedef _RowRemover = void Function(ListSmithController<int> controller);
+typedef _RowRemover = ValueSetter<ListSmithController<int>>;
 
 final _rowRemovers = <String, _RowRemover>{
   'its save already answered': (controller) => controller.remove(1),

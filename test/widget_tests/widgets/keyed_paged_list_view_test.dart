@@ -57,7 +57,7 @@ void main() {
       check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'off 3']);
     });
 
-    scenarioOutlineWidgets<({List<int> items, void Function(ListSmithController<int>) applyEdit})>(
+    scenarioOutlineWidgets<({List<int> items, ValueSetter<ListSmithController<int>> applyEdit})>(
       'a row keeps its state as its group header comes and goes',
       examples: {
         'gaining the header': (

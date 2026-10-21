@@ -18,7 +18,7 @@ class const RefreshBinding({
   required final Widget child,
 
   /// Runs when a pull crosses the threshold and is let go. Completes when the refresh is done.
-  required final ValueGetter<Future<void>> onRefresh,
+  required final AsyncCallback onRefresh,
 
   /// The room the indicator gets along the scroll axis.
   required final double indicatorExtent,

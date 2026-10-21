@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
@@ -27,7 +28,7 @@ void main() {
       ),
     );
 
-    scenarioOutlineWidgets<List<Future<void> Function(ListSmithController<int> controller)>>(
+    scenarioOutlineWidgets<List<AsyncValueSetter<ListSmithController<int>>>>(
       'restarts from code a frame apart during the 1st load still land a page',
       examples: {
         'refresh() twice': [
@@ -92,9 +93,7 @@ void main() {
           .deepEquals([FetchTrigger.initialLoad, FetchTrigger.invalidated]);
     });
 
-    scenarioOutlineWidgets<
-      ({Future<void> Function(ListSmithController<int> controller) callVerb, bool isFailing})
-    >(
+    scenarioOutlineWidgets<({AsyncValueSetter<ListSmithController<int>> callVerb, bool isFailing})>(
       'a verb from code completes once its fresh page has landed or failed',
       examples: {
         'refresh(), landing': (callVerb: (controller) => controller.refresh(), isFailing: false),
