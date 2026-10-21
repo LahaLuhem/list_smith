@@ -16,7 +16,6 @@
     ".claude",
     "build",
     "test",
-    "scripts",
     "example/.ai",
     "example/.dart_tool",
     "example/.idea",
