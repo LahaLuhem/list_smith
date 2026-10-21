@@ -28,8 +28,8 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
   and formats differently. What CI rejects has to be what a local `dart format .` fixes. Why:
   [`APPENDIX.md#ci-format-sdk`](../APPENDIX.md#ci-format-sdk).
 - **`flutter_test`** for widget and unit tests.
-- **`dependency_validator`** guards the dependency set, scoped by `dart_dependency_validator.yaml`
-  to the published surface.
+- **`dependency_validator`** guards the dependency set. It skips `example/` and `benchmark/app/` by
+  itself, since each is a package of its own.
 - **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
   Docker image, so the only local requirement is Docker. The check set and image tag live in
   [`lint-checks.json`](../.github/lint-checks.json), which dartender's setup writes and its CI fans a
@@ -49,7 +49,6 @@ list_smith/
 ├── example/                        Runnable Flutter demo; own pubspec, CODESTYLE and AGENTS
 ├── benchmark/                      Harness and micro benches, the app/ host, python/ reports
 ├── analysis_options.yaml
-├── dart_dependency_validator.yaml  Scopes dependency_validator (excludes example/)
 ├── pubspec.yaml                    Deps + cider config + topics
 ├── .pubignore
 ├── .fvmrc / .editorconfig          Local SDK pin / text-file formatting
