@@ -18,9 +18,6 @@ coverage/
 
 # Maintainer-only tooling.
 tool/
-# dependency_validator config, consumed only by the maintainer's dependency check.
-dart_dependency_validator.yaml
-
 # Context7 doc-indexer config, for context7.com rather than consumers.
 context7.json
 

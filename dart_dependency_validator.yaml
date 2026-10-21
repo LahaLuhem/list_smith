@@ -1,5 +1,0 @@
-# The example and the bench app are separate apps with their own deps, so they're skipped.
-# benchmark/micro/ stays in, so its `benchmark_harness` dev dependency still counts as used.
-exclude:
-  - "example/**"
-  - "benchmark/app/**"
