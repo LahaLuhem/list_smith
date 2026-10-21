@@ -4,8 +4,9 @@ import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+// Not the barrel: it pulls in Flutter, and the micros compile this without it.
 import '/src/data/edits/models/removal_stamps.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
+import '/src/data/pagination/pagination.dart';
 
 /// Enough pages to hold the rows that moved up into the removed rows' places.
 @internal

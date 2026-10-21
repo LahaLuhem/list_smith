@@ -1,8 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/list_smith.dart';
-import 'package:list_smith/src/data/search/enums/cache_action.dart';
-import 'package:list_smith/src/data/search/extensions/search_cache_policy_resolver_extension.dart';
+import 'package:list_smith/src/data/search/search.dart';
 
 void main() {
   final cacheTransitionFeature = BddFeature('Search cache transition');

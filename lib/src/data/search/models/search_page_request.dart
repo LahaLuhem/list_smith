@@ -1,7 +1,7 @@
 /// @docImport 'search_page_fetcher.dart';
 library;
 
-import '/src/data/pagination/models/page_request.dart';
+import '/src/data/pagination/pagination.dart';
 
 /// The inputs of one search-page fetch, handed to a [SearchPageFetcher]. A [PageRequest] plus the committed
 /// [query].

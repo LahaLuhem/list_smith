@@ -4,8 +4,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
 
 /// The rows edits are animating in and out, one controller per item id.
 ///

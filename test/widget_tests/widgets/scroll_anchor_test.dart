@@ -178,12 +178,93 @@ void main() {
         check(_topOf(tester, removedId + 1)).equals(removedTop);
       },
     );
+
+    scenarioOutlineWidgets<({List<_Row> newRows, bool reverse})>(
+      'a row on screen holds still on every frame as a pull ends away from the start',
+      examples: {
+        'nothing new on the server': (newRows: const [], reverse: false),
+        'a new row on the server, at the start': (newRows: [_row(100)], reverse: false),
+        'a reversed list': (newRows: const [], reverse: true),
+      },
+      outline: (tester, example) async {
+        final server = FakeServer(_rows);
+        final scrollController = _scrollController();
+        await _mount(
+          scrollOffset: 0,
+          server: server,
+          refresh: _depthPullRefresh,
+          reverse: example.reverse,
+        )(tester, scrollController);
+        final holdCompleter = server.hold(0, attempt: 2);
+        await pullToRefresh(
+          tester,
+          find.text('item 0'),
+          offset: Offset(0, example.reverse ? -300 : 300),
+        );
+        scrollController.jumpTo(1000);
+        await tester.pump();
+        final topWhileOut = _topOf(tester, 20);
+        check(find.byKey(_indicatorKey).evaluate()).isNotEmpty(); // premise: still out
+
+        server.store.insertAll(0, example.newRows);
+        final frameTops = await _releaseAndRecord(tester, holdCompleter, () => _topOf(tester, 20));
+
+        check(frameTops).every((it) => it.equals(topWhileOut));
+        check(find.byKey(_indicatorKey).evaluate()).isEmpty(); // the pull did end
+      },
+    );
+
+    scenarioWidgets('at the very start, a pull still pushes the rows and lets them back', (
+      tester,
+    ) async {
+      final server = FakeServer(_rows);
+      await _mount(scrollOffset: 0, server: server, refresh: _depthPullRefresh)(
+        tester,
+        _scrollController(),
+      );
+      final topAtRest = _topOf(tester, 0);
+      final holdCompleter = server.hold(0, attempt: 2);
+
+      await pullToRefresh(tester, find.text('item 0'));
+      final topWhileOut = _topOf(tester, 0);
+      final frameTops = await _releaseAndRecord(tester, holdCompleter, () => _topOf(tester, 0));
+
+      check(topWhileOut).isGreaterThan(topAtRest);
+      check(frameTops.last).equals(topAtRest);
+    });
+
+    scenarioWidgets("scrolled less than the pull's room away, the rows stop at the start", (
+      tester,
+    ) async {
+      final server = FakeServer(_rows);
+      final scrollController = _scrollController();
+      await _mount(scrollOffset: 0, server: server, refresh: _depthPullRefresh)(
+        tester,
+        scrollController,
+      );
+      final topAtRest = _topOf(tester, 0);
+      final holdCompleter = server.hold(0, attempt: 2);
+
+      await pullToRefresh(tester, find.text('item 0'));
+      scrollController.jumpTo(30);
+      await tester.pump();
+      final framePixels = await _releaseAndRecord(
+        tester,
+        holdCompleter,
+        () => scrollController.position.pixels,
+      );
+
+      check(framePixels).every((it) => it.isGreaterOrEqual(0)); // never past the start
+      check(_topOf(tester, 0)).equals(topAtRest);
+    });
   });
 }
 
-/// Pumps 50 rows from one page, then scrolls to [scrollOffset], `item 20` on top by default.
+/// Pumps the rows from one page, then scrolls to [scrollOffset], `item 20` on top by default.
 _Mount _mount({
   double scrollOffset = 1000,
+  FakeServer<_Row>? server,
+  Refresh refresh = const PullToRefresh(),
   ItemBuilder<_Row>? itemBuilder,
   ItemOrder<_Row> order = const UnknownOrder(),
   EditTransition editTransition = const NoEditTransition(),
@@ -195,8 +276,10 @@ _Mount _mount({
   await pumpListSmith(
     tester,
     ListSmith<_Row>.async(
-      fetchPage: pagedFetcher([List.generate(50, _row)]),
+      fetchPage: (server ?? FakeServer(_rows)).offsetLateFetcher,
       itemIdGetter: (row) => row.id,
+      pageSize: _rows.length,
+      refresh: refresh,
       order: order,
       editTransition: editTransition,
       grouping: grouping,
@@ -216,7 +299,33 @@ _Mount _mount({
 
 _Row _row(int id, {double? rank}) => (id: id, rank: rank ?? id.toDouble());
 
+final _rows = List.generate(50, _row);
+
 const _rowExtent = 50.0;
+
+const _indicatorKey = ValueKey('indicator');
+
+/// A depth reload waits on its fetches, so a held one keeps the pull out.
+final _depthPullRefresh = PullToRefresh(
+  reload: const ReloadToCurrentDepth(),
+  indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
+);
+
+/// Lets the held reload through, then reads [read] after each of a second's 50 ms frames.
+Future<List<T>> _releaseAndRecord<T>(
+  WidgetTester tester,
+  Completer<void> holdCompleter,
+  T Function() read,
+) async {
+  holdCompleter.complete();
+  final readings = <T>[];
+  for (var frame = 0; frame < 20; frame++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    readings.add(read());
+  }
+
+  return readings;
+}
 
 final _rankOrder = SortedBy<_Row>((a, b) => a.rank.compareTo(b.rank));
 

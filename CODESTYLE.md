@@ -138,9 +138,10 @@ feature**:
   kind: `models/` (classes: sealed types, immutable data, policy objects), `typedefs/` (standalone
   function-type aliases), `enums/`, `extensions/`, and `utils/` (pure functions). Sealed cases nest
   one level under the base's kind and stay `part`s of the base: `models/policies/` for the policy
-  cases, `source/sources/` for the source cases.
+  cases, `source/sources/` for the source cases. Each feature exports its libraries from a barrel
+  named after it, like `data/pagination/pagination.dart`.
 - **`widgets/`** holds everything that is a `Widget`, with the neutral default surfaces under
-  `widgets/defaults/`.
+  `widgets/defaults/`, behind its `defaults.dart` barrel.
 - **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
   (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
 
@@ -162,24 +163,30 @@ The placement rules that earn their keep:
 <a id="imports"></a>
 ## Imports
 
-**Relative within a feature, root-relative across features.** Same-feature targets use a path
-relative to the importing file. Anything crossing into another feature or top-level area uses a
-leading `/`, which Dart resolves from `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`.
+**Relative within a feature, the other feature's barrel across features.** Same-feature targets use
+a path relative to the importing file. Another feature is reached through its barrel (see
+[Directory layout](#directory-layout)), and another top-level area through the file itself, both with
+a leading `/`, which Dart resolves from `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`.
 That slash is a deliberate visual cue: own-feature imports read as bare relatives, cross-feature
 ones stand out.
 
 ```dart
 // in widgets/async_list_view.dart
-import '/src/data/pagination/models/pagination_end_policy.dart'; // other feature: leading /
-import '/src/utils/query_debouncer.dart';                        // other area: leading /
-import 'paged_view.dart';                                        // same folder: relative
-import 'refresh_binding.dart';                                   // same folder: relative
+import '/src/data/pagination/pagination.dart'; // other feature: its barrel
+import '/src/utils/query_debouncer.dart';      // other area: leading /
+import 'paged_view.dart';                      // same folder: relative
+import 'refresh_binding.dart';                 // same folder: relative
 ```
 
 The split holds inside a feature too: `search/extensions/…_extension.dart` reaches its own model as
-`../models/search_cache_policy.dart`, never root-relative. `@docImport` follows the same rule, and
-`part` / `part of` are always same-feature so always relative. The example app does the same with
-`/features/…` (see [`example/CODESTYLE.md`](example/CODESTYLE.md)).
+`../models/search_cache_policy.dart`, never root-relative and never through its own barrel, which
+would loop back to the importing file. Tests take a feature's barrel too, as
+`package:list_smith/src/data/pagination/pagination.dart`. The exception is pure Dart: the benchmark
+micros, and the code they compile, import the exact file where a feature's barrel pulls in Flutter.
+[`benchmark.yml`](.github/workflows/benchmark.yml) builds the micros on any `lib/` change, which
+catches a slip. `@docImport` follows the same rule, and `part` / `part of` are always same-feature
+so always relative. The example app does the same with `/features/…` (see
+[`example/CODESTYLE.md`](example/CODESTYLE.md)).
 
 ---
 

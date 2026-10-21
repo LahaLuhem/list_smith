@@ -1,7 +1,7 @@
-/// @docImport '/src/data/observer/models/list_smith_observer.dart';
-/// @docImport '/src/data/pagination/enums/fetch_trigger.dart';
-/// @docImport '/src/data/refresh/models/reload.dart';
-/// @docImport '/src/data/search/models/search_cache_policy.dart';
+/// @docImport '/src/data/observer/observer.dart';
+/// @docImport '/src/data/pagination/pagination.dart';
+/// @docImport '/src/data/refresh/refresh.dart';
+/// @docImport '/src/data/search/search.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 

@@ -6,7 +6,7 @@
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
 import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
 
 import '../harness/measure.dart';

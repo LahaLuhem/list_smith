@@ -5,7 +5,7 @@
 /// @docImport 'sinks/logging_list_smith_observer.dart';
 library;
 
-import '/src/data/pagination/enums/fetch_trigger.dart';
+import '/src/data/pagination/pagination.dart';
 
 /// Lifecycle sink for a [ListSmith.async] list: logging, telemetry, analytics.
 ///

@@ -1,5 +1,3 @@
-/// @docImport '/src/data/pagination/models/empty_page_behaviour.dart';
-/// @docImport '/src/data/search/models/search_cache_policy.dart';
 /// @docImport 'list_smith.dart';
 library;
 
@@ -11,35 +9,16 @@ import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
 
-import '/src/data/control/models/list_smith_controller.dart';
-import '/src/data/control/models/list_smith_controller_host.dart';
-import '/src/data/edits/models/edit_transition.dart';
-import '/src/data/edits/models/removal_stamps.dart';
-import '/src/data/grouping/models/grouping.dart';
-import '/src/data/observer/models/list_smith_observer.dart';
-import '/src/data/pagination/enums/fetch_trigger.dart';
-import '/src/data/pagination/enums/paging_status.dart';
-import '/src/data/pagination/enums/signal_kind.dart';
-import '/src/data/pagination/models/empty_page_context.dart';
-import '/src/data/pagination/models/end_context.dart';
-import '/src/data/pagination/models/loaded_page.dart';
-import '/src/data/pagination/models/page_request.dart';
-import '/src/data/pagination/models/paging_state.dart';
-import '/src/data/pagination/utils/fetch_trigger_resolver.dart';
-import '/src/data/presentation/models/async_list_surfaces.dart';
-import '/src/data/presentation/models/list_scroll_config.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/typedefs/no_results_builder.dart';
-import '/src/data/refresh/models/refresh.dart';
-import '/src/data/refresh/models/reload.dart';
-import '/src/data/refresh/models/reload_context.dart';
-import '/src/data/refresh/utils/line_up_resolver.dart';
-import '/src/data/search/extensions/search_resolver_extension.dart';
-import '/src/data/search/models/search.dart';
-import '/src/data/search/models/search_page_request.dart';
-import '/src/data/source/list_source.dart';
+import '/src/data/control/control.dart';
+import '/src/data/edits/edits.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/observer/observer.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
+import '/src/data/refresh/refresh.dart';
+import '/src/data/search/search.dart';
+import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
-import '../data/edits/models/edit_store_notifier.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -138,6 +117,9 @@ class _AsyncListViewState<T extends Object>()
   /// The rows edits are animating. Idle unless the source has an [EditTransition].
   late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(vsync: this);
 
+  /// How far a pull pushes the list now. The refresh binding writes it, the rows hold still against it.
+  final _pullExtentNotifier = ValueNotifier<double>(0);
+
   @override
   void initState() {
     super.initState();
@@ -175,6 +157,7 @@ class _AsyncListViewState<T extends Object>()
     _searchModeNotifier.dispose();
     _editStoreNotifier.dispose();
     _rowTransitionsNotifier.dispose();
+    _pullExtentNotifier.dispose();
 
     super.dispose();
   }
@@ -215,29 +198,15 @@ class _AsyncListViewState<T extends Object>()
         previousSignal: previousSignal,
         trigger: trigger,
       );
-      if (pageRead == null || generation != _generation) return;
+      if (pageRead == null) return;
 
-      final (:items, :signal, :rereadItems) = pageRead;
+      final (:items, :signal) = pageRead;
       _lastPageSignal = signal;
-      final itemIdGetter = widget.source.itemIdGetter;
-      late final knownIds = pages
-          .expand((page) => page.items)
-          .followedBy(items)
-          .map(itemIdGetter)
-          .toSet();
       final latestState = _pagingStateNotifier.value;
       _pagingStateNotifier.value = latestState.copyWith(
         pages: [
           ...?latestState.pages,
-          LoadedPage(
-            // Only the rows the list lacks, so the end policy still counts what this page sent.
-            items: rereadItems
-                .whereNot((item) => knownIds.contains(itemIdGetter(item)))
-                .followedBy(items)
-                .toList(growable: false),
-            readStamp: readStamp,
-            previousSignal: previousSignal,
-          ),
+          LoadedPage(items: items, readStamp: readStamp, previousSignal: previousSignal),
         ],
         isLoading: false,
       );
@@ -249,9 +218,9 @@ class _AsyncListViewState<T extends Object>()
     }
   }
 
-  /// Reads page [pageIndex], and again the pages before it that removals since [pages] were read could
-  /// have shifted. Null once the list moved on.
-  Future<({List<T> items, Object? signal, Iterable<T> rereadItems})?> _readWithRereads(
+  /// Reads page [pageIndex], plus the rows that removals since [pages] were read shifted into the pages
+  /// before it. Null once the list moved on.
+  Future<({List<T> items, Object? signal})?> _readWithRereads(
     List<LoadedPage<T>> pages,
     int pageIndex, {
     required int readStamp,
@@ -295,9 +264,21 @@ class _AsyncListViewState<T extends Object>()
     final rereads = lateRereadCount == 0
         ? pageReads.take(rereadCount)
         : await Future.wait(_rereadsBefore(pages, lateRereadCount), eagerError: true);
-    final (items, signal) = pageReads.last;
+    if (generation != _generation) return null;
 
-    return (items: items, signal: signal, rereadItems: rereads.expand((read) => read.$1));
+    final (items, signal) = pageReads.last;
+    final itemIdGetter = widget.source.itemIdGetter;
+    late final knownIds = loadedItems.followedBy(items).map(itemIdGetter).toSet();
+
+    return (
+      // Only the rows the list lacks, so the end policy still counts what this page sent.
+      items: rereads
+          .expand((read) => read.$1)
+          .whereNot((item) => knownIds.contains(itemIdGetter(item)))
+          .followedBy(items)
+          .toList(growable: false),
+      signal: signal,
+    );
   }
 
   /// Books the next page for after this frame, since a row's build is what asks. Once per frame.
@@ -326,75 +307,87 @@ class _AsyncListViewState<T extends Object>()
   /// A superseded page stays silent and leaves the retry marker alone, since the list drops it. An
   /// exception still fires `onError`: the request did fail, whoever was waiting.
   Future<(List<T>, Object?)> _fetchPageRaw(
-    int pageKey,
+    int pageIndex,
     Object? previousSignal,
     FetchTrigger trigger,
   ) async {
     final generation = _generation;
-    final source = widget.source;
-    final search = source.search;
-    final committedQuery = _debouncer.committedQuery;
-    final isSearchMode = _isSearchQuery(committedQuery);
+    final isSearchMode = _isSearchQuery(_debouncer.committedQuery);
 
     try {
-      final (items, signal) = switch (search) {
-        final AsyncSearch<T> asyncSearch when isSearchMode => await asyncSearch.fetchPage(
-          SearchPageRequest(
-            query: committedQuery,
-            pageIndex: pageKey,
-            pageSize: source.pageSize,
-            trigger: trigger,
-            previousSignal: previousSignal,
-          ),
-        ),
-        AsyncSearch<T>() || NoSearch() => await source.fetchPage(
-          PageRequest(
-            pageIndex: pageKey,
-            pageSize: source.pageSize,
-            trigger: trigger,
-            previousSignal: previousSignal,
-          ),
-        ),
-      };
+      final (items, signal) = await _requestPage(pageIndex, previousSignal, trigger);
       final pageItems = items.toList(growable: false);
-      if (kDebugMode && !isSearchMode) _reportIfOutOfOrder(pageKey, pageItems);
+      if (kDebugMode) {
+        _reportIfOutOfOrder(pageIndex, pageItems, _comparatorFor(isSearchMode: isSearchMode));
+      }
       if (generation == _generation) {
         // Only its own, since a read beside it may have just failed.
-        if (_lastFailedPageIndex == pageKey) _lastFailedPageIndex = null;
-        widget.observer?.onPageLoaded(pageKey, pageItems.length, isSearchMode: isSearchMode);
+        if (_lastFailedPageIndex == pageIndex) _lastFailedPageIndex = null;
+        widget.observer?.onPageLoaded(pageIndex, pageItems.length, isSearchMode: isSearchMode);
       }
 
       return (pageItems, signal);
     } on Exception catch (exception, stackTrace) {
-      if (generation == _generation) _lastFailedPageIndex = pageKey;
+      if (generation == _generation) _lastFailedPageIndex = pageIndex;
       widget.observer?.onError(exception, stackTrace);
 
       rethrow;
     }
   }
 
-  /// Reports a page not strictly in the list's order, rather than throwing, so it still lands.
-  void _reportIfOutOfOrder(int pageKey, List<T> pageItems) {
-    final comparator = widget.source.order.comparator;
+  /// Asks the current mode's fetcher for page [pageIndex].
+  Future<(Iterable<T>, Object?)> _requestPage(
+    int pageIndex,
+    Object? previousSignal,
+    FetchTrigger trigger,
+  ) {
+    final source = widget.source;
+    final committedQuery = _debouncer.committedQuery;
+
+    return switch (source.search) {
+      final AsyncSearch<T> asyncSearch when _isSearchQuery(committedQuery) => asyncSearch.fetchPage(
+        SearchPageRequest(
+          query: committedQuery,
+          pageIndex: pageIndex,
+          pageSize: source.pageSize,
+          trigger: trigger,
+          previousSignal: previousSignal,
+        ),
+      ),
+      AsyncSearch<T>() || NoSearch() => source.fetchPage(
+        PageRequest(
+          pageIndex: pageIndex,
+          pageSize: source.pageSize,
+          trigger: trigger,
+          previousSignal: previousSignal,
+        ),
+      ),
+    };
+  }
+
+  /// Reports a page not strictly in [comparator]'s order, rather than throwing, so it still lands.
+  void _reportIfOutOfOrder(int pageIndex, List<T> pageItems, Comparator<T>? comparator) {
     // A tie is out of order too.
     if (comparator == null || pageItems.isSorted((a, b) => comparator(a, b) < 0 ? -1 : 1)) return;
 
     FlutterError.reportError(
       FlutterErrorDetails(
         exception: FlutterError(
-          "Page $pageKey isn't in the list's order. Match the server's, ties included.",
+          "Page $pageIndex isn't in the list's order. Match the server's, ties included.",
         ),
         library: 'list_smith',
       ),
     );
   }
 
+  /// The order rows keep. Search results come in the server's own order, so they have none.
+  Comparator<T>? _comparatorFor({required bool isSearchMode}) =>
+      isSearchMode ? null : widget.source.order.comparator;
+
   /// The rows that left their place after [readStamp]: removed, going out, or sorted elsewhere by an
   /// edit. [loadedItems] and new items count.
   RemovalStamps _removalStampsSince(int readStamp, Iterable<T> loadedItems) {
-    final comparator = _isSearchQuery(_debouncer.committedQuery)
-        ? null
-        : widget.source.order.comparator;
+    final comparator = _comparatorFor(isSearchMode: _isSearchQuery(_debouncer.committedQuery));
     // The 1st copy, since a row read either side of its move down sits in 2 pages.
     late final loadedItemsById = loadedItems.groupFoldBy<Object, T>(
       widget.source.itemIdGetter,
@@ -483,8 +476,7 @@ class _AsyncListViewState<T extends Object>()
     List<LoadedPage<T>> pages, {
     required bool isSearchMode,
   }) {
-    // Search results come in the server's own order.
-    final comparator = isSearchMode ? null : widget.source.order.comparator;
+    final comparator = _comparatorFor(isSearchMode: isSearchMode);
     final (pages: displayPages, :shownIds) = _editStoreNotifier.applyTo(
       pages,
       itemIdGetter: widget.source.itemIdGetter,
@@ -534,9 +526,7 @@ class _AsyncListViewState<T extends Object>()
     final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
     final isMoreAvailable = _nextPageIndex(state.pages) != null;
     // The user emptied it, not the server, so there's more to show.
-    final wasEmptiedByEdits =
-        isEmpty && (state.pages?.any((page) => page.items.isNotEmpty) ?? false);
-    if (wasEmptiedByEdits && isMoreAvailable) return true;
+    if (isEmpty && state.items.isNotEmpty && isMoreAvailable) return true;
 
     return widget.source.onEmptyPage.shouldAdvance(
       EmptyPageContext(
@@ -556,13 +546,7 @@ class _AsyncListViewState<T extends Object>()
     );
 
     _searchModeNotifier.value = isSearchMode;
-    final keptSnapshot = cacheAction == .restoreNormal ? _normalSnapshot : null;
-    if (keptSnapshot == null) {
-      if (cacheAction == .snapshotThenRefresh) _parkFeed();
-      _startRun(.queryChanged, (run) => run.reset());
-    } else {
-      _restoreFeed(keptSnapshot);
-    }
+    final keptSnapshot = _runCacheAction(cacheAction);
 
     final observer = widget.observer;
     observer?.onQueryCommitted(committedQuery);
@@ -575,6 +559,20 @@ class _AsyncListViewState<T extends Object>()
     // Paid after the query facts, so the observer's events stay in order.
     final debt = keptSnapshot.debt;
     if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
+  }
+
+  /// Parks, restores or restarts the stream as [cacheAction] says. The feed it put back, or null when
+  /// it started over.
+  _NormalSnapshot<T>? _runCacheAction(CacheAction cacheAction) {
+    final keptSnapshot = cacheAction == .restoreNormal ? _normalSnapshot : null;
+    if (keptSnapshot == null) {
+      if (cacheAction == .snapshotThenRefresh) _parkFeed();
+      _startRun(.queryChanged, (run) => run.reset());
+    } else {
+      _restoreFeed(keptSnapshot);
+    }
+
+    return keptSnapshot;
   }
 
   /// Puts the feed aside while searching. Settled, since a restore re-fetches over both flags anyway.
@@ -658,6 +656,7 @@ class _AsyncListViewState<T extends Object>()
         refresh: widget.source.refresh,
         showsSurfaceGetter: _showsSurface,
         takesPullGetter: _takesPull,
+        pullExtentListenable: _pullExtentNotifier,
         isSearchMode: isSearchMode,
         query: _debouncer.committedQuery,
         separatorBuilder: widget.separatorBuilder,
@@ -678,6 +677,7 @@ class _AsyncListViewState<T extends Object>()
         takesPullGetter: _takesPull,
         indicatorExtent: indicatorExtent,
         indicatorBuilder: indicatorBuilder,
+        pullExtentNotifier: _pullExtentNotifier,
         child: pagedList,
       ),
     };

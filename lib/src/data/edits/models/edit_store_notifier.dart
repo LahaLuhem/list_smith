@@ -1,9 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 
-import '/src/data/grouping/typedefs/group_key_of.dart';
-import '/src/data/pagination/models/loaded_page.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/pagination/pagination.dart';
 import '../utils/edit_resolver.dart';
 import 'item_edit.dart';
 import 'removal_stamps.dart';
