@@ -20,7 +20,7 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
 - **The SDK floor lives in `pubspec.yaml`'s `environment:` block**, the channel in `.fvmrc`. Bump
   the floor only when a new stable language feature is actually consumed, and record why in
   `APPENDIX.md`.
-- **`flutter analyze`** for static analysis.
+- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it, for static analysis.
   [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
   which `analysis_options.yaml` includes, hold the posture: strict language modes plus a long
   `errors:` block. The pedantry is intentional, not negotiable.

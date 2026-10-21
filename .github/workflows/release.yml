@@ -15,7 +15,7 @@ on:
         default: false
 
 jobs:
-  # The repo's own CI first, so what gets released passed the checks a PR gets.
+  # CI first, since Flutter and dartender may have moved on since the last PR passed it.
   ci:
     uses: ./.github/workflows/ci.yml
     # What its Auto-merge job asks for. A run whose caller grants less won't start.

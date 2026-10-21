@@ -40,11 +40,11 @@ publishes automatically.
 - **Bash** only for what has no dedicated tool: `flutter`, `dart`, `git`. Invoke plain `flutter` /
   `dart`, which the user's shell aliases to whatever serves the `.fvmrc`-pinned channel, never the
   toolchain manager directly.
-- **Lint with `flutter analyze --fatal-infos --fatal-warnings`.** The lints promoted to `error:`
-  are the contract, not suggestions.
+- **Lint with `dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it. The lints promoted
+  to `error:` are the contract, not suggestions.
 - **Clear lints with `dart fix --apply` first**, then hand-fix what has no automated fix, then
-  `dart format`. Never hand-edit a lint the tool would fix. Run it per package, so repo root and
-  `example/`. DCM findings need hand-fixing, `dart fix` doesn't touch them.
+  `dart format`. Never hand-edit a lint the tool would fix. Run it per package, so repo root,
+  `example/` and `benchmark/app/`. DCM findings need hand-fixing, `dart fix` doesn't touch them.
 - **Agent tool** for wide or open-ended searches, or to keep large output out of context. Not for
   trivial lookups.
 
@@ -85,8 +85,8 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 ## Forbidden / confirm-first actions
 
 - **Never** `flutter pub publish` or `dart pub publish`. Publishing is effectively one-way, since
-  pub.dev reserves the version for 7 days after a retraction. Releases go through the tag-triggered
-  [`publish.yml`](.github/workflows/publish.yml).
+  pub.dev reserves the version for 7 days after a retraction. Releases go through the Release run,
+  whose tag push starts [`publish.yml`](.github/workflows/publish.yml).
 - **Never** push a semver tag without being told to. The tag authenticates to pub.dev over OIDC
   with no confirmation step on their side.
 - **Never** run `cider` or hand-edit `CHANGELOG.md` / `version:` (hard rule 7 has the why). If the
@@ -98,14 +98,15 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 
 ## Definition of done
 
-- `flutter analyze --fatal-infos --fatal-warnings` clean. Non-negotiable.
+- Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in
+  [dartender's `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml),
+  run with this repo's inputs from [`ci.yml`](.github/workflows/ci.yml). So does this repo's own
+  [`bench-app.yml`](.github/workflows/bench-app.yml).
 - `dcm analyze` clean where the CLI is there. Otherwise apply the DCM rules by hand, since
-  `flutter analyze` surfaces none of them. See [`CODESTYLE.md`](CODESTYLE.md#dcm-rules).
-- `dart format --output=none --set-exit-if-changed .` clean.
-- `flutter test` green, in the root and in `example/`.
-- Lint clean via the linterpol image for whatever changed, per
-  [`lint-checks.json`](.github/lint-checks.json).
-- `flutter pub publish --dry-run` clean if the change is publish-relevant. Never bump the version or
-  edit the CHANGELOG to make it pass, the release run owns those.
+  `dart analyze` surfaces none of them and CI runs no DCM. See
+  [`CODESTYLE.md`](CODESTYLE.md#dcm-rules).
+- `flutter pub publish --dry-run` clean if the change is publish-relevant, apart from its warning
+  about uncommitted files, which fails it until you commit. Never bump the version or edit the
+  CHANGELOG to make it pass, the release run owns those.
 - Public API additions carry `///` dartdoc and show up in the README.
 - **Explicitly call out what you did NOT verify.**

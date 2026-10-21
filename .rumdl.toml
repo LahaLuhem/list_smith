@@ -1,4 +1,4 @@
-# rumdl (Markdown lint) config. AGENTS.md says how CI and the release preflight run it.
+# rumdl (Markdown lint) config. AGENTS.md says how CI runs it.
 
 [global]
 # Not hand-written docs: the bot's CHANGELOG, GitHub's issue-template format, Flutter's platform
