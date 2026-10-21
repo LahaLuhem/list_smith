@@ -26,13 +26,13 @@ nothing on one path. The name is a craft metaphor, a sibling in spirit to `minte
   `errors:` block. The pedantry is intentional, not negotiable.
 - **The `dart format` gate runs Flutter's Dart**, not standalone Dart stable, which runs ahead of it
   and formats differently. What CI rejects has to be what a local `dart format .` fixes. Why:
-  [`APPENDIX.md#ci-format-sdk`](APPENDIX.md#ci-format-sdk).
+  [`APPENDIX.md#ci-format-sdk`](../APPENDIX.md#ci-format-sdk).
 - **`flutter_test`** for widget and unit tests.
 - **`dependency_validator`** guards the dependency set, scoped by `dart_dependency_validator.yaml`
   to the published surface.
 - **Container-based linters** run from the [`linterpol`](https://github.com/LahaLuhem/linterpol)
   Docker image, so the only local requirement is Docker. The check set and image tag live in
-  [`lint-checks.json`](.github/lint-checks.json), which dartender's setup writes and its CI fans a
+  [`lint-checks.json`](../.github/lint-checks.json), which dartender's setup writes and its CI fans a
   matrix out of. **A linter only this repo needs goes in a workflow of its own**, since the next
   setup run rewrites the manifest. Per-tool config sits in `.rumdl.toml` and `.yamllint.yaml`.
 - **Published to pub.dev.** `.pubignore` controls the tarball, `.editorconfig` is the source of
@@ -47,6 +47,7 @@ list_smith/
 │   └── src/                        Implementation (private by convention)
 ├── test/
 ├── example/                        Runnable Flutter demo; own pubspec, CODESTYLE and AGENTS
+├── benchmark/                      Harness and micro benches, the app/ host, python/ reports
 ├── analysis_options.yaml
 ├── dart_dependency_validator.yaml  Scopes dependency_validator (excludes example/)
 ├── pubspec.yaml                    Deps + cider config + topics
@@ -62,7 +63,7 @@ list_smith/
 ```
 
 `test/` splits by test kind (`unit_tests/`, `widget_tests/`) next to the shared `support/`, and each
-kind mirrors `lib/src/`. Where a test goes is in CODESTYLE's [test style](CODESTYLE.md#test-style).
+kind mirrors `lib/src/`. Where a test goes is in CODESTYLE's [test style](../CODESTYLE.md#test-style).
 
 **Nested-app lockfiles are opt-in.** The root `.gitignore` ignores `pubspec.lock` broadly, the
 library following the "don't commit your own lockfile" convention. A nested app that *should* commit
@@ -92,21 +93,21 @@ These are the general, architecture-independent rules.
    `bench-app-ok` from this repo's own `Protected`.** That one is a job id in `bench-app.yml`, and a
    required check that stops reporting blocks every PR. So renaming it, giving it a `name:` or
    path-filtering its workflow means changing `Protected` in the same pass:
-   [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
+   [`APPENDIX.md#dependabot-automerge`](../APPENDIX.md#dependabot-automerge).
 7. **`CHANGELOG.md` is bot-owned. Do not edit any section, including `## [Unreleased]`.** Release
    headers and Dependabot's lines are written by the release run, and the `## [Unreleased]`
-   buffer is appended to by [`changelog.yml`](.github/workflows/changelog.yml) from the merged PR
+   buffer is appended to by [`changelog.yml`](../.github/workflows/changelog.yml) from the merged PR
    title, governed by its `sem-*` label. Same prohibition on the `version:` field and on running
    `cider` by hand. The `cider:` block in `pubspec.yaml` is static config, hand-editable.
 8. **Workflows write out the action defaults they rely on**, even when the default is already the
    value you want. Every `github-actions` bump automerges, majors included, and an action major is
    usually a default-flip that CI stays green through:
-   [`APPENDIX.md#dependabot-automerge`](APPENDIX.md#dependabot-automerge).
+   [`APPENDIX.md#dependabot-automerge`](../APPENDIX.md#dependabot-automerge).
 
 ## PR conventions
 
 Enforced by dartender's `conventions.yml`, called from
-[`.github/workflows/conventions.yml`](.github/workflows/conventions.yml).
+[`.github/workflows/conventions.yml`](../.github/workflows/conventions.yml).
 
 - **Branch name**: `<type>/#<issue>-<slug>`, `<type>` one of `feature`, `bugfix`, `chore`,
   `refactor`. Example: `feature/#7-paginated-listview`.
@@ -133,7 +134,7 @@ up. [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing) ha
 
 ## Style
 
-Full guide: [`CODESTYLE.md`](CODESTYLE.md), and read it before writing code. The handful that catch
+Full guide: [`CODESTYLE.md`](../CODESTYLE.md), and read it before writing code. The handful that catch
 people out most often:
 
 - Bind generic type parameters to `<T extends Object>` by default, and never `as T` on a `T?`.
@@ -148,7 +149,7 @@ people out most often:
 
 - **Read <https://noslopgrenade.com/> before writing any prose.** Docs, dartdoc, comments, commit
   messages, PR bodies. Fetch the page, don't cite it from memory: it is the intent behind
-  [Prose & voice](CODESTYLE.md#prose), and skipping it is how the wall of text gets written.
+  [Prose & voice](../CODESTYLE.md#prose), and skipping it is how the wall of text gets written.
 - **Always ask before making technical choices.** Anything with more than 1 defensible answer
   (an API shape, public vs `lib/src/`, a new dependency, a widget's parameter model) stops and
   asks: options, trade-offs, the one you'd pick and why, then wait. Small choices compound. Mark

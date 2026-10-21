@@ -1,9 +1,9 @@
 # CLAUDE.md for `list_smith`
 
 Claude-Code-specific guidance. Project facts, stack, hard rules and AI-agent guidelines live in
-[AGENTS.md](AGENTS.md), the code-style guide in [`CODESTYLE.md`](CODESTYLE.md), design rationale in
-[`APPENDIX.md`](APPENDIX.md), the map of parts and seams in
-[`doc/how-it-works.md`](doc/how-it-works.md). Read AGENTS.md and CODESTYLE.md first, and the map
+[AGENTS.md](AGENTS.md), the code-style guide in [`CODESTYLE.md`](../CODESTYLE.md), design rationale in
+[`APPENDIX.md`](../APPENDIX.md), the map of parts and seams in
+[`doc/how-it-works.md`](../doc/how-it-works.md). Read AGENTS.md and CODESTYLE.md first, and the map
 before changing the async engine.
 
 ## Role & context
@@ -12,8 +12,8 @@ You're assisting with **list_smith**, whose scope [AGENTS.md](AGENTS.md) describ
 as technical and direct.
 
 It is live on pub.dev, so a change is visible to every downstream user the moment it ships, and
-breakage is expensive to walk back: a retracted version stays reserved for 7 days, and a tag push
-publishes automatically.
+breakage is expensive to walk back: pub.dev never unpublishes a version, it only lets you retract
+one within 7 days of publishing, and a tag push publishes automatically.
 
 ## Communication
 
@@ -84,9 +84,9 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 
 ## Forbidden / confirm-first actions
 
-- **Never** `flutter pub publish` or `dart pub publish`. Publishing is effectively one-way, since
-  pub.dev reserves the version for 7 days after a retraction. Releases go through the Release run,
-  whose tag push starts [`publish.yml`](.github/workflows/publish.yml).
+- **Never** `flutter pub publish` or `dart pub publish`. Publishing is one-way, since pub.dev never
+  unpublishes a version and only lets you retract one within 7 days. Releases go through the
+  Release run, whose tag push starts [`publish.yml`](../.github/workflows/publish.yml).
 - **Never** push a semver tag without being told to. The tag authenticates to pub.dev over OIDC
   with no confirmation step on their side.
 - **Never** run `cider` or hand-edit `CHANGELOG.md` / `version:` (hard rule 7 has the why). If the
@@ -100,11 +100,11 @@ The release flow (`CHANGELOG.md`, `version:`) is not on this list because it is 
 
 - Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in
   [dartender's `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml),
-  run with this repo's inputs from [`ci.yml`](.github/workflows/ci.yml). So does this repo's own
-  [`bench-app.yml`](.github/workflows/bench-app.yml).
+  run with this repo's inputs from [`ci.yml`](../.github/workflows/ci.yml). So does this repo's own
+  [`bench-app.yml`](../.github/workflows/bench-app.yml).
 - `dcm analyze` clean where the CLI is there. Otherwise apply the DCM rules by hand, since
   `dart analyze` surfaces none of them and CI runs no DCM. See
-  [`CODESTYLE.md`](CODESTYLE.md#dcm-rules).
+  [`CODESTYLE.md`](../CODESTYLE.md#dcm-rules).
 - `flutter pub publish --dry-run` clean if the change is publish-relevant, apart from its warning
   about uncommitted files, which fails it until you commit. Never bump the version or edit the
   CHANGELOG to make it pass, the release run owns those.

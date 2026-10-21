@@ -2,7 +2,7 @@
 
 Tool-agnostic brief for the runnable demo app under `example/`. Package (library) conventions live
 in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
-[`CODESTYLE.md`](CODESTYLE.md). Read both before working in this subdirectory.
+[`CODESTYLE.md`](../CODESTYLE.md). Read both before working in this subdirectory.
 
 ## Scope
 
@@ -10,7 +10,7 @@ in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
 - Not published (`publish_to: 'none'`), so no semver discipline and it may depend on whatever
   ecosystem packages it likes.
 - Keep it building and analysing clean on the strict lint set it inherits via `include`.
-  dartender's CI, called from [`ci.yml`](../.github/workflows/ci.yml), checks it along with the
+  dartender's CI, called from [`ci.yml`](../../.github/workflows/ci.yml), checks it along with the
   package.
 
 ## Architecture
@@ -18,13 +18,13 @@ in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
 Feature-first MVVM on the maintainer's platform-adaptive stack, mirroring the sibling examples
 (`platform_adaptive_widgets`, `better_internet_connectivity_checker`):
 
-- **State**: `pmvvm` (`MVVM.builder` + `ViewModel`). [`CODESTYLE.md`](CODESTYLE.md) has the
+- **State**: `pmvvm` (`MVVM.builder` + `ViewModel`). [`CODESTYLE.md`](../CODESTYLE.md) has the
   reactivity rule and the view / view-model shape.
 - **Surfaces**: `platform_adaptive_widgets` (Material on Android, Cupertino on iOS), with
   `material_ui` / `cupertino_ui` and `platform_icons`. That doubles as the showcase: list_smith's
   neutral surfaces drop into both shells unchanged.
 - **Layout**: `lib/main.dart` (app shell), `lib/app/` (scopes), `lib/features/` (one folder per
-  demo, plus `features/core/` for shared pieces). Full layout in [`CODESTYLE.md`](CODESTYLE.md).
+  demo, plus `features/core/` for shared pieces). Full layout in [`CODESTYLE.md`](../CODESTYLE.md).
 
 The app is a hub, `features/core/views/home_view.dart`, and that file *is* the list of demos. The
 README points at it rather than copying it, so adding one leaves no stale list behind.
