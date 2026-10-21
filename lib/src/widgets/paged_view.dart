@@ -46,6 +46,9 @@ class const PagedView<T extends Object>({
   /// How far a pull pushes the list now.
   required final ValueListenable<double> pullExtentListenable,
 
+  /// Whether the row on top holds still when rows above it change, or a pull's room does.
+  required final bool shouldKeepPosition,
+
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
 
@@ -113,6 +116,7 @@ class const PagedView<T extends Object>({
     ),
     onNearEnd: onNearEnd,
     pullExtentListenable: pullExtentListenable,
+    shouldKeepPosition: shouldKeepPosition,
     separatorBuilder: separatorBuilder,
     controller: scrollConfig.controller,
     scrollDirection: scrollConfig.scrollDirection,

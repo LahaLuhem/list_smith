@@ -68,6 +68,10 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemIdGetter] tells them
   /// apart.
   ///
+  /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change, or when
+  /// the refresh indicator closes while the list is scrolled away. Turn it off if your app keeps its
+  /// own scroll position.
+  ///
   /// 2 pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading end policy
   /// needs `withSignal` fetchers on both the feed and the search.
   new async({
@@ -81,6 +85,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     Search<T> search = const NoSearch(),
     EditTransition editTransition = const NoEditTransition(),
     ItemOrder<T> order = const UnknownOrder(),
+    bool shouldKeepPosition = true,
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = const Duration(milliseconds: 300),
@@ -118,6 +123,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          itemIdGetter: itemIdGetter,
          editTransition: editTransition,
          order: order,
+         shouldKeepPosition: shouldKeepPosition,
        );
 
   /// Creates a sync, in-memory searchable list over [items].

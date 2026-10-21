@@ -6,10 +6,11 @@
 /// are byte-identical copies. Edit both.
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Groups the widget scenarios describing one widget under test. Reads as `Feature: <description>`.
-void feature(String description, void Function() body) => group('Feature: $description', body);
+void feature(String description, ValueGetter<void> body) => group('Feature: $description', body);
 
 /// One widget behaviour, as a single `testWidgets` case. Reads as `Scenario: <description>`, with [body]
 /// the Given/When/Then flow.

@@ -657,6 +657,7 @@ class _AsyncListViewState<T extends Object>()
         showsSurfaceGetter: _showsSurface,
         takesPullGetter: _takesPull,
         pullExtentListenable: _pullExtentNotifier,
+        shouldKeepPosition: widget.source.shouldKeepPosition,
         isSearchMode: isSearchMode,
         query: _debouncer.committedQuery,
         separatorBuilder: widget.separatorBuilder,

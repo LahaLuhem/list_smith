@@ -40,6 +40,9 @@ class const KeyedPagedListView<T extends Object>({
   /// How far a pull pushes the list now.
   required final ValueListenable<double> pullExtentListenable,
 
+  /// Whether the row on top holds still when rows above it change, or a pull's room does.
+  required final bool shouldKeepPosition,
+
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
   super.controller,
@@ -96,6 +99,7 @@ class const KeyedPagedListView<T extends Object>({
       // Only here does scrolling ask for more, so a failed page waits for Retry.
       onNearEnd: status != .ongoing ? null : onNearEnd,
       pullExtentListenable: pullExtentListenable,
+      shouldKeepPosition: shouldKeepPosition,
     );
   }
 }
@@ -134,39 +138,41 @@ class const _KeyedRows<T extends Object>({
   required final IndexedWidgetBuilder? separatorBuilder,
   required final VoidCallback? onNearEnd,
   required final ValueListenable<double> pullExtentListenable,
+  required final bool shouldKeepPosition,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellCount = rowLookup.itemCount + 1;
     final separatorBuilder = this.separatorBuilder;
-    final childrenPerItem = separatorBuilder == null ? 1 : 2; // an item, then its separator
+    final rowsSliverList = separatorBuilder == null
+        ? SliverList.builder(
+            itemCount: cellCount,
+            itemBuilder: _buildCell,
+            findChildIndexCallback: _indexOf,
+          )
+        : SliverList.separated(
+            itemCount: cellCount,
+            itemBuilder: _buildCell,
+            separatorBuilder: separatorBuilder,
+            findItemIndexCallback: _indexOf,
+          );
+    if (!shouldKeepPosition) return rowsSliverList;
 
     return ScrollAnchor(
       rowIdGetter: (childIndex) {
-        final itemIndex = childIndex ~/ childrenPerItem;
+        final itemIndex = childIndex ~/ _childrenPerItem;
 
-        return childIndex % childrenPerItem != 0 || itemIndex >= rowLookup.itemCount
+        return childIndex % _childrenPerItem != 0 || itemIndex >= rowLookup.itemCount
             ? null
             : itemIdGetter(rowLookup.itemAt(itemIndex));
       },
       rowIndexGetter: (id, lastChildIndex) {
-        final itemIndex = rowLookup.indexOf(id, lastChildIndex ~/ childrenPerItem);
+        final itemIndex = rowLookup.indexOf(id, lastChildIndex ~/ _childrenPerItem);
 
-        return itemIndex == null ? null : itemIndex * childrenPerItem;
+        return itemIndex == null ? null : itemIndex * _childrenPerItem;
       },
       pullExtentListenable: pullExtentListenable,
-      sliver: separatorBuilder == null
-          ? SliverList.builder(
-              itemCount: cellCount,
-              itemBuilder: _buildCell,
-              findChildIndexCallback: _indexOf,
-            )
-          : SliverList.separated(
-              itemCount: cellCount,
-              itemBuilder: _buildCell,
-              separatorBuilder: separatorBuilder,
-              findItemIndexCallback: _indexOf,
-            ),
+      sliver: rowsSliverList,
     );
   }
 
@@ -184,6 +190,8 @@ class const _KeyedRows<T extends Object>({
   }
 
   int? _indexOf(Key key) => key is! _RowKey ? null : rowLookup.indexOf(key.id, key.index);
+
+  int get _childrenPerItem => separatorBuilder == null ? 1 : 2; // an item, then its separator
 
   /// How many rows from the end a row's build asks for the next page.
   static const _nearEndRows = 3;

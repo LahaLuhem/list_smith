@@ -257,6 +257,82 @@ void main() {
       check(framePixels).every((it) => it.isGreaterOrEqual(0)); // never past the start
       check(_topOf(tester, 0)).equals(topAtRest);
     });
+
+    scenarioWidgets(
+      'without shouldKeepPosition, a row on screen holds still as a row lands above',
+      (tester) async {
+        final scrollController = _scrollController();
+        final controller = ListSmithController<_Row>();
+        // Built here rather than by _mount, which always passes the flag.
+        await pumpListSmith(
+          tester,
+          ListSmith<_Row>.async(
+            fetchPage: FakeServer(_rows).offsetLateFetcher,
+            itemIdGetter: (row) => row.id,
+            pageSize: _rows.length,
+            controller: controller,
+            scroll: ListScrollConfig(controller: scrollController),
+            itemBuilder: (_, row, _) => SizedBox(height: _rowExtent, child: Text('item ${row.id}')),
+          ),
+        );
+        await drain(tester);
+        scrollController.jumpTo(1000);
+        await tester.pump();
+        final topBefore = _topOf(tester, 20);
+        final pixelsBefore = scrollController.position.pixels;
+
+        controller.upsert(_row(100));
+        await tester.pump();
+
+        check(_topOf(tester, 20)).equals(topBefore);
+        // The row did land above: the position moved with it.
+        check(scrollController.position.pixels).isGreaterThan(pixelsBefore);
+      },
+    );
+
+    scenarioWidgets('with shouldKeepPosition off, a row landing above leaves the position alone', (
+      tester,
+    ) async {
+      final scrollController = _scrollController();
+      final controller = await _mount(shouldKeepPosition: false)(tester, scrollController);
+      final topBefore = _topOf(tester, 20);
+      final pixelsBefore = scrollController.position.pixels;
+
+      controller.upsert(_row(100));
+      await tester.pump();
+
+      check(scrollController.position.pixels).equals(pixelsBefore);
+      check(_topOf(tester, 20)).isGreaterThan(topBefore); // the row did land above
+    });
+
+    scenarioWidgets(
+      'with shouldKeepPosition off, a pull ending away from the start leaves the position alone',
+      (tester) async {
+        final server = FakeServer(_rows);
+        final scrollController = _scrollController();
+        await _mount(
+          scrollOffset: 0,
+          server: server,
+          refresh: _depthPullRefresh,
+          shouldKeepPosition: false,
+        )(tester, scrollController);
+        final holdCompleter = server.hold(0, attempt: 2);
+        await pullToRefresh(tester, find.text('item 0'));
+        scrollController.jumpTo(1000);
+        await tester.pump();
+        final topWhileOut = _topOf(tester, 20);
+        final pixelsWhileOut = scrollController.position.pixels;
+
+        final framePixels = await _releaseAndRecord(
+          tester,
+          holdCompleter,
+          () => scrollController.position.pixels,
+        );
+
+        check(framePixels).every((it) => it.equals(pixelsWhileOut));
+        check(_topOf(tester, 20)).isLessThan(topWhileOut); // the room did let go
+      },
+    );
   });
 }
 
@@ -271,6 +347,7 @@ _Mount _mount({
   Grouping<_Row>? grouping,
   IndexedWidgetBuilder? separatorBuilder,
   bool reverse = false,
+  bool shouldKeepPosition = true,
 }) => (tester, scrollController) async {
   final controller = ListSmithController<_Row>();
   await pumpListSmith(
@@ -282,6 +359,7 @@ _Mount _mount({
       refresh: refresh,
       order: order,
       editTransition: editTransition,
+      shouldKeepPosition: shouldKeepPosition,
       grouping: grouping,
       separatorBuilder: separatorBuilder,
       controller: controller,
@@ -315,7 +393,7 @@ final _depthPullRefresh = PullToRefresh(
 Future<List<T>> _releaseAndRecord<T>(
   WidgetTester tester,
   Completer<void> holdCompleter,
-  T Function() read,
+  ValueGetter<T> read,
 ) async {
   holdCompleter.complete();
   final readings = <T>[];

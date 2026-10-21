@@ -104,7 +104,7 @@ void main() {
 
     scenarioOutlineWidgets<
       ({
-        FakeServer<int> Function() makeServer,
+        ValueGetter<FakeServer<int>> makeServer,
         Set<PullableSurface> pullableSurfaces,
         bool isPulled,
       })
@@ -168,7 +168,7 @@ void main() {
 
 /// A list's data and scroll setup, and the drag that pulls it from its start edge.
 typedef _PullSetup = ({
-  FakeServer<int> Function() makeServer,
+  ValueGetter<FakeServer<int>> makeServer,
   ListScrollConfig Function(ScrollController controller) makeScrollConfig,
   Offset pullOffset,
 });

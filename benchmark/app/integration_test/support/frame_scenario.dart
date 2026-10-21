@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,10 +56,7 @@ Future<void> refreshThrough(
 ///
 /// `binding.watchPerformance` does this, but its GC-info step opens a localhost socket the sandboxed
 /// macOS app is denied. Same keys as `FrameTimingSummarizer.summary`, minus the GC counts.
-Future<Map<String, dynamic>> captureFrames(
-  WidgetsBinding binding,
-  Future<void> Function() action,
-) async {
+Future<Map<String, dynamic>> captureFrames(WidgetsBinding binding, AsyncCallback action) async {
   final timings = <FrameTiming>[];
   void collector(List<FrameTiming> batch) => timings.addAll(batch);
 
