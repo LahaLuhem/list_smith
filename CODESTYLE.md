@@ -266,6 +266,9 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   only breaks a hand-written fake.
 - **Inline logic with one caller.** A private helper called from one place reads better in it.
   Extract once a 2nd caller shows up, or when it's a cleaner seam to test, as `@visibleForTesting`.
+  The exception is a method the
+  [Code Complexity plugin](https://github.com/nikolaikopernik/code-complexity-plugin) scores over
+  100%: split it into its decisions, like `RenderScrollAnchor.performLayout`.
 - **Members stay private.** One another library has to reach takes `@internal`, or
   `@visibleForTesting` when only tests need it. A type only the package uses takes `@internal`
   itself, which covers its members, and a member a subclass must not override takes `@nonVirtual`.

@@ -7,6 +7,7 @@ import '/src/data/pagination/models/paging_state.dart';
 import '/src/data/pagination/typedefs/item_id_getter.dart';
 import '/src/data/presentation/typedefs/item_builder.dart';
 import '/src/data/presentation/utils/row_lookup.dart';
+import 'scroll_anchor.dart';
 
 /// What the list shows instead of its rows, or after them, defaults already filled in.
 @internal
@@ -135,19 +136,34 @@ class const _KeyedRows<T extends Object>({
   Widget build(BuildContext context) {
     final cellCount = rowLookup.itemCount + 1;
     final separatorBuilder = this.separatorBuilder;
+    final childrenPerItem = separatorBuilder == null ? 1 : 2; // an item, then its separator
 
-    return separatorBuilder == null
-        ? SliverList.builder(
-            itemCount: cellCount,
-            itemBuilder: _buildCell,
-            findChildIndexCallback: _indexOf,
-          )
-        : SliverList.separated(
-            itemCount: cellCount,
-            itemBuilder: _buildCell,
-            separatorBuilder: separatorBuilder,
-            findItemIndexCallback: _indexOf,
-          );
+    return ScrollAnchor(
+      rowIdGetter: (childIndex) {
+        final itemIndex = childIndex ~/ childrenPerItem;
+
+        return childIndex % childrenPerItem != 0 || itemIndex >= rowLookup.itemCount
+            ? null
+            : itemIdGetter(rowLookup.itemAt(itemIndex));
+      },
+      rowIndexGetter: (id, lastChildIndex) {
+        final itemIndex = rowLookup.indexOf(id, lastChildIndex ~/ childrenPerItem);
+
+        return itemIndex == null ? null : itemIndex * childrenPerItem;
+      },
+      sliver: separatorBuilder == null
+          ? SliverList.builder(
+              itemCount: cellCount,
+              itemBuilder: _buildCell,
+              findChildIndexCallback: _indexOf,
+            )
+          : SliverList.separated(
+              itemCount: cellCount,
+              itemBuilder: _buildCell,
+              separatorBuilder: separatorBuilder,
+              findItemIndexCallback: _indexOf,
+            ),
+    );
   }
 
   Widget _buildCell(BuildContext context, int index) {
