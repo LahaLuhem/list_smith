@@ -18,6 +18,7 @@ coverage/
 
 # Maintainer-only tooling.
 tool/
+
 # Context7 doc-indexer config, for context7.com rather than consumers.
 context7.json
 
