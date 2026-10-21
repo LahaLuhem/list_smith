@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 /// Collapses a fast-changing search query into one committed value.
 ///
@@ -8,7 +8,7 @@ import 'package:meta/meta.dart';
 @internal
 class QueryDebouncer({
   /// Called with the new committed, trimmed query once a scheduled change elapses.
-  required final void Function(String committedQuery) onCommitted,
+  required final ValueChanged<String> onCommitted,
 }) {
   var _committedQuery = '';
   Timer? _timer;

@@ -4,7 +4,7 @@ library;
 import 'dart:async';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show AsyncValueSetter, kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 import 'package:multi_value_listenable_builder_typed/multi_value_listenable_builder_typed.dart';
@@ -727,7 +727,7 @@ class _AsyncListViewState<T extends Object>()
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) async {
     final itemIdGetter = widget.source.itemIdGetter;
     final draftId = itemIdGetter(draft);
@@ -766,7 +766,7 @@ class _AsyncListViewState<T extends Object>()
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) async {
     final pendingEdit = _editStoreNotifier.pendingEdit(widget.source.itemIdGetter(item), null);
     _bookShrinkingOut(item, pendingEdit.book);
@@ -860,7 +860,7 @@ class _AsyncListViewState<T extends Object>()
   /// Called directly it cuts in, since [_runReload] is where a caller meets the live run.
   _ReloadRun<T> _startRun(
     FetchTrigger trigger,
-    Future<void> Function(_ReloadRun<T> run) work, {
+    AsyncValueSetter<_ReloadRun<T>> work, {
     bool announces = false,
   }) {
     final run = _ReloadRun(this, trigger);

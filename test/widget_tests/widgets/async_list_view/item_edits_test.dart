@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
@@ -38,7 +39,7 @@ void main() {
       check(cursors.toSet()).length.equals(cursors.length);
     });
 
-    scenarioOutlineWidgets<void Function(ListSmithController<_Row> controller)>(
+    scenarioOutlineWidgets<ValueSetter<ListSmithController<_Row>>>(
       'an edit made while a depth reload runs survives its commit',
       examples: {
         'a removal': (controller) => controller.remove((id: 1, label: 'a')),
@@ -367,9 +368,7 @@ void main() {
       return (server, controller);
     }
 
-    scenarioOutlineWidgets<
-      ({Refresh refresh, Future<void> Function(ListSmithController<_Row>) reread})
-    >(
+    scenarioOutlineWidgets<({Refresh refresh, AsyncValueSetter<ListSmithController<_Row>> reread})>(
       'a draft stays through a re-read while its save is out',
       examples: {
         'a depth reload': (
@@ -443,9 +442,7 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<
-      ({void Function(ListSmithController<_Row>) edit, List<String> shownRows})
-    >(
+    scenarioOutlineWidgets<({ValueSetter<ListSmithController<_Row>> edit, List<String> shownRows})>(
       'a new item and a delete hold through a re-read while their save is out',
       examples: {
         'a new item': (
@@ -520,7 +517,7 @@ void main() {
     });
 
     scenarioOutlineWidgets<
-      Future<void> Function(ListSmithController<_Row>, void Function(Exception exception) onFailure)
+      Future<void> Function(ListSmithController<_Row>, ValueSetter<Exception> onFailure)
     >(
       'a failed save goes to onFailure instead of throwing',
       examples: {

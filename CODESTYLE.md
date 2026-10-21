@@ -383,6 +383,23 @@ states.resolve(<WidgetState>{WidgetState.selected, if (!enabled) WidgetState.dis
 Keep `<Type>` where inference would fall back to `dynamic`: empty literals with no slot
 (`final xs = <Foo>[];`), and top-level or `static const` initialisers with no LHS type.
 
+<a id="idioms-sdk-callback-typedefs"></a>
+### The SDK's callback typedefs over written-out function types
+
+Where a function type matches one of Flutter's typedefs, use the most specific one. It names the
+callback's job, where `void Function(Exception exception)` has to be read as a signature.
+
+| Written out | Typedef |
+|---|---|
+| `void Function()` | `VoidCallback` |
+| `T Function()` | `ValueGetter<T>` |
+| `void Function(T)` | `ValueChanged<T>` when it fires on a change, else `ValueSetter<T>` |
+| `Future<void> Function()` | `AsyncCallback` |
+| `Future<void> Function(T)` | `AsyncValueSetter<T>` |
+
+Keep it written out where the parameter's name says something its type doesn't, since a typedef's
+parameter is a bare `value`. Several parameters, or a value returned from one, have no typedef.
+
 <a id="idioms-flex-spacing"></a>
 ### `Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps
 

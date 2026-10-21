@@ -5,7 +5,7 @@
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 import 'list_smith_controller_host.dart';
 
@@ -63,7 +63,7 @@ class ListSmithController<T extends Object>() {
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) =>
       _host?.upsertAsync(draft, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -73,7 +73,7 @@ class ListSmithController<T extends Object>() {
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) =>
       _host?.removeAsync(item, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -98,7 +98,7 @@ class ListSmithController<T extends Object>() {
   /// With no list attached there's nothing to roll back, only a failure to pass on.
   static Future<void> _reportFailure(
     Future<Object?> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   ) async {
     try {
       await commit;

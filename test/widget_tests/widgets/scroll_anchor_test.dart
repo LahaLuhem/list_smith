@@ -20,7 +20,7 @@ typedef _Mount = Future<ListSmithController<_Row>> Function(
 
 void main() {
   feature('ListSmith.async keeps what the user is reading in place', () {
-    scenarioOutlineWidgets<({_Mount mount, void Function(ListSmithController<_Row>) edit})>(
+    scenarioOutlineWidgets<({_Mount mount, ValueSetter<ListSmithController<_Row>> edit})>(
       'a row on screen holds still on every frame while rows above it change',
       examples: {
         'a new row at the start': (
