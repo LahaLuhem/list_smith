@@ -13,7 +13,7 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
   @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required Iterable<T> Function() flattenItems,
+    required ValueGetter<Iterable<T>> flattenItems,
     required Axis axis,
   }) => itemBuilder;
 

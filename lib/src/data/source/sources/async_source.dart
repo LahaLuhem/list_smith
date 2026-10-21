@@ -32,6 +32,9 @@ final class const AsyncSource<T extends Object>({
 
   /// How the server sorts the list, which edits are placed by.
   required final ItemOrder<T> order,
+
+  /// Whether the row on top holds still when rows above it change, or a pull's room does.
+  required final bool shouldKeepPosition,
 }) extends ListSource<T> {
   /// Creates it.
   this;
@@ -48,6 +51,7 @@ final class const AsyncSource<T extends Object>({
       'refresh: $refresh, '
       'search: $search, '
       'editTransition: $editTransition, '
-      'order: $order'
+      'order: $order, '
+      'shouldKeepPosition: $shouldKeepPosition'
       ')';
 }

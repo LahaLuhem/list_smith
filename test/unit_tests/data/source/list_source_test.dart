@@ -13,6 +13,7 @@ void main() {
     itemIdGetter: (item) => item,
     editTransition: const NoEditTransition(),
     order: const UnknownOrder(),
+    shouldKeepPosition: true,
     pageSize: 20,
     endPolicy: const StopOnEmptyPagesPolicy(),
     onEmptyPage: const ShowEmptySurface(),
