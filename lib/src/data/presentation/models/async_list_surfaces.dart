@@ -1,4 +1,4 @@
-/// @docImport '/src/data/refresh/models/refresh.dart';
+/// @docImport '/src/data/refresh/refresh.dart';
 library;
 
 import 'package:flutter/widgets.dart';

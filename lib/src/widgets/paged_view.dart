@@ -1,22 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:meta/meta.dart';
 
-import '/src/data/grouping/models/grouping.dart';
-import '/src/data/pagination/models/paging_state.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
-import '/src/data/presentation/models/list_scroll_config.dart';
-import '/src/data/presentation/typedefs/error_builder.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/typedefs/no_results_builder.dart';
-import '/src/data/refresh/models/refresh.dart';
-import 'defaults/neutral_empty_indicator.dart';
-import 'defaults/neutral_error_indicator.dart';
-import 'defaults/neutral_loading_indicator.dart';
-import 'defaults/neutral_no_more_items_indicator.dart';
-import 'defaults/neutral_no_results_indicator.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
+import '/src/data/refresh/refresh.dart';
+import 'defaults/defaults.dart';
 import 'keyed_paged_list_view.dart';
 
 /// The async list, with every surface filled by our neutral default or the consumer's override.
@@ -51,6 +42,9 @@ class const PagedView<T extends Object>({
 
   /// Whether a pull may start on what shows, read as a drag goes.
   required final ValueGetter<bool> takesPullGetter,
+
+  /// How far a pull pushes the list now.
+  required final ValueListenable<double> pullExtentListenable,
 
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
@@ -92,34 +86,33 @@ class const PagedView<T extends Object>({
     // The group look-back only walks the pages when grouping is on, since decorate takes it as a callback.
     itemBuilder: grouping.decorate(
       itemBuilder,
-      flattenItems: () => state.pages?.expand((page) => page.items) ?? const Iterable.empty(),
+      flattenItems: () => state.items,
       axis: scrollConfig.scrollDirection,
     ),
     itemIdGetter: itemIdGetter,
     // The error surfaces read `state.exception!`, non-null because only an error status builds them.
     surfaces: (
-      firstPageLoading: (context) =>
-          firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
+      firstPageLoading: firstPageLoadingBuilder ?? (_) => const NeutralLoadingIndicator(),
       firstPageError: (_) => _ResolvedError(
         exception: state.exception!,
         onRetry: onRetry,
         builder: firstPageErrorBuilder,
       ),
-      noItemsFound: (context) => isSearchMode
-          ? (noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator())
-          : (emptyBuilder?.call(context) ?? const NeutralEmptyIndicator()),
-      newPageLoading: (context) =>
-          newPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
+      noItemsFound: isSearchMode
+          ? (context) => noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator()
+          : emptyBuilder ?? (_) => const NeutralEmptyIndicator(),
+      newPageLoading:
+          newPageLoadingBuilder ?? (_) => const NeutralLoadingIndicator(isCompact: true),
       newPageError: (_) => _ResolvedError(
         exception: state.exception!,
         onRetry: onRetry,
         builder: newPageErrorBuilder,
         isCompact: true,
       ),
-      noMoreItems: (context) =>
-          noMoreItemsBuilder?.call(context) ?? const NeutralNoMoreItemsIndicator(),
+      noMoreItems: noMoreItemsBuilder ?? (_) => const NeutralNoMoreItemsIndicator(),
     ),
     onNearEnd: onNearEnd,
+    pullExtentListenable: pullExtentListenable,
     separatorBuilder: separatorBuilder,
     controller: scrollConfig.controller,
     scrollDirection: scrollConfig.scrollDirection,

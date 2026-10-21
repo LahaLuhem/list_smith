@@ -6,7 +6,7 @@
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:list_smith/src/data/observer/models/list_smith_observer.dart';
+import 'package:list_smith/src/data/observer/observer.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';

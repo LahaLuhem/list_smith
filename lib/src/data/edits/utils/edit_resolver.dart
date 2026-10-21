@@ -1,9 +1,9 @@
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
+// Not the barrel: it pulls in Flutter, and the micros compile this without it.
 import '/src/data/grouping/typedefs/group_key_of.dart';
-import '/src/data/pagination/models/loaded_page.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
+import '/src/data/pagination/pagination.dart';
 import '../models/item_edit.dart';
 
 /// The start given to a group that isn't loaded, whose items open on top instead.

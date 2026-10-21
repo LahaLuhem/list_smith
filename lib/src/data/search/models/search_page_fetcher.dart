@@ -1,9 +1,6 @@
-/// @docImport '/src/data/pagination/models/page_fetcher.dart';
-library;
-
 import 'package:meta/meta.dart';
 
-import '/src/data/pagination/enums/signal_kind.dart';
+import '/src/data/pagination/pagination.dart';
 import 'search_page_request.dart';
 
 /// Fetches one page of search results, from the [SearchPageRequest] describing it.

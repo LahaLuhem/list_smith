@@ -1,6 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/search/utils/sync_search_resolver.dart';
+import 'package:list_smith/src/data/search/search.dart';
 
 void main() {
   final syncSearchFeature = BddFeature('Sync search resolution');

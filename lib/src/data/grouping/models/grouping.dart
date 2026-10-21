@@ -4,7 +4,7 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/presentation/presentation.dart';
 import '/src/widgets/grouped_item.dart';
 import '../typedefs/group_header_builder.dart';
 import '../typedefs/group_key_of.dart';
@@ -32,7 +32,7 @@ sealed class const Grouping<T extends Object>() {
   @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required Iterable<T> Function() flattenItems,
+    required ValueGetter<Iterable<T>> flattenItems,
     required Axis axis,
   });
 

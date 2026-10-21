@@ -1,5 +1,5 @@
-/// @docImport '/src/data/control/models/list_smith_controller.dart';
-/// @docImport '/src/data/pagination/models/page_request.dart';
+/// @docImport '/src/data/control/control.dart';
+/// @docImport '../models/page_request.dart';
 library;
 
 /// Why list_smith asked for a page, carried on every [PageRequest].

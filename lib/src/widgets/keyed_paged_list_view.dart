@@ -1,12 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:meta/meta.dart';
 
-import '/src/data/pagination/models/paging_state.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/utils/row_lookup.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
 import 'scroll_anchor.dart';
 
 /// What the list shows instead of its rows, or after them, defaults already filled in.
@@ -38,6 +36,9 @@ class const KeyedPagedListView<T extends Object>({
 
   /// Asks for the next page. Called while a row near the end builds.
   required final VoidCallback onNearEnd,
+
+  /// How far a pull pushes the list now.
+  required final ValueListenable<double> pullExtentListenable,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -94,6 +95,7 @@ class const KeyedPagedListView<T extends Object>({
       separatorBuilder: separatorBuilder,
       // Only here does scrolling ask for more, so a failed page waits for Retry.
       onNearEnd: status != .ongoing ? null : onNearEnd,
+      pullExtentListenable: pullExtentListenable,
     );
   }
 }
@@ -131,6 +133,7 @@ class const _KeyedRows<T extends Object>({
   required final WidgetBuilder footerBuilder,
   required final IndexedWidgetBuilder? separatorBuilder,
   required final VoidCallback? onNearEnd,
+  required final ValueListenable<double> pullExtentListenable,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -151,6 +154,7 @@ class const _KeyedRows<T extends Object>({
 
         return itemIndex == null ? null : itemIndex * childrenPerItem;
       },
+      pullExtentListenable: pullExtentListenable,
       sliver: separatorBuilder == null
           ? SliverList.builder(
               itemCount: cellCount,

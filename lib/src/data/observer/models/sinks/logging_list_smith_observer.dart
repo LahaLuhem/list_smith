@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import '/src/data/pagination/enums/fetch_trigger.dart';
+import '/src/data/pagination/pagination.dart';
 import '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.

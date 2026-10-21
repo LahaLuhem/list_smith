@@ -1,6 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/search/models/sync_search_predicates.dart';
+import 'package:list_smith/src/data/search/search.dart';
 
 typedef _City = ({String name, String? country});
 

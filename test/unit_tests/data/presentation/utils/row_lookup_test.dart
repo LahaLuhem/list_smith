@@ -1,7 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
-import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
+import 'package:list_smith/src/data/presentation/presentation.dart';
 
 void main() {
   final lookupFeature = BddFeature('Row lookup');

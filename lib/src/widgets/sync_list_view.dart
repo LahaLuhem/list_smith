@@ -4,16 +4,12 @@ library;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/grouping/models/grouping.dart';
-import '/src/data/presentation/extensions/list_scroll_config_resolver_extension.dart';
-import '/src/data/presentation/models/list_scroll_config.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/typedefs/no_results_builder.dart';
-import '/src/data/search/utils/sync_search_resolver.dart';
-import '/src/data/source/list_source.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/presentation/presentation.dart';
+import '/src/data/search/search.dart';
+import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
-import 'defaults/neutral_empty_indicator.dart';
-import 'defaults/neutral_no_results_indicator.dart';
+import 'defaults/defaults.dart';
 
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and renders it with a plain `ListView`.

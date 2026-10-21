@@ -1,14 +1,9 @@
 import 'package:meta/meta.dart';
 
-import '/src/data/edits/models/edit_transition.dart';
-import '/src/data/edits/models/item_order.dart';
-import '/src/data/pagination/models/empty_page_behaviour.dart';
-import '/src/data/pagination/models/page_fetcher.dart';
-import '/src/data/pagination/models/pagination_end_policy.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/refresh/models/refresh.dart';
-import '/src/data/search/models/search.dart';
-import '/src/data/search/typedefs/sync_search_predicate.dart';
+import '/src/data/edits/edits.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/refresh/refresh.dart';
+import '/src/data/search/search.dart';
 
 part 'sources/async_source.dart';
 part 'sources/sync_source.dart';

@@ -1,9 +1,8 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:collection/collection.dart';
-import 'package:list_smith/src/data/edits/models/item_edit.dart';
-import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
-import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
+import 'package:list_smith/src/data/edits/edits.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
 
 typedef _Row = ({int id, String label});
 typedef _Placed = ({int id, int group});
