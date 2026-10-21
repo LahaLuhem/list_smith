@@ -1,4 +1,4 @@
-# Not ../../analysis_options.yaml, the same as the example's.
+# The shared lints straight from the package, like every app here, not ../../analysis_options.yaml.
 include: package:dartender_lints/analysis_options.yaml
 
 # The shared lints, relaxed only where the benchmark host needs it:

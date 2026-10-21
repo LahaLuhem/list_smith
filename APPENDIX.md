@@ -585,7 +585,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   Action inputs check fails on an input an action no longer takes, but not on a default it flipped.
   `setup-uv` v9 flipped `prune-cache` to `false`, and v10 made `enable-cache: auto` skip
   `pull_request_target`, `workflow_run`, `release` and tag pushes. v10 was a no-op here only because
-  every `setup-uv` step already wrote `enable-cache: true`.
+  every `setup-uv` step in this repo's own workflows already wrote `enable-cache: true`.
 - **A required workflow can't have a `paths:` filter.** A filtered run never reports on a PR outside
   its paths, so the PR waits forever. That's why `bench-app.yml` runs on every PR, as the only
   analysis of a host app that gets bumps of its own ([why](#root-analysis-skips-bench-app)).

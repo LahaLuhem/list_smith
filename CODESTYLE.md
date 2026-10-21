@@ -692,8 +692,8 @@ a docImport served and the directive (and its `library;`) go too.
 <a id="dcm-rules"></a>
 ## DCM rules (applied by hand)
 
-`flutter analyze` does not run these. The project treats them as non-negotiable and expects to be
-clean under the DCM CLI (`dcm analyze <dir>`):
+`dart analyze` does not run these, and neither does CI. The project treats them as non-negotiable
+and expects to be clean under the DCM CLI (`dcm analyze <dir>`):
 
 - **`no-empty-block`**: every block has code or a `// TODO(handle): …` explaining the gap. Empty
   catch clauses are excused. `onRefresh: () {}` is a violation, so give it work or a TODO. A
