@@ -100,7 +100,13 @@ void main() {
           await _pumpFrames(tester);
         }
       });
-      records.add(buildFrameRecord(scenario: 'edit_transitions_$name', summary: summary));
+      records.add(
+        buildFrameRecord(
+          scenario: 'edit_transitions_$name',
+          iterations: _iterations,
+          summary: summary,
+        ),
+      );
     }
 
     binding.reportData = <String, dynamic>{'output_path': _outputPath, 'records': records};

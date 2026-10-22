@@ -118,20 +118,20 @@ def frame_scenarios_table(dataframe: pl.DataFrame, thread: FrameThread) -> str:
         return "_(no frame-scenario data in input)_\n"
 
     agg = (
-        df.group_by("scenario")
+        df.group_by("scenario", "platform")
         .agg(
             pl.col("frame_count").median().alias("frames"),
             *(pl.col(column).median().alias(stat) for stat, column in columns.items()),
         )
-        .sort("scenario")
+        .sort("scenario", "platform")
     )
 
     rows = [
-        f"| Scenario | Frames | Avg {thread} (ms) | Worst {thread} (ms) | p99 {thread} (ms) "
-        "| Missed |",
-        "|---|---:|---:|---:|---:|---:|",
+        f"| Scenario | Platform | Frames | Avg {thread} (ms) | Worst {thread} (ms) "
+        f"| p99 {thread} (ms) | Missed |",
+        "|---|---|---:|---:|---:|---:|---:|",
         *(
-            f"| `{row['scenario']}` | {row['frames']:.0f} | {row['avg']:.2f} "
+            f"| `{row['scenario']}` | {row['platform']} | {row['frames']:.0f} | {row['avg']:.2f} "
             f"| {row['worst']:.2f} | {row['p99']:.2f} | {row['missed']:.0f} |"
             for row in agg.iter_rows(named=True)
         ),
@@ -140,7 +140,7 @@ def frame_scenarios_table(dataframe: pl.DataFrame, thread: FrameThread) -> str:
 
 
 def _latency_by_delay(dataframe: pl.DataFrame) -> pl.DataFrame | None:
-    """Median render latency per observer delay, or None without `slow_observer` data."""
+    """Median render latency per platform and delay, or None without `slow_observer` data."""
     metric = "median_render_latency_micros"
     if metric not in dataframe.columns or "observer_delay_millis" not in dataframe.columns:
         return None
@@ -152,12 +152,12 @@ def _latency_by_delay(dataframe: pl.DataFrame) -> pl.DataFrame | None:
         return None
 
     return (
-        df.group_by("observer_delay_millis")
+        df.group_by("platform", "observer_delay_millis")
         .agg(
             pl.col(metric).median().alias("median"),
             pl.col("iterations").first().alias("n"),
         )
-        .sort("observer_delay_millis")
+        .sort("platform", "observer_delay_millis")
     )
 
 
@@ -168,8 +168,9 @@ def render_latency_table(dataframe: pl.DataFrame) -> str:
         return "_(no slow_observer data in input)_\n"
 
     rows = [
-        "| Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |",
-        "|---:|---:|---:|---:|",
+        "| Platform | Observer delay (ms) | Median render latency (ms) "
+        "| Render minus observer (ms) | N |",
+        "|---|---:|---:|---:|---:|",
         *map(_latency_row, agg.iter_rows(named=True)),
     ]
     return "\n".join(rows) + "\n"
@@ -178,15 +179,20 @@ def render_latency_table(dataframe: pl.DataFrame) -> str:
 def _observer_example(dataframe: pl.DataFrame, *, delay_ms: int = 50) -> str:
     """The headline's example, read off the capture. Empty when nothing ran at `delay_ms`."""
     agg = _latency_by_delay(dataframe)
-    row = None if agg is None else agg.filter(pl.col("observer_delay_millis") == delay_ms)
-    if row is None or row.is_empty():
+    rows = (
+        []
+        if agg is None
+        else list(agg.filter(pl.col("observer_delay_millis") == delay_ms).iter_rows(named=True))
+    )
+    if not rows:
         return ""
 
-    latency_ms = row["median"][0] / 1000.0
-    return (
-        f", so a {delay_ms} ms observer pushes ~{latency_ms - delay_ms:.0f} ms to "
-        f"~{latency_ms:.0f} ms"
-    )
+    pushes = []
+    for row in rows:
+        latency_ms = row["median"] / 1000.0
+        on_platform = f" on {row['platform']}" if len(rows) > 1 else ""
+        pushes.append(f"~{latency_ms - delay_ms:.0f} ms to ~{latency_ms:.0f} ms{on_platform}")
+    return f", so a {delay_ms} ms observer pushes {' and '.join(pushes)}"
 
 
 def _latency_row(row: dict[str, Any]) -> str:
@@ -194,7 +200,9 @@ def _latency_row(row: dict[str, Any]) -> str:
     latency_ms = row["median"] / 1000.0
     # Render latency minus the observer's own block: the list_smith render the observer sits on.
     baseline_ms = latency_ms - delay
-    return f"| {delay:.0f} | {latency_ms:,.1f} | {baseline_ms:,.1f} | {row['n']} |"
+    return (
+        f"| {row['platform']} | {delay:.0f} | {latency_ms:,.1f} | {baseline_ms:,.1f} | {row['n']} |"
+    )
 
 
 def render_summary_markdown(
@@ -210,9 +218,10 @@ def render_summary_markdown(
     parts: list[str] = [
         "# Benchmark results\n",
         f"Captured **{metadata['date']}** against `{metadata['package_version']}` at "
-        f"`{metadata['git_sha']}` on Dart SDK {metadata['sdk_version']}. "
-        f"N={metadata['iterations']} iterations.\n",
-        "> Per-machine measurements, reflecting *this* machine's CPU, GPU, GC, OS scheduler and "
+        f"`{metadata['git_sha']}` on Dart SDK {metadata['sdk_version']}"
+        + (f", UI scenarios on {metadata['platforms']}" if metadata["platforms"] else "")
+        + f". N={metadata['iterations']} iterations.\n",
+        "> Per-device measurements, reflecting each device's CPU, GPU, GC, OS scheduler and "
         "thermal state. Yours WILL differ, so capture your own baseline before measuring a "
         "delta.\n",
         "## Observer on the critical path: a slow observer blocks rendering\n",
@@ -306,13 +315,15 @@ def render_summary_markdown(
     parts.extend(
         [
             "## UI scenarios: per-frame build cost\n",
-            "From the profile-mode `integration_test` scenarios, real frames on this machine. "
+            "From the profile-mode `integration_test` scenarios, real frames on one device per "
+            "platform. "
             "`avg`, `worst` and `p99 build` are the UI-thread build cost per frame, which is "
             "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
             "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
             "attribution: that small delta is what list_smith adds to a plain list. "
             "`edit_transitions_none` makes the same edits as `_size`, `_fade` and `_slide` with no "
-            "transition, so the gap is what animating them adds.\n",
+            "transition, so the gap is what animating them adds. `_size_scrolled` makes `_size`'s "
+            "edits just above the screen, where the rows on it are held still.\n",
             frame_scenarios_table(dataframe, "build"),
         ]
     )

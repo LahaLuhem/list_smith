@@ -10,7 +10,8 @@ import pytest
 
 from list_smith_bench.data.utils import charts
 
-_FRAME_SCENARIOS = ["isp_scroll", "cri_refresh"]
+_FRAME_SCENARIOS = ["isp_scroll", "isp_scroll", "cri_refresh", "cri_refresh"]
+_FRAME_PLATFORMS = ["Android", "iOS", "Android", "iOS"]
 
 
 class TestReportCharts:
@@ -48,8 +49,9 @@ class TestReportCharts:
                 charts.plot_frame_costs,
                 {
                     "scenario": _FRAME_SCENARIOS,
-                    "avg_frame_build_millis": [0.4, 0.2],
-                    "p99_frame_build_millis": [1.0, 0.6],
+                    "platform": _FRAME_PLATFORMS,
+                    "avg_frame_build_millis": [0.4, 0.3, 0.2, 0.2],
+                    "p99_frame_build_millis": [1.0, 0.8, 0.6, 0.5],
                 },
                 id="frame_costs",
             ),
@@ -57,17 +59,19 @@ class TestReportCharts:
                 charts.plot_frame_raster_costs,
                 {
                     "scenario": _FRAME_SCENARIOS,
-                    "avg_frame_raster_millis": [0.9, 0.5],
-                    "p99_frame_raster_millis": [2.0, 1.2],
+                    "platform": _FRAME_PLATFORMS,
+                    "avg_frame_raster_millis": [0.9, 0.8, 0.5, 0.4],
+                    "p99_frame_raster_millis": [2.0, 1.8, 1.2, 1.0],
                 },
                 id="frame_raster_costs",
             ),
             pytest.param(
                 charts.plot_observer_latency,
                 {
-                    "scenario": ["slow_observer"] * 2,
-                    "observer_delay_millis": [0, 50],
-                    "median_render_latency_micros": [20_000.0, 71_000.0],
+                    "scenario": ["slow_observer"] * 4,
+                    "platform": ["Android", "Android", "iOS", "iOS"],
+                    "observer_delay_millis": [0, 50, 0, 50],
+                    "median_render_latency_micros": [20_000.0, 71_000.0, 18_000.0, 69_000.0],
                 },
                 id="observer_latency",
             ),

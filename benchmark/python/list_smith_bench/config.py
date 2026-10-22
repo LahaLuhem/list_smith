@@ -30,9 +30,10 @@ APP_DIR: Final[Path] = BENCHMARK_DIR / "app"
 SCENARIOS_DIR: Final[Path] = APP_DIR / "integration_test"
 # Driver passed to `flutter drive`, relative to APP_DIR.
 PERF_DRIVER_TARGET: Final[str] = "test_driver/perf_driver.dart"
-# macOS desktop is the reference target, being real and quiet hardware. The Android emulator
-# (e.g. emulator-5554) is a one-flag directional cross-check.
+# Needs nothing attached. The committed report comes from phones instead, see ../README.md.
 DEFAULT_SCENARIO_DEVICE: Final[str] = "macos"
+# What a UI record's `platform` (Dart's `Platform.operatingSystem`) shows as in charts and tables.
+PLATFORM_LABELS: Final[dict[str, str]] = {"android": "Android", "ios": "iOS", "macos": "macOS"}
 
 # ---- run defaults ---------------------------------------------------------
 

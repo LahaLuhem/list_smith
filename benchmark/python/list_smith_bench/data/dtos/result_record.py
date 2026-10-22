@@ -7,11 +7,18 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from list_smith_bench.config import PLATFORM_LABELS
+
 # The thread a frame scenario's summary keys name, as in `avg_frame_<thread>_millis`.
 type FrameThread = Literal["build", "raster"]
 
 # One JSON-decoded record, shaped as in `benchmark/README.md`'s Result JSON schema.
 ResultRecord = dict[str, Any]
+
+
+def platform_label(platform: object) -> str:
+    """How a record's `platform` reads in a report, `unknown` before records carried one."""
+    return PLATFORM_LABELS.get(str(platform), str(platform)) if platform else "unknown"
 
 
 def flatten_records(records: list[ResultRecord]) -> list[dict[str, Any]]:
@@ -24,6 +31,7 @@ def flatten_records(records: list[ResultRecord]) -> list[dict[str, Any]]:
     for rec in records:
         flat: dict[str, Any] = {
             "scenario": rec.get("scenario", "?"),
+            "platform": platform_label(rec.get("platform")),
             "iteration": rec.get("iteration", -1),
             "git_sha": rec.get("git_sha", "?"),
             "package_version": rec.get("package_version", "?"),

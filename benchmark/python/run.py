@@ -92,7 +92,9 @@ def _add_report_parser(sub: argparse._SubParsersAction) -> None:
     parser_report = sub.add_parser(
         "report", help="render PNG charts + SUMMARY.md from aggregated.json"
     )
-    parser_report.add_argument("results", help="path to aggregated.json")
+    parser_report.add_argument(
+        "results", nargs="+", help="aggregated.json files: one per platform, plus a micros run"
+    )
     parser_report.add_argument(
         "--out",
         default=None,

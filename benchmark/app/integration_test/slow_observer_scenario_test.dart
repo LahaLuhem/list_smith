@@ -106,6 +106,8 @@ Map<String, dynamic> _buildRecord(int delayMillis, List<int> latencies, int tota
   return <String, dynamic>{
     'scenario': 'slow_observer',
     'iteration': 0,
+    'iterations': _iterations,
+    'platform': Platform.operatingSystem,
     'sdk_version': Platform.version.split(' ').first,
     'package_version': _packageVersion,
     'git_sha': _gitSha,
