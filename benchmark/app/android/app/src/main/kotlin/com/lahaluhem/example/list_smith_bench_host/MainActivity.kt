@@ -1,4 +1,4 @@
-package com.example.list_smith_bench_host
+package com.lahaluhem.example.list_smith_bench_host
 
 import io.flutter.embedding.android.FlutterActivity
 

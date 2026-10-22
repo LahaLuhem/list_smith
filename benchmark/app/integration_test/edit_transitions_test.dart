@@ -1,7 +1,8 @@
 /// Scenario: frame cost while edits come and go, under each kind of edit transition.
 ///
 /// Each variant cycles an upsert of a new item and its removal. `none` makes the same edits with no
-/// transition, so the other 3 read as what animating them adds.
+/// transition, so the others read as what animating them adds. `size_scrolled` makes `size`'s edits
+/// just above the screen, where the list holds the rows on it still on every frame.
 library;
 
 import 'package:flutter/widgets.dart';
@@ -25,23 +26,35 @@ const _framesPerEdit = 25;
 // Fixed pumps settle the page, so every variant warms up over the same frames.
 const _warmupPumps = 10;
 
+// Off the start, but near enough that an edit there is built, inside the cache extent.
+const _scrolledOffset = 112.0;
+
 final _slideInTween = Tween(begin: const Offset(1, 0), end: Offset.zero);
 
-final _variants = <String, EditTransition>{
-  'none': const NoEditTransition(),
-  'size': EditTransition(
-    duration: _transitionDuration,
-    transitionBuilder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
+final _sizeTransition = EditTransition(
+  duration: _transitionDuration,
+  transitionBuilder: (child, animation) => SizeTransition(sizeFactor: animation, child: child),
+);
+
+final _variants = <String, ({EditTransition editTransition, double scrollOffset})>{
+  'none': (editTransition: const NoEditTransition(), scrollOffset: 0),
+  'size': (editTransition: _sizeTransition, scrollOffset: 0),
+  'fade': (
+    editTransition: EditTransition(
+      duration: _transitionDuration,
+      transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+    ),
+    scrollOffset: 0,
   ),
-  'fade': EditTransition(
-    duration: _transitionDuration,
-    transitionBuilder: (child, animation) => FadeTransition(opacity: animation, child: child),
+  'slide': (
+    editTransition: EditTransition(
+      duration: _transitionDuration,
+      transitionBuilder: (child, animation) =>
+          SlideTransition(position: _slideInTween.animate(animation), child: child),
+    ),
+    scrollOffset: 0,
   ),
-  'slide': EditTransition(
-    duration: _transitionDuration,
-    transitionBuilder: (child, animation) =>
-        SlideTransition(position: _slideInTween.animate(animation), child: child),
-  ),
+  'size_scrolled': (editTransition: _sizeTransition, scrollOffset: _scrolledOffset),
 };
 
 void main() {
@@ -50,8 +63,10 @@ void main() {
   testWidgets('edits coming and going under each edit transition', (tester) async {
     final records = <Map<String, dynamic>>[];
 
-    for (final MapEntry(key: name, value: editTransition) in _variants.entries) {
+    for (final MapEntry(key: name, value: (:editTransition, :scrollOffset)) in _variants.entries) {
       final controller = ListSmithController<int>();
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
       await tester.pumpWidget(
         HostFrame(
           key: ValueKey(name),
@@ -65,6 +80,7 @@ void main() {
             refresh: const NoRefresh(),
             editTransition: editTransition,
             controller: controller,
+            scroll: ListScrollConfig(controller: scrollController),
             itemBuilder: (_, item, _) => ScrollBenchItem(index: item),
           ),
         ),
@@ -72,6 +88,8 @@ void main() {
       for (var i = 0; i < _warmupPumps; i++) {
         await tester.pump(const Duration(milliseconds: 16));
       }
+      scrollController.jumpTo(scrollOffset);
+      await tester.pump(const Duration(milliseconds: 16));
 
       final summary = await captureFrames(binding, () async {
         for (var cycle = 0; cycle < _iterations; cycle++) {
