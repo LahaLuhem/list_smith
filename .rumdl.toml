@@ -8,6 +8,7 @@ exclude = [
     ".github/ISSUE_TEMPLATE/**",
     "example/ios/**",
     "example/android/**",
+    "benchmark/app/ios/**",
     "benchmark/reports/**",
 ]
 # MD033 inline HTML: intentional (<details>, <summary>, <a id> anchors).
