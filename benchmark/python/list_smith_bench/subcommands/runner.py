@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+from contextlib import nullcontext
 from pathlib import Path
 
 from list_smith_bench.config import (
@@ -107,8 +108,10 @@ def _run_scenarios(
 
     # CocoaPods needs a UTF-8 locale in the macOS build.
     env = {**os.environ, "LANG": "en_US.UTF-8", "LC_ALL": "en_US.UTF-8"}
+    is_macos_run = args.device == "macos"
     records: list[ResultRecord] = []
-    with macos_desktop_enabled():
+    # The flag is global, so a phone run never switches it and a killed one can't leave it on.
+    with macos_desktop_enabled() if is_macos_run else nullcontext():
         for scenario in scenarios:
             scenario_outdir = outdir / scenario.stem
             scenario_outdir.mkdir(parents=True, exist_ok=True)
@@ -127,7 +130,7 @@ def _run_scenarios(
                     args.device,
                     # Teardown otherwise uninstalls, and each fresh iOS install asks for local
                     # network access again. A desktop window left open would take the next focus.
-                    *([] if args.device == "macos" else ["--keep-app-running"]),
+                    *([] if is_macos_run else ["--keep-app-running"]),
                     f"--dart-define=ITERATIONS={args.iterations}",
                     f"--dart-define=OUTPUT={out_json}",
                     f"--dart-define=GIT_SHA={git_sha}",
