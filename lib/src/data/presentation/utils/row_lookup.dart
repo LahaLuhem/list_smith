@@ -1,8 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/pagination/models/loaded_page.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
+import '/src/data/pagination/pagination.dart';
 
 /// Where each row's item sits in one build of the async list, for its `findChildIndexCallback`.
 ///

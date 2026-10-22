@@ -1,6 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/pagination/models/paging_state.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
 
 import '../../../../support/support.dart';
 

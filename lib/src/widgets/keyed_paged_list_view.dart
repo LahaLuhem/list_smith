@@ -1,12 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:meta/meta.dart';
 
-import '/src/data/pagination/models/paging_state.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/utils/row_lookup.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
+import 'scroll_anchor.dart';
 
 /// What the list shows instead of its rows, or after them, defaults already filled in.
 @internal
@@ -37,6 +36,12 @@ class const KeyedPagedListView<T extends Object>({
 
   /// Asks for the next page. Called while a row near the end builds.
   required final VoidCallback onNearEnd,
+
+  /// How far a pull pushes the list now.
+  required final ValueListenable<double> pullExtentListenable,
+
+  /// Whether the row on top holds still when rows above it change, or a pull's room does.
+  required final bool shouldKeepPosition,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -93,6 +98,8 @@ class const KeyedPagedListView<T extends Object>({
       separatorBuilder: separatorBuilder,
       // Only here does scrolling ask for more, so a failed page waits for Retry.
       onNearEnd: status != .ongoing ? null : onNearEnd,
+      pullExtentListenable: pullExtentListenable,
+      shouldKeepPosition: shouldKeepPosition,
     );
   }
 }
@@ -130,13 +137,14 @@ class const _KeyedRows<T extends Object>({
   required final WidgetBuilder footerBuilder,
   required final IndexedWidgetBuilder? separatorBuilder,
   required final VoidCallback? onNearEnd,
+  required final ValueListenable<double> pullExtentListenable,
+  required final bool shouldKeepPosition,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cellCount = rowLookup.itemCount + 1;
     final separatorBuilder = this.separatorBuilder;
-
-    return separatorBuilder == null
+    final rowsSliverList = separatorBuilder == null
         ? SliverList.builder(
             itemCount: cellCount,
             itemBuilder: _buildCell,
@@ -148,6 +156,24 @@ class const _KeyedRows<T extends Object>({
             separatorBuilder: separatorBuilder,
             findItemIndexCallback: _indexOf,
           );
+    if (!shouldKeepPosition) return rowsSliverList;
+
+    return ScrollAnchor(
+      rowIdGetter: (childIndex) {
+        final itemIndex = childIndex ~/ _childrenPerItem;
+
+        return childIndex % _childrenPerItem != 0 || itemIndex >= rowLookup.itemCount
+            ? null
+            : itemIdGetter(rowLookup.itemAt(itemIndex));
+      },
+      rowIndexGetter: (id, lastChildIndex) {
+        final itemIndex = rowLookup.indexOf(id, lastChildIndex ~/ _childrenPerItem);
+
+        return itemIndex == null ? null : itemIndex * _childrenPerItem;
+      },
+      pullExtentListenable: pullExtentListenable,
+      sliver: rowsSliverList,
+    );
   }
 
   Widget _buildCell(BuildContext context, int index) {
@@ -164,6 +190,8 @@ class const _KeyedRows<T extends Object>({
   }
 
   int? _indexOf(Key key) => key is! _RowKey ? null : rowLookup.indexOf(key.id, key.index);
+
+  int get _childrenPerItem => separatorBuilder == null ? 1 : 2; // an item, then its separator
 
   /// How many rows from the end a row's build asks for the next page.
   static const _nearEndRows = 3;

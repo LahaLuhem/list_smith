@@ -1,7 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/edits/models/removal_stamps.dart';
-import 'package:list_smith/src/data/refresh/utils/line_up_resolver.dart';
+import 'package:list_smith/src/data/edits/edits.dart';
+import 'package:list_smith/src/data/refresh/refresh.dart';
 
 void main() {
   final lineUpFeature = BddFeature('Depth reload line-up');

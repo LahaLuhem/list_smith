@@ -2,7 +2,7 @@
 
 The imports sit at module level on purpose, since this module only works with the analysis stack
 installed. Subcommands check `find_spec` first, so a missing package points at `uv sync`. seaborn
-takes the polars frames directly and converts to pandas itself, so there's no pandas import here.
+reads pandas only, so each plot hands it `.to_pandas()`, which pyarrow backs.
 
 Each plot returns the `Path` it wrote, or `None` when it has no data, so the caller can skip that
 chart in the markdown.
@@ -64,7 +64,7 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="list_size",
         y=metric,
         ax=ax,
@@ -112,7 +112,7 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="list_size",
         y=metric,
         ax=ax,
@@ -161,7 +161,7 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="item_count",
         y=metric,
         ax=ax,
@@ -216,63 +216,62 @@ def _plot_frame_thread_costs(
     dataframe: pl.DataFrame, out_path: Path, *, thread: FrameThread, title: str
 ) -> Path | None:
     # No worst: it's one frame, on raster nearly always the 1st, so it swings per run.
-    stat_labels = {f"{stat}_frame_{thread}_millis": stat for stat in ("avg", "p99")}
+    stat_columns = {stat: f"{stat}_frame_{thread}_millis" for stat in ("avg", "p99")}
     # Captures from before the raster p99 was recorded get no raster chart.
-    if not set(stat_labels) <= set(dataframe.columns):
+    if not set(stat_columns.values()) <= set(dataframe.columns):
         return None
 
-    df = dataframe.filter(pl.col(f"avg_frame_{thread}_millis").is_not_null())
+    df = dataframe.filter(pl.col(stat_columns["avg"]).is_not_null())
     if df.is_empty():
         return None
 
-    long = df.unpivot(
-        on=list(stat_labels.keys()),
-        index="scenario",
-        variable_name="stat",
-        value_name="ms",
-    ).with_columns(pl.col("stat").replace(stat_labels))
-
     budget_ms = FRAME_BUDGET_MICROS_60HZ / 1000.0
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.barplot(
-        data=long,
-        x="scenario",
-        y="ms",
-        hue="stat",
-        ax=ax,
-        order=sorted(long["scenario"].unique()),
-        hue_order=["avg", "p99"],
-        errorbar=None,
-    )
-    ax.axhline(
-        budget_ms,
-        color="#c0392b",
-        linestyle="--",
-        linewidth=1.0,
-        label=f"60 Hz frame budget ({budget_ms:.2f} ms)",
-    )
     top_ms = budget_ms + 1.5
-    ax.set_ylim(0, top_ms)
-    # A spike past the axis gets clipped and labelled, rather than squashing every other bar.
-    for container in ax.containers:
-        for bar in container:
-            if bar.get_height() > top_ms:
-                ax.annotate(
-                    f"{bar.get_height():.0f} ms",
-                    xy=(bar.get_x() + bar.get_width() / 2, top_ms),
-                    xytext=(0, -3),
-                    textcoords="offset points",
-                    ha="center",
-                    va="top",
-                    fontsize=7,
-                    bbox={"boxstyle": "round,pad=0.2", "facecolor": "white", "edgecolor": "none"},
-                )
-    ax.set_xlabel("")
+    # A panel per stat, so each scenario's platforms stand side by side.
+    fig, axes = plt.subplots(len(stat_columns), 1, figsize=(9, 8), sharex=True)
+    for ax, (stat, column) in zip(axes, stat_columns.items(), strict=True):
+        sns.barplot(
+            data=df.to_pandas(),
+            x="scenario",
+            y=column,
+            hue="platform",
+            ax=ax,
+            order=sorted(df["scenario"].unique()),
+            hue_order=sorted(df["platform"].unique()),
+            errorbar=None,
+        )
+        ax.axhline(
+            budget_ms,
+            color="#c0392b",
+            linestyle="--",
+            linewidth=1.0,
+            label=f"60 Hz frame budget ({budget_ms:.2f} ms)",
+        )
+        ax.set_ylim(0, top_ms)
+        # A spike past the axis gets clipped and labelled, rather than squashing every other bar.
+        for container in ax.containers:
+            for bar in container:
+                if bar.get_height() > top_ms:
+                    ax.annotate(
+                        f"{bar.get_height():.0f} ms",
+                        xy=(bar.get_x() + bar.get_width() / 2, top_ms),
+                        xytext=(0, -3),
+                        textcoords="offset points",
+                        ha="center",
+                        va="top",
+                        fontsize=7,
+                        bbox={
+                            "boxstyle": "round,pad=0.2",
+                            "facecolor": "white",
+                            "edgecolor": "none",
+                        },
+                    )
+        ax.set_xlabel("")
+        ax.set_ylabel(f"{stat} {thread} time (ms)")
+        ax.legend(loc="best")
     # Tilted, or the edit_transitions_* names run into each other.
-    plt.setp(ax.get_xticklabels(), rotation=25, ha="right", rotation_mode="anchor")
-    ax.set_ylabel(f"Per-frame {thread} time (ms)")
-    ax.set_title(title)
-    ax.legend(loc="best")
+    plt.setp(axes[-1].get_xticklabels(), rotation=25, ha="right", rotation_mode="anchor")
+    fig.suptitle(title)
     plt.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)
     plt.close(fig)
@@ -294,21 +293,25 @@ def plot_observer_latency(dataframe: pl.DataFrame, out_path: Path) -> Path | Non
     df = (
         dataframe.filter(pl.col(metric).is_not_null())
         .filter(pl.col("observer_delay_millis").is_not_null())
-        .select(["observer_delay_millis", metric])
+        .select(["platform", "observer_delay_millis", metric])
         .unique()
-        .sort("observer_delay_millis")
+        .sort("platform", "observer_delay_millis")
     )
     if df.is_empty():
         return None
 
-    delays = df["observer_delay_millis"].to_list()
-    latencies = [value / 1000.0 for value in df[metric].to_list()]
-
     fig, ax = plt.subplots(figsize=(8, 5))
-    ax.plot(delays, latencies, marker="o", color="#4c72b0", label="measured render latency")
+    for (platform,), platform_df in df.group_by("platform", maintain_order=True):
+        ax.plot(
+            platform_df["observer_delay_millis"].to_list(),
+            [value / 1000.0 for value in platform_df[metric].to_list()],
+            marker="o",
+            label=f"render latency, {platform}",
+        )
+    max_delay = df["observer_delay_millis"].max()
     ax.plot(
-        [0, max(delays)],
-        [0, max(delays)],
+        [0, max_delay],
+        [0, max_delay],
         color="#c0392b",
         linestyle="--",
         linewidth=1.0,

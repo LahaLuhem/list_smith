@@ -170,7 +170,7 @@ void main() {
 
 /// A list's data and setup, a held drag on it, and whether the drag should carry it past an end.
 typedef _DragCase = ({
-  FakeServer<int> Function() makeServer,
+  ValueGetter<FakeServer<int>> makeServer,
   Refresh refresh,
   ListScrollConfig scrollConfig,
   Offset startOffset,

@@ -1,7 +1,7 @@
 /// @docImport 'list_smith_controller.dart';
 library;
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 /// What a [ListSmithController] drives: the engine's own entry points, one per intent.
 ///
@@ -24,16 +24,12 @@ abstract interface class ListSmithControllerHost<T extends Object>._() {
   void remove(T item);
 
   /// See [ListSmithController.upsertAsync].
-  Future<void> upsertAsync(
-    T draft, {
-    required Future<T> commit,
-    void Function(Exception exception)? onFailure,
-  });
+  Future<void> upsertAsync(T draft, {required Future<T> commit, ValueSetter<Exception>? onFailure});
 
   /// See [ListSmithController.removeAsync].
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   });
 }

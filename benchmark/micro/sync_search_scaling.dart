@@ -7,7 +7,7 @@
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:list_smith/src/data/search/utils/sync_search_resolver.dart';
+import 'package:list_smith/src/data/search/search.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';

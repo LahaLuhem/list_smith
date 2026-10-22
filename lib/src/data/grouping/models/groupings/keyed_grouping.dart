@@ -23,7 +23,7 @@ final class const KeyedGrouping<T extends Object>._({
   @internal
   ItemBuilder<T> decorate(
     ItemBuilder<T> itemBuilder, {
-    required Iterable<T> Function() flattenItems,
+    required ValueGetter<Iterable<T>> flattenItems,
     required Axis axis,
   }) {
     final headerFlags = resolveHeaderFlags(flattenItems(), groupOf, orderPolicy);

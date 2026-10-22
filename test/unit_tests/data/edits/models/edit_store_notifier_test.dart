@@ -1,7 +1,8 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/edits/models/edit_store_notifier.dart';
-import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
+import 'package:flutter/foundation.dart';
+import 'package:list_smith/src/data/edits/edits.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
 
 typedef _Row = ({int id, String label});
 
@@ -196,7 +197,7 @@ void main() {
       )
       .run((context) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
-        final applyEdits = context.example.val(editsKey) as void Function(EditStoreNotifier<_Row>);
+        final applyEdits = context.example.val(editsKey) as ValueSetter<EditStoreNotifier<_Row>>;
 
         applyEdits(editStoreNotifier);
 
@@ -252,7 +253,7 @@ void main() {
       .run((context) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
         final pendingEdit = editStoreNotifier.pendingEdit(1, (id: 1, label: 'draft'));
-        (context.example.val(answerKey) as void Function(PendingEdit<_Row>))(pendingEdit);
+        (context.example.val(answerKey) as ValueSetter<PendingEdit<_Row>>)(pendingEdit);
         final beforeStamp = editStoreNotifier.value;
 
         pendingEdit.book();
@@ -301,7 +302,7 @@ void main() {
       .run((context) {
         final editStoreNotifier = EditStoreNotifier<_Row>();
         final pendingEdit = draftOut(editStoreNotifier, 'draft');
-        final answer = context.example.val(answerKey) as void Function(PendingEdit<_Row>);
+        final answer = context.example.val(answerKey) as ValueSetter<PendingEdit<_Row>>;
         editStoreNotifier.dispose();
 
         check(() => answer(pendingEdit)).returnsNormally();

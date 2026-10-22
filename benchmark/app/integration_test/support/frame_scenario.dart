@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,10 +56,7 @@ Future<void> refreshThrough(
 ///
 /// `binding.watchPerformance` does this, but its GC-info step opens a localhost socket the sandboxed
 /// macOS app is denied. Same keys as `FrameTimingSummarizer.summary`, minus the GC counts.
-Future<Map<String, dynamic>> captureFrames(
-  WidgetsBinding binding,
-  Future<void> Function() action,
-) async {
+Future<Map<String, dynamic>> captureFrames(WidgetsBinding binding, AsyncCallback action) async {
   final timings = <FrameTiming>[];
   void collector(List<FrameTiming> batch) => timings.addAll(batch);
 
@@ -121,6 +119,7 @@ int _missedCount(List<int> micros) => micros.where((m) => m > _frameBudgetMicros
 /// samples, aggregate stats (milliseconds) become summary scalars.
 Map<String, dynamic> buildFrameRecord({
   required String scenario,
+  required int iterations,
   required Map<String, dynamic> summary,
 }) {
   final buildMicros = (summary['frame_build_times'] as List).cast<int>();
@@ -129,6 +128,8 @@ Map<String, dynamic> buildFrameRecord({
   return <String, dynamic>{
     'scenario': scenario,
     'iteration': 0,
+    'iterations': iterations,
+    'platform': Platform.operatingSystem,
     'sdk_version': Platform.version.split(' ').first,
     'package_version': const String.fromEnvironment('PKG_VERSION', defaultValue: 'unknown'),
     'git_sha': const String.fromEnvironment('GIT_SHA', defaultValue: 'unknown'),

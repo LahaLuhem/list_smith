@@ -13,7 +13,7 @@ of it reaches downstream users.
 | Layer | What | Runner | Fidelity |
 |---|---|---|---|
 | **Micro** (`micro/`) | Pure-Dart logic (the resolvers, filters) in isolation | `dart compile exe` + [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) | **Trustworthy absolute µs** (AOT) |
-| **Scenario** (`app/integration_test/`) | UI-isolate blocking / frame cost, driven through the real widgets | `flutter drive --profile` + `integration_test` | **Directional**; real frames, but a Flutter app, not a pure AOT program |
+| **Scenario** (`app/integration_test/`) | UI-isolate blocking / frame cost, driven through the real widgets | `flutter drive --profile` + `integration_test` | **Directional**: real frames, but a Flutter app, not a pure AOT program |
 
 The split is deliberate. A practical ceiling ("sync search suits lists up to ~N") comes from the
 **micro**, which gives real absolute microseconds, while the **scenario** confirms the cost lands on
@@ -46,10 +46,12 @@ benchmark/
 - The Dart/Flutter SDK from [`.fvmrc`](../.fvmrc). The orchestrator prefers `fvm dart` and
   `fvm flutter` when fvm is present, falling back to plain `dart`.
 - [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv`).
-- For the UI scenarios, a device. **macOS desktop** in profile mode by default, with the desktop
-  feature flag enabled for the run and **restored afterwards**, so a run leaves no global toolchain
-  change behind. Point at another with `--device` (say `--device emulator-5554` for a directional
-  Android cross-check).
+- For the UI scenarios, a device. **macOS desktop** in profile mode by default, needing nothing
+  attached, with the desktop feature flag enabled for the run and **restored afterwards**. The
+  committed report comes from phones instead, one run per platform with `--device <id>` (`flutter
+  devices` lists them), since a desktop window losing focus swamps its timings.
+- For an iPhone, signing in an untracked `app/ios/Flutter/LocalSigning.xcconfig` holding your
+  `DEVELOPMENT_TEAM` and `PRODUCT_BUNDLE_IDENTIFIER`.
 
 ## Running
 
@@ -67,6 +69,15 @@ flags: `--skip-scenarios` (micros only, no device needed), `--skip-micros`, `--d
 `--scenarios <file...>`, which takes file names without `.dart` (`dedup_scaling`,
 `isp_scroll_test`), not the scenario names below.
 
+The committed report takes a micro run on the host and a UI run per phone:
+
+```bash
+uv run python run.py run --skip-scenarios --iterations 10 --out ../results-local/micros/
+uv run python run.py run --skip-micros --device <android id> --iterations 10 --out ../results-local/android/
+uv run python run.py run --skip-micros --device <ios id> --iterations 10 --out ../results-local/ios/
+uv run python run.py report ../results-local/{micros,android,ios}/aggregated.json
+```
+
 Lint the Python side before committing: `uv run ruff format .` then `uv run ruff check .`.
 
 ## Methodology
@@ -74,9 +85,8 @@ Lint the Python side before committing: `uv run ruff format .` then `uv run ruff
 - **AOT compile the micros**, never JIT. `dart compile exe` gives deterministic warmup and
   `dart run` doesn't.
 - **UI scenarios run in profile mode**, not release: profile is AOT and release-like in performance
-  while keeping the VM service the driver needs. Absolute frame numbers are machine- and
-  target-specific, so the value is the *delta* and the build-thread share. Real mobile raster and
-  jank need a physical device and are out of scope.
+  while keeping the VM service the driver needs. Absolute frame numbers are device-specific, so
+  the value is the *delta* and the build-thread share.
 - **N >= 10 iterations**, bumped to 30 for a high-variance metric before claiming a regression.
 - **Report median and IQR, never mean.** GC outliers skew means on a single-threaded VM.
 - **`forceGc()` before each micro measurement window.** SDK pinned via `.fvmrc`, since a bump
@@ -85,9 +95,13 @@ Lint the Python side before committing: `uv run ruff format .` then `uv run ruff
 ## Baselines are per-machine, never committed
 
 Perf numbers depend on CPU, GPU, GC tuning, OS scheduler and thermal state, so comparing across
-machines is misleading. `results-local/` is gitignored, and every record embeds its SDK version, git
-SHA and capture date, so each file is self-describing. Capture your own baseline before measuring
-the delta from a change.
+machines or phones is misleading. `results-local/` is gitignored, and every record embeds its SDK
+version, git SHA and capture date, so each file is self-describing. Capture your own baseline before
+measuring the delta from a change.
+
+On Android, frames with little to do run on slow clocks, since the governor keeps idle-looking cores
+at low speed. So light scenarios like `edit_transitions` read several times slower than on iOS, and
+come close to it once background load holds the clocks up.
 
 ## CI regression gate
 
@@ -142,13 +156,15 @@ Each micro/scenario emits records conforming to (see `harness/result_writer.dart
 ```
 
 The analyzer reads the raw `samples` arrays for median, IQR and significance. `summary` carries
-pre-computed scalars plus the pivot (`list_size`, say).
+pre-computed scalars plus the pivot (`list_size`, say). A UI scenario's record also carries
+`iterations`, since it holds every iteration's frames, and `platform`, the OS it ran on.
 
 ## Reports
 
 `reports/` is the committed output of `report` (PNGs plus `SUMMARY.md`), linked from the package
-README so pub.dev viewers see the perf shape without cloning. Committing it is a deliberate
-maintainer refresh on a quiet machine, so contributor runs should pass `--out` to a local path.
+README so pub.dev viewers see the perf shape without cloning. Its UI charts show a bar per platform.
+Committing it is a deliberate maintainer refresh, so contributor runs should pass `--out` to a
+local path.
 `SUMMARY.md` takes its capture date from the records' own `started_at`, so re-rendering an old
 capture reproduces it rather than restamping it with today.
 
@@ -171,7 +187,7 @@ capture reproduces it rather than restamping it with today.
 | `isp_scroll` | per-frame build cost scrolling a `ListSmith.async` list |
 | `bare_listview` | the same scroll over a plain `ListView.builder`, the attribution control |
 | `cri_refresh` | per-frame build cost across full pull-to-refresh cycles |
-| `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide` |
+| `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide`. `size_scrolled` makes `size`'s edits just above the screen, where the rows on it are held still |
 
 On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
 interleaved so run-order drift lands on both sides equally. Each side runs a copy of its build from

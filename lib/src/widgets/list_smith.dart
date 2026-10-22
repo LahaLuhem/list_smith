@@ -1,25 +1,14 @@
-/// @docImport '/src/data/pagination/models/page_request.dart';
-library;
-
 import 'package:flutter/widgets.dart';
 
-import '/src/data/control/models/list_smith_controller.dart';
-import '/src/data/edits/models/edit_transition.dart';
-import '/src/data/edits/models/item_order.dart';
-import '/src/data/grouping/models/grouping.dart';
-import '/src/data/observer/models/list_smith_observer.dart';
-import '/src/data/pagination/models/empty_page_behaviour.dart';
-import '/src/data/pagination/models/page_fetcher.dart';
-import '/src/data/pagination/models/pagination_end_policy.dart';
-import '/src/data/pagination/typedefs/item_id_getter.dart';
-import '/src/data/presentation/models/async_list_surfaces.dart';
-import '/src/data/presentation/models/list_scroll_config.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
-import '/src/data/presentation/typedefs/no_results_builder.dart';
-import '/src/data/refresh/models/refresh.dart';
-import '/src/data/search/models/search.dart';
-import '/src/data/search/typedefs/sync_search_predicate.dart';
-import '/src/data/source/list_source.dart';
+import '/src/data/control/control.dart';
+import '/src/data/edits/edits.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/observer/observer.dart';
+import '/src/data/pagination/pagination.dart';
+import '/src/data/presentation/presentation.dart';
+import '/src/data/refresh/refresh.dart';
+import '/src/data/search/search.dart';
+import '/src/data/source/source.dart';
 import 'async_list_view.dart';
 import 'sync_list_view.dart';
 
@@ -79,6 +68,10 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// [fetchPage] gets a [PageRequest] and returns that page's items, and [itemIdGetter] tells them
   /// apart.
   ///
+  /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change, or when
+  /// the refresh indicator closes while the list is scrolled away. Turn it off if your app keeps its
+  /// own scroll position.
+  ///
   /// 2 pairings are asserted: a non-empty [query] needs an [AsyncSearch], and a signal-reading end policy
   /// needs `withSignal` fetchers on both the feed and the search.
   new async({
@@ -92,6 +85,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
     Search<T> search = const NoSearch(),
     EditTransition editTransition = const NoEditTransition(),
     ItemOrder<T> order = const UnknownOrder(),
+    bool shouldKeepPosition = true,
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = const Duration(milliseconds: 300),
@@ -129,6 +123,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
          itemIdGetter: itemIdGetter,
          editTransition: editTransition,
          order: order,
+         shouldKeepPosition: shouldKeepPosition,
        );
 
   /// Creates a sync, in-memory searchable list over [items].

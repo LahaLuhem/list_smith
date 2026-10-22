@@ -1,7 +1,6 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/grouping/models/group_order_policy.dart';
-import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
+import 'package:list_smith/src/data/grouping/grouping.dart';
 
 void main() {
   final groupingFeature = BddFeature('Grouping resolution');

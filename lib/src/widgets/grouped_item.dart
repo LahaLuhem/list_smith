@@ -1,9 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/grouping/typedefs/group_header_builder.dart';
-import '/src/data/grouping/typedefs/group_key_of.dart';
-import '/src/data/presentation/typedefs/item_builder.dart';
+import '/src/data/grouping/grouping.dart';
+import '/src/data/presentation/presentation.dart';
 
 /// Renders one list item, with its group's header on top when the item opens a new group.
 ///

@@ -372,7 +372,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 ## Editing loaded items
 
 A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
-re-read. Notify the list and it shows the change at once, keeping the scroll position.
+re-read. Notify the list and it shows the change at once.
 
 ```dart
 ListSmith.async(
@@ -404,7 +404,9 @@ server's copy. Removals never end the list early: the end policy still counts wh
 and removing every row on the screen loads the next page.
 
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
-while rows above it come and go.
+while rows above it come and go. The row the user is reading holds still too, whatever changes above
+it, and at the very start a new row shows on top. If your app keeps its own scroll position, pass
+`shouldKeepPosition: false`.
 
 A removal moves every row after it up a place on your server, so the next page also reads the page
 before it again, keeping the rows that moved up. Removing a new item counts too, and so does an edit
@@ -837,19 +839,19 @@ would come back mid-reload.
 
 ## Performance
 
-Measured on one machine (yours will differ), from the committed
-[benchmark report](benchmark/reports/SUMMARY.md):
+Measured on one phone per platform for the UI rows and on macOS for the rest (yours will differ),
+from the committed [benchmark report](benchmark/reports/SUMMARY.md):
 
-| What                                                 | Cost                                                                          |
-|------------------------------------------------------|-------------------------------------------------------------------------------|
-| Scrolling                                            | within ~0.07 ms/frame of a plain `ListView.builder`, neither dropping a frame |
-| Per-page bookkeeping (end policy, observer dispatch) | sub-microsecond to a few microseconds                                         |
-| A full pull-to-refresh cycle                         | ~0.4 ms/frame to build, none over the 16.67 ms budget                         |
-| Animating edits (size, fade or slide)                | +0.05 to 0.2 ms/frame over the same edits unanimated, none over budget        |
-| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                             |
-| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~26 ms at 100k                                 |
-| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.4 ms at 10k, ~40 ms at 100k                          |
-| A 50 ms observer callback                            | pushes render latency to ~69 ms                                               |
+| What                                                 | Cost                                                                                                      |
+|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| Scrolling                                            | within ~0.05 ms/frame of a plain `ListView.builder` on Android and ~0.01 on iOS, neither dropping a frame |
+| Per-page bookkeeping (end policy, observer dispatch) | under a microsecond                                                                                       |
+| A full pull-to-refresh cycle                         | ~0.9 ms/frame to build on Android and ~0.4 on iOS, none over the 16.67 ms budget                          |
+| Animating edits (size, fade or slide)                | at most ~0.1 ms/frame more to build than the same edits unanimated, none over budget                      |
+| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~42 ms at 100k                                                         |
+| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~27 ms at 100k                                                             |
+| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~39 ms at 100k                                                      |
+| A 50 ms observer callback                            | pushes render latency to ~70 ms on Android and ~67 ms on iOS                                              |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
 on the debounce or go async. De-dup is off the scroll path, and only crosses the budget past tens of
@@ -857,7 +859,7 @@ thousands of items in one live list. Edits run in that same pass, and
 [`edit_layer_scaling`](benchmark/micro/edit_layer_scaling.dart) measures what they add. Observers
 are called synchronously while a page loads: log, count, report, and do heavy work elsewhere.
 
-Numbers are per-machine, so capture your own baseline before trusting a delta. The suite lives in
+Numbers are per-device, so capture your own baseline before trusting a delta. The suite lives in
 [`benchmark/`](benchmark/), and `run.py compare` diffs 2 runs with a Mann-Whitney test.
 
 ![Render latency vs observer delay](benchmark/reports/observer_latency.png)

@@ -10,7 +10,7 @@ import subprocess
 from datetime import UTC, datetime
 
 from list_smith_bench.config import PROJECT_ROOT
-from list_smith_bench.data.dtos.result_record import ResultRecord
+from list_smith_bench.data.dtos.result_record import ResultRecord, platform_label
 from list_smith_bench.data.utils.stats import records_per_scenario
 
 
@@ -58,17 +58,39 @@ def _capture_date(records: list[ResultRecord]) -> str:
     return (min(stamps) if stamps else datetime.now(UTC)).strftime("%Y-%m-%d")
 
 
+def _distinct(records: list[ResultRecord], key: str) -> str:
+    """Every value of `key` in [records], so a report mixing captures names them all."""
+    return (
+        ", ".join(dict.fromkeys(str(record.get(key, "unknown")) for record in records)) or "unknown"
+    )
+
+
+def _iterations(records: list[ResultRecord]) -> str:
+    """The count a UI record carries, since it holds every iteration's frames. A micro writes one
+    record per iteration, so those get counted."""
+    carried = {record["iterations"] for record in records if "iterations" in record}
+    counted = records_per_scenario([record for record in records if "iterations" not in record])
+    return (
+        ", ".join(str(count) for count in sorted(carried | ({counted} if counted else set())))
+        or "0"
+    )
+
+
 def summary_metadata(records: list[ResultRecord]) -> dict[str, str]:
     """Header metadata from the records, stringified for f-strings.
 
     The date is when the data was captured, read off `started_at`, not when the report was
     rendered. Re-rendering an old capture therefore reproduces it rather than restamping it.
     """
-    first = records[0] if records else {}
     return {
         "date": _capture_date(records),
-        "git_sha": str(first.get("git_sha", "unknown")),
-        "package_version": str(first.get("package_version", "unknown")),
-        "sdk_version": str(first.get("sdk_version", "unknown")),
-        "iterations": str(records_per_scenario(records)),
+        "git_sha": _distinct(records, "git_sha"),
+        "package_version": _distinct(records, "package_version"),
+        "sdk_version": _distinct(records, "sdk_version"),
+        "iterations": _iterations(records),
+        "platforms": ", ".join(
+            sorted(
+                {platform_label(record["platform"]) for record in records if "platform" in record}
+            )
+        ),
     }

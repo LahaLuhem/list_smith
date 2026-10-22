@@ -1,7 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
-import 'package:list_smith/src/data/source/list_source.dart';
+import 'package:list_smith/src/data/source/source.dart';
 
 import '../../../support/support.dart';
 
@@ -13,6 +13,7 @@ void main() {
     itemIdGetter: (item) => item,
     editTransition: const NoEditTransition(),
     order: const UnknownOrder(),
+    shouldKeepPosition: true,
     pageSize: 20,
     endPolicy: const StopOnEmptyPagesPolicy(),
     onEmptyPage: const ShowEmptySurface(),

@@ -7,7 +7,7 @@ library;
 import 'package:benchmark_harness/benchmark_harness.dart';
 import 'package:list_smith/src/data/edits/models/item_edit.dart';
 import 'package:list_smith/src/data/edits/utils/edit_resolver.dart';
-import 'package:list_smith/src/data/pagination/models/loaded_page.dart';
+import 'package:list_smith/src/data/pagination/pagination.dart';
 
 import '../harness/measure.dart';
 import '../harness/result_writer.dart';

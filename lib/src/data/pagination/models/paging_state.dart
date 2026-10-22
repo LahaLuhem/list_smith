@@ -36,6 +36,9 @@ final class const PagingState<T extends Object>({
     return exception == null ? .ongoing : .subsequentPageError;
   }
 
+  /// Every loaded item, in order. Empty until the 1st page lands.
+  Iterable<T> get items => pages?.expand((page) => page.items) ?? const .empty();
+
   /// A fetch is on its way, so the last one's exception goes.
   PagingState<T> loading() => PagingState(pages: pages, hasNextPage: hasNextPage, isLoading: true);
 

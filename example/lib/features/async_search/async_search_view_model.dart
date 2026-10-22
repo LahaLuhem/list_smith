@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
+import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier, ValueSetter;
 import 'package:list_smith/list_smith.dart';
 import 'package:listenable_collections/listenable_collections.dart';
 import 'package:pmvvm/pmvvm.dart';
@@ -48,7 +48,7 @@ final class AsyncSearchViewModel() extends ViewModel with SearchQueryMixin, Fail
   }
 }
 
-final class _EventLogObserver(final void Function(String event) _record) extends ListSmithObserver {
+final class _EventLogObserver(final ValueSetter<String> _record) extends ListSmithObserver {
   @override
   void onPageLoaded(int pageIndex, int itemCount, {required bool isSearchMode}) =>
       _record('onPageLoaded  page $pageIndex · $itemCount items${isSearchMode ? ' · search' : ''}');

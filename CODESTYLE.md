@@ -138,9 +138,10 @@ feature**:
   kind: `models/` (classes: sealed types, immutable data, policy objects), `typedefs/` (standalone
   function-type aliases), `enums/`, `extensions/`, and `utils/` (pure functions). Sealed cases nest
   one level under the base's kind and stay `part`s of the base: `models/policies/` for the policy
-  cases, `source/sources/` for the source cases.
+  cases, `source/sources/` for the source cases. Each feature exports its libraries from a barrel
+  named after it, like `data/pagination/pagination.dart`.
 - **`widgets/`** holds everything that is a `Widget`, with the neutral default surfaces under
-  `widgets/defaults/`.
+  `widgets/defaults/`, behind its `defaults.dart` barrel.
 - **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
   (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
 
@@ -162,24 +163,30 @@ The placement rules that earn their keep:
 <a id="imports"></a>
 ## Imports
 
-**Relative within a feature, root-relative across features.** Same-feature targets use a path
-relative to the importing file. Anything crossing into another feature or top-level area uses a
-leading `/`, which Dart resolves from `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`.
+**Relative within a feature, the other feature's barrel across features.** Same-feature targets use
+a path relative to the importing file. Another feature is reached through its barrel (see
+[Directory layout](#directory-layout)), and another top-level area through the file itself, both with
+a leading `/`, which Dart resolves from `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`.
 That slash is a deliberate visual cue: own-feature imports read as bare relatives, cross-feature
 ones stand out.
 
 ```dart
 // in widgets/async_list_view.dart
-import '/src/data/pagination/models/pagination_end_policy.dart'; // other feature: leading /
-import '/src/utils/query_debouncer.dart';                        // other area: leading /
-import 'paged_view.dart';                                        // same folder: relative
-import 'refresh_binding.dart';                                   // same folder: relative
+import '/src/data/pagination/pagination.dart'; // other feature: its barrel
+import '/src/utils/query_debouncer.dart';      // other area: leading /
+import 'paged_view.dart';                      // same folder: relative
+import 'refresh_binding.dart';                 // same folder: relative
 ```
 
 The split holds inside a feature too: `search/extensions/…_extension.dart` reaches its own model as
-`../models/search_cache_policy.dart`, never root-relative. `@docImport` follows the same rule, and
-`part` / `part of` are always same-feature so always relative. The example app does the same with
-`/features/…` (see [`example/CODESTYLE.md`](example/CODESTYLE.md)).
+`../models/search_cache_policy.dart`, never root-relative and never through its own barrel, which
+would loop back to the importing file. Tests take a feature's barrel too, as
+`package:list_smith/src/data/pagination/pagination.dart`. The exception is pure Dart: the benchmark
+micros, and the code they compile, import the exact file where a feature's barrel pulls in Flutter.
+[`benchmark.yml`](.github/workflows/benchmark.yml) builds the micros on any `lib/` change, which
+catches a slip. `@docImport` follows the same rule, and `part` / `part of` are always same-feature
+so always relative. The example app does the same with `/features/…` (see
+[`example/CODESTYLE.md`](example/CODESTYLE.md)).
 
 ---
 
@@ -266,6 +273,9 @@ The split holds inside a feature too: `search/extensions/…_extension.dart` rea
   only breaks a hand-written fake.
 - **Inline logic with one caller.** A private helper called from one place reads better in it.
   Extract once a 2nd caller shows up, or when it's a cleaner seam to test, as `@visibleForTesting`.
+  The exception is a method the
+  [Code Complexity plugin](https://github.com/nikolaikopernik/code-complexity-plugin) scores over
+  100%: split it into its decisions, like `RenderScrollAnchor.performLayout`.
 - **Members stay private.** One another library has to reach takes `@internal`, or
   `@visibleForTesting` when only tests need it. A type only the package uses takes `@internal`
   itself, which covers its members, and a member a subclass must not override takes `@nonVirtual`.
@@ -372,6 +382,23 @@ states.resolve(<WidgetState>{WidgetState.selected, if (!enabled) WidgetState.dis
 
 Keep `<Type>` where inference would fall back to `dynamic`: empty literals with no slot
 (`final xs = <Foo>[];`), and top-level or `static const` initialisers with no LHS type.
+
+<a id="idioms-sdk-callback-typedefs"></a>
+### The SDK's callback typedefs over written-out function types
+
+Where a function type matches one of Flutter's typedefs, use the most specific one. It names the
+callback's job, where `void Function(Exception exception)` has to be read as a signature.
+
+| Written out | Typedef |
+|---|---|
+| `void Function()` | `VoidCallback` |
+| `T Function()` | `ValueGetter<T>` |
+| `void Function(T)` | `ValueChanged<T>` when it fires on a change, else `ValueSetter<T>` |
+| `Future<void> Function()` | `AsyncCallback` |
+| `Future<void> Function(T)` | `AsyncValueSetter<T>` |
+
+Keep it written out where the parameter's name says something its type doesn't, since a typedef's
+parameter is a bare `value`. Several parameters, or a value returned from one, have no typedef.
 
 <a id="idioms-flex-spacing"></a>
 ### `Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps
@@ -779,7 +806,8 @@ class-shaped to mock.
 - **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls and workflow stay in
   `.ai/AGENTS.md` and `.ai/CLAUDE.md`. The "why we do it this way" lives in
   [`APPENDIX.md`](APPENDIX.md). Rationale bullets stay compact too: the decision and its why in a
-  few lines. Rejected alternatives belong in the issue, not here.
+  few lines. Rejected alternatives belong in the issue, not here. What each part and seam does lives
+  in [`doc/how-it-works.md`](doc/how-it-works.md), so an entry never restates a seam's promise.
 - **Explicit `<a id="…">` anchors** sit above every APPENDIX and CODESTYLE heading. Link via the
   anchor, never the heading text. Anchor stability is load-bearing: renaming a heading keeps the
   existing anchor, or you grep the repo and update every caller in the same change.

@@ -1,11 +1,11 @@
-/// @docImport '/src/data/observer/models/list_smith_observer.dart';
-/// @docImport '/src/data/pagination/enums/fetch_trigger.dart';
-/// @docImport '/src/data/refresh/models/reload.dart';
-/// @docImport '/src/data/search/models/search_cache_policy.dart';
+/// @docImport '/src/data/observer/observer.dart';
+/// @docImport '/src/data/pagination/pagination.dart';
+/// @docImport '/src/data/refresh/refresh.dart';
+/// @docImport '/src/data/search/search.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 
 import 'list_smith_controller_host.dart';
 
@@ -63,7 +63,7 @@ class ListSmithController<T extends Object>() {
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) =>
       _host?.upsertAsync(draft, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -73,7 +73,7 @@ class ListSmithController<T extends Object>() {
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   }) =>
       _host?.removeAsync(item, commit: commit, onFailure: onFailure) ??
       _reportFailure(commit, onFailure);
@@ -98,7 +98,7 @@ class ListSmithController<T extends Object>() {
   /// With no list attached there's nothing to roll back, only a failure to pass on.
   static Future<void> _reportFailure(
     Future<Object?> commit,
-    void Function(Exception exception)? onFailure,
+    ValueSetter<Exception>? onFailure,
   ) async {
     try {
       await commit;

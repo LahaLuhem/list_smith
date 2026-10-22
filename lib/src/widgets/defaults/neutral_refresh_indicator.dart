@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '/src/data/refresh/models/list_smith_refresh_state.dart';
+import '/src/data/refresh/refresh.dart';
 import 'neutral_progress_indicator.dart';
 
 /// The neutral pull indicator. Override `indicatorBuilder` to replace it.
