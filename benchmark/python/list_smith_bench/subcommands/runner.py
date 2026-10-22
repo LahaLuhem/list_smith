@@ -125,6 +125,9 @@ def _run_scenarios(
                     "--profile",
                     "-d",
                     args.device,
+                    # Teardown otherwise uninstalls, and each fresh iOS install asks for local
+                    # network access again. A desktop window left open would take the next focus.
+                    *([] if args.device == "macos" else ["--keep-app-running"]),
                     f"--dart-define=ITERATIONS={args.iterations}",
                     f"--dart-define=OUTPUT={out_json}",
                     f"--dart-define=GIT_SHA={git_sha}",
