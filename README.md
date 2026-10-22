@@ -372,7 +372,7 @@ Nothing to dispose, and async-only. To *watch* the list rather than drive it, us
 ## Editing loaded items
 
 A swipe-to-delete, a post you just created, a rename. When you already know what changed, skip the
-re-read. Notify the list and it shows the change at once, keeping the scroll position.
+re-read. Notify the list and it shows the change at once.
 
 ```dart
 ListSmith.async(
@@ -404,7 +404,9 @@ server's copy. Removals never end the list early: the end policy still counts wh
 and removing every row on the screen loads the next page.
 
 Rows follow their item, so a row keeps its own state, like an open tile or a swipe halfway done,
-while rows above it come and go.
+while rows above it come and go. The row the user is reading holds still too, whatever changes above
+it, and at the very start a new row shows on top. If your app keeps its own scroll position, pass
+`shouldKeepPosition: false`.
 
 A removal moves every row after it up a place on your server, so the next page also reads the page
 before it again, keeping the rows that moved up. Removing a new item counts too, and so does an edit

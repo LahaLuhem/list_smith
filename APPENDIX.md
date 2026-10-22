@@ -44,6 +44,7 @@ renames.
 - [A depth reload commits a whole list, lined up](#depth-reload-whole)
 - [The edit store walks its edits by stamp, unsorted](#edit-store-scans)
 - [An order places edits where the server sorts them](#sorted-placement)
+- [The row the user is reading holds still](#keep-position)
 
 <!-- TOC end -->
 
@@ -104,7 +105,7 @@ renames.
 ## Pull-to-refresh resets the list on V1
 
 - **Decision (V1):** a pull resets the paging state, so the list clears and the first-page loader
-  shows while the fresh page loads. The pull indicator retracts as the loader shows.
+  shows while the fresh page loads.
 - **Why not hold the indicator until fresh data:** it would spin beside the loader. A `refresh()`
   from code still waits for the fresh page, since a button has no loader to hand over to.
 - **Since landed as an option:** `ReloadToCurrentDepth` keeps the old items and holds the indicator
@@ -464,15 +465,11 @@ renames.
   joined.
 - **Own writes don't stale a run.** Its commit and its reset move the epoch along, so a refresh asked
   while a `ResetToFirstPage` run fetches its page 0 still joins it.
-- **The join rule.** 2 refreshes coalesce. Any other pair books one more run after the live one,
-  `.refresh` winning, because a write landing on a page the run already read would otherwise never
-  be re-read. A joiner's future completes with the run it joined. `reset()` never joins: it takes the
-  slot, so the next caller meets its page 0.
-- **Every page-0 load is a run,** so the join rule sees it: the 1st load, a restart's page 0, a
-  1st-page retry, an owed restore. The engine's own loads are nobody's ask, so a feed parked during
-  one owes nothing for it.
-- **The verbs wait for the fresh page, the pull for the hand-over,** so the indicator retracts as the
-  loader shows ([#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1)).
+- **Why any other pair runs once more,** `.refresh` winning: a write landing on a page the run
+  already read would otherwise never be re-read. A joiner's future completes with the run it joined,
+  and `reset()` takes the slot so the next caller meets its page 0.
+- **Page-0 loads are runs** so the join rule sees them. The engine's own are nobody's ask, so a feed
+  parked during one owes nothing for it.
 - **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping back to
   the start is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull
   config to lean on.
@@ -601,10 +598,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="edit-layer"></a>
 ## Local edits live beside the pages, not in them
 
-- **Decision:** the edit verbs book an edit beside the loaded pages, applied in the display pass
-  de-dup already runs. The pages keep saying what the backend returned, because the end policy
-  counts them and a depth reload or `KeepCachePolicy` writes them back. An edit made inside them
-  would end the list early, or be undone.
+- **Why beside the pages:** the end policy counts what the backend returned, and a depth reload or
+  `KeepCachePolicy` writes the pages back, so an edit made inside them would end the list early, or
+  be undone.
 - **Each page carries a read stamp,** the edit counter when its fetch went out, and an edit
   covers only pages read before it. A page read after already has the server's answer. Once every
   loaded and parked page was read after an edit, the edit is forgotten.
@@ -717,8 +713,6 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   value, so 2 restarts a frame apart left the list on its loader for good
   ([upstream #382](https://github.com/EdsonBueno/infinite_scroll_pagination/issues/382), closed
   as not planned). A page 0 nobody owned also slipped past the [run slot](#reload-run).
-- **Only the engine fetches,** never a listener reacting to the state, and every write is a new
-  object, compared by identity.
 - **Not leftovers of the old package:** the retry marker ([#fetch-trigger](#fetch-trigger)) and the
   microtask that pages past an empty page. Both are list_smith's own.
 
@@ -730,17 +724,15 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Decision:** on the rows, and on the error and empty surfaces while
   `PullToRefresh.pullableSurfaces` lists them, as it does by default. Never on the 1st-page loader,
   whose page is already on its way.
-- **Only a drag's start is refused,** so a pull the list changes under still ends and lets go.
-- **While a surface shows, the list moves past its ends only into a pull it takes.** It asks whether
-  a surface shows, not whether anything overflows, so short rows still bounce away from the pull on
-  iOS, like a plain `ListView`.
-- **One set of physics for every surface:** always-scrollable under pull-to-refresh, below the app's
-  physics so a `NeverScrollableScrollPhysics` still wins. Swapping them per surface cancels a held
-  drag inside layout, where the indicator's `setState` asserts, so the rule above reads what shows
-  as the drag goes.
-- **Every surface sits in the list and gets its visible space,** unmeasured, so a `LayoutBuilder` or
-  `Expanded` works and a short one can't scroll. A taller one scrolls itself. Built outside it, a
-  surface would take the list out of the tree and detach the app's `ScrollController`.
+- **Why only a drag's start is refused:** a pull the list changes under still ends and lets go.
+- **The scroll rule asks whether a surface shows,** not whether anything overflows, so short rows
+  still bounce away from the pull on iOS, like a plain `ListView`.
+- **Why one set of physics:** swapping them per surface cancels a held drag inside layout, where the
+  indicator's `setState` asserts, so the rule above reads what shows as the drag goes. They sit below
+  the app's, so a `NeverScrollableScrollPhysics` still wins.
+- **Why surfaces sit in the list, unmeasured:** a `LayoutBuilder` or `Expanded` works and a short one
+  can't scroll, while a taller one scrolls itself. Built outside it, a surface would take the list out
+  of the tree and detach the app's `ScrollController`.
 
 ---
 
@@ -771,9 +763,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="depth-reload-whole"></a>
 ## A depth reload commits a whole list, lined up
 
-- **Decision:** `ReloadToCurrentDepth` commits only once every page reloaded, else the old list
-  stays. An old page kept beside fresh ones was read at another time, so rows go missing or repeat
-  where they meet. `onError` and `ReloadOnError` do nothing now, and go at the next major.
+- **Why whole:** an old page kept beside fresh ones was read at another time, so rows go missing or
+  repeat where they meet. `onError` and `ReloadOnError` do nothing now, and go at the next major.
 - **Lined up before it commits.** A removal booked any time after page `k - 1` went out could have
   pulled rows up past page `k`'s start. Once every page landed, page `k - 1` is read again, and each
   row the fresh pages lack goes in front of the page after the fresh row it follows.
@@ -782,8 +773,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   page counts above every boundary.
 - **"Any time after" has no end.** A slow `remove()` or an exit ending late reaches list_smith after
   the server already had it, so stopping the count once page `k` landed lost rows.
-- **A failed line-up read keeps the old list,** like a failed page. Its reads are part of the run,
-  so they report its trigger.
+- **Line-up reads are part of the run,** so they report its trigger.
 
 ---
 
@@ -814,13 +804,32 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **A row sorting after every loaded one waits for its page** while more may follow.
   `PaginationEndPolicy.stopsAtDataEnd` says whether a reported end is the data's, so a cap doesn't
   show rows past it.
-- **A page read after the edit shows the server's copy,** sorted or not.
 - **The feed only.** Search results come by relevance, so they keep their own placement.
 - **Each page read is checked in debug** to be strictly in order, ties included, and reported rather
   than thrown so it still lands. Not across pages, where another writer's edit between 2 reads
   would trip it.
 - **Groups:** the order sorts by group first. One that doesn't trips grouping's contiguity assert.
 - **Moves jump.** Animating one would need 2 copies of one keyed row at once.
+
+---
+
+<a id="keep-position"></a>
+## The row the user is reading holds still
+
+- **Decision:** a proxy sliver around the async rows answers a row's move with a
+  `scrollOffsetCorrection` of the same size, so no frame shows the slide.
+- **Why the sliver:** the scroll position counts pixels from the start, so any change above moves the
+  view. Layout sees each row's new offset before it paints, so one anchor there covers every cause.
+- **Why not at offset 0:** a new row at the start shows, and a reversed chat at its newest shows the
+  new message.
+- **Why the pull's room counts:** a reload ending while the user is scrolled away would otherwise
+  move every row by it.
+- **A change during an `animateTo` still slides, a frame late**
+  ([flutter#193339](https://github.com/flutter/flutter/issues/193339)).
+- **A `jumpTo(0)` after a change above that isn't built lands short,** since the list places unbuilt
+  rows by estimate. `animateTo(0)`, or a 2nd `jumpTo(0)`, lands exactly. Undoing the list's own
+  corrections at 0 loops past the viewport's 10-cycle limit.
+- **Async only.** `.sync` rows have no ids to find again.
 
 ---
 
