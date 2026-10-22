@@ -2,7 +2,7 @@
 
 The imports sit at module level on purpose, since this module only works with the analysis stack
 installed. Subcommands check `find_spec` first, so a missing package points at `uv sync`. seaborn
-takes the polars frames directly and converts to pandas itself, so there's no pandas import here.
+reads pandas only, so each plot hands it `.to_pandas()`, which pyarrow backs.
 
 Each plot returns the `Path` it wrote, or `None` when it has no data, so the caller can skip that
 chart in the markdown.
@@ -64,7 +64,7 @@ def plot_sync_search_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | 
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="list_size",
         y=metric,
         ax=ax,
@@ -112,7 +112,7 @@ def plot_bucket_by_group_scaling(dataframe: pl.DataFrame, out_path: Path) -> Pat
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="list_size",
         y=metric,
         ax=ax,
@@ -161,7 +161,7 @@ def plot_dedup_scaling(dataframe: pl.DataFrame, out_path: Path) -> Path | None:
 
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.pointplot(
-        data=plot_df,
+        data=plot_df.to_pandas(),
         x="item_count",
         y=metric,
         ax=ax,
@@ -235,7 +235,7 @@ def _plot_frame_thread_costs(
     budget_ms = FRAME_BUDGET_MICROS_60HZ / 1000.0
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.barplot(
-        data=long,
+        data=long.to_pandas(),
         x="scenario",
         y="ms",
         hue="stat",
