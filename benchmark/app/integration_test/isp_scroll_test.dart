@@ -51,7 +51,9 @@ void main() {
 
     binding.reportData = <String, dynamic>{
       'output_path': _outputPath,
-      'records': <Map<String, dynamic>>[buildFrameRecord(scenario: 'isp_scroll', summary: summary)],
+      'records': <Map<String, dynamic>>[
+        buildFrameRecord(scenario: 'isp_scroll', iterations: _iterations, summary: summary),
+      ],
     };
   });
 }

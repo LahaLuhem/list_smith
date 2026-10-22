@@ -53,7 +53,7 @@ void main() {
     binding.reportData = <String, dynamic>{
       'output_path': _outputPath,
       'records': <Map<String, dynamic>>[
-        buildFrameRecord(scenario: 'cri_refresh', summary: summary),
+        buildFrameRecord(scenario: 'cri_refresh', iterations: _iterations, summary: summary),
       ],
     };
   });

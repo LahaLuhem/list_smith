@@ -1,4 +1,4 @@
-"""`cmd_report`: render PNG charts and SUMMARY.md from one aggregated.json."""
+"""`cmd_report`: render PNG charts and SUMMARY.md from aggregated.json files, one per platform."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from list_smith_bench.data.utils.io import load_aggregated, resolve_outdir
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    """Generate PNG charts + SUMMARY.md from one aggregated.json file."""
+    """Generate PNG charts + SUMMARY.md from the aggregated.json files given."""
     missing = [
         name
         for name in ("matplotlib", "polars", "seaborn", "pandas")
@@ -28,7 +28,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     from list_smith_bench.data.utils import charts, markdown
 
-    records = load_aggregated(args.results)
+    records = [record for path in args.results for record in load_aggregated(path)]
     if not records:
         print("no records found in input", file=sys.stderr)
         return 1

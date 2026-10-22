@@ -48,7 +48,7 @@ class TestCaptureDate:
 
 
 class TestPassthroughFields:
-    def test_takes_git_sha_version_and_sdk_from_the_first_record(self) -> None:
+    def test_takes_git_sha_version_and_sdk_from_the_records(self) -> None:
         records = [
             _record(
                 "2026-07-18T09:14:02.000Z",
@@ -69,3 +69,38 @@ class TestPassthroughFields:
         metadata = summary_metadata([_record("2026-07-18T09:14:02.000Z")])
 
         assert metadata["git_sha"] == "unknown"
+
+
+class TestMixedCaptures:
+    def test_names_every_commit_a_report_spans(self) -> None:
+        records = [_record(None, git_sha="a1b2c3d"), _record(None, git_sha="e4f5a6b")]
+
+        assert summary_metadata(records)["git_sha"] == "a1b2c3d, e4f5a6b"
+
+    def test_names_the_platforms_the_ui_scenarios_ran_on(self) -> None:
+        records = [
+            _record(None, scenario="isp_scroll", platform="ios"),
+            _record(None, scenario="isp_scroll", platform="android"),
+            _record(None, scenario="observer_dispatch"),
+        ]
+
+        assert summary_metadata(records)["platforms"] == "Android, iOS"
+
+
+class TestIterations:
+    def test_reads_the_count_a_scenario_record_carries(self) -> None:
+        # A UI scenario writes one record holding every iteration's frames.
+        records = [
+            _record(None, scenario="isp_scroll", iterations=10),
+            _record(None, scenario="cri_refresh", iterations=10),
+        ]
+
+        assert summary_metadata(records)["iterations"] == "10"
+
+    def test_counts_a_micro_that_writes_one_record_per_iteration(self) -> None:
+        records = [
+            *(_record(None, scenario="observer_dispatch") for _ in range(10)),
+            _record(None, scenario="isp_scroll", iterations=10),
+        ]
+
+        assert summary_metadata(records)["iterations"] == "10"
