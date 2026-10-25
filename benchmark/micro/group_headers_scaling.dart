@@ -1,10 +1,11 @@
-/// Micro-benchmark: [headerFlagsByFirstSighting] cost as the loaded list grows.
+/// Micro-benchmark: [resolveGroupHeaders] cost as the loaded list grows.
 ///
-/// Runs per item on every `PagedView` build, over the lazy flatten of the pages, so a slower scan trips
-/// the gate.
+/// Runs per item on every build of a grouped list, over the lazy flatten of the pages, so a slower scan
+/// trips the gate.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
+import 'package:list_smith/src/data/grouping/models/group_order_policy.dart';
 import 'package:list_smith/src/data/grouping/utils/grouping_resolver.dart';
 
 import '../harness/measure.dart';
@@ -20,11 +21,11 @@ const _pageSize = 100;
 /// Items per group. Every 10th item opens a run.
 const _groupSize = 10;
 
-final class _HeaderFlagsScaling(final int itemCount) extends BenchmarkBase {
-  this : super('header_flags_scaling_n$itemCount');
+final class _GroupHeadersScaling(final int itemCount) extends BenchmarkBase {
+  this : super('group_headers_scaling_n$itemCount');
 
   late final List<List<int>> _pages;
-  var lastFlagCount = 0;
+  var lastHeaderCount = 0;
 
   @override
   void setup() => _pages = List<List<int>>.generate(
@@ -35,8 +36,14 @@ final class _HeaderFlagsScaling(final int itemCount) extends BenchmarkBase {
 
   @override
   void run() {
-    final flags = headerFlagsByFirstSighting(_pages.expand((page) => page), _groupKey);
-    lastFlagCount = flags.length;
+    // The default policy's order check is an assert, so AOT times the headers pass alone.
+    final headers = resolveGroupHeaders(
+      _pages.expand((page) => page),
+      _groupKey,
+      const RepairHeadersPolicy(),
+      isReversed: false,
+    );
+    lastHeaderCount = headers.length;
   }
 
   static Object _groupKey(int item) => item ~/ _groupSize;
@@ -47,7 +54,7 @@ Future<void> main(List<String> arguments) async {
 
   final writer = await ResultWriter.open(
     outputPath: scenarioArguments.outputPath,
-    scenario: 'header_flags_scaling',
+    scenario: 'group_headers_scaling',
     sdkVersion: ScenarioArguments.sdkVersion,
     packageVersion: scenarioArguments.packageVersion,
     gitSha: scenarioArguments.gitSha,
@@ -55,7 +62,7 @@ Future<void> main(List<String> arguments) async {
 
   for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final itemCount in _itemCounts) {
-      final benchmark = _HeaderFlagsScaling(itemCount);
+      final benchmark = _GroupHeadersScaling(itemCount);
 
       final microseconds = measureWindowed(benchmark, millis: scenarioArguments.measureMillis);
 
@@ -67,7 +74,7 @@ Future<void> main(List<String> arguments) async {
         summary: {
           'item_count': itemCount,
           'microseconds_per_scan': microseconds,
-          'flag_count': benchmark.lastFlagCount,
+          'header_count': benchmark.lastHeaderCount,
         },
       );
     }

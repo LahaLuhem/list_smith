@@ -1,11 +1,8 @@
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
-import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
-import '/src/data/presentation/presentation.dart';
-import '/src/widgets/grouped_item.dart';
 import '../typedefs/group_header_builder.dart';
 import '../typedefs/group_key_of.dart';
 import '../utils/grouping_resolver.dart';
@@ -26,16 +23,6 @@ sealed class const Grouping<T extends Object>() {
   /// Orders [items] for display. Sync path only, since async can't reorder across pages.
   @internal
   List<T> arrange(Iterable<T> items);
-
-  /// Wraps [itemBuilder] into the builder for one build. Once per build, not per item.
-  ///
-  /// [flattenItems] is a callback because the ungrouped path never flattens and shouldn't pay for it.
-  @internal
-  ItemBuilder<T> decorate(
-    ItemBuilder<T> itemBuilder, {
-    required ValueGetter<Iterable<T>> flattenItems,
-    required Axis axis,
-  });
 
   /// The headers over [items] for one build, null without groups. [isReversed] puts each after its
   /// group's last item.
