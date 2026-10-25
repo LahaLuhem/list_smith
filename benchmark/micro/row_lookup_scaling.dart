@@ -1,12 +1,10 @@
 /// Micro-benchmark: finding every built row again on a rebuild, as the loaded list grows.
 ///
-/// A page landing at the end moves no row, so each one is found at its last index. An item landing on
-/// top moves them all, so the 1st lookup builds the id map. Pages and items match `dedup_scaling`'s,
-/// so the curves read side by side.
+/// Pages and items match `dedup_scaling`'s, so the curves read side by side.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
-import 'package:list_smith/src/data/pagination/pagination.dart';
+import 'package:collection/collection.dart';
 import 'package:list_smith/src/data/presentation/utils/row_lookup.dart';
 
 import '../harness/measure.dart';
@@ -20,11 +18,10 @@ const _itemsPerPage = 20;
 const _builtRows = 30;
 
 /// One rebuild: a fresh [RowLookup] over the new pages, then every built row found again and re-keyed.
-final class _RowLookupScaling(final int itemCount, {required final bool isItemOnTop})
-    extends BenchmarkBase {
+final class _RowLookupScaling(final int itemCount, final _Change change) extends BenchmarkBase {
   this : super('row_lookup_scaling_n$itemCount');
 
-  late final List<LoadedPage<_Item>> _pages;
+  late final List<List<_Item>> _pages;
   late final List<({int id, int lastIndex})> _rows;
   var lastFoundCount = 0;
 
@@ -39,29 +36,31 @@ final class _RowLookupScaling(final int itemCount, {required final bool isItemOn
       ),
       growable: false,
     );
-    final List<List<_Item>> shownPages;
-    if (isItemOnTop) {
-      // The user sits at the top, and every row there now sits 1 lower than it was built.
-      shownPages = [
-        [const _Item(-1), ...loadedPages.first],
-        ...loadedPages.skip(1),
-      ];
-      _rows = List.generate(_builtRows, (index) => (id: index, lastIndex: index));
-    } else {
-      // The user scrolled to the bottom, and the page that brought in moves nothing.
-      shownPages = [
-        ...loadedPages,
-        List.generate(_itemsPerPage, (index) => _Item(itemCount + index), growable: false),
-      ];
-      _rows = List.generate(_builtRows, (index) {
-        final id = itemCount - _builtRows + index;
+    final topRows = List.generate(_builtRows, (index) => (id: index, lastIndex: index));
+    switch (change) {
+      case .pageAppended:
+        _pages = [
+          ...loadedPages,
+          List.generate(_itemsPerPage, (index) => _Item(itemCount + index), growable: false),
+        ];
+        _rows = List.generate(_builtRows, (index) {
+          final id = itemCount - _builtRows + index;
 
-        return (id: id, lastIndex: id);
-      });
+          return (id: id, lastIndex: id);
+        });
+      case .itemOnTop:
+        _pages = [
+          [const _Item(-1), ...loadedPages.first],
+          ...loadedPages.skip(1),
+        ];
+        _rows = topRows;
+      case .rowRemoved:
+        _pages = [
+          [...loadedPages.first]..removeAt(_builtRows ~/ 2),
+          ...loadedPages.skip(1),
+        ];
+        _rows = topRows;
     }
-    _pages = shownPages
-        .map((items) => LoadedPage(items: items, readStamp: 0))
-        .toList(growable: false);
   }
 
   @override
@@ -76,6 +75,18 @@ final class _RowLookupScaling(final int itemCount, {required final bool isItemOn
 
     lastFoundCount = foundCount;
   }
+}
+
+/// What changed since the rows were built.
+enum _Change(final String metricKey) {
+  /// The user scrolled to the bottom, and the page that brought in moves nothing.
+  pageAppended('page_appended_microseconds_per_pass'),
+
+  /// The user sits at the top, and every row there now sits 1 lower than it was built.
+  itemOnTop('item_on_top_microseconds_per_pass'),
+
+  /// A row halfway down the built ones went, so its lookup builds the id map.
+  rowRemoved('row_removed_microseconds_per_pass'),
 }
 
 /// A reference-identity item with an [id], the shape `itemIdGetter` keys on.
@@ -94,25 +105,27 @@ Future<void> main(List<String> arguments) async {
 
   for (var i = 0; i < scenarioArguments.iterations; i++) {
     for (final itemCount in _itemCounts) {
-      final append = _RowLookupScaling(itemCount, isItemOnTop: false);
-      final appendMicroseconds = measureWindowed(append, millis: scenarioArguments.measureMillis);
-      final itemOnTop = _RowLookupScaling(itemCount, isItemOnTop: true);
-      final itemOnTopMicroseconds = measureWindowed(
-        itemOnTop,
-        millis: scenarioArguments.measureMillis,
+      final benchmarks = _Change.values
+          .map((change) => _RowLookupScaling(itemCount, change))
+          .toList(growable: false);
+      final microsecondsByMetric = Map.fromEntries(
+        benchmarks.map(
+          (benchmark) => MapEntry(
+            benchmark.change.metricKey,
+            measureWindowed(benchmark, millis: scenarioArguments.measureMillis),
+          ),
+        ),
       );
 
       writer.writeRecord(
         iteration: i,
-        samples: {
-          'page_appended_microseconds_per_pass': [appendMicroseconds],
-          'item_on_top_microseconds_per_pass': [itemOnTopMicroseconds],
-        },
+        samples: microsecondsByMetric.map(
+          (metric, microseconds) => MapEntry(metric, [microseconds]),
+        ),
         summary: {
           'item_count': itemCount,
-          'page_appended_microseconds_per_pass': appendMicroseconds,
-          'item_on_top_microseconds_per_pass': itemOnTopMicroseconds,
-          'found_rows': append.lastFoundCount + itemOnTop.lastFoundCount,
+          ...microsecondsByMetric,
+          'found_rows': benchmarks.map((benchmark) => benchmark.lastFoundCount).sum,
         },
       );
     }
