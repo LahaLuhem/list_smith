@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,53 @@ import 'package:list_smith/list_smith.dart';
 import '../../support/support.dart';
 
 void main() {
+  feature('ListSmith.async surfaces by status', () {
+    scenarioWidgets('a failing later page shows the new-page error surface', (tester) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: PageFetcher((request) async {
+            if (request.pageIndex == 0) return const [1, 2, 3];
+
+            throw Exception('later page');
+          }),
+          itemIdGetter: (item) => item,
+          surfaces: AsyncListSurfaces(newPageErrorBuilder: (_, _, _) => const Text('later failed')),
+          refresh: const NoRefresh(),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+
+      // Page 0's items stay while the failed page 1 shows its own error footer.
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.text('later failed').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets('a surface replacing another starts fresh', (tester) async {
+      final holdCompleter = Completer<List<int>>();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: PageFetcher((_) => holdCompleter.future),
+          itemIdGetter: (item) => item,
+          surfaces: AsyncListSurfaces(firstPageLoadingBuilder: (_) => const ToggleRow(1)),
+          emptyBuilder: (_) => const ToggleRow(1),
+          refresh: const NoRefresh(),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await tester.tap(find.text('off 1'));
+      await tester.pump();
+      check(shownToggleRows()).deepEquals(['on 1']);
+
+      holdCompleter.complete(const []);
+      await drain(tester);
+
+      check(shownToggleRows()).deepEquals(['off 1']);
+    });
+  });
+
   feature('ListSmith.async drags on a surface', () {
     Widget list(
       FakeServer<int> server, {

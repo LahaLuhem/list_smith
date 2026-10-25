@@ -91,23 +91,6 @@ void main() {
   });
 
   feature('ListSmith.async surfaces and separators', () {
-    scenarioWidgets('a failing later page shows the new-page error surface', (tester) async {
-      await _pumpAsync(
-        tester,
-        fetchPage: PageFetcher((request) async {
-          if (request.pageIndex == 0) return const [1, 2, 3];
-
-          throw Exception('later page');
-        }),
-        surfaces: AsyncListSurfaces(newPageErrorBuilder: (_, _, _) => const Text('later failed')),
-      );
-      await drain(tester);
-
-      // Page 0's items stay while the failed page 1 shows its own error footer.
-      check(find.text('item 1').evaluate()).length.equals(1);
-      check(find.text('later failed').evaluate()).length.equals(1);
-    });
-
     scenarioOutlineWidgets<_SurfaceHost>(
       "a surface gets exactly the list's height, however tall it asks to be",
       examples: _surfaceHosts,
