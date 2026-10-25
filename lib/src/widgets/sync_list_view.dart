@@ -60,13 +60,14 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final ValueNotifier<({List<T> visibleItems, bool isSearching})> _resultNotifier;
   late List<T> _items;
+  Object? _repeatedId;
 
   @override
   void initState() {
     super.initState();
 
     _debouncer.seed(widget.query);
-    _items = widget.source.items.toList(growable: false);
+    _takeItems();
     _resultNotifier = ValueNotifier(_resolve());
   }
 
@@ -75,7 +76,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     super.didUpdateWidget(oldWidget);
 
     final didItemsChange = !identical(widget.source.items, oldWidget.source.items);
-    if (didItemsChange) _items = widget.source.items.toList(growable: false);
+    if (didItemsChange) _takeItems();
     if (didItemsChange || !identical(widget.grouping, oldWidget.grouping)) {
       _resultNotifier.value = _resolve();
     }
@@ -89,6 +90,17 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     _resultNotifier.dispose();
 
     super.dispose();
+  }
+
+  /// Copies the source's items, each id once, since keyed rows can't share one.
+  void _takeItems() {
+    final source = widget.source;
+    final itemIdGetter = source.itemIdGetter;
+    final (:items, :repeatedId) = itemIdGetter == null
+        ? (items: source.items.toList(growable: false), repeatedId: null)
+        : firstOfEachId(source.items, itemIdGetter);
+    _items = items;
+    _repeatedId = repeatedId;
   }
 
   ({List<T> visibleItems, bool isSearching}) _resolve() {
@@ -108,41 +120,50 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   void _onQueryCommitted(String committedQuery) => _resultNotifier.value = _resolve();
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: _resultNotifier,
-    builder: (context, result, _) {
-      final isEmpty = _items.isEmpty;
-      final Widget? surfaceWidget;
-      if (isEmpty) {
-        surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
-      } else if (result.isSearching && result.visibleItems.isEmpty) {
-        surfaceWidget =
-            widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
-            const NeutralNoResultsIndicator();
-      } else {
-        surfaceWidget = null;
-      }
-      final scrollConfig = widget.scrollConfig;
+  Widget build(BuildContext context) {
+    // Here, not where the items land: a throw in didUpdateWidget leaves the element tree broken.
+    assert(
+      _repeatedId == null,
+      "ListSmith.sync's itemIdGetter gave $_repeatedId for more than one item. Ids have to be "
+      'unique, so a release build shows only the 1st.',
+    );
 
-      return KeyedListView(
-        pagedItems: [result.visibleItems],
-        itemBuilder: widget.itemBuilder,
-        grouping: widget.grouping,
-        pullExtentListenable: const AlwaysStoppedAnimation(0),
-        shouldKeepPosition: widget.source.shouldKeepPosition,
-        itemIdGetter: widget.source.itemIdGetter,
-        // Keyed by which surface, so one replacing the other starts fresh.
-        surface: surfaceWidget == null
-            ? null
-            : KeyedSubtree(key: ValueKey(isEmpty), child: surfaceWidget),
-        separatorBuilder: widget.separatorBuilder,
-        controller: scrollConfig.controller,
-        scrollDirection: scrollConfig.scrollDirection,
-        reverse: scrollConfig.reverse,
-        physics: scrollConfig.physics,
-        padding: scrollConfig.padding,
-        scrollCacheExtent: scrollConfig.scrollCacheExtent,
-      );
-    },
-  );
+    return ValueListenableBuilder(
+      valueListenable: _resultNotifier,
+      builder: (context, result, _) {
+        final isEmpty = _items.isEmpty;
+        final Widget? surfaceWidget;
+        if (isEmpty) {
+          surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
+        } else if (result.isSearching && result.visibleItems.isEmpty) {
+          surfaceWidget =
+              widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
+              const NeutralNoResultsIndicator();
+        } else {
+          surfaceWidget = null;
+        }
+        final scrollConfig = widget.scrollConfig;
+
+        return KeyedListView(
+          pagedItems: [result.visibleItems],
+          itemBuilder: widget.itemBuilder,
+          grouping: widget.grouping,
+          pullExtentListenable: const AlwaysStoppedAnimation(0),
+          shouldKeepPosition: widget.source.shouldKeepPosition,
+          itemIdGetter: widget.source.itemIdGetter,
+          // Keyed by which surface, so one replacing the other starts fresh.
+          surface: surfaceWidget == null
+              ? null
+              : KeyedSubtree(key: ValueKey(isEmpty), child: surfaceWidget),
+          separatorBuilder: widget.separatorBuilder,
+          controller: scrollConfig.controller,
+          scrollDirection: scrollConfig.scrollDirection,
+          reverse: scrollConfig.reverse,
+          physics: scrollConfig.physics,
+          padding: scrollConfig.padding,
+          scrollCacheExtent: scrollConfig.scrollCacheExtent,
+        );
+      },
+    );
+  }
 }

@@ -133,7 +133,8 @@ class ListSmith<T extends Object> extends StatelessWidget {
   ///
   /// [itemIdGetter] tells the items apart, so each row keeps its state as rows come and go. Always pass
   /// it: a later release requires it. Without it, rows follow their position, and
-  /// [shouldKeepPosition] has to be off.
+  /// [shouldKeepPosition] has to be off. Each item needs its own id: a repeat is an error in debug,
+  /// and a release build shows only the 1st item with it.
   ///
   /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change. Turn it
   /// off if your app keeps its own scroll position.

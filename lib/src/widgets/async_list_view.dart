@@ -174,19 +174,11 @@ class _AsyncListViewState<T extends Object>()
   /// Fetches the next page into the current stream, unless one is already on its way or the stream has
   /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
   Future<void> _fetchNextPage({FetchTrigger? trigger}) async {
-    final state = _pagingStateNotifier.value;
-    if (!mounted || state.isLoading || !state.hasNextPage) return;
+    final pageIndex = _reserveNextPage();
+    if (pageIndex == null) return;
 
     final generation = _generation;
-    final loadingState = state.loading();
-    _pagingStateNotifier.value = loadingState;
-    final pageIndex = _nextPageIndex(loadingState.pages);
-    if (pageIndex == null) {
-      _pagingStateNotifier.value = loadingState.copyWith(hasNextPage: false, isLoading: false);
-
-      return;
-    }
-    final pages = loadingState.pages ?? const [];
+    final pages = _pagingStateNotifier.value.pages ?? const [];
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
     final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
 
@@ -216,6 +208,22 @@ class _AsyncListViewState<T extends Object>()
         _pagingStateNotifier.value = _pagingStateNotifier.value.failed(exception);
       }
     }
+  }
+
+  /// Marks the next page loading and returns its index. Null when none may load: unmounted, one already
+  /// on its way, or past the end, which it marks.
+  int? _reserveNextPage() {
+    final state = _pagingStateNotifier.value;
+    if (!mounted || state.isLoading || !state.hasNextPage) return null;
+
+    final loadingState = state.loading();
+    _pagingStateNotifier.value = loadingState;
+    final pageIndex = _nextPageIndex(loadingState.pages);
+    if (pageIndex == null) {
+      _pagingStateNotifier.value = loadingState.copyWith(hasNextPage: false, isLoading: false);
+    }
+
+    return pageIndex;
   }
 
   /// Reads page [pageIndex], plus the rows that removals since [pages] were read shifted into the pages

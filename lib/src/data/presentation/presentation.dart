@@ -7,4 +7,5 @@ export 'typedefs/group_header.dart';
 export 'typedefs/item_builder.dart';
 export 'typedefs/no_results_builder.dart';
 export 'utils/cell_layout.dart';
+export 'utils/first_of_each_id.dart';
 export 'utils/row_lookup.dart';
