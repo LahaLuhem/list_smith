@@ -1,3 +1,4 @@
+export 'models/group_headers.dart';
 export 'models/group_order_policy.dart';
 export 'models/grouping.dart';
 export 'typedefs/group_header_builder.dart';
