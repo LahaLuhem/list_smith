@@ -561,6 +561,8 @@ of private mutable state and a bug otherwise.
 
 Over data that never changes once built, a view just saves the copy:
 `UnmodifiableListView(pages.map((page) => page.items))`. Say at the call site why it can't change.
+Not over a filter, which the view walks again on every read, and not where the result is read
+several times, since each read runs the mapping again.
 
 <a id="idioms-uri-construction"></a>
 ### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs

@@ -154,7 +154,7 @@ List<T> _placeAtGroupStarts<T extends Object>(
   }
   displayPages.first.items.insertAll(
     0,
-    openingGroups.values.toList().reversed.expand((group) => group.reversed),
+    openingGroups.values.toList(growable: false).reversed.expand((group) => group.reversed),
   );
 
   return items;
