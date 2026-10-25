@@ -1,6 +1,8 @@
 /// @docImport 'list_smith.dart';
 library;
 
+import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
@@ -61,6 +63,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final ValueNotifier<({List<T> visibleItems, bool isSearching})> _resultNotifier;
   late List<T> _items;
   Object? _repeatedId;
+  var _didItemsChangeInPlace = false;
 
   @override
   void initState() {
@@ -77,6 +80,12 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
     final didItemsChange = !identical(widget.source.items, oldWidget.source.items);
     if (didItemsChange) _takeItems();
+    if (kDebugMode) {
+      // Walk here, instead of a every rebuild in the build method.
+      _didItemsChangeInPlace =
+          !didItemsChange &&
+          !const IterableEquality<Object>(IdentityEquality()).equals(_items, widget.source.items);
+    }
     if (didItemsChange || !identical(widget.grouping, oldWidget.grouping)) {
       _resultNotifier.value = _resolve();
     }
@@ -126,6 +135,11 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
       _repeatedId == null,
       "ListSmith.sync's itemIdGetter gave $_repeatedId for more than one item. Ids have to be "
       'unique, so a release build shows only the 1st.',
+    );
+    assert(
+      !_didItemsChangeInPlace,
+      "ListSmith.sync's items came back as the same list, edited in place. It only reads a new "
+      'list, so pass a copy with the change, like [...items, newItem].',
     );
 
     return ValueListenableBuilder(
