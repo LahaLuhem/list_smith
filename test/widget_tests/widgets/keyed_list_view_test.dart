@@ -90,6 +90,72 @@ void main() {
     );
   });
 
+  feature('ListSmith.async group headers', () {
+    scenarioWidgets('the row being read holds still when a new row takes its header', (
+      tester,
+    ) async {
+      final (controller, scrollController) = await _pumpGrouped(tester);
+      scrollController.jumpTo(1060); // group 2's header on top, item 20 under it
+      await tester.pump();
+      final shownTop = _topOf(tester, 20);
+
+      controller.upsert(200); // joins the start of group 2
+      await tester.pump();
+
+      check(_topOf(tester, 20)).equals(shownTop);
+    });
+
+    scenarioWidgets('the row being read holds still when it gains its header', (tester) async {
+      final (controller, scrollController) = await _pumpGrouped(tester);
+      scrollController.jumpTo(1140); // item 21 on top, item 20 opening its group above
+      await tester.pump();
+      final shownTop = _topOf(tester, 21);
+
+      controller.remove(20);
+      await tester.pump();
+
+      check(_topOf(tester, 21)).equals(shownTop);
+    });
+
+    scenarioWidgets('a header keeps its state when a group lands above it', (tester) async {
+      final controller = ListSmithController<int>();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: pagedFetcher([
+            const [10, 11, 20],
+          ]),
+          itemIdGetter: (item) => item,
+          endPolicy: const FixedPageCountPolicy(pageCount: 1),
+          refresh: const NoRefresh(),
+          grouping: Grouping.by<int, int>(
+            groupBy: (item) => item ~/ 10,
+            headerBuilder: (_, key) => ToggleRow(key),
+          ),
+          controller: controller,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      await tester.tap(find.text('off 2'));
+      await tester.pump();
+
+      controller.upsert(0); // group 0 isn't loaded, so it goes on top
+      await tester.pump();
+
+      check(shownToggleRows()).deepEquals(['off 0', 'off 1', 'on 2']);
+    });
+
+    scenarioWidgets('on a reversed list, a header sits above its group', (tester) async {
+      await _pumpGrouped(tester, reverse: true);
+
+      // Group 0 runs from item 0 at the bottom up to item 9.
+      check(tester.getBottomLeft(find.text('group 0')).dy).equals(_topOf(tester, 9));
+      check(tester.getTopLeft(find.text('group 0')).dy)
+          .equals(tester.getBottomLeft(find.text('item 10')).dy);
+    });
+  });
+
   feature('ListSmith.async surfaces and separators', () {
     scenarioOutlineWidgets<_SurfaceHost>(
       "a surface gets exactly the list's height, however tall it asks to be",
@@ -231,6 +297,37 @@ Future<ListSmithController<int>> _pumpRows(
 
   return controller;
 }
+
+/// Pumps items `0..49` as 50 px rows, grouped by tens (200 joins group 2) under 30 px headers.
+Future<(ListSmithController<int>, ScrollController)> _pumpGrouped(
+  WidgetTester tester, {
+  bool reverse = false,
+}) async {
+  final controller = ListSmithController<int>();
+  final scrollController = ScrollController();
+  await pumpListSmith(
+    tester,
+    ListSmith.async(
+      fetchPage: pagedFetcher([List.generate(50, (item) => item)]),
+      itemIdGetter: (item) => item,
+      endPolicy: const FixedPageCountPolicy(pageCount: 1),
+      refresh: const NoRefresh(),
+      grouping: Grouping.by<int, int>(
+        groupBy: (item) => item < 100 ? item ~/ 10 : item ~/ 100,
+        headerBuilder: (_, key) => SizedBox(height: 30, child: Text('group $key')),
+      ),
+      controller: controller,
+      scroll: ListScrollConfig(controller: scrollController, reverse: reverse),
+      itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
+    ),
+  );
+  await drain(tester);
+
+  return (controller, scrollController);
+}
+
+double _topOf(WidgetTester tester, int item) =>
+    tester.getTopLeft(find.text('item $item', skipOffstage: false)).dy;
 
 /// Pumps past a Dismissible's slide and shrink.
 Future<void> _finishSwipes(WidgetTester tester) async {

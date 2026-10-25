@@ -19,6 +19,10 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
 
   @override
   @internal
+  GroupHeaders? headersOver(Iterable<T> items, {required bool isReversed}) => null;
+
+  @override
+  @internal
   GroupKeyOf<T, Object>? get groupOf => null;
 
   @override

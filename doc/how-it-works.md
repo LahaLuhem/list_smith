@@ -11,7 +11,7 @@ The parts, and what each seam between them promises. The reasons are in
 | [async engine](../lib/src/widgets/async_list_view.dart)                            | owns the paging state and every fetch, runs the reloads, and feed and search as 2 views on one state |
 | [paging state](../lib/src/data/pagination/models/paging_state.dart)                | the loaded pages and where the stream stands. Its `status` names the surface to show                 |
 | [`PagedView`](../lib/src/widgets/paged_view.dart)                                  | picks the surface for the status, the app's builder or a neutral default                             |
-| [`KeyedListView`](../lib/src/widgets/keyed_list_view.dart)                         | the scroll view: rows keyed by item, or a surface in their place, and the near-end trigger           |
+| [`KeyedListView`](../lib/src/widgets/keyed_list_view.dart)                         | the scroll view: keyed rows and headers, or a surface in their place, and the near-end trigger       |
 | [`ScrollAnchor`](../lib/src/widgets/scroll_anchor.dart)                            | holds the row the user is reading still as rows above it change, or the pull's room does             |
 | [`RefreshBinding`](../lib/src/widgets/refresh_binding.dart)                        | wires `custom_refresh_indicator` and places the indicator                                            |
 | [reloads](../lib/src/data/refresh/models/reload.dart)                              | the `Reload` strategies, each run through the `ReloadContext` the engine hands it                    |

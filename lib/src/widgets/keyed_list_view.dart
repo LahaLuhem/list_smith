@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '/src/data/grouping/grouping.dart';
 import '/src/data/pagination/pagination.dart';
 import '/src/data/presentation/presentation.dart';
 import 'scroll_anchor.dart';
@@ -19,6 +20,9 @@ class const KeyedListView<T extends Object>({
 
   /// Keys each row, so the list finds it again after a shift.
   required final ItemIdGetter<T> itemIdGetter,
+
+  /// Splits the items into sections under headers.
+  required final Grouping<T> grouping,
 
   /// Builds the cell after the rows.
   required final WidgetBuilder footerBuilder,
@@ -71,6 +75,7 @@ class const KeyedListView<T extends Object>({
 
     return _KeyedRows(
       rowLookup: RowLookup<T>(pagedItems, itemIdGetter),
+      groupHeaders: grouping.headersOver(pagedItems.expand((items) => items), isReversed: reverse),
       itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
       footerBuilder: footerBuilder,
@@ -104,9 +109,11 @@ class const _SurfaceSlot({required final double trailingPaddingExtent, required 
   );
 }
 
-/// The sliver: the rows, keyed, then the footer as one more cell, so separators fall before it too.
+/// The sliver: keyed rows and headers, then the footer as one more cell, so separators fall before it
+/// too.
 class const _KeyedRows<T extends Object>({
   required final RowLookup<T> rowLookup,
+  required final GroupHeaders? groupHeaders,
   required final ItemIdGetter<T> itemIdGetter,
   required final ItemBuilder<T> itemBuilder,
   required final WidgetBuilder footerBuilder,
@@ -117,56 +124,90 @@ class const _KeyedRows<T extends Object>({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final cellCount = rowLookup.itemCount + 1;
-    final separatorBuilder = this.separatorBuilder;
-    final rowsSliverList = separatorBuilder == null
-        ? SliverList.builder(
-            itemCount: cellCount,
-            itemBuilder: _buildCell,
-            findChildIndexCallback: _indexOf,
-          )
-        : SliverList.separated(
-            itemCount: cellCount,
-            itemBuilder: _buildCell,
-            separatorBuilder: separatorBuilder,
-            findItemIndexCallback: _indexOf,
-          );
+    final cellLayout = CellLayout(
+      itemCount: rowLookup.itemCount,
+      hasSeparators: separatorBuilder != null,
+      headers: groupHeaders?.headers ?? const [],
+      isHeaderAfterItem: groupHeaders?.isAfterItem ?? false,
+    );
+    final rowsSliverList = SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, childIndex) => _buildCell(context, cellLayout.cellAt(childIndex)),
+        childCount: cellLayout.childCount,
+        findChildIndexCallback: (key) => _indexOf(key, cellLayout),
+        // Screen readers count rows and the footer as list entries, not headers or separators.
+        semanticIndexCallback: (_, childIndex) {
+          final (:kind, :index) = cellLayout.cellAt(childIndex);
+
+          return kind == .item || kind == .footer ? index : null;
+        },
+      ),
+    );
     if (!shouldKeepPosition) return rowsSliverList;
 
     return ScrollAnchor(
       rowIdGetter: (childIndex) {
-        final itemIndex = childIndex ~/ _childrenPerItem;
+        final (:kind, :index) = cellLayout.cellAt(childIndex);
 
-        return childIndex % _childrenPerItem != 0 || itemIndex >= rowLookup.itemCount
-            ? null
-            : itemIdGetter(rowLookup.itemAt(itemIndex));
+        return kind == .item ? itemIdGetter(rowLookup.itemAt(index)) : null;
       },
       rowIndexGetter: (id, lastChildIndex) {
-        final itemIndex = rowLookup.indexOf(id, lastChildIndex ~/ _childrenPerItem);
+        final (:kind, :index) = cellLayout.cellAt(lastChildIndex);
+        // Only a hint for the lookup, so a header stands in for the item it sits by.
+        final itemIndex = rowLookup.indexOf(
+          id,
+          kind == .header ? groupHeaders!.headers[index].itemIndex : index,
+        );
 
-        return itemIndex == null ? null : itemIndex * _childrenPerItem;
+        return itemIndex == null ? null : cellLayout.childIndexOfItem(itemIndex);
       },
       pullExtentListenable: pullExtentListenable,
       sliver: rowsSliverList,
     );
   }
 
-  Widget _buildCell(BuildContext context, int index) {
-    final itemCount = rowLookup.itemCount;
-    if (index >= itemCount) return footerBuilder(context);
+  Widget _buildCell(BuildContext context, Cell cell) {
+    final (:kind, :index) = cell;
+    // A header or separator cell only exists when its builder does.
+    switch (kind) {
+      case .header:
+        final groupHeaders = this.groupHeaders!;
+        final groupKey = groupHeaders.headers[index].key;
 
-    if (index >= math.max(0, itemCount - 1 - _nearEndRows)) onNearEnd?.call();
-    final item = rowLookup.itemAt(index);
+        return KeyedSubtree(
+          key: _HeaderKey(groupKey, index),
+          child: groupHeaders.headerFor(context, groupKey),
+        );
+      case .separator:
+        return separatorBuilder!(context, index);
+      case .footer:
+        return footerBuilder(context);
+      case .item:
+        final itemCount = rowLookup.itemCount;
+        if (index >= math.max(0, itemCount - 1 - _nearEndRows)) onNearEnd?.call();
+        final item = rowLookup.itemAt(index);
 
-    return KeyedSubtree(
-      key: _RowKey(itemIdGetter(item), index),
-      child: itemBuilder(context, item, index),
-    );
+        return KeyedSubtree(
+          key: _RowKey(itemIdGetter(item), index),
+          child: itemBuilder(context, item, index),
+        );
+    }
   }
 
-  int? _indexOf(Key key) => key is! _RowKey ? null : rowLookup.indexOf(key.id, key.index);
+  int? _indexOf(Key key, CellLayout cellLayout) {
+    if (key is _RowKey) {
+      final itemIndex = rowLookup.indexOf(key.id, key.index);
 
-  int get _childrenPerItem => separatorBuilder == null ? 1 : 2; // an item, then its separator
+      return itemIndex == null ? null : cellLayout.childIndexOfItem(itemIndex);
+    }
+    if (key is _HeaderKey) {
+      final headerIndex = groupHeaders?.indexOf(key.groupKey, key.index);
+
+      return headerIndex == null ? null : cellLayout.childIndexOfHeader(headerIndex);
+    }
+
+    return null;
+  }
 
   /// How many rows from the end a row's build asks for the next page.
   static const _nearEndRows = 3;
@@ -183,4 +224,17 @@ final class const _RowKey(final Object id, final int index) extends LocalKey {
 
   @override
   String toString() => '_RowKey(id: $id, index: $index)';
+}
+
+/// A header's group key, plus where it was built as a lookup hint. Equal on the key alone, so a
+/// header that moved is still the same header.
+final class const _HeaderKey(final Object groupKey, final int index) extends LocalKey {
+  @override
+  bool operator ==(Object other) => other is _HeaderKey && other.groupKey == groupKey;
+
+  @override
+  int get hashCode => groupKey.hashCode;
+
+  @override
+  String toString() => '_HeaderKey(groupKey: $groupKey, index: $index)';
 }

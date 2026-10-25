@@ -1,6 +1,7 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/src/data/grouping/grouping.dart';
+import 'package:list_smith/src/data/presentation/presentation.dart';
 
 void main() {
   final groupingFeature = BddFeature('Grouping resolution');
@@ -82,6 +83,76 @@ void main() {
         // Properly grouped items: no throw, same flags as the default.
         check(resolveHeaderFlags(const [10, 11, 20], decade, const FailOnUnorderedPolicy()))
             .deepEquals(const [true, false, true]);
+      });
+
+  const headerItemsKey = 'headerItems';
+  const isReversedKey = 'isReversed';
+  const headersKey = 'headers';
+
+  Bdd(groupingFeature)
+      .scenario("puts one header on each key's 1st run, after its last item on a reversed list")
+      .given('a tens-digit group key')
+      .when('it finds the headers for <$headerItemsKey>, reversed <$isReversedKey>')
+      .then('they are <$headersKey>')
+      .example(
+        val(headerItemsKey, const <int>[]),
+        val(isReversedKey, false),
+        val(headersKey, const <GroupHeader>[]),
+      )
+      .example(
+        val(headerItemsKey, const [10, 11, 20, 30]),
+        val(isReversedKey, false),
+        val(headersKey, const [
+          (itemIndex: 0, key: 1),
+          (itemIndex: 2, key: 2),
+          (itemIndex: 3, key: 3),
+        ]),
+      )
+      // On a reversed list a header shows above its group, so it goes after the group's last item.
+      .example(
+        val(headerItemsKey, const [10, 11, 20, 30]),
+        val(isReversedKey, true),
+        val(headersKey, const [
+          (itemIndex: 1, key: 1),
+          (itemIndex: 2, key: 2),
+          (itemIndex: 3, key: 3),
+        ]),
+      )
+      // A key coming back gets no 2nd header, either way round.
+      .example(
+        val(headerItemsKey, const [10, 20, 11]),
+        val(isReversedKey, false),
+        val(headersKey, const [(itemIndex: 0, key: 1), (itemIndex: 1, key: 2)]),
+      )
+      .example(
+        val(headerItemsKey, const [10, 20, 11]),
+        val(isReversedKey, true),
+        val(headersKey, const [(itemIndex: 0, key: 1), (itemIndex: 1, key: 2)]),
+      )
+      .run((context) {
+        final headers = groupHeadersByFirstRun(
+          context.example.val(headerItemsKey) as List<int>,
+          decade,
+          isReversed: context.example.val(isReversedKey) as bool,
+        );
+
+        check(headers).deepEquals(context.example.val(headersKey) as List<GroupHeader>);
+      });
+
+  Bdd(groupingFeature)
+      .scenario('FailOnUnorderedPolicy throws on out-of-order items when finding headers too')
+      .given('a tens-digit group key and FailOnUnorderedPolicy')
+      .when('a group key comes back after another one')
+      .then('it throws a StateError')
+      .run((_) {
+        check(
+          () => resolveGroupHeaders(
+            const [10, 20, 11],
+            decade,
+            const FailOnUnorderedPolicy(),
+            isReversed: false,
+          ),
+        ).throws<StateError>();
       });
 
   const contiguousItemsKey = 'contiguousItems';

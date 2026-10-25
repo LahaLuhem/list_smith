@@ -40,5 +40,13 @@ final class const KeyedGrouping<T extends Object>._({
   }
 
   @override
+  @internal
+  GroupHeaders headersOver(Iterable<T> items, {required bool isReversed}) => GroupHeaders(
+    headers: resolveGroupHeaders(items, groupOf, orderPolicy, isReversed: isReversed),
+    isAfterItem: isReversed,
+    headerFor: headerFor,
+  );
+
+  @override
   String toString() => 'KeyedGrouping(orderPolicy: $orderPolicy)';
 }

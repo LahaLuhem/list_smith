@@ -9,6 +9,7 @@ import '/src/widgets/grouped_item.dart';
 import '../typedefs/group_header_builder.dart';
 import '../typedefs/group_key_of.dart';
 import '../utils/grouping_resolver.dart';
+import 'group_headers.dart';
 import 'group_order_policy.dart';
 
 part 'groupings/keyed_grouping.dart';
@@ -35,6 +36,11 @@ sealed class const Grouping<T extends Object>() {
     required ValueGetter<Iterable<T>> flattenItems,
     required Axis axis,
   });
+
+  /// The headers over [items] for one build, null without groups. [isReversed] puts each after its
+  /// group's last item.
+  @internal
+  GroupHeaders? headersOver(Iterable<T> items, {required bool isReversed});
 
   /// Pulls an item's group key, null when there are no groups. The edit layer reads it to keep a new or
   /// moved item inside its group.

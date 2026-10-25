@@ -105,13 +105,9 @@ class const PagedView<T extends Object>({
     return KeyedListView(
       // A view, not a copy. Pages never change once built.
       pagedItems: UnmodifiableListView((state.pages ?? const []).map((page) => page.items)),
-      // The group look-back only walks the pages when grouping is on, since decorate takes it as a callback.
-      itemBuilder: grouping.decorate(
-        itemBuilder,
-        flattenItems: () => state.items,
-        axis: scrollConfig.scrollDirection,
-      ),
+      itemBuilder: itemBuilder,
       itemIdGetter: itemIdGetter,
+      grouping: grouping,
       // One shape whatever the footer shows: the end, a new page loading, or its error.
       footerBuilder: switch (status) {
         .subsequentPageError => (_) => _ResolvedError(
