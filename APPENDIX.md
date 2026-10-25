@@ -540,7 +540,9 @@ renames.
   faster reads, for about 20% more build time than a growable `List<bool>`. Never
   `BoolList.of(iterable)` over a stateful chain: it reads `.length` and then `setAll`, so the chain
   runs twice and every key reads as already seen.
-- **Tripwire:** the `header_flags_scaling` micro.
+- **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
+  or not, and a moved row is checked at several indices before the id map gets built.
+- **Tripwire:** the `header_flags_scaling` micro, and `row_lookup_scaling` for the lookup.
 
 ---
 

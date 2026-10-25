@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -87,7 +88,11 @@ class const KeyedPagedListView<T extends Object>({
 
     // One shape whatever the footer shows: the end, a new page loading, or its error.
     return _KeyedRows(
-      rowLookup: RowLookup<T>(state.pages ?? const [], itemIdGetter),
+      rowLookup: RowLookup<T>(
+        // A view, not a copy. Pages never change once built.
+        UnmodifiableListView((state.pages ?? const []).map((page) => page.items)),
+        itemIdGetter,
+      ),
       itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
       footerBuilder: switch (status) {

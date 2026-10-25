@@ -559,6 +559,9 @@ collection. It *copies*, so you get a snapshot. The `…View` only *wraps*, so w
 the original can mutate what the view shows, which is the point when you want a read-through view
 of private mutable state and a bug otherwise.
 
+Over data that never changes once built, a view just saves the copy:
+`UnmodifiableListView(pages.map((page) => page.items))`. Say at the call site why it can't change.
+
 <a id="idioms-uri-construction"></a>
 ### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs
 

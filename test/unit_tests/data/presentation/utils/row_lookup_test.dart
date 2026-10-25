@@ -1,16 +1,12 @@
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
-import 'package:list_smith/src/data/pagination/pagination.dart';
 import 'package:list_smith/src/data/presentation/presentation.dart';
 
 void main() {
   final lookupFeature = BddFeature('Row lookup');
 
-  // The ids are the items themselves. Read stamps don't matter to a lookup.
-  RowLookup<int> lookupOver(List<List<int>> pages) => RowLookup(
-    pages.map((items) => LoadedPage(items: items, readStamp: 0)).toList(growable: false),
-    (item) => item,
-  );
+  // The ids are the items themselves.
+  RowLookup<int> lookupOver(List<List<int>> pages) => RowLookup(pages, (item) => item);
 
   Bdd(lookupFeature)
       .scenario('reads each item by its flat index, across empty pages')
@@ -77,9 +73,31 @@ void main() {
         ]),
         val(indexKey, null),
       )
+      // 40 landed above it, further than the nearby search.
+      .example(
+        val(pagesKey, [
+          List.generate(40, (index) => index + 100),
+          const [0, 1, 2, 3, 4],
+        ]),
+        val(indexKey, 43),
+      )
       .run((context) {
         final rowLookup = lookupOver(context.example.val(pagesKey) as List<List<int>>);
 
         check(rowLookup.indexOf(3, 3)).equals(context.example.val(indexKey) as int?);
+      });
+
+  Bdd(lookupFeature)
+      .scenario('answers the same whatever was looked for before')
+      .given('item 4 went, and the items above it stayed')
+      .when('item 4 is looked for, then item 3')
+      .then('item 4 is gone, and item 3 sits where it was')
+      .run((_) {
+        final rowLookup = lookupOver(const [
+          [0, 1, 2, 3],
+        ]);
+
+        check(rowLookup.indexOf(4, 4)).isNull();
+        check(rowLookup.indexOf(3, 3)).equals(3);
       });
 }
