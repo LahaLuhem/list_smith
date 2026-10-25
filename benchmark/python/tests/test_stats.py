@@ -43,7 +43,7 @@ _SCENARIO_PIVOTS: dict[str, str] = {
     "dedup_scaling": "item_count",
     "edit_layer_scaling": "item_count",
     "row_lookup_scaling": "item_count",
-    "header_flags_scaling": "item_count",
+    "group_headers_scaling": "item_count",
     "wrapping_overhead": "page_count",
     "slow_observer": "observer_delay_millis",
 }

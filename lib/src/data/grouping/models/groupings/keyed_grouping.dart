@@ -21,26 +21,6 @@ final class const KeyedGrouping<T extends Object>._({
 
   @override
   @internal
-  ItemBuilder<T> decorate(
-    ItemBuilder<T> itemBuilder, {
-    required ValueGetter<Iterable<T>> flattenItems,
-    required Axis axis,
-  }) {
-    final headerFlags = resolveHeaderFlags(flattenItems(), groupOf, orderPolicy);
-
-    return (_, item, index) => GroupedItem<T>(
-      itemBuilder: itemBuilder,
-      groupOf: groupOf,
-      headerFor: headerFor,
-      scrollDirection: axis,
-      drawsHeader: headerFlags[index],
-      item: item,
-      index: index,
-    );
-  }
-
-  @override
-  @internal
   GroupHeaders headersOver(Iterable<T> items, {required bool isReversed}) => GroupHeaders(
     headers: resolveGroupHeaders(items, groupOf, orderPolicy, isReversed: isReversed),
     isAfterItem: isReversed,

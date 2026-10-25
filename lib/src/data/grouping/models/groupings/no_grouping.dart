@@ -11,14 +11,6 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
 
   @override
   @internal
-  ItemBuilder<T> decorate(
-    ItemBuilder<T> itemBuilder, {
-    required ValueGetter<Iterable<T>> flattenItems,
-    required Axis axis,
-  }) => itemBuilder;
-
-  @override
-  @internal
   GroupHeaders? headersOver(Iterable<T> items, {required bool isReversed}) => null;
 
   @override

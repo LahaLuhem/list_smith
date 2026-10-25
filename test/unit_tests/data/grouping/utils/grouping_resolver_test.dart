@@ -34,41 +34,22 @@ void main() {
         check(bucketed).deepEquals(context.example.val(bucketedKey) as List<int>);
       });
 
-  const flagItemsKey = 'flagItems';
-  const flagsKey = 'flags';
-
-  Bdd(groupingFeature)
-      .scenario('flags the first sighting of each group key, and only that one')
-      .given('a tens-digit group key')
-      .when('it flags headers for <$flagItemsKey>')
-      .then('the flags are <$flagsKey>')
-      // Empty in, empty out.
-      .example(val(flagItemsKey, const <int>[]), val(flagsKey, const <bool>[]))
-      // One header per group, on the item that opens it.
-      .example(
-        val(flagItemsKey, const [10, 11, 20, 30]),
-        val(flagsKey, const [true, false, true, true]),
-      )
-      // A key coming back is not a 2nd header. That is the repair.
-      .example(val(flagItemsKey, const [10, 20, 11]), val(flagsKey, const [true, true, false]))
-      .run((context) {
-        final flags = headerFlagsByFirstSighting(
-          context.example.val(flagItemsKey) as List<int>,
-          decade,
-        );
-
-        check(flags).deepEquals(context.example.val(flagsKey) as List<bool>);
-      });
+  const groupedHeaders = [(itemIndex: 0, key: 1), (itemIndex: 2, key: 2)];
 
   Bdd(groupingFeature)
       .scenario('the default policy leaves properly grouped items alone')
       .given('a tens-digit group key and RepairHeadersPolicy')
       .when('it resolves headers for contiguous items')
-      .then('every group opener is flagged')
+      .then('every group gets its header')
       .run((_) {
-        final flags = resolveHeaderFlags(const [10, 11, 20], decade, const RepairHeadersPolicy());
+        final headers = resolveGroupHeaders(
+          const [10, 11, 20],
+          decade,
+          const RepairHeadersPolicy(),
+          isReversed: false,
+        );
 
-        check(flags).deepEquals(const [true, false, true]);
+        check(headers).deepEquals(groupedHeaders);
       });
 
   Bdd(groupingFeature)
@@ -77,12 +58,24 @@ void main() {
       .when('a group key comes back after another one')
       .then('it throws a StateError instead of drawing anything')
       .run((_) {
-        check(() => resolveHeaderFlags(const [10, 20, 11], decade, const FailOnUnorderedPolicy()))
-            .throws<StateError>();
+        check(
+          () => resolveGroupHeaders(
+            const [10, 20, 11],
+            decade,
+            const FailOnUnorderedPolicy(),
+            isReversed: false,
+          ),
+        ).throws<StateError>();
 
-        // Properly grouped items: no throw, same flags as the default.
-        check(resolveHeaderFlags(const [10, 11, 20], decade, const FailOnUnorderedPolicy()))
-            .deepEquals(const [true, false, true]);
+        // Properly grouped items: no throw, same headers as the default.
+        check(
+          resolveGroupHeaders(
+            const [10, 11, 20],
+            decade,
+            const FailOnUnorderedPolicy(),
+            isReversed: false,
+          ),
+        ).deepEquals(groupedHeaders);
       });
 
   const headerItemsKey = 'headerItems';
@@ -137,22 +130,6 @@ void main() {
         );
 
         check(headers).deepEquals(context.example.val(headersKey) as List<GroupHeader>);
-      });
-
-  Bdd(groupingFeature)
-      .scenario('FailOnUnorderedPolicy throws on out-of-order items when finding headers too')
-      .given('a tens-digit group key and FailOnUnorderedPolicy')
-      .when('a group key comes back after another one')
-      .then('it throws a StateError')
-      .run((_) {
-        check(
-          () => resolveGroupHeaders(
-            const [10, 20, 11],
-            decade,
-            const FailOnUnorderedPolicy(),
-            isReversed: false,
-          ),
-        ).throws<StateError>();
       });
 
   const contiguousItemsKey = 'contiguousItems';

@@ -29,7 +29,7 @@ renames.
 - [Each reload is a run that knows its stream](#reload-run)
 - [Fetchers take a request object, not an argument list](#page-request-object)
 - [Fetchers are told why they were called](#fetch-trigger)
-- [Per-item scans on the build path stay loops, and pack their flags](#scan-loops)
+- [Per-item scans on the build path stay loops](#scan-loops)
 - [The format gate runs Flutter's Dart, not standalone Dart](#ci-format-sdk)
 - [The root analysis skips `benchmark/app`](#root-analysis-skips-bench-app)
 - [Dependabot's PRs auto-merge through dartender](#dependabot-automerge)
@@ -267,12 +267,11 @@ renames.
   non-grouping list would carry a meaningless `K`. The `key as K` downcast is sound: every key
   reaching the header came from the same instance's `groupBy`. Caveat: an untyped inline `groupBy`
   widens `T` to `Object`, so type the parameter or pass a typed function.
-- **The header rides the group's 1st item, not a sticky sliver.** `KeyedGrouping.decorate` wraps
-  each cell in a `GroupedItem` that stacks the header before the group's 1st item in a `Flex`
-  along the scroll axis, so the pager stays flat and list_smith keeps owning the scrollable. One
-  pass per build flags where each group starts ([#scan-loops](#scan-loops)). Sticky headers would
-  need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset tracking, exactly
-  the fragility this package rejects. Deferred.
+- **A header is a cell among the rows, not a sticky sliver.** It sits before its group's 1st item,
+  or after its last on a reversed list, so the rows stay one flat sliver and list_smith keeps owning
+  the scrollable. One pass per build places the headers ([#scan-loops](#scan-loops)). Sticky headers
+  would need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset tracking,
+  exactly the fragility this package rejects. Deferred.
 - **Sync buckets, async trusts arrival order.** A sync list holds every item, so it reorders the
   filtered ones into contiguous groups (`bucketByGroup` over `collection`'s `groupListsBy`,
   first-appearance order, item order kept within a group) and input can arrive any way round. An
@@ -280,10 +279,10 @@ renames.
   with a debug-only `groupsAreContiguous` assert flagging a key that recurs after its section ended.
 - **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
   passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
-  widget-free and unit-tested (`bucketByGroup`, `resolveHeaderFlags`, `groupsAreContiguous`), while
-  the per-build wrapping lives on the type as `Grouping.decorate`. `resolveSyncSearch` returns a
-  lazy view so the grouped sync path buckets with one copy, re-resolving on an items or `grouping`
-  identity change. Hence "hold the `Grouping` stable" on a large list.
+  widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupsAreContiguous`), and
+  each build gets its headers from the type, through `Grouping.headersOver`. `resolveSyncSearch`
+  returns a lazy view so the grouped sync path buckets with one copy, re-resolving on an items or
+  `grouping` identity change. Hence "hold the `Grouping` stable" on a large list.
 
 ---
 
@@ -292,9 +291,9 @@ renames.
 
 - **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
   methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `decorate(itemBuilder, flattenItems:, axis:)`
-  returns the per-build item builder. Same "delegate to the type, keep the shell branch-free" move
-  as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
+  `arrange(items)` is the sync display ordering, `headersOver(items, isReversed:)` returns the
+  per-build headers, null without groups. Same "delegate to the type, keep the shell branch-free"
+  move as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
 - **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
   compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
   Opening it later is a one-line change. `@internal` makes them callable across the package but not
@@ -302,20 +301,15 @@ renames.
 - **`NoGrouping` had to become generic.** A `T`-typed parameter on an instance reified at `Never`
   rejects a real argument at runtime, since Dart makes such parameters covariant and checks them, so
   `arrange(<String>[...])` on a `Grouping<Never>` throws. The old `const NoGrouping()` default was
-  exactly that, and would have crashed every ungrouped list the moment `arrange` or `decorate` ran.
+  exactly that, and would have crashed every ungrouped list the moment `arrange` or `headersOver`
+  ran.
   Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
-- **The ungrouped path still does no flatten.** `decorate` takes `flattenItems` as a callback
-  `NoGrouping.decorate` never invokes, so an ungrouped async list skips the O(loaded) page flatten.
-  Only `KeyedGrouping.decorate` calls it, once per build, for the header flags and the assert.
-  Dispatch is per build rather than per item, one virtual call replacing one `is` check, so the
-  render path is unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
-- **`GroupedItem` was decoupled from `KeyedGrouping`.** It takes `groupOf` and `headerFor` directly
-  rather than the whole grouping, so `decorate` can build it without a cycle: the grouping model
-  imports the widget, and a `KeyedGrouping` field would make the 2 files import each other. The
-  trade is deliberate. `Grouping` gains a presentation method, so the model is no longer purely
-  widget-free, though its ordering and boundary logic still is and the graph stays acyclic.
+- **The ungrouped path still does no flatten.** `headersOver` takes the items as a lazy flatten that
+  `NoGrouping.headersOver` never walks, so an ungrouped list skips the O(loaded) pass. Dispatch is
+  per build rather than per item, one virtual call replacing one `is` check, so the render path is
+  unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
 
 ---
 
@@ -529,20 +523,17 @@ renames.
 ---
 
 <a id="scan-loops"></a>
-## Per-item scans on the build path stay loops, and pack their flags
+## Per-item scans on the build path stay loops
 
-- **Decision:** `headerFlagsByFirstSighting` and `groupsAreContiguous` are single-pass loops over
-  the lazy flatten of the loaded pages, and the flags come back as a `BoolList`.
-- **Why:** both run on every `PagedView` build. Against the loop, a chain on one stateful closure
-  costs about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per run.
-  The indexed `List.generate` form paid for its flatten and still lost.
-- **`BoolList`:** a bit per flag instead of a reference, so tens of times less memory and about 3x
-  faster reads, for about 20% more build time than a growable `List<bool>`. Never
-  `BoolList.of(iterable)` over a stateful chain: it reads `.length` and then `setAll`, so the chain
-  runs twice and every key reads as already seen.
+- **Decision:** `groupHeadersByFirstRun` and `groupsAreContiguous` are single-pass loops over the
+  lazy flatten of the loaded pages.
+- **Why:** both run on every build of a grouped list. Against the loop, a chain on one stateful
+  closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per
+  run. The indexed `List.generate` form paid for its flatten and still lost. Measured on the
+  per-item header flags `groupHeadersByFirstRun` replaced, which walked the same way.
 - **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
   or not, and a moved row is checked at several indices before the id map gets built.
-- **Tripwire:** the `header_flags_scaling` micro, and `row_lookup_scaling` for the lookup.
+- **Tripwire:** the `group_headers_scaling` micro, and `row_lookup_scaling` for the lookup.
 
 ---
 
@@ -673,8 +664,6 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **The lookup:** a row's key carries the index it was last built at, and that's checked first. Only
   a row that moved builds the id-to-index map, once per rebuild. The
   [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
-- **`GroupedItem` keeps one shape,** a `Flex` with keyed header and item slots, so a row gaining or
-  losing its header keeps its state too.
 
 ---
 
