@@ -1,3 +1,6 @@
+// Test-local fixtures share the file with the scenarios that use them.
+// ignore_for_file: prefer-match-file-name
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -282,6 +285,40 @@ void main() {
       check(find.text('banana').evaluate()).length.equals(0);
     });
 
+    scenarioOutlineWidgets<void Function(List<_Task> tasks)>(
+      'the same list coming back edited is an error',
+      examples: {
+        'an item added': (tasks) => tasks.insert(0, const _Task(100)),
+        'an item removed': (tasks) => tasks.removeAt(1),
+        // The row would keep showing the old item, since == can't tell the 2 apart.
+        'an item swapped for one equal by ==': (tasks) => tasks[1] = const _Task(1),
+      },
+      outline: (tester, edit) async {
+        final tasks = List.generate(5, _Task.new);
+        late StateSetter setTasks;
+        await pumpListSmith(
+          tester,
+          StatefulBuilder(
+            builder: (_, setState) {
+              setTasks = setState;
+
+              return ListSmith<_Task>.sync(
+                items: tasks,
+                itemIdGetter: (task) => task.id,
+                searchBy: (_, _) => true,
+                itemBuilder: (_, task, _) => Text('task ${task.id}'),
+              );
+            },
+          ),
+        );
+
+        setTasks(() => edit(tasks));
+        await tester.pump();
+
+        check(tester.takeException()).isA<AssertionError>();
+      },
+    );
+
     scenarioOutlineWidgets<({double cacheExtent, int row, bool isBuilt})>(
       'rows are built as far past the screen as the cache extent reaches',
       examples: const {
@@ -380,6 +417,16 @@ Future<void> _pumpRows(
     ),
   ),
 );
+
+/// An item whose `==` compares only ids, as many app models do.
+@immutable
+final class const _Task(final int id) {
+  @override
+  bool operator ==(Object other) => other is _Task && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+}
 
 double _topOf(WidgetTester tester, int item) =>
     tester.getTopLeft(find.text('item $item', skipOffstage: false)).dy;

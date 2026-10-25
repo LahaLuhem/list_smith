@@ -128,6 +128,9 @@ class ListSmith<T extends Object> extends StatelessWidget {
 
   /// Creates a sync, in-memory searchable list over [items].
   ///
+  /// [items] is only read again when you pass a new list, so pass a copy with each change. Editing the
+  /// one you passed shows nothing, and is an error in debug.
+  ///
   /// [searchBy] is required: there's nothing to paginate or refresh over in-memory data, so search is
   /// the whole point. [searchDebounce] defaults to zero, an in-memory filter being instant.
   ///
