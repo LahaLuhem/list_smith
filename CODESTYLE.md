@@ -73,15 +73,15 @@ under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
   OS) stay. Everything else spells out, because shorthand that's obvious to the author reads as a
   typo to the next person.
 
-  | Don't write            | Write instead                                                     |
-  |------------------------|-------------------------------------------------------------------|
-  | `cb`                   | `callback` (or the semantic role: `onRefresh`, `onQueryChanged`)  |
-  | `fn`                   | `function` / `handler` / spell out the role                       |
-  | `cfg`                  | `config`                                                          |
-  | `idx`                  | `index` (loop counters keep `i` / `j` per genre convention)       |
-  | `tmp`                  | `temporary`, or a name describing what it holds                   |
-  | `req` / `res` / `resp` | `request` / `response`                                            |
-  | `ctx`                  | `context` (Flutter's `BuildContext` arg stays `context`)          |
+  | Don't write            | Write instead                                                    |
+  |------------------------|------------------------------------------------------------------|
+  | `cb`                   | `callback` (or the semantic role: `onRefresh`, `onQueryChanged`) |
+  | `fn`                   | `function` / `handler` / spell out the role                      |
+  | `cfg`                  | `config`                                                         |
+  | `idx`                  | `index` (loop counters keep `i` / `j` per genre convention)      |
+  | `tmp`                  | `temporary`, or a name describing what it holds                  |
+  | `req` / `res` / `resp` | `request` / `response`                                           |
+  | `ctx`                  | `context` (Flutter's `BuildContext` arg stays `context`)         |
   | `evt`                  | `event`                                                          |
 
   This binds *every* identifier: fields, locals, parameters, pattern bindings. The carve-outs are
@@ -780,19 +780,19 @@ a local helper can't cross a package boundary.
 **Widget tests share one harness, not per-file copies.** The pieces live under `test/support/`,
 re-exported by the `support.dart` barrel, so import that one file:
 
-| Helper | What it does |
-|---|---|
-| `pumpListSmith(tester, child)` | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs |
-| `drain(tester, {frames})` | pumps a fixed number of frames |
-| `settle(tester, {debounce})` | advances past a search debounce, then drains |
-| `pullToRefresh(tester, anchor, {offset})` | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
-| `scrollToEnd(tester, controller)`, `allShownTexts(tester, controller, prefix)` | scrolls until the list stops growing, and reads every row's text there, top to bottom |
-| `containsIgnoreCase` | sync-search predicate |
-| `pagedFetcher([...])` | multi-page or overlapping data (a single page reads clearer inline) |
-| `FakeServer(items)` | a store to edit mid-test, with fetchers you can hold or fail per page and attempt |
-| `release(tester, holdCompleters)` | lets held fetches through, then drains |
-| `ToggleRow(item)`, `shownToggleRows()` | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen |
-| `check(value).readsAsItself()` | its `toString` isn't Dart's default `Instance of '…'` |
+| Helper                                                                         | What it does                                                                                                        |
+|--------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| `pumpListSmith(tester, child)`                                                 | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs                                     |
+| `drain(tester, {frames})`                                                      | pumps a fixed number of frames                                                                                      |
+| `settle(tester, {debounce})`                                                   | advances past a search debounce, then drains                                                                        |
+| `pullToRefresh(tester, anchor, {offset})`                                      | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
+| `scrollToEnd(tester, controller)`, `allShownTexts(tester, controller, prefix)` | scrolls until the list stops growing, and reads every row's text there, top to bottom                               |
+| `containsIgnoreCase`                                                           | sync-search predicate                                                                                               |
+| `pagedFetcher([...])`                                                          | multi-page or overlapping data (a single page reads clearer inline)                                                 |
+| `FakeServer(items)`                                                            | a store to edit mid-test, with fetchers you can hold or fail per page and attempt                                   |
+| `release(tester, holdCompleters)`                                              | lets held fetches through, then drains                                                                              |
+| `ToggleRow(item)`, `shownToggleRows()`                                         | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen                                  |
+| `check(value).readsAsItself()`                                                 | its `toString` isn't Dart's default `Instance of '…'`                                                               |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin
 delegation carrying only that suite's own `ListSmith` config, never a re-declared scaffold or drain

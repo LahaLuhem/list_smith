@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -8,7 +9,7 @@ import '/src/data/pagination/pagination.dart';
 import '/src/data/presentation/presentation.dart';
 import '/src/data/refresh/refresh.dart';
 import 'defaults/defaults.dart';
-import 'keyed_paged_list_view.dart';
+import 'keyed_list_view.dart';
 
 /// The async list, with every surface filled by our neutral default or the consumer's override.
 @internal
@@ -84,51 +85,65 @@ class const PagedView<T extends Object>({
   this;
 
   @override
-  Widget build(BuildContext context) => KeyedPagedListView(
-    state: state,
-    // The group look-back only walks the pages when grouping is on, since decorate takes it as a callback.
-    itemBuilder: grouping.decorate(
-      itemBuilder,
-      flattenItems: () => state.items,
-      axis: scrollConfig.scrollDirection,
-    ),
-    itemIdGetter: itemIdGetter,
+  Widget build(BuildContext context) {
+    final status = state.status;
     // The error surfaces read `state.exception!`, non-null because only an error status builds them.
-    surfaces: (
-      firstPageLoading: firstPageLoadingBuilder ?? (_) => const NeutralLoadingIndicator(),
-      firstPageError: (_) => _ResolvedError(
+    final surfaceWidget = switch (status) {
+      .loadingFirstPage =>
+        firstPageLoadingBuilder?.call(context) ?? const NeutralLoadingIndicator(),
+      .firstPageError => _ResolvedError(
         exception: state.exception!,
         onRetry: onRetry,
         builder: firstPageErrorBuilder,
       ),
-      noItemsFound: isSearchMode
-          ? (context) => noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator()
-          : emptyBuilder ?? (_) => const NeutralEmptyIndicator(),
-      newPageLoading:
-          newPageLoadingBuilder ?? (_) => const NeutralLoadingIndicator(isCompact: true),
-      newPageError: (_) => _ResolvedError(
-        exception: state.exception!,
-        onRetry: onRetry,
-        builder: newPageErrorBuilder,
-        isCompact: true,
+      .noItemsFound when isSearchMode =>
+        noResultsBuilder?.call(context, query) ?? const NeutralNoResultsIndicator(),
+      .noItemsFound => emptyBuilder?.call(context) ?? const NeutralEmptyIndicator(),
+      .ongoing || .subsequentPageError || .completed => null,
+    };
+
+    return KeyedListView(
+      // A view, not a copy. Pages never change once built.
+      pagedItems: UnmodifiableListView((state.pages ?? const []).map((page) => page.items)),
+      // The group look-back only walks the pages when grouping is on, since decorate takes it as a callback.
+      itemBuilder: grouping.decorate(
+        itemBuilder,
+        flattenItems: () => state.items,
+        axis: scrollConfig.scrollDirection,
       ),
-      noMoreItems: noMoreItemsBuilder ?? (_) => const NeutralNoMoreItemsIndicator(),
-    ),
-    onNearEnd: onNearEnd,
-    pullExtentListenable: pullExtentListenable,
-    shouldKeepPosition: shouldKeepPosition,
-    separatorBuilder: separatorBuilder,
-    controller: scrollConfig.controller,
-    scrollDirection: scrollConfig.scrollDirection,
-    reverse: scrollConfig.reverse,
-    physics: _SurfaceDragPhysics(
-      showsSurfaceGetter: showsSurfaceGetter,
-      takesPullGetter: takesPullGetter,
-      parent: refresh.scrollPhysics(scrollConfig),
-    ),
-    padding: scrollConfig.padding,
-    scrollCacheExtent: scrollConfig.scrollCacheExtent,
-  );
+      itemIdGetter: itemIdGetter,
+      // One shape whatever the footer shows: the end, a new page loading, or its error.
+      footerBuilder: switch (status) {
+        .subsequentPageError => (_) => _ResolvedError(
+          exception: state.exception!,
+          onRetry: onRetry,
+          builder: newPageErrorBuilder,
+          isCompact: true,
+        ),
+        .completed => noMoreItemsBuilder ?? (_) => const NeutralNoMoreItemsIndicator(),
+        _ => newPageLoadingBuilder ?? (_) => const NeutralLoadingIndicator(isCompact: true),
+      },
+      pullExtentListenable: pullExtentListenable,
+      shouldKeepPosition: shouldKeepPosition,
+      // Keyed by status, so one surface replacing another starts fresh.
+      surface: surfaceWidget == null
+          ? null
+          : KeyedSubtree(key: ValueKey(status), child: surfaceWidget),
+      // Only an ongoing list asks for more, so a failed page waits for Retry.
+      onNearEnd: status == .ongoing ? onNearEnd : null,
+      separatorBuilder: separatorBuilder,
+      controller: scrollConfig.controller,
+      scrollDirection: scrollConfig.scrollDirection,
+      reverse: scrollConfig.reverse,
+      physics: _SurfaceDragPhysics(
+        showsSurfaceGetter: showsSurfaceGetter,
+        takesPullGetter: takesPullGetter,
+        parent: refresh.scrollPhysics(scrollConfig),
+      ),
+      padding: scrollConfig.padding,
+      scrollCacheExtent: scrollConfig.scrollCacheExtent,
+    );
+  }
 }
 
 /// The consumer's [ErrorBuilder] if there is one, else the neutral default.

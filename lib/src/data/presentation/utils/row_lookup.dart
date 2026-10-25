@@ -8,13 +8,19 @@ import '/src/data/pagination/pagination.dart';
 /// above. Only a row that's gone or moved far builds the id map.
 @internal
 final class RowLookup<T extends Object>(
-  final List<List<T>> _pages,
+  final List<List<T>> _pagedItems,
   final ItemIdGetter<T> _itemIdGetter,
 ) {
   /// Where each page starts in the flat list, then the total, so reading by index needs no flatten.
-  late final List<int> _pageStarts = _pages.fold([
-    0,
-  ], (starts, items) => starts..add(starts.last + items.length));
+  late final List<int> _pageStarts = () {
+    var start = 0;
+
+    return List.generate(
+      _pagedItems.length + 1,
+      (page) => page == 0 ? 0 : start += _pagedItems[page - 1].length,
+      growable: false,
+    );
+  }();
 
   /// Each item's index by id, once a lookup has needed it.
   Map<Object, int>? _indexById;
@@ -39,7 +45,7 @@ final class RowLookup<T extends Object>(
       }
     }
 
-    return _pages[pageIndex][index - _pageStarts[pageIndex]];
+    return _pagedItems[pageIndex][index - _pageStarts[pageIndex]];
   }
 
   /// Where the item with [id] sits now, or null once it's gone. [lastIndex] is where its row was last
@@ -57,7 +63,7 @@ final class RowLookup<T extends Object>(
     final indexById = <Object, int>{};
     var index = 0;
     // A loop, like the other per-item scans on the build path (APPENDIX.md#scan-loops).
-    for (final items in _pages) {
+    for (final items in _pagedItems) {
       for (final item in items) {
         indexById[_itemIdGetter(item)] = index++;
       }

@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -8,23 +7,12 @@ import '/src/data/pagination/pagination.dart';
 import '/src/data/presentation/presentation.dart';
 import 'scroll_anchor.dart';
 
-/// What the list shows instead of its rows, or after them, defaults already filled in.
+/// A list of rows that follow their item, or a surface in their place. When rows above a row come or
+/// go, it keeps its state and anything it's animating.
 @internal
-typedef PagedSurfaces = ({
-  WidgetBuilder firstPageLoading,
-  WidgetBuilder firstPageError,
-  WidgetBuilder noItemsFound,
-  WidgetBuilder newPageLoading,
-  WidgetBuilder newPageError,
-  WidgetBuilder noMoreItems,
-});
-
-/// The async list: [state]'s rows, or the surface its status calls for. A row follows its item, so
-/// when rows above it come or go, it keeps its state and anything it's animating.
-@internal
-class const KeyedPagedListView<T extends Object>({
-  /// What renders, edits and de-dup already applied.
-  required final PagingState<T> state,
+class const KeyedListView<T extends Object>({
+  /// One list per page, in order.
+  required final List<List<T>> pagedItems,
 
   /// Builds each row.
   required final ItemBuilder<T> itemBuilder,
@@ -32,17 +20,20 @@ class const KeyedPagedListView<T extends Object>({
   /// Keys each row, so the list finds it again after a shift.
   required final ItemIdGetter<T> itemIdGetter,
 
-  /// What shows instead of the rows, or after them.
-  required final PagedSurfaces surfaces,
-
-  /// Asks for the next page. Called while a row near the end builds.
-  required final VoidCallback onNearEnd,
+  /// Builds the cell after the rows.
+  required final WidgetBuilder footerBuilder,
 
   /// How far a pull pushes the list now.
   required final ValueListenable<double> pullExtentListenable,
 
   /// Whether the row on top holds still when rows above it change, or a pull's room does.
   required final bool shouldKeepPosition,
+
+  /// Shows instead of the rows. Key it, so one replacing another starts fresh.
+  final Widget? surface,
+
+  /// Asks for the next page. Called while a row near the end builds.
+  final VoidCallback? onNearEnd,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -59,22 +50,14 @@ class const KeyedPagedListView<T extends Object>({
 
   @override
   Widget buildChildLayout(BuildContext context) {
-    final status = state.status;
-    final firstPageBuilder = switch (status) {
-      .loadingFirstPage => surfaces.firstPageLoading,
-      .firstPageError => surfaces.firstPageError,
-      .noItemsFound => surfaces.noItemsFound,
-      .ongoing || .subsequentPageError || .completed => null,
-    };
-
-    if (firstPageBuilder != null) {
+    final surface = this.surface;
+    if (surface != null) {
       // As [BoxScrollView] pads: [padding], else the safe area.
       final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
         Directionality.maybeOf(context),
       );
 
       return _SurfaceSlot(
-        key: ValueKey(status), // so one surface replacing another starts fresh
         // So a short surface has nothing to scroll.
         trailingPaddingExtent: switch (getDirection(context)) {
           .down => resolvedInsets.bottom,
@@ -82,27 +65,17 @@ class const KeyedPagedListView<T extends Object>({
           .right => resolvedInsets.right,
           .left => resolvedInsets.left,
         },
-        child: firstPageBuilder(context),
+        child: surface,
       );
     }
 
-    // One shape whatever the footer shows: the end, a new page loading, or its error.
     return _KeyedRows(
-      rowLookup: RowLookup<T>(
-        // A view, not a copy. Pages never change once built.
-        UnmodifiableListView((state.pages ?? const []).map((page) => page.items)),
-        itemIdGetter,
-      ),
+      rowLookup: RowLookup<T>(pagedItems, itemIdGetter),
       itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
-      footerBuilder: switch (status) {
-        .subsequentPageError => surfaces.newPageError,
-        .completed => surfaces.noMoreItems,
-        _ => surfaces.newPageLoading,
-      },
+      footerBuilder: footerBuilder,
       separatorBuilder: separatorBuilder,
-      // Only here does scrolling ask for more, so a failed page waits for Retry.
-      onNearEnd: status != .ongoing ? null : onNearEnd,
+      onNearEnd: onNearEnd,
       pullExtentListenable: pullExtentListenable,
       shouldKeepPosition: shouldKeepPosition,
     );
@@ -110,11 +83,8 @@ class const KeyedPagedListView<T extends Object>({
 }
 
 /// Unlike `SliverFillRemaining`, never measures the surface or resizes it while scrolling.
-class const _SurfaceSlot({
-  required final double trailingPaddingExtent,
-  required final Widget child,
-  super.key,
-}) extends StatelessWidget {
+class const _SurfaceSlot({required final double trailingPaddingExtent, required final Widget child})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SliverLayoutBuilder(
     builder: (_, constraints) {
