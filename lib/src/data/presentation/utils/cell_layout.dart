@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:meta/meta.dart';
 
 import '../enums/cell_kind.dart';
@@ -15,8 +17,11 @@ final class const CellLayout({
   /// How many items the rows show.
   required final int itemCount,
 
-  /// Whether a separator follows each item.
+  /// Whether separators sit between items, and before the footer.
   required final bool hasSeparators,
+
+  /// Whether a footer follows the rows.
+  required final bool hasFooter,
 
   /// The group headers, in list order.
   required final List<GroupHeader> headers,
@@ -28,7 +33,11 @@ final class const CellLayout({
   this;
 
   /// How many children the sliver has.
-  int get childCount => itemCount * _childrenPerItem + 1 + headers.length;
+  int get childCount =>
+      (hasFooter
+          ? itemCount * _childrenPerItem + 1
+          : math.max(0, itemCount * _childrenPerItem - (_childrenPerItem - 1))) +
+      headers.length;
 
   /// What the child at [childIndex] shows.
   Cell cellAt(int childIndex) {
@@ -40,7 +49,7 @@ final class const CellLayout({
     }
 
     final indexWithoutHeaders = childIndex - headersUpTo;
-    if (indexWithoutHeaders == itemCount * _childrenPerItem) {
+    if (hasFooter && indexWithoutHeaders == itemCount * _childrenPerItem) {
       return (kind: .footer, index: itemCount);
     }
 

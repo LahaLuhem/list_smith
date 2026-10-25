@@ -18,20 +18,21 @@ class const KeyedListView<T extends Object>({
   /// Builds each row.
   required final ItemBuilder<T> itemBuilder,
 
-  /// Keys each row, so the list finds it again after a shift.
-  required final ItemIdGetter<T> itemIdGetter,
-
   /// Splits the items into sections under headers.
   required final Grouping<T> grouping,
-
-  /// Builds the cell after the rows.
-  required final WidgetBuilder footerBuilder,
 
   /// How far a pull pushes the list now.
   required final ValueListenable<double> pullExtentListenable,
 
   /// Whether the row on top holds still when rows above it change, or a pull's room does.
   required final bool shouldKeepPosition,
+
+  /// Keys each row, so the list finds it again after a shift. Null leaves rows by position, while
+  /// `.sync` takes lists without ids.
+  final ItemIdGetter<T>? itemIdGetter,
+
+  /// Builds the cell after the rows. Null for none.
+  final WidgetBuilder? footerBuilder,
 
   /// Shows instead of the rows. Key it, so one replacing another starts fresh.
   final Widget? surface,
@@ -74,7 +75,7 @@ class const KeyedListView<T extends Object>({
     }
 
     return _KeyedRows(
-      rowLookup: RowLookup<T>(pagedItems, itemIdGetter),
+      rowLookup: RowLookup<T>(pagedItems, itemIdGetter ?? _neverLookedUp),
       groupHeaders: grouping.headersOver(pagedItems.expand((items) => items), isReversed: reverse),
       itemIdGetter: itemIdGetter,
       itemBuilder: itemBuilder,
@@ -85,6 +86,10 @@ class const KeyedListView<T extends Object>({
       shouldKeepPosition: shouldKeepPosition,
     );
   }
+
+  // Rows without ids aren't keyed or anchored, so nothing looks them up.
+  static Object _neverLookedUp(Object _) =>
+      throw StateError('Rows without ids are never looked up.');
 }
 
 /// Unlike `SliverFillRemaining`, never measures the surface or resizes it while scrolling.
@@ -114,9 +119,9 @@ class const _SurfaceSlot({required final double trailingPaddingExtent, required 
 class const _KeyedRows<T extends Object>({
   required final RowLookup<T> rowLookup,
   required final GroupHeaders? groupHeaders,
-  required final ItemIdGetter<T> itemIdGetter,
+  required final ItemIdGetter<T>? itemIdGetter,
   required final ItemBuilder<T> itemBuilder,
-  required final WidgetBuilder footerBuilder,
+  required final WidgetBuilder? footerBuilder,
   required final IndexedWidgetBuilder? separatorBuilder,
   required final VoidCallback? onNearEnd,
   required final ValueListenable<double> pullExtentListenable,
@@ -127,6 +132,7 @@ class const _KeyedRows<T extends Object>({
     final cellLayout = CellLayout(
       itemCount: rowLookup.itemCount,
       hasSeparators: separatorBuilder != null,
+      hasFooter: footerBuilder != null,
       headers: groupHeaders?.headers ?? const [],
       isHeaderAfterItem: groupHeaders?.isAfterItem ?? false,
     );
@@ -143,7 +149,8 @@ class const _KeyedRows<T extends Object>({
         },
       ),
     );
-    if (!shouldKeepPosition) return rowsSliverList;
+    final itemIdGetter = this.itemIdGetter;
+    if (!shouldKeepPosition || itemIdGetter == null) return rowsSliverList;
 
     return ScrollAnchor(
       rowIdGetter: (childIndex) {
@@ -168,7 +175,7 @@ class const _KeyedRows<T extends Object>({
 
   Widget _buildCell(BuildContext context, Cell cell) {
     final (:kind, :index) = cell;
-    // A header or separator cell only exists when its builder does.
+    // A header, separator or footer cell only exists when its builder does.
     switch (kind) {
       case .header:
         final groupHeaders = this.groupHeaders!;
@@ -181,16 +188,17 @@ class const _KeyedRows<T extends Object>({
       case .separator:
         return separatorBuilder!(context, index);
       case .footer:
-        return footerBuilder(context);
+        return footerBuilder!(context);
       case .item:
         final itemCount = rowLookup.itemCount;
         if (index >= math.max(0, itemCount - 1 - _nearEndRows)) onNearEnd?.call();
         final item = rowLookup.itemAt(index);
+        final itemIdGetter = this.itemIdGetter;
+        final rowWidget = itemBuilder(context, item, index);
 
-        return KeyedSubtree(
-          key: _RowKey(itemIdGetter(item), index),
-          child: itemBuilder(context, item, index),
-        );
+        return itemIdGetter == null
+            ? rowWidget
+            : KeyedSubtree(key: _RowKey(itemIdGetter(item), index), child: rowWidget);
     }
   }
 

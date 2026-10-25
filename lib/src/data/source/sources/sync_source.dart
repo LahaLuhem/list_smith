@@ -12,10 +12,16 @@ final class const SyncSource<T extends Object>({
 
   /// Decides whether an item matches the current query.
   required final SyncSearchPredicate<T> searchBy,
+
+  /// Whether the row on top holds still when rows above it change.
+  required final bool shouldKeepPosition,
+
+  /// Tells items apart, keeping each row with its item. Null while it's optional.
+  final ItemIdGetter<T>? itemIdGetter,
 }) extends ListSource<T> {
   /// Creates it.
   this;
 
   @override
-  String toString() => 'SyncSource()';
+  String toString() => 'SyncSource(shouldKeepPosition: $shouldKeepPosition)';
 }

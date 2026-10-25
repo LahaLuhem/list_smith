@@ -10,9 +10,10 @@ import '/src/data/search/search.dart';
 import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
 import 'defaults/defaults.dart';
+import 'keyed_list_view.dart';
 
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
-/// and renders it with a plain `ListView`.
+/// and shows it in the same keyed list as `.async`.
 ///
 /// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
 @internal
@@ -110,49 +111,38 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: _resultNotifier,
     builder: (context, result, _) {
-      if (_items.isEmpty) {
-        return widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
-      }
-
-      if (result.isSearching && result.visibleItems.isEmpty) {
-        return widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
+      final isEmpty = _items.isEmpty;
+      final Widget? surfaceWidget;
+      if (isEmpty) {
+        surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
+      } else if (result.isSearching && result.visibleItems.isEmpty) {
+        surfaceWidget =
+            widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
             const NeutralNoResultsIndicator();
+      } else {
+        surfaceWidget = null;
       }
-
-      final visibleItems = result.visibleItems;
-      final separatorBuilder = widget.separatorBuilder;
       final scrollConfig = widget.scrollConfig;
 
-      final effectiveItemBuilder = widget.grouping.decorate(
-        widget.itemBuilder,
-        flattenItems: () => visibleItems,
-        axis: scrollConfig.scrollDirection,
+      return KeyedListView(
+        pagedItems: [result.visibleItems],
+        itemBuilder: widget.itemBuilder,
+        grouping: widget.grouping,
+        pullExtentListenable: const AlwaysStoppedAnimation(0),
+        shouldKeepPosition: widget.source.shouldKeepPosition,
+        itemIdGetter: widget.source.itemIdGetter,
+        // Keyed by which surface, so one replacing the other starts fresh.
+        surface: surfaceWidget == null
+            ? null
+            : KeyedSubtree(key: ValueKey(isEmpty), child: surfaceWidget),
+        separatorBuilder: widget.separatorBuilder,
+        controller: scrollConfig.controller,
+        scrollDirection: scrollConfig.scrollDirection,
+        reverse: scrollConfig.reverse,
+        physics: scrollConfig.physics,
+        padding: scrollConfig.padding,
+        scrollCacheExtent: scrollConfig.scrollCacheExtent,
       );
-
-      return separatorBuilder != null
-          ? ListView.separated(
-              scrollDirection: scrollConfig.scrollDirection,
-              reverse: scrollConfig.reverse,
-              controller: scrollConfig.controller,
-              physics: scrollConfig.physics,
-              padding: scrollConfig.padding,
-              scrollCacheExtent: scrollConfig.scrollCacheExtent,
-              itemCount: visibleItems.length,
-              itemBuilder: (context, index) =>
-                  effectiveItemBuilder(context, visibleItems[index], index),
-              separatorBuilder: separatorBuilder,
-            )
-          : ListView.builder(
-              scrollDirection: scrollConfig.scrollDirection,
-              reverse: scrollConfig.reverse,
-              controller: scrollConfig.controller,
-              physics: scrollConfig.physics,
-              padding: scrollConfig.padding,
-              scrollCacheExtent: scrollConfig.scrollCacheExtent,
-              itemCount: visibleItems.length,
-              itemBuilder: (context, index) =>
-                  effectiveItemBuilder(context, visibleItems[index], index),
-            );
     },
   );
 }
