@@ -4,10 +4,12 @@
 - \[#71\] `order: SortedBy(...)` on `ListSmith.async` puts an edited or new item where your server sorts it
 - \[#71\] `PageFetcher.withHasMore` and `SearchPageFetcher.withHasMore` end the list on a has-more flag from your fetcher
 - \[#71\] `PaginationEndPolicy.stopsAtDataEnd` tells a page cap, like `FixedPageCountPolicy`, from the end of the data
+- \[#73\] `ListSmith.async` holds the row being read still when rows above it change. `shouldKeepPosition: false` turns it off
 
 ### Changed
 - \[#71\] A `ReloadToCurrentDepth` reload keeps the old list if any page fails, instead of keeping the pages that reloaded
 - \[#71\] `EndContext.pageItemCounts` is read-only, and the end check costs the same however many pages are loaded. A policy that wrote into it now throws.
+- \[#73\] `ListSmith.async` lists now hold their position by default. An app that corrects the scroll position itself should pass `shouldKeepPosition: false`
 
 ### Deprecated
 - \[#71\] `ExplicitHasMorePolicy`: return the flag from `PageFetcher.withHasMore` instead. It goes at the next major.
