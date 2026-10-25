@@ -24,7 +24,7 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
   required ItemIdGetter<T> itemIdGetter,
   required int pageSize,
 }) {
-  final removedIds = removalStamps.after(readStamps.values.min);
+  late final removedIds = removalStamps.after(readStamps.values.min).toSet();
   // The 1st page each removed row sat in, old or fresh, so it counts above every boundary after. A new
   // item on no page counts above them all.
   late final removedPageIndexById = oldPages.indexed
