@@ -6,6 +6,7 @@ void main() {
   final layoutFeature = BddFeature('Cell layout');
 
   const hasSeparatorsKey = 'hasSeparators';
+  const hasFooterKey = 'hasFooter';
   const headersKey = 'headers';
   const isHeaderAfterItemKey = 'isHeaderAfterItem';
   const cellsKey = 'cells';
@@ -17,6 +18,7 @@ void main() {
   CellLayout layoutOf(BddContext context) => CellLayout(
     itemCount: 3,
     hasSeparators: context.example.val(hasSeparatorsKey) as bool,
+    hasFooter: context.example.val(hasFooterKey) as bool,
     headers: context.example.val(headersKey) as List<GroupHeader>,
     isHeaderAfterItem: context.example.val(isHeaderAfterItemKey) as bool,
   );
@@ -29,39 +31,58 @@ void main() {
   };
 
   Bdd(layoutFeature)
-      .scenario('lays out 3 items, their headers and separators, then the footer, in list order')
-      .given('separators <$hasSeparatorsKey> and headers <$headersKey>')
+      .scenario('lays out 3 items, their headers and separators, and any footer, in list order')
+      .given('separators <$hasSeparatorsKey>, a footer <$hasFooterKey> and headers <$headersKey>')
       .when('each header sits after its item: <$isHeaderAfterItemKey>')
       .then('the children show <$cellsKey>')
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, false),
         val(headersKey, const <GroupHeader>[]),
         val(isHeaderAfterItemKey, false),
         val(cellsKey, const ['i0', 'i1', 'i2', 'f']),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
         val(headersKey, const <GroupHeader>[]),
         val(isHeaderAfterItemKey, false),
         val(cellsKey, const ['i0', 's0', 'i1', 's1', 'i2', 's2', 'f']),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
         val(headersKey, openingHeaders),
         val(isHeaderAfterItemKey, false),
         val(cellsKey, const ['h0', 'i0', 's0', 'i1', 's1', 'h1', 'i2', 's2', 'f']),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
         val(headersKey, closingHeaders),
         val(isHeaderAfterItemKey, true),
         val(cellsKey, const ['i0', 's0', 'i1', 'h0', 's1', 'i2', 'h1', 's2', 'f']),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, false),
         val(headersKey, closingHeaders),
         val(isHeaderAfterItemKey, true),
         val(cellsKey, const ['i0', 'i1', 'h0', 'i2', 'h1', 'f']),
+      )
+      .example(
+        val(hasFooterKey, false),
+        val(hasSeparatorsKey, true),
+        val(headersKey, const <GroupHeader>[]),
+        val(isHeaderAfterItemKey, false),
+        val(cellsKey, const ['i0', 's0', 'i1', 's1', 'i2']),
+      )
+      .example(
+        val(hasFooterKey, false),
+        val(hasSeparatorsKey, true),
+        val(headersKey, closingHeaders),
+        val(isHeaderAfterItemKey, true),
+        val(cellsKey, const ['i0', 's0', 'i1', 'h0', 's1', 'i2', 'h1']),
       )
       .run((context) {
         final cellLayout = layoutOf(context);
@@ -76,20 +97,23 @@ void main() {
 
   Bdd(layoutFeature)
       .scenario('finds each row and header at the child that shows it')
-      .given('separators <$hasSeparatorsKey> and headers <$headersKey>')
+      .given('separators <$hasSeparatorsKey>, a footer <$hasFooterKey> and headers <$headersKey>')
       .when('each header sits after its item: <$isHeaderAfterItemKey>')
       .then('each lookup lands on the child showing that row or header')
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
         val(headersKey, openingHeaders),
         val(isHeaderAfterItemKey, false),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
         val(headersKey, closingHeaders),
         val(isHeaderAfterItemKey, true),
       )
       .example(
+        val(hasFooterKey, true),
         val(hasSeparatorsKey, false),
         val(headersKey, closingHeaders),
         val(isHeaderAfterItemKey, true),

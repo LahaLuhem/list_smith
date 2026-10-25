@@ -44,6 +44,16 @@ void main() {
       .when('it is turned into a string')
       .then("it reads as itself, not as Dart's default Instance of")
       .example(val(valueKey, asyncSource()))
-      .example(val(valueKey, SyncSource<String>(items: const ['a'], searchBy: (_, _) => true)))
+      .example(
+        val(
+          valueKey,
+          SyncSource<String>(
+            items: const ['a'],
+            searchBy: (_, _) => true,
+            shouldKeepPosition: true,
+            itemIdGetter: (item) => item,
+          ),
+        ),
+      )
       .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }

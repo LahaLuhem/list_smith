@@ -79,6 +79,157 @@ void main() {
     });
   });
 
+  feature('ListSmith.sync rows follow their item', () {
+    scenarioOutlineWidgets<_RowsChange>(
+      'the row being read holds still when the app changes the rows above it',
+      examples: {
+        'an item lands on top': (
+          scrollOffset: 1000,
+          change: (items, _) => [100, ...items],
+          reverse: false,
+          separatorBuilder: null,
+          grouping: null,
+        ),
+        'an item above goes': (
+          scrollOffset: 1000,
+          change: (items, _) => [...items]..remove(5),
+          reverse: false,
+          separatorBuilder: null,
+          grouping: null,
+        ),
+        'a built row above grows': (
+          scrollOffset: 1000,
+          change: (items, heights) {
+            heights[18] = 150;
+
+            return [...items];
+          },
+          reverse: false,
+          separatorBuilder: null,
+          grouping: null,
+        ),
+        'an item lands on top of a reversed list': (
+          scrollOffset: 1000,
+          change: (items, _) => [100, ...items],
+          reverse: true,
+          separatorBuilder: null,
+          grouping: null,
+        ),
+        'an item lands on top, with separators': (
+          scrollOffset: 1200,
+          change: (items, _) => [100, ...items],
+          reverse: false,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          grouping: null,
+        ),
+        'an item lands on top in a new group': (
+          scrollOffset: 1060,
+          change: (items, _) => [100, ...items],
+          reverse: false,
+          separatorBuilder: null,
+          grouping: Grouping.by<int, int>(
+            groupBy: (item) => item ~/ 10,
+            headerBuilder: (_, key) => SizedBox(height: 30, child: Text('group $key')),
+          ),
+        ),
+      },
+      outline: (tester, example) async {
+        final heights = <int, double>{};
+        final itemsNotifier = ValueNotifier(List.generate(50, (item) => item));
+        final scrollController = ScrollController();
+        await _pumpRows(
+          tester,
+          itemsNotifier,
+          scrollController: scrollController,
+          reverse: example.reverse,
+          separatorBuilder: example.separatorBuilder,
+          grouping: example.grouping,
+          itemBuilder: (_, item, _) =>
+              SizedBox(height: heights[item] ?? 50, child: Text('item $item')),
+        );
+        scrollController.jumpTo(example.scrollOffset);
+        await tester.pump();
+        final shownTop = _topOf(tester, 20);
+
+        itemsNotifier.value = example.change(itemsNotifier.value, heights);
+        await tester.pump();
+
+        check(_topOf(tester, 20)).equals(shownTop);
+      },
+    );
+
+    scenarioWidgets('at the very start, a new item shows on top', (tester) async {
+      final itemsNotifier = ValueNotifier(List.generate(50, (item) => item));
+      await _pumpRows(tester, itemsNotifier);
+
+      itemsNotifier.value = [100, ...itemsNotifier.value];
+      await tester.pump();
+
+      check(_topOf(tester, 100)).equals(0);
+    });
+
+    scenarioOutlineWidgets<List<int> Function(List<int> items)>(
+      'a row keeps its state when the app changes the rows above it',
+      examples: {
+        'an item lands on top': (items) => [100, ...items],
+        'an item above goes': (items) => [...items]..remove(1),
+      },
+      outline: (tester, change) async {
+        final itemsNotifier = ValueNotifier(List.generate(10, (item) => item));
+        await _pumpRows(tester, itemsNotifier, itemBuilder: (_, item, _) => ToggleRow(item));
+        await tester.tap(find.text('off 3'));
+        await tester.pump();
+
+        itemsNotifier.value = change(itemsNotifier.value);
+        await tester.pump();
+
+        check(shownToggleRows().where((row) => row.startsWith('on'))).deepEquals(['on 3']);
+      },
+    );
+
+    scenarioWidgets('the scroll controller stays attached while nothing matches', (tester) async {
+      final scrollController = ScrollController();
+      await _pumpSync(
+        tester,
+        items: const ['apple', 'banana'],
+        searchBy: containsIgnoreCase,
+        query: 'xyz',
+        scrollConfig: ListScrollConfig(controller: scrollController),
+      );
+      await tester.pump();
+
+      check(find.text('No results').evaluate()).length.equals(1);
+      check(scrollController.hasClients).isTrue();
+    });
+
+    scenarioWidgets('without ids, keeping its position is an error', (tester) async {
+      check(
+        () => ListSmith<int>.sync(
+          items: const [1],
+          searchBy: (_, _) => true,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      ).throws<AssertionError>();
+    });
+
+    scenarioWidgets('without ids, a list that keeps no position still shows its rows', (
+      tester,
+    ) async {
+      await pumpListSmith(
+        tester,
+        ListSmith<int>.sync(
+          items: const [1, 2],
+          searchBy: (_, _) => true,
+          shouldKeepPosition: false,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await tester.pump();
+
+      check(find.textContaining('item ').evaluate()).length.equals(2);
+    });
+  });
+
   feature('ListSmith.sync rebuild and layout', () {
     scenarioWidgets('replacing the items list after build re-materialises and re-filters', (
       tester,
@@ -124,6 +275,7 @@ void main() {
           tester,
           ListSmith.sync(
             items: List.generate(100, (index) => 'row $index'),
+            itemIdGetter: (item) => item,
             searchBy: containsIgnoreCase,
             scroll: ListScrollConfig(cacheExtent: example.cacheExtent),
             itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text(item)),
@@ -164,6 +316,7 @@ Future<void> _pumpSync(
   tester,
   ListSmith.sync(
     items: items,
+    itemIdGetter: (item) => item,
     searchBy: searchBy,
     query: query,
     emptyBuilder: emptyBuilder,
@@ -172,3 +325,39 @@ Future<void> _pumpSync(
     itemBuilder: (_, item, _) => Text(item),
   ),
 );
+
+typedef _RowsChange = ({
+  double scrollOffset,
+  List<int> Function(List<int> items, Map<int, double> heights) change,
+  bool reverse,
+  IndexedWidgetBuilder? separatorBuilder,
+  Grouping<int>? grouping,
+});
+
+/// A `.sync` list over [itemsNotifier], keyed by value, `item N` rows 50 px tall by default.
+Future<void> _pumpRows(
+  WidgetTester tester,
+  ValueNotifier<List<int>> itemsNotifier, {
+  ScrollController? scrollController,
+  bool reverse = false,
+  IndexedWidgetBuilder? separatorBuilder,
+  Grouping<int>? grouping,
+  ItemBuilder<int>? itemBuilder,
+}) => pumpListSmith(
+  tester,
+  ValueListenableBuilder(
+    valueListenable: itemsNotifier,
+    builder: (_, items, _) => ListSmith<int>.sync(
+      items: items,
+      itemIdGetter: (item) => item,
+      searchBy: (_, _) => true,
+      grouping: grouping,
+      separatorBuilder: separatorBuilder,
+      scroll: ListScrollConfig(controller: scrollController, reverse: reverse),
+      itemBuilder: itemBuilder ?? (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
+    ),
+  ),
+);
+
+double _topOf(WidgetTester tester, int item) =>
+    tester.getTopLeft(find.text('item $item', skipOffstage: false)).dy;

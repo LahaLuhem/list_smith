@@ -25,6 +25,7 @@ void main() {
             (group: 'B', label: 'banana'),
             (group: 'A', label: 'avocado'),
           ],
+          itemIdGetter: (item) => item.label,
           searchBy: (item, query) => item.label.contains(query),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),

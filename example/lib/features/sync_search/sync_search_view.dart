@@ -37,6 +37,7 @@ class const SyncSearchView({super.key}) extends StatelessWidget {
           valueListenable: viewModel.queryListenable,
           builder: (_, query, _) => ListSmith<DemoItem>.sync(
             items: viewModel.items,
+            itemIdGetter: (item) => item.id,
             searchBy: SyncSearchPredicates.fields([(item) => item.title, (item) => item.subtitle]),
             query: query,
             grouping: shouldGroup

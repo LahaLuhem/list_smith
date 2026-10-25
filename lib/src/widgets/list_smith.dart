@@ -130,10 +130,19 @@ class ListSmith<T extends Object> extends StatelessWidget {
   ///
   /// [searchBy] is required: there's nothing to paginate or refresh over in-memory data, so search is
   /// the whole point. [searchDebounce] defaults to zero, an in-memory filter being instant.
+  ///
+  /// [itemIdGetter] tells the items apart, so each row keeps its state as rows come and go. Always pass
+  /// it: a later release requires it. Without it, rows follow their position, and
+  /// [shouldKeepPosition] has to be off.
+  ///
+  /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change. Turn it
+  /// off if your app keeps its own scroll position.
   new sync({
     required Iterable<T> items,
     required SyncSearchPredicate<T> searchBy,
     required this.itemBuilder,
+    ItemIdGetter<T>? itemIdGetter,
+    bool shouldKeepPosition = true,
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = .zero,
@@ -146,8 +155,17 @@ class ListSmith<T extends Object> extends StatelessWidget {
   }) : surfaces = const AsyncListSurfaces(),
        observer = null,
        controller = null,
+       assert(
+         itemIdGetter != null || !shouldKeepPosition,
+         'Keeping the position needs itemIdGetter. Pass one, or shouldKeepPosition: false.',
+       ),
        grouping = grouping ?? NoGrouping<T>(),
-       _source = SyncSource(items: items, searchBy: searchBy);
+       _source = SyncSource(
+         items: items,
+         searchBy: searchBy,
+         shouldKeepPosition: shouldKeepPosition,
+         itemIdGetter: itemIdGetter,
+       );
 
   @override
   Widget build(BuildContext context) => switch (_source) {
