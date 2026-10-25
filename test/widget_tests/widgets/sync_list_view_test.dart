@@ -228,6 +228,28 @@ void main() {
 
       check(find.textContaining('item ').evaluate()).length.equals(2);
     });
+
+    scenarioOutlineWidgets<({List<int> firstItems, List<int>? newItems})>(
+      'a repeated id is an error that names it',
+      examples: {
+        'in the 1st items': (firstItems: [42, 7, 42], newItems: null),
+        'in new items': (firstItems: [42, 7], newItems: [42, 7, 42]),
+      },
+      outline: (tester, example) async {
+        final itemsNotifier = ValueNotifier(example.firstItems);
+        await _pumpRows(tester, itemsNotifier);
+        final newItems = example.newItems;
+        if (newItems != null) {
+          itemsNotifier.value = newItems;
+          await tester.pump();
+        }
+
+        check(tester.takeException())
+            .isA<AssertionError>()
+            .has((error) => '${error.message}', 'message')
+            .contains('42');
+      },
+    );
   });
 
   feature('ListSmith.sync rebuild and layout', () {

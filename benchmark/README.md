@@ -174,6 +174,7 @@ capture reproduces it rather than restamping it with today.
 |---|---|
 | `sync_search_scaling` | `resolveSyncSearch` cost as the in-memory list grows |
 | `bucket_by_group_scaling` | `bucketByGroup` cost as the list grows, over interleaved input |
+| `first_of_each_id_scaling` | `firstOfEachId` cost as the in-memory list grows, with every id unique |
 | `group_headers_scaling` | `resolveGroupHeaders` cost as the loaded list grows, over a lazy flatten of pages |
 | `dedup_scaling` | de-dup cost as the loaded list grows, with no real overlap |
 | `edit_layer_scaling` | the edit layer's pass as the loaded list grows, with 10 new items joining groups spread across it |

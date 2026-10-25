@@ -40,6 +40,7 @@ def _record(
 _SCENARIO_PIVOTS: dict[str, str] = {
     "sync_search_scaling": "list_size",
     "bucket_by_group_scaling": "list_size",
+    "first_of_each_id_scaling": "list_size",
     "dedup_scaling": "item_count",
     "edit_layer_scaling": "item_count",
     "row_lookup_scaling": "item_count",
