@@ -33,6 +33,19 @@ Future<void> settle(
   await drain(tester);
 }
 
+/// Sets [queryNotifier] to [query] and lets it commit. The list only starts the debounce once a frame
+/// builds it with the new query, so [settle] alone would never fire it.
+Future<void> commitQuery(
+  WidgetTester tester,
+  ValueNotifier<String> queryNotifier,
+  String query,
+) async {
+  queryNotifier.value = query;
+  await tester.pump();
+
+  await settle(tester);
+}
+
 /// Pulls from [anchor] by [offset], down unless told otherwise, far enough to arm a refresh, then pumps
 /// long enough for it to run.
 Future<void> pullToRefresh(

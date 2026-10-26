@@ -787,6 +787,7 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `pumpListSmith(tester, child)`                                                 | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs                                     |
 | `drain(tester, {frames})`                                                      | pumps a fixed number of frames                                                                                      |
 | `settle(tester, {debounce})`                                                   | advances past a search debounce, then drains                                                                        |
+| `commitQuery(tester, queryNotifier, query)`                                    | sets a query that reaches the list through a notifier, then pumps the frame that starts its debounce and settles    |
 | `pullToRefresh(tester, anchor, {offset})`                                      | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
 | `scrollToEnd(tester, controller)`, `allShownTexts(tester, controller, prefix)` | scrolls until the list stops growing, and reads every row's text there, top to bottom                               |
 | `containsIgnoreCase`                                                           | sync-search predicate                                                                                               |

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import '/src/data/grouping/grouping.dart';
@@ -26,6 +27,9 @@ class const KeyedListView<T extends Object>({
 
   /// Whether the row on top holds still when rows above it change, or a pull's room does.
   required final bool shouldKeepPosition,
+
+  /// Takes the list back to its start whenever it changes, as a new committed query does.
+  required final Object startKey,
 
   /// Keys each row, so the list finds it again after a shift. Null leaves rows by position, while
   /// `.sync` takes lists without ids.
@@ -56,13 +60,28 @@ class const KeyedListView<T extends Object>({
   @override
   Widget buildChildLayout(BuildContext context) {
     final surface = this.surface;
-    if (surface != null) {
+    final Widget contentSliver;
+    if (surface == null) {
+      contentSliver = _KeyedRows(
+        rowLookup: RowLookup<T>(pagedItems, itemIdGetter ?? _neverLookedUp),
+        groupHeaders: grouping.headersOver(
+          pagedItems.expand((items) => items),
+          isReversed: reverse,
+        ),
+        itemIdGetter: itemIdGetter,
+        itemBuilder: itemBuilder,
+        footerBuilder: footerBuilder,
+        separatorBuilder: separatorBuilder,
+        onNearEnd: onNearEnd,
+        pullExtentListenable: pullExtentListenable,
+        shouldKeepPosition: shouldKeepPosition,
+      );
+    } else {
       // As [BoxScrollView] pads: [padding], else the safe area.
       final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
         Directionality.maybeOf(context),
       );
-
-      return _SurfaceSlot(
+      contentSliver = _SurfaceSlot(
         // So a short surface has nothing to scroll.
         trailingPaddingExtent: switch (getDirection(context)) {
           .down => resolvedInsets.bottom,
@@ -74,17 +93,7 @@ class const KeyedListView<T extends Object>({
       );
     }
 
-    return _KeyedRows(
-      rowLookup: RowLookup<T>(pagedItems, itemIdGetter ?? _neverLookedUp),
-      groupHeaders: grouping.headersOver(pagedItems.expand((items) => items), isReversed: reverse),
-      itemIdGetter: itemIdGetter,
-      itemBuilder: itemBuilder,
-      footerBuilder: footerBuilder,
-      separatorBuilder: separatorBuilder,
-      onNearEnd: onNearEnd,
-      pullExtentListenable: pullExtentListenable,
-      shouldKeepPosition: shouldKeepPosition,
-    );
+    return _ScrollStart(startKey: startKey, sliver: contentSliver);
   }
 
   // Rows without ids aren't keyed or anchored, so nothing looks them up.
@@ -112,6 +121,48 @@ class const _SurfaceSlot({required final double trailingPaddingExtent, required 
       );
     },
   );
+}
+
+/// Takes the list back to its start when [startKey] changes, in the same frame and with any scroll
+/// controller or none.
+class const _ScrollStart({required final Object startKey, required Widget sliver})
+    extends SingleChildRenderObjectWidget {
+  this : super(child: sliver);
+
+  @override
+  _RenderScrollStart createRenderObject(BuildContext context) => _RenderScrollStart(startKey);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderScrollStart renderObject) =>
+      renderObject.startKey = startKey;
+}
+
+class _RenderScrollStart(Object startKey) extends RenderProxySliver {
+  var _startKey = startKey;
+  var _isGoingToStart = false;
+
+  set startKey(Object value) {
+    if (value == _startKey) return;
+
+    _startKey = value;
+    _isGoingToStart = true;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    if (_isGoingToStart) {
+      _isGoingToStart = false;
+      final pixels = (RenderAbstractViewport.of(this) as RenderViewportBase).offset.pixels;
+      if (pixels > precisionErrorTolerance) {
+        geometry = SliverGeometry(scrollOffsetCorrection: -pixels);
+
+        return;
+      }
+    }
+
+    super.performLayout();
+  }
 }
 
 /// The sliver: keyed rows and headers, then the footer as one more cell, so separators fall before it

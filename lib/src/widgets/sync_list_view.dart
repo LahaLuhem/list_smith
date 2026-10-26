@@ -169,6 +169,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
           grouping: widget.grouping,
           pullExtentListenable: const AlwaysStoppedAnimation(0),
           shouldKeepPosition: widget.source.shouldKeepPosition,
+          startKey: _debouncer.committedQuery,
           itemIdGetter: widget.source.itemIdGetter,
           // Keyed by which surface, so one replacing the other starts fresh.
           surface: surfaceWidget == null
