@@ -5,6 +5,7 @@
 - \[#71\] `PageFetcher.withHasMore` and `SearchPageFetcher.withHasMore` end the list on a has-more flag from your fetcher
 - \[#71\] `PaginationEndPolicy.stopsAtDataEnd` tells a page cap, like `FixedPageCountPolicy`, from the end of the data
 - \[#73\] `ListSmith.async` holds the row being read still when rows above it change. `shouldKeepPosition: false` turns it off
+- \[#107\] `ListSmith.sync` rows follow their item, with `itemIdGetter` and `shouldKeepPosition`
 
 ### Changed
 - \[#71\] A `ReloadToCurrentDepth` reload keeps the old list if any page fails, instead of keeping the pages that reloaded
