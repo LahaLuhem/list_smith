@@ -28,7 +28,7 @@ final class _SyncSearchScaling(final int listSize) extends BenchmarkBase {
 
   @override
   void run() {
-    final searchResult = resolveSyncSearch(_items, _matches, 'label 7', 0);
+    final searchResult = resolveSyncSearch(_items, _matches, 'label 7');
     lastMatchCount = searchResult.visibleItems.length;
   }
 

@@ -36,7 +36,7 @@ class const AsyncListView<T extends Object>({
   /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
   required final Grouping<T> grouping,
 
-  /// The current search query. Empty runs the feed, non-empty runs search.
+  /// The current search query. Empty, or shorter than [minSearchLength], runs the feed.
   required final String query,
 
   /// Minimum trimmed query length before a search runs. Below it the query counts as empty.
@@ -124,7 +124,7 @@ class _AsyncListViewState<T extends Object>()
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query);
+    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
     _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
@@ -143,7 +143,13 @@ class _AsyncListViewState<T extends Object>()
       oldWidget.controller?.detach();
       widget.controller?.attach(this);
     }
-    if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
+    if (widget.query != oldWidget.query) {
+      _debouncer.schedule(
+        widget.query,
+        widget.searchDebounce,
+        minSearchLength: widget.minSearchLength,
+      );
+    }
     // Turned off mid-animation: a leaving row would otherwise build its deleted item again.
     if (widget.source.editTransition is NoEditTransition) _rowTransitionsNotifier.settle();
   }

@@ -38,6 +38,36 @@ void main() {
       check(find.text('banana').evaluate()).length.equals(0);
     });
 
+    scenarioOutlineWidgets<({String firstQuery, String? nextQuery})>(
+      'a query shorter than minSearchLength shows every item',
+      examples: const {
+        'as the 1st query': (firstQuery: 'ap', nextQuery: null),
+        'typed after': (firstQuery: '', nextQuery: 'ap'),
+      },
+      outline: (tester, example) async {
+        await _pumpSync(
+          tester,
+          items: const ['apple', 'banana'],
+          searchBy: containsIgnoreCase,
+          query: example.firstQuery,
+          minSearchLength: 3,
+        );
+        final nextQuery = example.nextQuery;
+        if (nextQuery != null) {
+          await _pumpSync(
+            tester,
+            items: const ['apple', 'banana'],
+            searchBy: containsIgnoreCase,
+            query: nextQuery,
+            minSearchLength: 3,
+          );
+        }
+        await settle(tester);
+
+        check(find.text('banana').evaluate()).length.equals(1);
+      },
+    );
+
     scenarioWidgets('shows the no-results surface when a query matches nothing', (tester) async {
       await _pumpSync(
         tester,
@@ -368,6 +398,7 @@ Future<void> _pumpSync(
   required List<String> items,
   required SyncSearchPredicate<String> searchBy,
   String query = '',
+  int minSearchLength = 0,
   WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
   ListScrollConfig scrollConfig = const ListScrollConfig(),
@@ -378,6 +409,7 @@ Future<void> _pumpSync(
     itemIdGetter: (item) => item,
     searchBy: searchBy,
     query: query,
+    minSearchLength: minSearchLength,
     emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
     scroll: scrollConfig,

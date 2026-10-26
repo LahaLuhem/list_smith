@@ -143,9 +143,11 @@ renames.
   changing on nearly every rebuild, so burying it in a holder reads badly. The debounce default also
   diverges by path (zero on sync, 300ms on async), which flat per-constructor defaults express and a
   shared holder could not.
-- **Pure resolver:** the trim, the min-length gate and the predicate filtering live in a widget-free
-  `resolveSyncSearch(...)` returning `(visibleItems, isSearching)`, unit-tested directly. An empty
-  or too-short query shows everything, an active query with no matches is the no-results surface.
+- **Pure resolver:** the predicate filtering lives in a widget-free `resolveSyncSearch(...)`
+  returning `(visibleItems, isSearching)`, unit-tested directly. The trim and the min-length gate
+  come before it, in the `QueryDebouncer` both lists share, so the committed query is the one that
+  searches. An empty or too-short query shows everything, an active query with no matches is the
+  no-results surface.
 - **Surfaces stay flat:** `emptyBuilder` and `noResultsBuilder` are shared with the async path, per
   the [flat-if-universal rule](#async-surfaces-holder). A sync list carries no async surfaces, so
   `.sync` takes no `AsyncListSurfaces` at all.
