@@ -315,6 +315,38 @@ void main() {
       check(find.text('banana').evaluate()).length.equals(0);
     });
 
+    scenarioOutlineWidgets<({String fromQuery, double fromOffset, String toQuery, int topItem})>(
+      'a committed query starts the list from the top',
+      examples: const {
+        'entering a search': (fromQuery: '', fromOffset: 1000, toQuery: '3', topItem: 3),
+        // 1 and 2 match 14 items each, 100 px more than the screen.
+        'changing it': (fromQuery: '1', fromOffset: 100, toQuery: '2', topItem: 2),
+        'clearing it': (fromQuery: '3', fromOffset: 100, toQuery: '', topItem: 0),
+      },
+      outline: (tester, example) async {
+        final queryNotifier = ValueNotifier(example.fromQuery);
+        await _pumpSearch(tester, queryNotifier);
+        tester.state<ScrollableState>(listScrollableFinder).position.jumpTo(example.fromOffset);
+        await tester.pump();
+
+        await commitQuery(tester, queryNotifier, example.toQuery);
+
+        check(_topOf(tester, example.topItem)).equals(0);
+      },
+    );
+
+    scenarioWidgets('a committed query that changes nothing keeps the place', (tester) async {
+      final queryNotifier = ValueNotifier('');
+      await _pumpSearch(tester, queryNotifier, minSearchLength: 2);
+      tester.state<ScrollableState>(listScrollableFinder).position.jumpTo(1000);
+      await tester.pump();
+
+      // Shorter than minSearchLength, so it counts as no search, like the empty query before it.
+      await commitQuery(tester, queryNotifier, '3');
+
+      check(_topOf(tester, 20)).equals(0);
+    });
+
     scenarioOutlineWidgets<void Function(List<_Task> tasks)>(
       'the same list coming back edited is an error',
       examples: {
@@ -449,6 +481,30 @@ Future<void> _pumpRows(
     ),
   ),
 );
+
+/// A `.sync` list of `item 0` to `item 49` in 50 px rows, searched by [queryNotifier].
+Future<void> _pumpSearch(
+  WidgetTester tester,
+  ValueNotifier<String> queryNotifier, {
+  int minSearchLength = 0,
+}) {
+  final items = List.generate(50, (item) => item);
+
+  return pumpListSmith(
+    tester,
+    ValueListenableBuilder(
+      valueListenable: queryNotifier,
+      builder: (_, query, _) => ListSmith<int>.sync(
+        items: items,
+        itemIdGetter: (item) => item,
+        searchBy: (item, query) => '$item'.contains(query),
+        query: query,
+        minSearchLength: minSearchLength,
+        itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
+      ),
+    ),
+  );
+}
 
 /// An item whose `==` compares only ids, as many app models do.
 @immutable

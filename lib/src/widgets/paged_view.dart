@@ -53,7 +53,8 @@ class const PagedView<T extends Object>({
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
 
-  /// The committed query, handed to [noResultsBuilder] when [isSearchMode] and nothing matched.
+  /// The committed query. The list starts from the top when it changes, and [noResultsBuilder] gets
+  /// it when [isSearchMode] and nothing matched.
   required final String query,
 
   /// Builds separators between items. Null for none.
@@ -121,6 +122,7 @@ class const PagedView<T extends Object>({
       },
       pullExtentListenable: pullExtentListenable,
       shouldKeepPosition: shouldKeepPosition,
+      startKey: query,
       // Keyed by status, so one surface replacing another starts fresh.
       surface: surfaceWidget == null
           ? null
