@@ -39,6 +39,47 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
 
+    scenarioOutlineWidgets<({String firstQuery, String? nextQuery})>(
+      'a query shorter than minSearchLength shows the feed and searches nothing',
+      examples: const {
+        'as the 1st query': (firstQuery: 'ab', nextQuery: null),
+        'typed after': (firstQuery: '', nextQuery: 'ab'),
+      },
+      outline: (tester, example) async {
+        final searchedQueries = <String>[];
+        final fetchPage = PageFetcher<int>(
+          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+        );
+        final searchFetchPage = SearchPageFetcher<int>((request) async {
+          searchedQueries.add(request.query);
+
+          return const [99];
+        });
+        await _pumpAsyncSearch(
+          tester,
+          fetchPage: fetchPage,
+          searchFetchPage: searchFetchPage,
+          query: example.firstQuery,
+          minSearchLength: 3,
+        );
+        await settle(tester);
+        final nextQuery = example.nextQuery;
+        if (nextQuery != null) {
+          await _pumpAsyncSearch(
+            tester,
+            fetchPage: fetchPage,
+            searchFetchPage: searchFetchPage,
+            query: nextQuery,
+            minSearchLength: 3,
+          );
+          await settle(tester);
+        }
+
+        check(searchedQueries).isEmpty();
+        check(find.text('item 1').evaluate()).length.equals(1);
+      },
+    );
+
     scenarioWidgets('a search that matches nothing shows the no-results surface', (tester) async {
       await _pumpAsyncSearch(
         tester,
@@ -217,6 +258,7 @@ Future<void> _pumpAsyncSearch(
   required PageFetcher<int> fetchPage,
   required SearchPageFetcher<int> searchFetchPage,
   required String query,
+  int minSearchLength = 0,
   SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
 }) => pumpListSmith(
   tester,
@@ -225,6 +267,7 @@ Future<void> _pumpAsyncSearch(
     itemIdGetter: (item) => item,
     search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: cachePolicy),
     query: query,
+    minSearchLength: minSearchLength,
     searchDebounce: const Duration(milliseconds: 20),
     itemBuilder: (_, item, _) => Text('item $item'),
   ),

@@ -9,65 +9,29 @@ void main() {
   bool contains(String item, String query) => item.toLowerCase().contains(query.toLowerCase());
 
   const queryKey = 'query';
-  const minLengthKey = 'minLength';
   const searchingKey = 'searching';
   const visibleKey = 'visible';
 
   Bdd(syncSearchFeature)
-      .scenario('gates the query by trim and min-length, then filters by the predicate')
+      .scenario(
+        'shows everything for an empty committed query, and filters by the predicate otherwise',
+      )
       .given('items $items and a case-insensitive contains predicate')
-      .when('it resolves query <$queryKey> with minSearchLength <$minLengthKey>')
+      .when('it resolves the committed query <$queryKey>')
       .then('isSearching is <$searchingKey> and the visible items are <$visibleKey>')
-      // Empty or too-short queries count as no search: every item stays visible.
-      .example(
-        val(queryKey, ''),
-        val(minLengthKey, 0),
-        val(searchingKey, false),
-        val(visibleKey, items),
-      )
-      .example(
-        val(queryKey, '  '),
-        val(minLengthKey, 0),
-        val(searchingKey, false),
-        val(visibleKey, items),
-      )
-      .example(
-        val(queryKey, 'ap'),
-        val(minLengthKey, 3),
-        val(searchingKey, false),
-        val(visibleKey, items),
-      )
-      // Active searches filter (trimming first). A miss yields an empty, no-results list.
+      .example(val(queryKey, ''), val(searchingKey, false), val(visibleKey, items))
       .example(
         val(queryKey, 'a'),
-        val(minLengthKey, 0),
         val(searchingKey, true),
         val(visibleKey, const ['apple', 'banana']),
       )
-      .example(
-        val(queryKey, ' a '),
-        val(minLengthKey, 0),
-        val(searchingKey, true),
-        val(visibleKey, const ['apple', 'banana']),
-      )
-      .example(
-        val(queryKey, 'app'),
-        val(minLengthKey, 3),
-        val(searchingKey, true),
-        val(visibleKey, const ['apple']),
-      )
-      .example(
-        val(queryKey, 'xyz'),
-        val(minLengthKey, 0),
-        val(searchingKey, true),
-        val(visibleKey, const <String>[]),
-      )
+      // A miss yields an empty, no-results list.
+      .example(val(queryKey, 'xyz'), val(searchingKey, true), val(visibleKey, const <String>[]))
       .run((context) {
         final searchResult = resolveSyncSearch(
           items,
           contains,
           context.example.val(queryKey) as String,
-          context.example.val(minLengthKey) as int,
         );
 
         check(searchResult.isSearching).equals(context.example.val(searchingKey) as bool);

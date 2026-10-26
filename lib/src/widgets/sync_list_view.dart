@@ -69,7 +69,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query);
+    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
     _takeItems();
     _resultNotifier = ValueNotifier(_resolve());
   }
@@ -90,7 +90,13 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
       _resultNotifier.value = _resolve();
     }
 
-    if (widget.query != oldWidget.query) _debouncer.schedule(widget.query, widget.searchDebounce);
+    if (widget.query != oldWidget.query) {
+      _debouncer.schedule(
+        widget.query,
+        widget.searchDebounce,
+        minSearchLength: widget.minSearchLength,
+      );
+    }
   }
 
   @override
@@ -117,7 +123,6 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
       _items,
       widget.source.searchBy,
       _debouncer.committedQuery,
-      widget.minSearchLength,
     );
 
     return (
