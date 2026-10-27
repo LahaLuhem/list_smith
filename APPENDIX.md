@@ -36,7 +36,7 @@ renames.
 - [Local edits live beside the pages, not in them](#edit-layer)
 - [list_smith places the pull indicator, the builder only draws it](#pull-indicator-layout)
 - [`itemIdGetter` is required](#item-id-required)
-- [Async rows follow their item, not their index](#row-identity)
+- [Rows follow their item, not their index](#row-identity)
 - [Edit transitions animate the rows edits add and take](#edit-transitions)
 - [list_smith pages on its own](#own-paging)
 - [Where a pull can start](#pull-surfaces)
@@ -153,7 +153,8 @@ renames.
   `.sync` takes no `AsyncListSurfaces` at all.
 - **The iterable is copied once:** `SyncSource` keeps the consumer's raw iterable, and
   `SyncListView` turns it into a list once, again only when the iterable identity changes, so an
-  unchanged list is never re-copied or re-filtered per build.
+  unchanged list is never re-copied or re-filtered per build. A change has to come as a new object,
+  and the same one edited in place asserts in debug.
 - **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent` (`double`)
   for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a public
   `double?`, and both views read it through an unexported extension that wraps it in
@@ -269,11 +270,13 @@ renames.
   non-grouping list would carry a meaningless `K`. The `key as K` downcast is sound: every key
   reaching the header came from the same instance's `groupBy`. Caveat: an untyped inline `groupBy`
   widens `T` to `Object`, so type the parameter or pass a typed function.
-- **A header is a cell among the rows, not a sticky sliver.** It sits before its group's 1st item,
-  or after its last on a reversed list, so the rows stay one flat sliver and list_smith keeps owning
-  the scrollable. One pass per build places the headers ([#scan-loops](#scan-loops)). Sticky headers
-  would need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset tracking,
-  exactly the fragility this package rejects. Deferred.
+- **Header cells, not a sticky sliver.** Cells keep the rows one flat sliver, so list_smith keeps
+  owning the scrollable. One pass per build places the headers ([#scan-loops](#scan-loops)). Sticky
+  headers would need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset
+  tracking, exactly the fragility this package rejects. Deferred.
+- **Not part of a row either.** A row that gained or lost its group's header changed size, which
+  moved the row being read, and a reversed list drew the header between the group's 1st and 2nd
+  items.
 - **Sync buckets, async trusts arrival order.** A sync list holds every item, so it reorders the
   filtered ones into contiguous groups (`bucketByGroup` over `collection`'s `groupListsBy`,
   first-appearance order, item order kept within a group) and input can arrive any way round. An
@@ -654,18 +657,24 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   wiping its state. The README suggests it for values that do.
 - **Cost:** the display pass now runs on every list, at the price
   [#overlap-dedup](#overlap-dedup) measures.
+- **`.sync` takes it optional for now,** since requiring it breaks every `.sync` call. Without it a
+  row can't follow its item, so `.sync` asserts in debug while `shouldKeepPosition` is on, instead
+  of sliding unnoticed.
 
 ---
 
 <a id="row-identity"></a>
-## Async rows follow their item, not their index
+## Rows follow their item, not their index
 
-- **Decision:** each async row is keyed by its item's id, and the list finds a row that moved through
+- **Decision:** each row is keyed by its item's id, and the list finds a row that moved through
   `findChildIndexCallback`. So a row keeps its state, and anything it's animating, while rows above
   it come and go.
 - **The lookup:** a row's key carries the index it was last built at, and that's checked first. Only
   a row that moved builds the id-to-index map, once per rebuild. The
   [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
+- **A repeated id keeps its 1st item.** 2 built rows on one key fail Flutter's child-order assert,
+  which blanks the list. `.async`'s de-dup already drops repeats, and `.sync` does the same when
+  `items` changes, asserting in debug.
 
 ---
 
@@ -809,8 +818,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 <a id="keep-position"></a>
 ## The row the user is reading holds still
 
-- **Decision:** a proxy sliver around the async rows answers a row's move with a
-  `scrollOffsetCorrection` of the same size, so no frame shows the slide.
+- **Decision:** a proxy sliver around the rows answers a row's move with a `scrollOffsetCorrection`
+  of the same size, so no frame shows the slide.
 - **Why the sliver:** the scroll position counts pixels from the start, so any change above moves the
   view. Layout sees each row's new offset before it paints, so one anchor there covers every cause.
 - **Why not at offset 0:** a new row at the start shows, and a reversed chat at its newest shows the
@@ -822,7 +831,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **A `jumpTo(0)` after a change above that isn't built lands short,** since the list places unbuilt
   rows by estimate. `animateTo(0)`, or a 2nd `jumpTo(0)`, lands exactly. Undoing the list's own
   corrections at 0 loops past the viewport's 10-cycle limit.
-- **Async only.** `.sync` rows have no ids to find again.
+- **On `.sync` it needs `itemIdGetter`,** as [#item-id-required](#item-id-required) says.
 - **Cost: none measured on Android,** every bench scenario within the regression gate's threshold
   of main. iOS was too noisy to decide.
 
