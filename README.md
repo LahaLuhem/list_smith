@@ -23,6 +23,7 @@
     * [When your server sorts the list](#when-your-server-sorts-the-list)
     * [Before your server answers](#before-your-server-answers)
     * [Animating edits](#animating-edits)
+    * [On a `.sync` list](#on-a-sync-list)
 - [Search](#search)
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async`](#paged-with-listsmithasync)
@@ -523,6 +524,22 @@ timing, not a look.
   second animation on top.
 - With the platform's reduce-motion setting on, edits show at once.
 
+### On a `.sync` list
+
+`.sync` has no controller. Change your list by passing a new one, since it only reads `items` again
+when it gets a new object:
+
+```dart
+setState(() => _contacts = [..._contacts, added]);  // not _contacts.add(added)
+```
+
+Editing the list you passed shows nothing, and asserts in debug.
+
+Given an `itemIdGetter`, rows follow their item here too, and the row being read holds still. Always
+pass one: a later release requires it. Without one, `.sync` asserts in debug unless you pass
+`shouldKeepPosition: false`. Each item needs its own id. A repeat asserts in debug, and a release
+build shows only the 1st item with it.
+
 ## Search
 
 This is where the 2 constructors part ways the most.
@@ -537,6 +554,7 @@ Most lists want "keep the item when any text field contains the query", so there
 ```dart
 ListSmith<City>.sync(
   items: allCities,
+  itemIdGetter: (city) => city.id,
   searchBy: SyncSearchPredicates.fields([(city) => city.name, (city) => city.country]),
   query: searchQuery, // you own the field, more on that below
   itemBuilder: (context, city, index) => Text(city.name),
@@ -641,6 +659,7 @@ section key, plus a `headerBuilder` for the header. Works on both constructors:
 ```dart
 ListSmith.sync(
   items: contacts,
+  itemIdGetter: (contact) => contact.id,
   searchBy: (contact, query) => contact.name.toLowerCase().contains(query.toLowerCase()),
   query: searchQuery,
   grouping: Grouping.by(
