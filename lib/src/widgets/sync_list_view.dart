@@ -81,7 +81,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     final didItemsChange = !identical(widget.source.items, oldWidget.source.items);
     if (didItemsChange) _takeItems();
     if (kDebugMode) {
-      // Walk here, instead of a every rebuild in the build method.
+      // Walk here, instead of on every rebuild in the build method.
       _didItemsChangeInPlace =
           !didItemsChange &&
           !const IterableEquality<Object>(IdentityEquality()).equals(_items, widget.source.items);

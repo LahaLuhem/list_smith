@@ -40,7 +40,7 @@
 
 <!-- TOC end -->
 
-**list_smith** wraps `ListView.builder` for the lists you actually ship: async pagination,
+**list_smith** builds the lists you actually ship, lazily like `ListView.builder`: async pagination,
 pull-to-refresh, and search, sync or async. Hand it a data source, an item builder, and a bit of
 config. It owns the scrollable, the controller, and every fiddly loading, error and empty state in
 between. No `ScrollController`, no paging controller, nothing to wire up.
