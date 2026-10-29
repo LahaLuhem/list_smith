@@ -14,10 +14,9 @@ import 'sync_list_view.dart';
 
 /// A list that handles async pagination and pull-to-refresh, or sync in-memory search.
 ///
-/// Wraps `ListView.builder` and owns the scrollable and the pager, so you pass data, an [ItemBuilder]
-/// and config, never a `ListView` or a paging controller. Every visible surface has a neutral widgets-layer
-/// default, so it drops into a Material, Cupertino or bespoke app without dragging in a look you didn't
-/// choose.
+/// Owns the scrollable and the pager, so you pass data, an [ItemBuilder] and config, never a `ListView`
+/// or a paging controller. Every visible surface has a neutral widgets-layer default, so it drops into
+/// a Material, Cupertino or bespoke app without dragging in a look you didn't choose.
 ///
 /// [ListSmith.async] paginates over a [PageFetcher], and searches too when given an [AsyncSearch]. [ListSmith.sync]
 /// filters an in-memory list with a [SyncSearchPredicate]. A parameter meant for one mode is never silently

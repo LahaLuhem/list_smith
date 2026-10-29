@@ -5,11 +5,11 @@ in this package. Claude-Code-specific guidance lives in [CLAUDE.md](CLAUDE.md).
 
 ## Project goal
 
-A developer-first Flutter package wrapping `ListView.builder` for real-world lists, doing 3 jobs
-properly: **pagination** and **pull-to-refresh** for an async source, and **search** for either
-kind. A sync source holds all its items, so it has nothing to page, and refreshing it means
-rebuilding the widget. Async search additionally needs a policy for how cached items interact with
-new results.
+A developer-first Flutter package for real-world lists, built lazily like `ListView.builder` and
+doing 3 jobs properly: **pagination** and **pull-to-refresh** for an async source, and **search**
+for either kind. A sync source holds all its items, so it has nothing to page, and refreshing it
+means rebuilding the widget. Async search additionally needs a policy for how cached items interact
+with new results.
 
 Built as a ground-up replacement for an older search-list package. It keeps the good ideas, fixes
 the known correctness bugs, and removes the "ghost params": constructor parameters that silently do

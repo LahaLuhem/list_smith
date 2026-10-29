@@ -45,6 +45,7 @@ renames.
 - [The edit store walks its edits by stamp, unsorted](#edit-store-scans)
 - [An order places edits where the server sorts them](#sorted-placement)
 - [The row the user is reading holds still](#keep-position)
+- [A new search starts at the top](#search-starts-at-top)
 
 <!-- TOC end -->
 
@@ -835,6 +836,24 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Cost: none measured.** Every bench scenario stayed within the regression gate's threshold of
   main on Android (iOS too noisy to decide), and `sync_scroll` within it of `.sync` before ids on
   both phones.
+
+---
+
+<a id="search-starts-at-top"></a>
+## A new search starts at the top
+
+- **Decision:** the engine hands the list its committed query, the one that changes what shows, and
+  a proxy sliver around the rows or surface corrects the offset to 0 at layout when it changes.
+- **Why the top:** the results are a different list, so the old offset points at whatever sits there
+  now. A filter usually moves the row being read outside the built rows, where the anchor can't
+  follow it.
+- **Clearing loses the place.** Going back to it is the build-upward path, and only `.sync` could
+  land it, since a replaced `.async` feed reloads from page 0.
+- **Why a sliver, not a `jumpTo(0)`:** no frame shows the old offset, and it needs no scroll
+  controller.
+- **It corrects once.** The short landing [keep-position](#keep-position) warns of never showed
+  after a query change: the list restarts from its 1st row instead of walking back over stale
+  offsets. If one shows up, stay armed while the list corrects itself at the start.
 
 ---
 
