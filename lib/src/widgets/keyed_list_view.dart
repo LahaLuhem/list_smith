@@ -19,7 +19,7 @@ class const KeyedListView<T extends Object>({
   /// Builds each row.
   required final ItemBuilder<T> itemBuilder,
 
-  /// Splits the items into sections under headers.
+  /// Splits the items into sections under headers, so the rows can come out of page order.
   required final Grouping<T> grouping,
 
   /// How far a pull pushes the list now.
@@ -62,12 +62,13 @@ class const KeyedListView<T extends Object>({
     final surface = this.surface;
     final Widget contentSliver;
     if (surface == null) {
+      final (pagedItems: shownPagedItems, :groupHeaders) = grouping.sectionsOver(
+        pagedItems,
+        isReversed: reverse,
+      );
       contentSliver = _KeyedRows(
-        rowLookup: RowLookup<T>(pagedItems, itemIdGetter ?? _neverLookedUp),
-        groupHeaders: grouping.headersOver(
-          pagedItems.expand((items) => items),
-          isReversed: reverse,
-        ),
+        rowLookup: RowLookup<T>(shownPagedItems, itemIdGetter ?? _neverLookedUp),
+        groupHeaders: groupHeaders,
         itemIdGetter: itemIdGetter,
         itemBuilder: itemBuilder,
         footerBuilder: footerBuilder,

@@ -20,14 +20,17 @@ sealed class const Grouping<T extends Object>() {
   /// Const base constructor.
   this;
 
-  /// Orders [items] for display. Sync path only, since async can't reorder across pages.
+  /// Orders [items] for display, `.sync` only. Async gathers in [sectionsOver] when a key comes back.
   @internal
   List<T> arrange(Iterable<T> items);
 
-  /// The headers over [items] for one build, null without groups. [isReversed] puts each after its
-  /// group's last item.
+  /// One build's rows in section order, and their headers, null without groups. [isReversed] puts each
+  /// header after its group's last item.
   @internal
-  GroupHeaders? headersOver(Iterable<T> items, {required bool isReversed});
+  ({List<List<T>> pagedItems, GroupHeaders? groupHeaders}) sectionsOver(
+    List<List<T>> pagedItems, {
+    required bool isReversed,
+  });
 
   /// Pulls an item's group key, null when there are no groups. The edit layer reads it to keep a new or
   /// moved item inside its group.
@@ -39,9 +42,9 @@ sealed class const Grouping<T extends Object>() {
   /// Type [groupBy]'s parameter, or pass an already-typed function, so `K` infers instead of widening
   /// to `Object`.
   ///
-  /// Sync reorders for you, so your input can arrive any way round. Async can't reorder across pages,
-  /// so the fetcher has to return items already grouped, and [orderPolicy] says what happens when it
-  /// doesn't. Either way a group split over a page boundary gets one header.
+  /// Each group gathers into one section, so items can arrive in any order, even spread over pages.
+  /// On `.async` a later page can add to a section above the one being read. [orderPolicy] can make
+  /// it throw instead.
   static Grouping<T> by<T extends Object, K extends Object>({
     required GroupKeyOf<T, K> groupBy,
     required GroupHeaderBuilder<K> headerBuilder,

@@ -294,7 +294,7 @@ blindly. The engine must not `is`-test the concrete variant and implement each c
 
 **Why:** the engine stays a thin dispatcher, the way the framework calls `Widget.build` without
 knowing the subtype, so new variants and new axes drop in without touching it and each behaviour
-unit-tests on its own. Already the shape of `hasReachedEnd`, `actionFor`, `headersOver`, and
+unit-tests on its own. Already the shape of `hasReachedEnd`, `actionFor`, `sectionsOver`, and
 `shouldAdvance`.
 
 **How:**

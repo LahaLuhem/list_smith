@@ -18,7 +18,7 @@ const _itemCounts = <int>[1000, 10000, 100000];
 /// Items per page, so the source is a lazy flatten of pages like the real one.
 const _pageSize = 100;
 
-/// Items per group. Every 10th item opens a run.
+/// Small groups, so the pass opens a run often.
 const _groupSize = 10;
 
 final class _GroupHeadersScaling(final int itemCount) extends BenchmarkBase {
@@ -36,8 +36,8 @@ final class _GroupHeadersScaling(final int itemCount) extends BenchmarkBase {
 
   @override
   void run() {
-    // The default policy's order check is an assert, so AOT times the headers pass alone.
-    final headers = resolveGroupHeaders(
+    // Grouped pages, so nothing gathers. This times the header pass, which is also the order check.
+    final (:headers, gatheredItems: _) = resolveGroupHeaders(
       _pages.expand((page) => page),
       _groupKey,
       const RepairHeadersPolicy(),

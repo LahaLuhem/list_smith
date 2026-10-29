@@ -119,36 +119,7 @@ void main() {
       check(find.text('section C').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('a duplicate id inside a straddling group keeps the header single', (
-      tester,
-    ) async {
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: pagedFetcher(const [
-            [(group: 'A', label: 'a1'), (group: 'A', label: 'a2'), (group: 'B', label: 'b1')],
-            [(group: 'B', label: 'b1'), (group: 'B', label: 'b2'), (group: 'C', label: 'c1')],
-          ]),
-          itemIdGetter: (item) => item.label,
-          endPolicy: const FixedPageCountPolicy(pageCount: 2),
-          refresh: const NoRefresh(),
-          grouping: byGroup(),
-          itemBuilder: (_, item, _) => Text(item.label),
-        ),
-      );
-      await drain(tester, frames: 12);
-
-      // De-dup runs before the view sees the state, so headers read the de-duped list. b1 collapses
-      // and B still opens once.
-      check(find.text('section B').evaluate()).length.equals(1);
-      check(find.text('b1').evaluate()).length.equals(1);
-      check(find.text('section A').evaluate()).length.equals(1);
-      check(find.text('section C').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('de-dup by id keeps groups contiguous when pages overlap a boundary', (
-      tester,
-    ) async {
+    scenarioWidgets('pages overlapping across a group boundary show each row once', (tester) async {
       await pumpListSmith(
         tester,
         ListSmith.async(
@@ -165,14 +136,11 @@ void main() {
       );
       await drain(tester, frames: 12);
 
-      // Raw, page 1 reads back A, A, B, A, B, B and breaks group order. De-dup collapses the overlap
-      // first, so grouping never sees it. Grouping relies on de-dup here.
-      check(find.text('section A').evaluate()).length.equals(1);
-      check(find.text('section B').evaluate()).length.equals(1);
+      // Page 1 repeats a2 and b1. Grouping reads the list after de-dup, so a2 isn't gathered twice.
       check(find.text('a2').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('FailOnUnorderedPolicy throws instead of asserting', (tester) async {
+    scenarioWidgets('FailOnUnorderedPolicy throws instead of gathering', (tester) async {
       await pumpListSmith(
         tester,
         ListSmith.async(
@@ -187,33 +155,63 @@ void main() {
       );
       await drain(tester);
 
-      // Default only asserts, so release would let this slide. This is the opt-in to fail loud.
       check(tester.takeException()).isA<StateError>();
     });
 
-    scenarioWidgets('asserts when a page is not ordered by group key', (tester) async {
+    scenarioWidgets('a key that comes back on a later page joins its section', (tester) async {
       await pumpListSmith(
         tester,
         ListSmith.async(
-          fetchPage: PageFetcher(
-            (request) async => request.pageIndex == 0
-                ? const [
-                    (group: 'A', label: 'apple'),
-                    (group: 'B', label: 'banana'),
-                    (group: 'A', label: 'avocado'),
-                  ]
-                : const <_Item>[],
-          ),
+          fetchPage: pagedFetcher(const [
+            [(group: 'A', label: 'a1'), (group: 'B', label: 'b1')],
+            [(group: 'A', label: 'a2'), (group: 'C', label: 'c1')],
+          ]),
           itemIdGetter: (item) => item.label,
+          endPolicy: const FixedPageCountPolicy(pageCount: 2),
           refresh: const NoRefresh(),
           grouping: byGroup(),
           itemBuilder: (_, item, _) => Text(item.label),
         ),
       );
-      await drain(tester);
+      await drain(tester, frames: 12);
 
-      // The A, B, A page breaks the pre-sorted contract, so the debug assert fires during build.
-      check(tester.takeException()).isA<AssertionError>();
+      check(tester.getTopLeft(find.text('a2')).dy)
+          .isLessThan(tester.getTopLeft(find.text('section B')).dy);
+    });
+
+    scenarioWidgets('the row being read holds still while a later page joins a section above it', (
+      tester,
+    ) async {
+      final server = FakeServer<_Item>([
+        (group: 'A', label: 'a1'),
+        (group: 'A', label: 'a2'),
+        for (var index = 1; index <= 8; index++) (group: 'B', label: 'b$index'),
+        (group: 'A', label: 'a3'),
+      ]);
+      final pageHoldCompleter = server.hold(1, attempt: 1);
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          pageSize: 10,
+          itemIdGetter: (item) => item.label,
+          refresh: const NoRefresh(),
+          grouping: byGroup(),
+          scroll: ListScrollConfig(controller: scrollController),
+          itemBuilder: (_, item, _) => SizedBox(height: 100, child: Text(item.label)),
+        ),
+      );
+      await drain(tester);
+      scrollController.jumpTo(300);
+      await tester.pump();
+      final readRowTop = tester.getTopLeft(find.text('b3')).dy;
+
+      await release(tester, [pageHoldCompleter]);
+
+      check(scrollController.offset).isGreaterThan(300); // a3 did land above
+      check(tester.getTopLeft(find.text('b3')).dy).equals(readRowTop);
     });
   });
 }
