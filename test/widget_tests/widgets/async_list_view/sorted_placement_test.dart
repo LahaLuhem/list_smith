@@ -249,14 +249,15 @@ void main() {
           .isGreaterThan(tester.getTopLeft(find.text('row n30')).dy);
     });
 
-    scenarioWidgets("an order that doesn't sort by group first trips grouping's check", (
+    scenarioWidgets("an edit under an order that doesn't put the group first lands in its group", (
       tester,
     ) async {
       final server = FakeServer(_rows()..sort(_byTeamThenName));
+      final scrollController = _scrollController();
       final controller = await _pumpSorted(
         tester,
         server,
-        _scrollController(),
+        scrollController,
         rowHeight: _shortRowHeight,
         grouping: Grouping.by(groupBy: (row) => row.team, headerBuilder: (_, team) => Text(team)),
       );
@@ -264,7 +265,7 @@ void main() {
       _rename(server, controller, 1, 'n13', comparator: _byTeamThenName);
       await tester.pump();
 
-      check(tester.takeException()).isA<AssertionError>();
+      check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server));
     });
   });
 }

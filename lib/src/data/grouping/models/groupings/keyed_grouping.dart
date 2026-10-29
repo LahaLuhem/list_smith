@@ -21,11 +21,22 @@ final class const KeyedGrouping<T extends Object>._({
 
   @override
   @internal
-  GroupHeaders headersOver(Iterable<T> items, {required bool isReversed}) => GroupHeaders(
-    headers: resolveGroupHeaders(items, groupOf, orderPolicy, isReversed: isReversed),
-    isAfterItem: isReversed,
-    headerFor: headerFor,
-  );
+  ({List<List<T>> pagedItems, GroupHeaders groupHeaders}) sectionsOver(
+    List<List<T>> pagedItems, {
+    required bool isReversed,
+  }) {
+    final (:headers, :gatheredItems) = resolveGroupHeaders(
+      pagedItems.expand((items) => items),
+      groupOf,
+      orderPolicy,
+      isReversed: isReversed,
+    );
+
+    return (
+      pagedItems: gatheredItems == null ? pagedItems : [gatheredItems],
+      groupHeaders: GroupHeaders(headers: headers, isAfterItem: isReversed, headerFor: headerFor),
+    );
+  }
 
   @override
   String toString() => 'KeyedGrouping(orderPolicy: $orderPolicy)';

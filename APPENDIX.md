@@ -285,10 +285,11 @@ renames.
   with a debug-only `groupsAreContiguous` assert flagging a key that recurs after its section ended.
 - **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
   passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
-  widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupsAreContiguous`), and
-  each build gets its headers from the type, through `Grouping.headersOver`. `resolveSyncSearch`
-  returns a lazy view so the grouped sync path buckets with one copy, re-resolving on an items or
-  `grouping` identity change. Hence "hold the `Grouping` stable" on a large list.
+  widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupHeadersIfContiguous`),
+  and each build gets its sections from the type, through `Grouping.sectionsOver`.
+  `resolveSyncSearch` returns a lazy view so the grouped sync path buckets with one copy,
+  re-resolving on an items or `grouping` identity change. Hence "hold the `Grouping` stable" on a
+  large list.
 
 ---
 
@@ -297,8 +298,9 @@ renames.
 
 - **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
   methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `headersOver(items, isReversed:)` returns the
-  per-build headers, null without groups. Same "delegate to the type, keep the shell branch-free"
+  `arrange(items)` is the sync display ordering, `sectionsOver(pagedItems, isReversed:)` returns
+  the per-build rows and headers, null headers without groups. Same "delegate to the type, keep the
+  shell branch-free"
   move as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
 - **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
   compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
@@ -307,13 +309,13 @@ renames.
 - **`NoGrouping` had to become generic.** A `T`-typed parameter on an instance reified at `Never`
   rejects a real argument at runtime, since Dart makes such parameters covariant and checks them, so
   `arrange(<String>[...])` on a `Grouping<Never>` throws. The old `const NoGrouping()` default was
-  exactly that, and would have crashed every ungrouped list the moment `arrange` or `headersOver`
+  exactly that, and would have crashed every ungrouped list the moment `arrange` or `sectionsOver`
   ran.
   Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
-- **The ungrouped path still does no flatten.** `headersOver` takes the items as a lazy flatten that
-  `NoGrouping.headersOver` never walks, so an ungrouped list skips the O(loaded) pass. Dispatch is
+- **The ungrouped path still does no flatten.** `sectionsOver` takes the pages, and only
+  `KeyedGrouping` flattens them, so an ungrouped list skips the O(loaded) pass. Dispatch is
   per build rather than per item, one virtual call replacing one `is` check, so the render path is
   unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
 
@@ -531,12 +533,12 @@ renames.
 <a id="scan-loops"></a>
 ## Per-item scans on the build path stay loops
 
-- **Decision:** `groupHeadersByFirstRun` and `groupsAreContiguous` are single-pass loops over the
-  lazy flatten of the loaded pages.
-- **Why:** both run on every build of a grouped list. Against the loop, a chain on one stateful
+- **Decision:** `groupHeadersIfContiguous` is a single-pass loop over the lazy flatten of the loaded
+  pages.
+- **Why:** it runs on every build of a grouped list. Against the loop, a chain on one stateful
   closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per
   run. The indexed `List.generate` form paid for its flatten and still lost. Measured on the
-  per-item header flags `groupHeadersByFirstRun` replaced, which walked the same way.
+  per-item header flags the header pass replaced, which walked the same way.
 - **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
   or not, and a moved row is checked at several indices before the id map gets built.
 - **Tripwire:** the `group_headers_scaling` micro, and `row_lookup_scaling` for the lookup.

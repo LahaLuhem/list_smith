@@ -37,19 +37,54 @@ void main() {
   const groupedHeaders = [(itemIndex: 0, key: 1), (itemIndex: 2, key: 2)];
 
   Bdd(groupingFeature)
-      .scenario('the default policy leaves properly grouped items alone')
+      .scenario('grouped items stay as they are')
       .given('a tens-digit group key and RepairHeadersPolicy')
-      .when('it resolves headers for contiguous items')
-      .then('every group gets its header')
+      .when('it resolves headers for items already grouped')
+      .then('nothing gathers')
       .run((_) {
-        final headers = resolveGroupHeaders(
+        final (headers: _, :gatheredItems) = resolveGroupHeaders(
           const [10, 11, 20],
           decade,
           const RepairHeadersPolicy(),
           isReversed: false,
         );
 
-        check(headers).deepEquals(groupedHeaders);
+        check(gatheredItems).isNull();
+      });
+
+  const outOfOrderItemsKey = 'outOfOrderItems';
+  const gatheredKey = 'gathered';
+  const isReversedKey = 'isReversed';
+  const headersKey = 'headers';
+
+  Bdd(groupingFeature)
+      .scenario('the default policy gathers a key that comes back, one header per group')
+      .given('a tens-digit group key and RepairHeadersPolicy')
+      .when('it resolves headers for <$outOfOrderItemsKey>, reversed <$isReversedKey>')
+      .then('the items gather into <$gatheredKey> under <$headersKey>')
+      .example(
+        val(outOfOrderItemsKey, const [10, 20, 11]),
+        val(isReversedKey, false),
+        val(gatheredKey, const [10, 11, 20]),
+        val(headersKey, groupedHeaders),
+      )
+      // On a reversed list a header shows above its group, so it goes after the group's last item.
+      .example(
+        val(outOfOrderItemsKey, const [10, 20, 11]),
+        val(isReversedKey, true),
+        val(gatheredKey, const [10, 11, 20]),
+        val(headersKey, const [(itemIndex: 1, key: 1), (itemIndex: 2, key: 2)]),
+      )
+      .run((context) {
+        final (:headers, :gatheredItems) = resolveGroupHeaders(
+          context.example.val(outOfOrderItemsKey) as List<int>,
+          decade,
+          const RepairHeadersPolicy(),
+          isReversed: context.example.val(isReversedKey) as bool,
+        );
+
+        check(gatheredItems).isNotNull().deepEquals(context.example.val(gatheredKey) as List<int>);
+        check(headers).deepEquals(context.example.val(headersKey) as List<GroupHeader>);
       });
 
   Bdd(groupingFeature)
@@ -74,16 +109,14 @@ void main() {
             decade,
             const FailOnUnorderedPolicy(),
             isReversed: false,
-          ),
+          ).headers,
         ).deepEquals(groupedHeaders);
       });
 
   const headerItemsKey = 'headerItems';
-  const isReversedKey = 'isReversed';
-  const headersKey = 'headers';
 
   Bdd(groupingFeature)
-      .scenario("puts one header on each key's 1st run, after its last item on a reversed list")
+      .scenario("puts a header on each group's run, after its last item on a reversed list")
       .given('a tens-digit group key')
       .when('it finds the headers for <$headerItemsKey>, reversed <$isReversedKey>')
       .then('they are <$headersKey>')
@@ -101,7 +134,6 @@ void main() {
           (itemIndex: 3, key: 3),
         ]),
       )
-      // On a reversed list a header shows above its group, so it goes after the group's last item.
       .example(
         val(headerItemsKey, const [10, 11, 20, 30]),
         val(isReversedKey, true),
@@ -111,48 +143,22 @@ void main() {
           (itemIndex: 3, key: 3),
         ]),
       )
-      // A key coming back gets no 2nd header, either way round.
-      .example(
-        val(headerItemsKey, const [10, 20, 11]),
-        val(isReversedKey, false),
-        val(headersKey, const [(itemIndex: 0, key: 1), (itemIndex: 1, key: 2)]),
-      )
-      .example(
-        val(headerItemsKey, const [10, 20, 11]),
-        val(isReversedKey, true),
-        val(headersKey, const [(itemIndex: 0, key: 1), (itemIndex: 1, key: 2)]),
-      )
       .run((context) {
-        final headers = groupHeadersByFirstRun(
+        final headers = groupHeadersIfContiguous(
           context.example.val(headerItemsKey) as List<int>,
           decade,
           isReversed: context.example.val(isReversedKey) as bool,
         );
 
-        check(headers).deepEquals(context.example.val(headersKey) as List<GroupHeader>);
+        check(headers).isNotNull().deepEquals(context.example.val(headersKey) as List<GroupHeader>);
       });
 
-  const contiguousItemsKey = 'contiguousItems';
-  const contiguousKey = 'contiguous';
-
   Bdd(groupingFeature)
-      .scenario('reports whether groups stay contiguous, flagging a key that recurs after its run')
+      .scenario('a key coming back after its run ended gives no headers, since it needs gathering')
       .given('a tens-digit group key')
-      .when('it checks <$contiguousItemsKey>')
-      .then('groupsAreContiguous is <$contiguousKey>')
-      // Empty and single-group inputs are trivially contiguous.
-      .example(val(contiguousItemsKey, const <int>[]), val(contiguousKey, true))
-      .example(val(contiguousItemsKey, const [10, 11, 12]), val(contiguousKey, true))
-      // Distinct groups back to back are contiguous.
-      .example(val(contiguousItemsKey, const [10, 11, 20, 30]), val(contiguousKey, true))
-      // A group key returning after another intervened is not contiguous.
-      .example(val(contiguousItemsKey, const [10, 20, 11]), val(contiguousKey, false))
-      .run((context) {
-        final contiguous = groupsAreContiguous(
-          context.example.val(contiguousItemsKey) as List<int>,
-          decade,
-        );
-
-        check(contiguous).equals(context.example.val(contiguousKey) as bool);
+      .when('a group key comes back after another one')
+      .then('there are no headers yet')
+      .run((_) {
+        check(groupHeadersIfContiguous(const [10, 20, 11], decade, isReversed: false)).isNull();
       });
 }
