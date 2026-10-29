@@ -389,13 +389,13 @@ Keep `<Type>` where inference would fall back to `dynamic`: empty literals with 
 Where a function type matches one of Flutter's typedefs, use the most specific one. It names the
 callback's job, where `void Function(Exception exception)` has to be read as a signature.
 
-| Written out | Typedef |
-|---|---|
-| `void Function()` | `VoidCallback` |
-| `T Function()` | `ValueGetter<T>` |
-| `void Function(T)` | `ValueChanged<T>` when it fires on a change, else `ValueSetter<T>` |
-| `Future<void> Function()` | `AsyncCallback` |
-| `Future<void> Function(T)` | `AsyncValueSetter<T>` |
+| Written out                | Typedef                                                            |
+|----------------------------|--------------------------------------------------------------------|
+| `void Function()`          | `VoidCallback`                                                     |
+| `T Function()`             | `ValueGetter<T>`                                                   |
+| `void Function(T)`         | `ValueChanged<T>` when it fires on a change, else `ValueSetter<T>` |
+| `Future<void> Function()`  | `AsyncCallback`                                                    |
+| `Future<void> Function(T)` | `AsyncValueSetter<T>`                                              |
 
 Keep it written out where the parameter's name says something its type doesn't, since a typedef's
 parameter is a bare `value`. Several parameters, or a value returned from one, have no typedef.
