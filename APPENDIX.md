@@ -832,8 +832,9 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   rows by estimate. `animateTo(0)`, or a 2nd `jumpTo(0)`, lands exactly. Undoing the list's own
   corrections at 0 loops past the viewport's 10-cycle limit.
 - **On `.sync` it needs `itemIdGetter`,** as [#item-id-required](#item-id-required) says.
-- **Cost: none measured on Android,** every bench scenario within the regression gate's threshold
-  of main. iOS was too noisy to decide.
+- **Cost: none measured.** Every bench scenario stayed within the regression gate's threshold of
+  main on Android (iOS too noisy to decide), and `sync_scroll` within it of `.sync` before ids on
+  both phones.
 
 ---
 

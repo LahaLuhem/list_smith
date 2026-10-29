@@ -321,6 +321,7 @@ def render_summary_markdown(
             "where list_smith's code runs, and `missed` counts frames over the 16.67ms budget. "
             "`isp_scroll` against `bare_listview` (same items and scroll, no list_smith) is the "
             "attribution: that small delta is what list_smith adds to a plain list. "
+            "`sync_scroll` is the same scroll over a `ListSmith.sync` list with ids. "
             "`edit_transitions_none` makes the same edits as `_size`, `_fade` and `_slide` with no "
             "transition, so the gap is what animating them adds. `_size_scrolled` makes `_size`'s "
             "edits just above the screen, where the rows on it are held still.\n",

@@ -187,6 +187,7 @@ capture reproduces it rather than restamping it with today.
 | `slow_observer` | render latency when a slow synchronous observer sits on the fetch path |
 | `isp_scroll` | per-frame build cost scrolling a `ListSmith.async` list |
 | `bare_listview` | the same scroll over a plain `ListView.builder`, the attribution control |
+| `sync_scroll` | the same scroll over a `ListSmith.sync` list with ids |
 | `cri_refresh` | per-frame build cost across full pull-to-refresh cycles |
 | `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide`. `size_scrolled` makes `size`'s edits just above the screen, where the rows on it are held still |
 
