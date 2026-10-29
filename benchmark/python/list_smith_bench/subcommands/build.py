@@ -61,6 +61,15 @@ def cmd_build(args: argparse.Namespace) -> int:
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
     sources = list(discover_sources())
+    # `run` times every exe in BUILD_DIR, so a removed micro's leftovers go.
+    names = {src.stem for src in sources}
+    for exe in BUILD_DIR.glob("*"):
+        if exe.is_file() and exe.name not in names:
+            fingerprint = fingerprint_path(BUILD_DIR, exe.name)
+            for path in (exe, fingerprint, fingerprint.with_suffix(".d")):
+                path.unlink(missing_ok=True)
+            print(f"prune  {exe.name} (no source in micro/)")
+
     if not sources:
         print("no micro sources to build (yet)", file=sys.stderr)
         return 0

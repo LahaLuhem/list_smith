@@ -863,13 +863,14 @@ from the committed [benchmark report](benchmark/reports/SUMMARY.md):
 
 | What                                                 | Cost                                                                                                      |
 |------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| Scrolling                                            | within ~0.05 ms/frame of a plain `ListView.builder` on Android and ~0.01 on iOS, neither dropping a frame |
+| Scrolling `.async`                                   | within ~0.07 ms/frame of a plain `ListView.builder` on Android and ~0.05 on iOS, neither dropping a frame |
+| Scrolling `.sync`, with ids                          | within ~0.05 ms/frame of it on Android and ~0.01 on iOS, neither dropping a frame                         |
 | Per-page bookkeeping (end policy, observer dispatch) | under a microsecond                                                                                       |
-| A full pull-to-refresh cycle                         | ~0.9 ms/frame to build on Android and ~0.4 on iOS, none over the 16.67 ms budget                          |
-| Animating edits (size, fade or slide)                | at most ~0.1 ms/frame more to build than the same edits unanimated, none over budget                      |
-| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~42 ms at 100k                                                         |
-| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.4 ms at 10k, ~27 ms at 100k                                                             |
-| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.3 ms at 10k, ~39 ms at 100k                                                      |
+| A full pull-to-refresh cycle                         | ~0.8 ms/frame to build on Android and ~0.4 on iOS, none over the 16.67 ms budget                          |
+| Animating edits (size, fade or slide)                | at most ~0.3 ms/frame more to build than the same edits unanimated, none over budget                      |
+| Sync search, per committed query                     | ~0.4 ms at 1k items, ~4 ms at 10k, ~41 ms at 100k                                                         |
+| Sync grouping, per committed query                   | ~0.2 ms at 1k, ~2.5 ms at 10k, ~27 ms at 100k                                                             |
+| De-dup by id, per page arriving                      | ~0.3 ms at 1k loaded, ~3.2 ms at 10k, ~38 ms at 100k                                                      |
 | A 50 ms observer callback                            | pushes render latency to ~70 ms on Android and ~67 ms on iOS                                              |
 
 Sync search and grouping are O(n) per query and cross the frame budget around 100k items, so lean
