@@ -23,6 +23,7 @@
 - \[#112\] `ListSmith.async` no longer searches a query shorter than `minSearchLength`
 - \[#107\] A group header showing up or going above the row being read no longer moves it
 - \[#107\] A reversed grouped list's headers sit above their group
+- \[#110\] A new search starts the list at the top
 
 ## [2.0.1] - 2026-10-07
 ### Fixed
