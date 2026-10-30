@@ -41,7 +41,8 @@ one within 7 days of publishing, and a tag push publishes automatically.
   `dart`, which the user's shell aliases to whatever serves the `.fvmrc`-pinned channel, never the
   toolchain manager directly.
 - **Lint with `dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it. The lints promoted
-  to `error:` are the contract, not suggestions.
+  to `error:` are the contract, not suggestions. CI ignores the `ci` caller's `ignored-lints`, so
+  their infos are expected here.
 - **Clear lints with `dart fix --apply` first**, then hand-fix what has no automated fix, then
   `dart format`. Never hand-edit a lint the tool would fix. Run it per package, so repo root,
   `example/` and `benchmark/app/`. DCM findings need hand-fixing, `dart fix` doesn't touch them.
