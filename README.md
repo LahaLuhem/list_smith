@@ -452,7 +452,6 @@ ListSmith.async(
   order gets reported.
 - A row sorting after every loaded one waits for its page. Once the data has ended it shows last,
   though never past a `FixedPageCountPolicy` cap.
-- On a [grouped](#grouping) list, sort by the group first.
 - Search results keep the order they came in.
 - A moved row jumps to its place, keeping its state.
 
@@ -537,8 +536,8 @@ Editing the list you passed shows nothing, and asserts in debug.
 
 Given an `itemIdGetter`, rows follow their item here too, and the row being read holds still. Always
 pass one: a later release requires it. Without one, `.sync` asserts in debug unless you pass
-`shouldKeepPosition: false`. Each item needs its own id. A repeat asserts in debug, and a release
-build shows only the 1st item with it.
+`shouldKeepPosition: false`. Each item needs its own id. A repeat shows only its 1st item, and gets
+reported in debug.
 
 ## Search
 
@@ -674,28 +673,12 @@ Grouping runs over whatever is *visible*, so it composes with search: sections r
 matches as you type.
 
 <details>
-<summary><b>How each path orders its sections, and what to watch</b></summary>
+<summary><b>How sections form, and what to watch</b></summary>
 
-The 2 paths order differently, and the difference matters:
-
-- **`.sync` buckets for you.** It holds the whole list, so it gathers each group into one contiguous
-  run: groups in the order they first appear, items kept in order within a group. Your input can
-  arrive any way round.
-- **`.async` groups in arrival order.** It can't reorder across pages, so your `fetchPage` (and the
-  `AsyncSearch` fetcher) must return items *already grouped by key*, all of one group before the
-  next. A group spanning a page boundary still gets a single header.
-
-If a key does come back after its section ended, `orderPolicy` decides. The default
-`RepairHeadersPolicy` draws each header once and asserts in debug. `FailOnUnorderedPolicy` throws a
-`StateError` in release too, for when a wrong-looking list is worse than a crash:
-
-```dart
-grouping: Grouping.by(
-  groupBy: (Contact contact) => contact.team,
-  headerBuilder: (context, team) => SectionHeader(team),
-  orderPolicy: const FailOnUnorderedPolicy(),
-),
-```
+Both constructors gather each group into one section: groups in the order they first show up, items
+kept in order within a group. So your items can arrive any way round, on `.async` even spread over
+pages. There, a later page can add to a section above the one being read, and with
+`shouldKeepPosition` on, the row being read holds still while it does.
 
 Worth knowing:
 
