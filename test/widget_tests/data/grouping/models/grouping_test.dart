@@ -11,6 +11,26 @@ void main() {
   Grouping<_Item> byGroup() =>
       Grouping.by(groupBy: (item) => item.group, headerBuilder: (_, key) => Text('section $key'));
 
+  Grouping<_Item> oneSection() =>
+      Grouping.by(groupBy: (_) => 'all', headerBuilder: (_, key) => Text('section $key'));
+
+  // Counts groupBy's calls, so a test sees whenever the sections form.
+  ({Grouping<_Item> grouping, ValueGetter<int> callCountGetter}) countingByGroup() {
+    var callCount = 0;
+
+    return (
+      grouping: Grouping.by<_Item, String>(
+        groupBy: (item) {
+          callCount++;
+
+          return item.group;
+        },
+        headerBuilder: (_, key) => Text('section $key'),
+      ),
+      callCountGetter: () => callCount,
+    );
+  }
+
   feature('ListSmith.sync grouping', () {
     scenarioWidgets('buckets unsorted items into sections, one header per group', (tester) async {
       await pumpListSmith(
@@ -33,6 +53,44 @@ void main() {
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('avocado').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets("a rebuild with the same items doesn't run groupBy again", (tester) async {
+      final (:grouping, :callCountGetter) = countingByGroup();
+      Widget listFor(String query) => ListSmith.sync(
+        items: const [(group: 'A', label: 'apple'), (group: 'B', label: 'banana')],
+        itemIdGetter: (item) => item.label,
+        searchBy: (item, query) => item.label.contains(query),
+        query: query,
+        searchDebounce: const Duration(milliseconds: 300),
+        grouping: grouping,
+        itemBuilder: (_, item, _) => Text(item.label),
+      );
+      await pumpListSmith(tester, listFor(''));
+      final loadCallCount = callCountGetter();
+
+      await pumpListSmith(tester, listFor('')); // the app rebuilds
+      await pumpListSmith(tester, listFor('a')); // a keystroke, inside the debounce
+
+      check(loadCallCount).isGreaterThan(0);
+      check(callCountGetter()).equals(loadCallCount);
+    });
+
+    scenarioWidgets('a new grouping re-forms the sections at once', (tester) async {
+      Widget listFor(Grouping<_Item> grouping) => ListSmith.sync(
+        items: const [(group: 'A', label: 'apple'), (group: 'B', label: 'banana')],
+        itemIdGetter: (item) => item.label,
+        searchBy: (item, query) => item.label.contains(query),
+        grouping: grouping,
+        itemBuilder: (_, item, _) => Text(item.label),
+      );
+      await pumpListSmith(tester, listFor(byGroup()));
+      check(find.text('section A').evaluate()).length.equals(1); // premise
+
+      await pumpListSmith(tester, listFor(oneSection()));
+
+      check(find.text('section all').evaluate()).length.equals(1);
+      check(find.text('section A').evaluate()).isEmpty();
     });
   });
 
@@ -61,6 +119,54 @@ void main() {
       check(find.text('section A').evaluate()).length.equals(1);
       check(find.text('section B').evaluate()).length.equals(1);
       check(find.text('banana').evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets("a rebuild with the same items doesn't run groupBy again", (tester) async {
+      final (:grouping, :callCountGetter) = countingByGroup();
+      final fetchPage = pagedFetcher(const [
+        [(group: 'A', label: 'apple'), (group: 'B', label: 'banana')],
+      ]);
+      final search = AsyncSearch(fetchPage: pagedSearchFetcher(const <List<_Item>>[]));
+      Widget listFor(String query) => ListSmith.async(
+        fetchPage: fetchPage,
+        itemIdGetter: (item) => item.label,
+        search: search,
+        query: query,
+        refresh: const NoRefresh(),
+        grouping: grouping,
+        itemBuilder: (_, item, _) => Text(item.label),
+      );
+      await pumpListSmith(tester, listFor(''));
+      await drain(tester);
+      final loadCallCount = callCountGetter();
+
+      await pumpListSmith(tester, listFor('')); // the app rebuilds
+      await pumpListSmith(tester, listFor('a')); // a keystroke, inside the debounce
+
+      check(loadCallCount).isGreaterThan(0);
+      check(callCountGetter()).equals(loadCallCount);
+    });
+
+    scenarioWidgets('a new grouping re-forms the sections at once', (tester) async {
+      // Built once, so the switch is all that changes between the 2 builds.
+      final fetchPage = pagedFetcher(const [
+        [(group: 'A', label: 'apple'), (group: 'B', label: 'banana')],
+      ]);
+      Widget listFor(Grouping<_Item> grouping) => ListSmith.async(
+        fetchPage: fetchPage,
+        itemIdGetter: (item) => item.label,
+        refresh: const NoRefresh(),
+        grouping: grouping,
+        itemBuilder: (_, item, _) => Text(item.label),
+      );
+      await pumpListSmith(tester, listFor(byGroup()));
+      await drain(tester);
+      check(find.text('section A').evaluate()).length.equals(1); // premise
+
+      await pumpListSmith(tester, listFor(oneSection()));
+
+      check(find.text('section all').evaluate()).length.equals(1);
+      check(find.text('section A').evaluate()).isEmpty();
     });
 
     scenarioWidgets('a group straddling a page boundary gets one header, not one per page', (

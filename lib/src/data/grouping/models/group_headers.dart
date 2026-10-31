@@ -3,7 +3,7 @@ import 'package:meta/meta.dart';
 import '/src/data/presentation/presentation.dart';
 import '../typedefs/group_header_builder.dart';
 
-/// One build's group headers, and how to draw them.
+/// The group headers, and how to draw them.
 @internal
 final class GroupHeaders({
   /// In list order.

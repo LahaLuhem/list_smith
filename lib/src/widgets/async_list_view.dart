@@ -107,6 +107,10 @@ class _AsyncListViewState<T extends Object>()
   /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
   ({PagingState<T> raw, int editStamp, bool isSearchMode, _Display<T> display})? _displayMemo;
 
+  /// Memo for [_sectionsFor], keyed on the shown state and the grouping. A cell of its own, so a
+  /// grouping built inline, new every rebuild, re-forms the sections without re-running [_displayFor].
+  ({PagingState<T> shownState, Grouping<T> grouping, Sections<T> sections})? _sectionsMemo;
+
   final _editStoreNotifier = EditStoreNotifier<T>();
 
   /// Whether the controller currently reflects search results (drives the empty/no-results surface).
@@ -646,37 +650,41 @@ class _AsyncListViewState<T extends Object>()
       secondListenable: _searchModeNotifier,
       // An edit only needs the rebuild, _displayFor reads the edits.
       thirdListenable: _editStoreNotifier,
-      builder: (context, state, isSearchMode, _, _) => PagedView(
-        state: _shownStateFor(state),
-        onNearEnd: _onNearEnd,
-        onRetry: _retryPage,
-        itemBuilder: switch (widget.source.editTransition) {
-          NoEditTransition() => widget.itemBuilder,
-          AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
-            widget.itemBuilder,
-            itemIdGetter: widget.source.itemIdGetter,
-            transitionBuilder: transitionBuilder,
-          ),
-        },
-        itemIdGetter: widget.source.itemIdGetter,
-        grouping: widget.grouping,
-        scrollConfig: widget.scrollConfig,
-        refresh: widget.source.refresh,
-        showsSurfaceGetter: _showsSurface,
-        takesPullGetter: _takesPull,
-        pullExtentListenable: _pullExtentNotifier,
-        shouldKeepPosition: widget.source.shouldKeepPosition,
-        isSearchMode: isSearchMode,
-        query: _debouncer.committedQuery,
-        separatorBuilder: widget.separatorBuilder,
-        firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
-        newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
-        firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
-        newPageErrorBuilder: surfaces.newPageErrorBuilder,
-        emptyBuilder: widget.emptyBuilder,
-        noResultsBuilder: widget.noResultsBuilder,
-        noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
-      ),
+      builder: (context, state, isSearchMode, _, _) {
+        final shownState = _shownStateFor(state);
+
+        return PagedView(
+          state: shownState,
+          sections: _sectionsFor(shownState),
+          onNearEnd: _onNearEnd,
+          onRetry: _retryPage,
+          itemBuilder: switch (widget.source.editTransition) {
+            NoEditTransition() => widget.itemBuilder,
+            AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
+              widget.itemBuilder,
+              itemIdGetter: widget.source.itemIdGetter,
+              transitionBuilder: transitionBuilder,
+            ),
+          },
+          itemIdGetter: widget.source.itemIdGetter,
+          scrollConfig: widget.scrollConfig,
+          refresh: widget.source.refresh,
+          showsSurfaceGetter: _showsSurface,
+          takesPullGetter: _takesPull,
+          pullExtentListenable: _pullExtentNotifier,
+          shouldKeepPosition: widget.source.shouldKeepPosition,
+          isSearchMode: isSearchMode,
+          query: _debouncer.committedQuery,
+          separatorBuilder: widget.separatorBuilder,
+          firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
+          newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
+          firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
+          newPageErrorBuilder: surfaces.newPageErrorBuilder,
+          emptyBuilder: widget.emptyBuilder,
+          noResultsBuilder: widget.noResultsBuilder,
+          noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
+        );
+      },
     );
 
     return switch (widget.source.refresh) {
@@ -706,6 +714,25 @@ class _AsyncListViewState<T extends Object>()
   /// empty surface waits for the true end (or the maxPages give-up).
   PagingState<T> _shownStateFor(PagingState<T> state) =>
       _shouldAdvancePastEmpty(state) ? PagingState() : _displayFor(state).state;
+
+  /// [shownState]'s rows, in sections.
+  Sections<T> _sectionsFor(PagingState<T> shownState) {
+    final grouping = widget.grouping;
+    final sectionsMemo = _sectionsMemo;
+    if (sectionsMemo != null &&
+        identical(shownState, sectionsMemo.shownState) &&
+        identical(grouping, sectionsMemo.grouping)) {
+      return sectionsMemo.sections;
+    }
+
+    final sections = grouping.sectionsOver(
+      // A view, not a copy. Pages never change once built.
+      UnmodifiableListView((shownState.pages ?? const []).map((page) => page.items)),
+    );
+    _sectionsMemo = (shownState: shownState, grouping: grouping, sections: sections);
+
+    return sections;
+  }
 
   @override
   Future<void> refresh() => _runReload(.refresh).doneFuture;

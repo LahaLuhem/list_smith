@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -17,6 +16,9 @@ class const PagedView<T extends Object>({
   /// Drives which surface renders.
   required final PagingState<T> state,
 
+  /// [state]'s rows, in sections.
+  required final Sections<T> sections,
+
   /// Asks for the next page, from a row near the end.
   required final VoidCallback onNearEnd,
 
@@ -28,9 +30,6 @@ class const PagedView<T extends Object>({
 
   /// Keys each row by its item.
   required final ItemIdGetter<T> itemIdGetter,
-
-  /// Splits the visible items into sections. [NoGrouping] (the default) renders a flat list.
-  required final Grouping<T> grouping,
 
   /// Scroll and layout configuration.
   required final ListScrollConfig scrollConfig,
@@ -104,11 +103,9 @@ class const PagedView<T extends Object>({
     };
 
     return KeyedListView(
-      // A view, not a copy. Pages never change once built.
-      pagedItems: UnmodifiableListView((state.pages ?? const []).map((page) => page.items)),
+      sections: sections,
       itemBuilder: itemBuilder,
       itemIdGetter: itemIdGetter,
-      grouping: grouping,
       // One shape whatever the footer shows: the end, a new page loading, or its error.
       footerBuilder: switch (status) {
         .subsequentPageError => (_) => _ResolvedError(

@@ -272,9 +272,9 @@ renames.
   reaching the header came from the same instance's `groupBy`. Caveat: an untyped inline `groupBy`
   widens `T` to `Object`, so type the parameter or pass a typed function.
 - **Header cells, not a sticky sliver.** Cells keep the rows one flat sliver, so list_smith keeps
-  owning the scrollable. One pass per build places the headers ([#scan-loops](#scan-loops)). Sticky
-  headers would need a sliver `CustomScrollView` and, on async, a split pager plus scroll-offset
-  tracking, exactly the fragility this package rejects. Deferred.
+  owning the scrollable. One pass per change of the shown items places the headers
+  ([#scan-loops](#scan-loops)). Sticky headers would need a sliver `CustomScrollView` and, on async,
+  a split pager plus scroll-offset tracking, exactly the fragility this package rejects. Deferred.
 - **Not part of a row either.** A row that gained or lost its group's header changed size, which
   moved the row being read, and a reversed list drew the header between the group's 1st and 2nd
   items.
@@ -289,10 +289,14 @@ renames.
 - **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
   passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
   widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupHeadersIfContiguous`),
-  and each build gets its sections from the type, through `Grouping.sectionsOver`.
+  and the engines get their sections from the type, through `Grouping.sectionsOver`.
   `resolveSyncSearch` returns a lazy view so the grouped sync path buckets with one copy,
   re-resolving on an items or `grouping` identity change. Hence "hold the `Grouping` stable" on a
   large list.
+- **Sections form where the data lands.** Async forms them from `_displayFor`'s result, sync in
+  `_resolve`, and `KeyedListView` takes them ready, so a rebuild that keeps the items (a keystroke,
+  a parent rebuild) runs no pass. Async keeps them in a memo cell of their own, so a `Grouping.by`
+  built inline, new every rebuild, re-forms the sections without redoing de-dup.
 
 ---
 
@@ -317,9 +321,9 @@ renames.
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
 - **The ungrouped path skips the pass.** `sectionsOver` takes the pages, and only `KeyedGrouping`
-  walks them, so an ungrouped list skips the O(loaded) pass. Dispatch is per build rather than per
-  item, one virtual call replacing one `is` check, so the render path is unchanged. Confirmed
-  perf-neutral against the `benchmark/micro` baseline.
+  walks them, so an ungrouped list skips the O(loaded) pass. Dispatch is once per change of the
+  shown items rather than per item, one virtual call replacing one `is` check, so the render path is
+  unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
 
 ---
 
@@ -537,10 +541,10 @@ renames.
 
 - **Decision:** `groupHeadersIfContiguous` is a single-pass loop over the loaded pages, without
   flattening them.
-- **Why:** it runs on every build of a grouped list. Against the loop, a chain on one stateful
-  closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per
-  run. The indexed `List.generate` form paid for its flatten and still lost. Measured on the
-  per-item header flags the header pass replaced, which walked the same way.
+- **Why:** it walks every loaded item each time a grouped list's items change. Against the loop, a
+  chain on one stateful closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per
+  element, plus a list per run. The indexed `List.generate` form paid for its flatten and still
+  lost. Measured on the per-item header flags the header pass replaced, which walked the same way.
 - **Pages, not a flatten of them.** Over a lazy flatten the pass took 1.5x to 1.7x as long: its
   iterator adds calls on every item, and once the gather path handed it a `List` too, each of those
   calls needed a lookup.
