@@ -30,7 +30,6 @@ void main() {
             (itemIndex: 5, key: 'b'),
             (itemIndex: 9, key: 'c'),
           ],
-          isAfterItem: false,
           headerFor: (_, key) => Text('$key'),
         );
 

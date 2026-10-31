@@ -26,7 +26,8 @@ final class const CellLayout({
   /// The group headers, in list order.
   required final List<GroupHeader> headers,
 
-  /// Whether a header sits after its item, as on a reversed list, rather than before it.
+  /// Whether a header sits after its group's last item, as on a reversed list, rather than before its
+  /// 1st.
   required final bool isHeaderAfterItem,
 }) {
   /// Creates it.
@@ -63,14 +64,26 @@ final class const CellLayout({
   int childIndexOfItem(int itemIndex) =>
       itemIndex * _childrenPerItem +
       _countHeaders((headerIndex) {
-        final headerItemIndex = headers[headerIndex].itemIndex;
+        final headerItemIndex = itemIndexOfHeader(headerIndex);
 
         return headerItemIndex < itemIndex || (headerItemIndex == itemIndex && !isHeaderAfterItem);
       });
 
   /// The child showing the header at [headerIndex].
   int childIndexOfHeader(int headerIndex) =>
-      headers[headerIndex].itemIndex * _childrenPerItem + (isHeaderAfterItem ? 1 : 0) + headerIndex;
+      itemIndexOfHeader(headerIndex) * _childrenPerItem + (isHeaderAfterItem ? 1 : 0) + headerIndex;
+
+  /// The item the header at [headerIndex] sits by: its group's 1st, or its last when headers sit after.
+  int itemIndexOfHeader(int headerIndex) {
+    if (!isHeaderAfterItem) return headers[headerIndex].itemIndex;
+
+    final nextHeaderIndex = headerIndex + 1;
+    final nextGroupStartIndex = nextHeaderIndex < headers.length
+        ? headers[nextHeaderIndex].itemIndex
+        : itemCount;
+
+    return nextGroupStartIndex - 1;
+  }
 
   int get _childrenPerItem => hasSeparators ? 2 : 1;
 

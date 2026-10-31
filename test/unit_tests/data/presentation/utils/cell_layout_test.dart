@@ -11,9 +11,11 @@ void main() {
   const isHeaderAfterItemKey = 'isHeaderAfterItem';
   const cellsKey = 'cells';
 
-  // Before items 0 and 2, or after items 1 and 2 as on a reversed list.
-  const openingHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 2, key: 'b')];
-  const closingHeaders = [(itemIndex: 1, key: 'a'), (itemIndex: 2, key: 'b')];
+  // Groups a (items 0 and 1) and b (item 2): headers before items 0 and 2, or after 1 and 2 as on a
+  // reversed list.
+  const longFirstGroupHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 2, key: 'b')];
+  // Groups a (item 0) and b (items 1 and 2), so a reversed list puts b's header after the last item.
+  const longLastGroupHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 1, key: 'b')];
 
   CellLayout layoutOf(BddContext context) => CellLayout(
     itemCount: 3,
@@ -52,23 +54,30 @@ void main() {
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
-        val(headersKey, openingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, false),
         val(cellsKey, const ['h0', 'i0', 's0', 'i1', 's1', 'h1', 'i2', 's2', 'f']),
       )
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
-        val(headersKey, closingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, true),
         val(cellsKey, const ['i0', 's0', 'i1', 'h0', 's1', 'i2', 'h1', 's2', 'f']),
       )
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, false),
-        val(headersKey, closingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, true),
         val(cellsKey, const ['i0', 'i1', 'h0', 'i2', 'h1', 'f']),
+      )
+      .example(
+        val(hasFooterKey, true),
+        val(hasSeparatorsKey, true),
+        val(headersKey, longLastGroupHeaders),
+        val(isHeaderAfterItemKey, true),
+        val(cellsKey, const ['i0', 'h0', 's0', 'i1', 's1', 'i2', 'h1', 's2', 'f']),
       )
       .example(
         val(hasFooterKey, false),
@@ -80,7 +89,7 @@ void main() {
       .example(
         val(hasFooterKey, false),
         val(hasSeparatorsKey, true),
-        val(headersKey, closingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, true),
         val(cellsKey, const ['i0', 's0', 'i1', 'h0', 's1', 'i2', 'h1']),
       )
@@ -103,19 +112,19 @@ void main() {
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
-        val(headersKey, openingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, false),
       )
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, true),
-        val(headersKey, closingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, true),
       )
       .example(
         val(hasFooterKey, true),
         val(hasSeparatorsKey, false),
-        val(headersKey, closingHeaders),
+        val(headersKey, longFirstGroupHeaders),
         val(isHeaderAfterItemKey, true),
       )
       .run((context) {

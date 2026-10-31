@@ -24,13 +24,9 @@ sealed class const Grouping<T extends Object>() {
   @internal
   List<T> arrange(Iterable<T> items);
 
-  /// One build's rows in section order, and their headers, null without groups. [isReversed] puts each
-  /// header after its group's last item.
+  /// One build's rows in section order, and the header at each group's start, null without groups.
   @internal
-  ({List<List<T>> pagedItems, GroupHeaders? groupHeaders}) sectionsOver(
-    List<List<T>> pagedItems, {
-    required bool isReversed,
-  });
+  ({List<List<T>> pagedItems, GroupHeaders? groupHeaders}) sectionsOver(List<List<T>> pagedItems);
 
   /// Pulls an item's group key, null when there are no groups. The edit layer reads it to keep a new or
   /// moved item inside its group.

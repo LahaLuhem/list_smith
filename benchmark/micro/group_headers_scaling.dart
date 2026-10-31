@@ -40,7 +40,6 @@ final class _GroupHeadersScaling(final int itemCount) extends BenchmarkBase {
       _pages,
       _groupKey,
       const RepairHeadersPolicy(),
-      isReversed: false,
     );
     lastHeaderCount = headers.length;
   }

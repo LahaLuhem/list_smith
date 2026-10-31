@@ -49,7 +49,6 @@ void main() {
           ],
           decade,
           const RepairHeadersPolicy(),
-          isReversed: false,
         );
 
         check(gatheredItems).isNull();
@@ -57,39 +56,26 @@ void main() {
 
   const outOfOrderPagesKey = 'outOfOrderPages';
   const gatheredKey = 'gathered';
-  const isReversedKey = 'isReversed';
   const headersKey = 'headers';
 
   Bdd(groupingFeature)
       .scenario('the default policy gathers a key that comes back, one header per group')
       .given('a tens-digit group key and RepairHeadersPolicy')
-      .when('it resolves headers for <$outOfOrderPagesKey>, reversed <$isReversedKey>')
+      .when('it resolves headers for <$outOfOrderPagesKey>')
       .then('the items gather into <$gatheredKey> under <$headersKey>')
       .example(
         val(outOfOrderPagesKey, const [
           [10, 20],
           [11],
         ]),
-        val(isReversedKey, false),
         val(gatheredKey, const [10, 11, 20]),
         val(headersKey, groupedHeaders),
-      )
-      // On a reversed list a header shows above its group, so it goes after the group's last item.
-      .example(
-        val(outOfOrderPagesKey, const [
-          [10, 20],
-          [11],
-        ]),
-        val(isReversedKey, true),
-        val(gatheredKey, const [10, 11, 20]),
-        val(headersKey, const [(itemIndex: 1, key: 1), (itemIndex: 2, key: 2)]),
       )
       .run((context) {
         final (:headers, :gatheredItems) = resolveGroupHeaders(
           context.example.val(outOfOrderPagesKey) as List<List<int>>,
           decade,
           const RepairHeadersPolicy(),
-          isReversed: context.example.val(isReversedKey) as bool,
         );
 
         check(gatheredItems).isNotNull().deepEquals(context.example.val(gatheredKey) as List<int>);
@@ -110,7 +96,6 @@ void main() {
             ],
             decade,
             const FailOnUnorderedPolicy(),
-            isReversed: false,
           ),
         ).throws<StateError>();
 
@@ -123,7 +108,6 @@ void main() {
             ],
             decade,
             const FailOnUnorderedPolicy(),
-            isReversed: false,
           ).headers,
         ).deepEquals(groupedHeaders);
       });
@@ -131,17 +115,11 @@ void main() {
   const headerPagesKey = 'headerPages';
 
   Bdd(groupingFeature)
-      .scenario(
-        "puts a header on each group's run, even across pages, after its last item when reversed",
-      )
+      .scenario("puts a header at the start of each group's run, even across pages")
       .given('a tens-digit group key')
-      .when('it finds the headers for <$headerPagesKey>, reversed <$isReversedKey>')
+      .when('it finds the headers for <$headerPagesKey>')
       .then('they are <$headersKey>')
-      .example(
-        val(headerPagesKey, const <List<int>>[]),
-        val(isReversedKey, false),
-        val(headersKey, const <GroupHeader>[]),
-      )
+      .example(val(headerPagesKey, const <List<int>>[]), val(headersKey, const <GroupHeader>[]))
       // Group 1 runs across the 1st page boundary, group 3 starts a page.
       .example(
         val(headerPagesKey, const [
@@ -149,22 +127,8 @@ void main() {
           [11, 20],
           [30],
         ]),
-        val(isReversedKey, false),
         val(headersKey, const [
           (itemIndex: 0, key: 1),
-          (itemIndex: 2, key: 2),
-          (itemIndex: 3, key: 3),
-        ]),
-      )
-      .example(
-        val(headerPagesKey, const [
-          [10],
-          [11, 20],
-          [30],
-        ]),
-        val(isReversedKey, true),
-        val(headersKey, const [
-          (itemIndex: 1, key: 1),
           (itemIndex: 2, key: 2),
           (itemIndex: 3, key: 3),
         ]),
@@ -173,7 +137,6 @@ void main() {
         final headers = groupHeadersIfContiguous(
           context.example.val(headerPagesKey) as List<List<int>>,
           decade,
-          isReversed: context.example.val(isReversedKey) as bool,
         );
 
         check(headers).isNotNull().deepEquals(context.example.val(headersKey) as List<GroupHeader>);
@@ -190,6 +153,6 @@ void main() {
           [11],
         ];
 
-        check(groupHeadersIfContiguous(pages, decade, isReversed: false)).isNull();
+        check(groupHeadersIfContiguous(pages, decade)).isNull();
       });
 }

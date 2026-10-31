@@ -301,10 +301,9 @@ renames.
 
 - **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
   methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `sectionsOver(pagedItems, isReversed:)` returns
-  the per-build rows and headers, null headers without groups. Same "delegate to the type, keep the
-  shell branch-free"
-  move as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
+  `arrange(items)` is the sync display ordering, `sectionsOver(pagedItems)` returns the per-build
+  rows and headers, null headers without groups. Same "delegate to the type, keep the shell
+  branch-free" move as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
 - **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
   compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
   Opening it later is a one-line change. `@internal` makes them callable across the package but not
