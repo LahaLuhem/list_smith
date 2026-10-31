@@ -12,6 +12,10 @@ import 'group_order_policy.dart';
 part 'groupings/keyed_grouping.dart';
 part 'groupings/no_grouping.dart';
 
+/// A list's rows by page, in section order, and their group headers, null without groups.
+@internal
+typedef Sections<T extends Object> = ({List<List<T>> pagedItems, GroupHeaders? groupHeaders});
+
 /// How a list splits its items into labelled sections.
 ///
 /// [NoGrouping] (the default) is flat, no headers. [Grouping.by] turns sections on. Both [ListSmith]
@@ -24,9 +28,10 @@ sealed class const Grouping<T extends Object>() {
   @internal
   List<T> arrange(Iterable<T> items);
 
-  /// One build's rows in section order, and the header at each group's start, null without groups.
+  /// [pagedItems] in section order, with a header at each group's start. Call it when the shown items
+  /// change, not on every build.
   @internal
-  ({List<List<T>> pagedItems, GroupHeaders? groupHeaders}) sectionsOver(List<List<T>> pagedItems);
+  Sections<T> sectionsOver(List<List<T>> pagedItems);
 
   /// Pulls an item's group key, null when there are no groups. The edit layer reads it to keep a new or
   /// moved item inside its group.

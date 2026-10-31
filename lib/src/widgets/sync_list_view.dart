@@ -61,7 +61,7 @@ class const SyncListView<T extends Object>({
 
 class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
-  late final ValueNotifier<({List<T> visibleItems, bool isSearching})> _resultNotifier;
+  late final ValueNotifier<_Display<T>> _displayNotifier;
   late List<T> _items;
 
   /// The items as passed, kept in debug for the in-place check, since [_items] drops repeated ids.
@@ -74,7 +74,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
     _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
     _takeItems();
-    _resultNotifier = ValueNotifier(_resolve());
+    _displayNotifier = ValueNotifier(_resolve());
   }
 
   @override
@@ -91,7 +91,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
               .equals(_passedItems, widget.source.items);
     }
     if (didItemsChange || !identical(widget.grouping, oldWidget.grouping)) {
-      _resultNotifier.value = _resolve();
+      _displayNotifier.value = _resolve();
     }
 
     if (widget.query != oldWidget.query) {
@@ -106,7 +106,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   @override
   void dispose() {
     _debouncer.dispose();
-    _resultNotifier.dispose();
+    _displayNotifier.dispose();
 
     super.dispose();
   }
@@ -128,20 +128,23 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     }
   }
 
-  ({List<T> visibleItems, bool isSearching}) _resolve() {
+  _Display<T> _resolve() {
     final searchResult = resolveSyncSearch(
       _items,
       widget.source.searchBy,
       _debouncer.committedQuery,
     );
+    final grouping = widget.grouping;
+    final visibleItems = grouping.arrange(searchResult.visibleItems);
 
     return (
-      visibleItems: widget.grouping.arrange(searchResult.visibleItems),
+      visibleItems: visibleItems,
+      sections: grouping.sectionsOver([visibleItems]),
       isSearching: searchResult.isSearching,
     );
   }
 
-  void _onQueryCommitted(String committedQuery) => _resultNotifier.value = _resolve();
+  void _onQueryCommitted(String committedQuery) => _displayNotifier.value = _resolve();
 
   @override
   Widget build(BuildContext context) {
@@ -153,13 +156,13 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     );
 
     return ValueListenableBuilder(
-      valueListenable: _resultNotifier,
-      builder: (context, result, _) {
+      valueListenable: _displayNotifier,
+      builder: (context, display, _) {
         final isEmpty = _items.isEmpty;
         final Widget? surfaceWidget;
         if (isEmpty) {
           surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
-        } else if (result.isSearching && result.visibleItems.isEmpty) {
+        } else if (display.isSearching && display.visibleItems.isEmpty) {
           surfaceWidget =
               widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
               const NeutralNoResultsIndicator();
@@ -169,9 +172,8 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
         final scrollConfig = widget.scrollConfig;
 
         return KeyedListView(
-          pagedItems: [result.visibleItems],
+          sections: display.sections,
           itemBuilder: widget.itemBuilder,
-          grouping: widget.grouping,
           pullExtentListenable: const AlwaysStoppedAnimation(0),
           shouldKeepPosition: widget.source.shouldKeepPosition,
           startKey: _debouncer.committedQuery,
@@ -192,3 +194,10 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     );
   }
 }
+
+/// What renders for the committed query, as items and in sections, and whether it's a search.
+typedef _Display<T extends Object> = ({
+  List<T> visibleItems,
+  Sections<T> sections,
+  bool isSearching,
+});

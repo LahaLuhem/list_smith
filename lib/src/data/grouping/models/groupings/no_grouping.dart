@@ -11,7 +11,7 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
 
   @override
   @internal
-  ({List<List<T>> pagedItems, GroupHeaders? groupHeaders}) sectionsOver(List<List<T>> pagedItems) =>
+  Sections<T> sectionsOver(List<List<T>> pagedItems) =>
       (pagedItems: pagedItems, groupHeaders: null);
 
   @override

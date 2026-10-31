@@ -684,9 +684,9 @@ Worth knowing:
 
 - **Type the `groupBy` parameter**, or pass a typed function reference, so the key type infers
   instead of widening to `Object`.
-- **Hold the `Grouping` stable** on a large `.sync` list. One rebuilt every frame re-buckets every
-  frame, so keep it in a field and the result stays cached. What that costs is in
-  [Performance](#performance).
+- **Hold the `Grouping` stable** on a large list: keep it in a field. One built inline is new on
+  every rebuild, so each rebuild forms the sections again, and `.sync` re-buckets too. That cost is
+  in [Performance](#performance).
 
 </details>
 

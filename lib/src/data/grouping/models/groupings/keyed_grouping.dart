@@ -21,7 +21,7 @@ final class const KeyedGrouping<T extends Object>._({
 
   @override
   @internal
-  ({List<List<T>> pagedItems, GroupHeaders groupHeaders}) sectionsOver(List<List<T>> pagedItems) {
+  Sections<T> sectionsOver(List<List<T>> pagedItems) {
     final (:headers, :gatheredItems) = resolveGroupHeaders(pagedItems, groupOf, orderPolicy);
 
     return (

@@ -13,14 +13,11 @@ import 'scroll_anchor.dart';
 /// go, it keeps its state and anything it's animating.
 @internal
 class const KeyedListView<T extends Object>({
-  /// One list per page, in order.
-  required final List<List<T>> pagedItems,
+  /// The rows, formed into sections where the data lands, so a rebuild doesn't form them again.
+  required final Sections<T> sections,
 
   /// Builds each row.
   required final ItemBuilder<T> itemBuilder,
-
-  /// Splits the items into sections under headers, so the rows can come out of page order.
-  required final Grouping<T> grouping,
 
   /// How far a pull pushes the list now.
   required final ValueListenable<double> pullExtentListenable,
@@ -62,10 +59,9 @@ class const KeyedListView<T extends Object>({
     final surface = this.surface;
     final Widget contentSliver;
     if (surface == null) {
-      final (pagedItems: shownPagedItems, :groupHeaders) = grouping.sectionsOver(pagedItems);
       contentSliver = _KeyedRows(
-        rowLookup: RowLookup<T>(shownPagedItems, itemIdGetter ?? _neverLookedUp),
-        groupHeaders: groupHeaders,
+        rowLookup: RowLookup<T>(sections.pagedItems, itemIdGetter ?? _neverLookedUp),
+        groupHeaders: sections.groupHeaders,
         isReversed: reverse,
         itemIdGetter: itemIdGetter,
         itemBuilder: itemBuilder,
