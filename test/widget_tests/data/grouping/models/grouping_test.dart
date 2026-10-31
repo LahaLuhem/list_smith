@@ -8,12 +8,8 @@ import '../../../../support/support.dart';
 typedef _Item = ({String group, String label});
 
 void main() {
-  Grouping<_Item> byGroup({GroupOrderPolicy orderPolicy = const RepairHeadersPolicy()}) =>
-      Grouping.by(
-        groupBy: (item) => item.group,
-        headerBuilder: (_, key) => Text('section $key'),
-        orderPolicy: orderPolicy,
-      );
+  Grouping<_Item> byGroup() =>
+      Grouping.by(groupBy: (item) => item.group, headerBuilder: (_, key) => Text('section $key'));
 
   feature('ListSmith.sync grouping', () {
     scenarioWidgets('buckets unsorted items into sections, one header per group', (tester) async {
@@ -143,13 +139,17 @@ void main() {
     scenarioWidgets('FailOnUnorderedPolicy throws instead of gathering', (tester) async {
       await pumpListSmith(
         tester,
-        ListSmith.async(
+        ListSmith<_Item>.async(
           fetchPage: pagedFetcher(const [
             [(group: 'A', label: 'a1'), (group: 'B', label: 'b1'), (group: 'A', label: 'a2')],
           ]),
           itemIdGetter: (item) => item.label,
           refresh: const NoRefresh(),
-          grouping: byGroup(orderPolicy: const FailOnUnorderedPolicy()),
+          grouping: Grouping.by(
+            groupBy: (item) => item.group,
+            headerBuilder: (_, key) => Text('section $key'),
+            orderPolicy: const FailOnUnorderedPolicy(),
+          ),
           itemBuilder: (_, item, _) => Text(item.label),
         ),
       );

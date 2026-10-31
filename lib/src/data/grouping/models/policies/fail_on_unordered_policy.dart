@@ -1,11 +1,16 @@
 part of '../group_order_policy.dart';
 
-/// Throws a [StateError] when pages arrive out of group order, in release too.
-///
-/// Pick it when a wrong-looking list is worse than a crash. Costs an order check every build, where
-/// [RepairHeadersPolicy] only pays that in debug.
+/// Throws a [StateError] when a group key comes back after its section ended, in release too.
+@Deprecated(
+  "Out-of-order pages gather into their sections now, so there's nothing left to fail on. Remove "
+  'the orderPolicy argument, it goes at the next major.',
+)
 final class const FailOnUnorderedPolicy() extends GroupOrderPolicy {
   /// Creates it.
+  @Deprecated(
+    "Out-of-order pages gather into their sections now, so there's nothing left to fail on. Remove "
+    'the orderPolicy argument, it goes at the next major.',
+  )
   this;
 
   @override
