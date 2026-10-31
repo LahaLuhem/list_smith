@@ -43,11 +43,11 @@ sealed class const Grouping<T extends Object>() {
   /// to `Object`.
   ///
   /// Each group gathers into one section, so items can arrive in any order, even spread over pages.
-  /// On `.async` a later page can add to a section above the one being read. [orderPolicy] can make
-  /// it throw instead.
+  /// On `.async` a later page can add to a section above the one being read.
   static Grouping<T> by<T extends Object, K extends Object>({
     required GroupKeyOf<T, K> groupBy,
     required GroupHeaderBuilder<K> headerBuilder,
+    @Deprecated('Groups gather on their own now. Remove it, it goes at the next major.')
     GroupOrderPolicy orderPolicy = const RepairHeadersPolicy(),
   }) => KeyedGrouping<T>._(
     groupOf: groupBy,

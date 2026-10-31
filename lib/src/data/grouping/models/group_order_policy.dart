@@ -1,11 +1,14 @@
 part 'policies/fail_on_unordered_policy.dart';
 part 'policies/repair_headers_policy.dart';
 
-/// What an async list does when its pages don't arrive grouped by key.
-///
-/// Async pages can't be reordered, so the fetcher has to send all of one group before the next. The
-/// sync path reorders for you and ignores this.
+/// What an async list does when a group key comes back after its section ended.
+@Deprecated(
+  'Groups gather on their own now. Remove the orderPolicy argument, it goes at the next major.',
+)
 sealed class const GroupOrderPolicy() {
   /// Const base constructor.
+  @Deprecated(
+    'Groups gather on their own now. Remove the orderPolicy argument, it goes at the next major.',
+  )
   this;
 }
