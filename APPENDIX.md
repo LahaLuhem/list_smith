@@ -317,10 +317,10 @@ renames.
   Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
   in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
   couldn't name `T` inside a `const`.
-- **The ungrouped path still does no flatten.** `sectionsOver` takes the pages, and only
-  `KeyedGrouping` flattens them, so an ungrouped list skips the O(loaded) pass. Dispatch is
-  per build rather than per item, one virtual call replacing one `is` check, so the render path is
-  unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
+- **The ungrouped path skips the pass.** `sectionsOver` takes the pages, and only `KeyedGrouping`
+  walks them, so an ungrouped list skips the O(loaded) pass. Dispatch is per build rather than per
+  item, one virtual call replacing one `is` check, so the render path is unchanged. Confirmed
+  perf-neutral against the `benchmark/micro` baseline.
 
 ---
 
@@ -536,12 +536,15 @@ renames.
 <a id="scan-loops"></a>
 ## Per-item scans on the build path stay loops
 
-- **Decision:** `groupHeadersIfContiguous` is a single-pass loop over the lazy flatten of the loaded
-  pages.
+- **Decision:** `groupHeadersIfContiguous` is a single-pass loop over the loaded pages, without
+  flattening them.
 - **Why:** it runs on every build of a grouped list. Against the loop, a chain on one stateful
   closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per element, plus a list per
   run. The indexed `List.generate` form paid for its flatten and still lost. Measured on the
   per-item header flags the header pass replaced, which walked the same way.
+- **Pages, not a flatten of them.** Over a lazy flatten the pass took 1.5x to 1.7x as long: its
+  iterator adds calls on every item, and once the gather path handed it a `List` too, each of those
+  calls needed a lookup.
 - **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
   or not, and a moved row is checked at several indices before the id map gets built.
 - **Tripwire:** the `group_headers_scaling` micro, and `row_lookup_scaling` for the lookup.

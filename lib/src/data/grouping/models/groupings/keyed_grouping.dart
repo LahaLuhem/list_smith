@@ -26,7 +26,7 @@ final class const KeyedGrouping<T extends Object>._({
     required bool isReversed,
   }) {
     final (:headers, :gatheredItems) = resolveGroupHeaders(
-      pagedItems.expand((items) => items),
+      pagedItems,
       groupOf,
       orderPolicy,
       isReversed: isReversed,
