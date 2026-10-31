@@ -21,20 +21,12 @@ final class const KeyedGrouping<T extends Object>._({
 
   @override
   @internal
-  ({List<List<T>> pagedItems, GroupHeaders groupHeaders}) sectionsOver(
-    List<List<T>> pagedItems, {
-    required bool isReversed,
-  }) {
-    final (:headers, :gatheredItems) = resolveGroupHeaders(
-      pagedItems,
-      groupOf,
-      orderPolicy,
-      isReversed: isReversed,
-    );
+  ({List<List<T>> pagedItems, GroupHeaders groupHeaders}) sectionsOver(List<List<T>> pagedItems) {
+    final (:headers, :gatheredItems) = resolveGroupHeaders(pagedItems, groupOf, orderPolicy);
 
     return (
       pagedItems: gatheredItems == null ? pagedItems : [gatheredItems],
-      groupHeaders: GroupHeaders(headers: headers, isAfterItem: isReversed, headerFor: headerFor),
+      groupHeaders: GroupHeaders(headers: headers, headerFor: headerFor),
     );
   }
 

@@ -9,9 +9,6 @@ final class GroupHeaders({
   /// In list order.
   required final List<GroupHeader> headers,
 
-  /// Whether each sits after its group's last item, as on a reversed list, rather than before its 1st.
-  required final bool isAfterItem,
-
   /// Builds a group's header from its key.
   required final GroupHeaderBuilder<Object> headerFor,
 }) {

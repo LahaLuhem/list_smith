@@ -62,13 +62,11 @@ class const KeyedListView<T extends Object>({
     final surface = this.surface;
     final Widget contentSliver;
     if (surface == null) {
-      final (pagedItems: shownPagedItems, :groupHeaders) = grouping.sectionsOver(
-        pagedItems,
-        isReversed: reverse,
-      );
+      final (pagedItems: shownPagedItems, :groupHeaders) = grouping.sectionsOver(pagedItems);
       contentSliver = _KeyedRows(
         rowLookup: RowLookup<T>(shownPagedItems, itemIdGetter ?? _neverLookedUp),
         groupHeaders: groupHeaders,
+        isReversed: reverse,
         itemIdGetter: itemIdGetter,
         itemBuilder: itemBuilder,
         footerBuilder: footerBuilder,
@@ -171,6 +169,7 @@ class _RenderScrollStart(Object startKey) extends RenderProxySliver {
 class const _KeyedRows<T extends Object>({
   required final RowLookup<T> rowLookup,
   required final GroupHeaders? groupHeaders,
+  required final bool isReversed,
   required final ItemIdGetter<T>? itemIdGetter,
   required final ItemBuilder<T> itemBuilder,
   required final WidgetBuilder? footerBuilder,
@@ -186,7 +185,7 @@ class const _KeyedRows<T extends Object>({
       hasSeparators: separatorBuilder != null,
       hasFooter: footerBuilder != null,
       headers: groupHeaders?.headers ?? const [],
-      isHeaderAfterItem: groupHeaders?.isAfterItem ?? false,
+      isHeaderAfterItem: isReversed,
     );
     final rowsSliverList = SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -215,7 +214,7 @@ class const _KeyedRows<T extends Object>({
         // Only a hint for the lookup, so a header stands in for the item it sits by.
         final itemIndex = rowLookup.indexOf(
           id,
-          kind == .header ? groupHeaders!.headers[index].itemIndex : index,
+          kind == .header ? cellLayout.itemIndexOfHeader(index) : index,
         );
 
         return itemIndex == null ? null : cellLayout.childIndexOfItem(itemIndex);
