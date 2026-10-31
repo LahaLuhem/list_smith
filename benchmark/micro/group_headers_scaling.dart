@@ -1,7 +1,6 @@
 /// Micro-benchmark: [resolveGroupHeaders] cost as the loaded list grows.
 ///
-/// Runs per item on every build of a grouped list, over the lazy flatten of the pages, so a slower scan
-/// trips the gate.
+/// Runs per item on every build of a grouped list, page by page, so a slower scan trips the gate.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
@@ -15,7 +14,7 @@ import '../harness/scenario_arguments.dart';
 /// Loaded-item counts the scan is measured against. The pivot for the scaling curve.
 const _itemCounts = <int>[1000, 10000, 100000];
 
-/// Items per page, so the source is a lazy flatten of pages like the real one.
+/// Items per page, so the source is paged like the real one.
 const _pageSize = 100;
 
 /// Small groups, so the pass opens a run often.
@@ -38,7 +37,7 @@ final class _GroupHeadersScaling(final int itemCount) extends BenchmarkBase {
   void run() {
     // Grouped pages, so nothing gathers. This times the header pass, which is also the order check.
     final (:headers, gatheredItems: _) = resolveGroupHeaders(
-      _pages.expand((page) => page),
+      _pages,
       _groupKey,
       const RepairHeadersPolicy(),
       isReversed: false,
