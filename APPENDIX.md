@@ -19,7 +19,7 @@ renames.
 - [Async search: one paging state, 2 views](#async-two-view-search)
 - [Unified opt-in idioms: every optional behaviour is a sealed, defaulted seam](#opt-in-idioms)
 - [Observer seam: async-only, no-op-method sink](#observer-seam)
-- [Grouping: erased key, sync buckets, async pre-sorted](#grouping-shape)
+- [Grouping: erased key, gathered sections](#grouping-shape)
 - [Grouping dispatches on the type, so the views don't branch](#grouping-polymorphic-dispatch)
 - [Overlap de-dup runs at the display layer, not before storage](#overlap-dedup)
 - [Explicit end signals: an open policy plus a fetcher building block](#explicit-end-signals)
@@ -254,7 +254,7 @@ renames.
 ---
 
 <a id="grouping-shape"></a>
-## Grouping: erased key, sync buckets, async pre-sorted
+## Grouping: erased key, gathered sections
 
 - **Decision:** an optional `Grouping<T>` on both constructors, default `NoGrouping`, opted into
   with `Grouping.by(groupBy:, headerBuilder:)`. A sealed, defaulted seam like the end and cache
@@ -278,11 +278,14 @@ renames.
 - **Not part of a row either.** A row that gained or lost its group's header changed size, which
   moved the row being read, and a reversed list drew the header between the group's 1st and 2nd
   items.
-- **Sync buckets, async trusts arrival order.** A sync list holds every item, so it reorders the
-  filtered ones into contiguous groups (`bucketByGroup` over `collection`'s `groupListsBy`,
-  first-appearance order, item order kept within a group) and input can arrive any way round. An
-  async list can't reorder across pages, so the fetcher must return items already grouped by key,
-  with a debug-only `groupsAreContiguous` assert flagging a key that recurs after its section ended.
+- **Both gather each group into one run.** Sync buckets its filtered items on every query
+  (`bucketByGroup` over `collection`'s `groupListsBy`: groups in first-appearance order, items in
+  order within a group). Async gathers only once a key comes back after its run. The header pass
+  already tracks every key, so it spots that for free and grouped pages are never copied, where a
+  2nd scan would cost as much as the header pass (`group_headers_scaling`).
+- **`orderPolicy` is deprecated, going at the next major.** Gathering left it nothing to choose:
+  `RepairHeadersPolicy` is what happens anyway, and `FailOnUnorderedPolicy` would crash a list that
+  renders fine. Until then that one keeps arrival order and throws.
 - **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
   passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
   widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupHeadersIfContiguous`),
@@ -677,7 +680,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
 - **A repeated id keeps its 1st item.** 2 built rows on one key fail Flutter's child-order assert,
   which blanks the list. `.async`'s de-dup already drops repeats, and `.sync` does the same when
-  `items` changes, asserting in debug.
+  `items` changes, reporting it in debug.
 
 ---
 
@@ -813,7 +816,7 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 - **Each page read is checked in debug** to be strictly in order, ties included, and reported rather
   than thrown so it still lands. Not across pages, where another writer's edit between 2 reads
   would trip it.
-- **Groups:** the order sorts by group first. One that doesn't trips grouping's contiguity assert.
+- **Groups gather after placement,** so the order needn't sort by group first.
 - **Moves jump.** Animating one would need 2 copies of one keyed row at once.
 
 ---

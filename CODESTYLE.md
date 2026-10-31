@@ -236,11 +236,14 @@ so always relative. The example app does the same with `/features/…` (see
 - **Fields, then constructors, then other members.** A reader scans the state shape, then how to
   build it, then how to use it. Unnamed constructor before named and factory
   (`sort_unnamed_constructors_first`), statics after the instance members.
-- **`assert` for dev-time errors, `throw` for runtime ones.** A constraint a caller can see
-  violated while developing (a negative page size, an empty required list) is an `assert`:
-  stripped in release, free at runtime. `throw` is for conditions the caller genuinely can't
-  guarantee at compile time. Init-list asserts, with messages, per
-  `prefer_asserts_in_initializer_lists` and `prefer_asserts_with_message`.
+- **`assert` for dev-time errors, `throw` for runtime ones, a report for bad data.** A constraint a
+  caller can see violated while developing (a negative page size, an empty required list, a list
+  edited in place) is an `assert`: stripped in release, free at runtime. `throw` is for conditions
+  the caller genuinely can't guarantee at compile time. Data list_smith can work around, like a
+  repeated id or a page out of order, goes through `reportBadData` in debug, once where it lands.
+  The app may not control that data, so the list keeps working and shows what release would.
+  Init-list asserts, with messages, per `prefer_asserts_in_initializer_lists` and
+  `prefer_asserts_with_message`.
 - **Enforce constructor invariants with `assert(condition, message)` in the initializer list, not
   by silently accepting params and ignoring them downstream.** When 2 parameters are mutually
   exclusive, or one is only meaningful when another is set, say so loudly at construction time:
