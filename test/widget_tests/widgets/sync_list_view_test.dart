@@ -263,7 +263,7 @@ void main() {
     });
 
     scenarioOutlineWidgets<({List<int> firstItems, List<int>? newItems})>(
-      'a repeated id is an error that names it',
+      'a repeated id shows its 1st item, and is reported by name',
       examples: {
         'in the 1st items': (firstItems: [42, 7, 42], newItems: null),
         'in new items': (firstItems: [42, 7], newItems: [42, 7, 42]),
@@ -278,11 +278,22 @@ void main() {
         }
 
         check(tester.takeException())
-            .isA<AssertionError>()
-            .has((error) => '${error.message}', 'message')
+            .isA<FlutterError>()
+            .has((error) => error.message, 'message')
             .contains('42');
+        check(find.text('item 42').evaluate()).length.equals(1);
       },
     );
+
+    scenarioWidgets('a rebuild with the same items reports nothing more', (tester) async {
+      final itemsNotifier = ValueNotifier([42, 7, 42]);
+      await _pumpRows(tester, itemsNotifier);
+      check(tester.takeException()).isNotNull(); // premise: the 1st build reported it
+
+      await _pumpRows(tester, itemsNotifier);
+
+      check(tester.takeException()).isNull();
+    });
   });
 
   feature('ListSmith.sync rebuild and layout', () {
