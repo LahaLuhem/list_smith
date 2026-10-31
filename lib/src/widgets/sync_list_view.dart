@@ -11,6 +11,7 @@ import '/src/data/presentation/presentation.dart';
 import '/src/data/search/search.dart';
 import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
+import '/src/utils/report_bad_data.dart';
 import 'defaults/defaults.dart';
 import 'keyed_list_view.dart';
 
@@ -62,7 +63,9 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
   late final ValueNotifier<({List<T> visibleItems, bool isSearching})> _resultNotifier;
   late List<T> _items;
-  Object? _repeatedId;
+
+  /// The items as passed, kept in debug for the in-place check, since [_items] drops repeated ids.
+  List<T>? _passedItems;
   var _didItemsChangeInPlace = false;
 
   @override
@@ -84,7 +87,8 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
       // Walk here, instead of on every rebuild in the build method.
       _didItemsChangeInPlace =
           !didItemsChange &&
-          !const IterableEquality<Object>(IdentityEquality()).equals(_items, widget.source.items);
+          !const IterableEquality<Object>(IdentityEquality())
+              .equals(_passedItems, widget.source.items);
     }
     if (didItemsChange || !identical(widget.grouping, oldWidget.grouping)) {
       _resultNotifier.value = _resolve();
@@ -115,7 +119,13 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
         ? (items: source.items.toList(growable: false), repeatedId: null)
         : firstOfEachId(source.items, itemIdGetter);
     _items = items;
-    _repeatedId = repeatedId;
+    if (kDebugMode) _passedItems = source.items.toList(growable: false);
+    if (kDebugMode && repeatedId != null) {
+      reportBadData(
+        "ListSmith.sync's itemIdGetter gave $repeatedId for more than one item. Ids have to be "
+        'unique, so only the 1st shows.',
+      );
+    }
   }
 
   ({List<T> visibleItems, bool isSearching}) _resolve() {
@@ -136,11 +146,6 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   @override
   Widget build(BuildContext context) {
     // Here, not where the items land: a throw in didUpdateWidget leaves the element tree broken.
-    assert(
-      _repeatedId == null,
-      "ListSmith.sync's itemIdGetter gave $_repeatedId for more than one item. Ids have to be "
-      'unique, so a release build shows only the 1st.',
-    );
     assert(
       !_didItemsChangeInPlace,
       "ListSmith.sync's items came back as the same list, edited in place. It only reads a new "

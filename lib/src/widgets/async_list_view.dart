@@ -19,6 +19,7 @@ import '/src/data/refresh/refresh.dart';
 import '/src/data/search/search.dart';
 import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
+import '/src/utils/report_bad_data.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -384,14 +385,7 @@ class _AsyncListViewState<T extends Object>()
     // A tie is out of order too.
     if (comparator == null || pageItems.isSorted((a, b) => comparator(a, b) < 0 ? -1 : 1)) return;
 
-    FlutterError.reportError(
-      FlutterErrorDetails(
-        exception: FlutterError(
-          "Page $pageIndex isn't in the list's order. Match the server's, ties included.",
-        ),
-        library: 'list_smith',
-      ),
-    );
+    reportBadData("Page $pageIndex isn't in the list's order. Match the server's, ties included.");
   }
 
   /// The order rows keep. Search results come in the server's own order, so they have none.

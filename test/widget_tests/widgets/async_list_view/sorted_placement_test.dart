@@ -220,6 +220,7 @@ void main() {
         await _pumpSorted(tester, server, _scrollController(), order: SortedBy(example.comparator));
 
         check(tester.takeException()).isNotNull();
+        check(find.text('row ${server.store.first.name}').evaluate()).length.equals(1);
       },
     );
 
