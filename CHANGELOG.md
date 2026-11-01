@@ -12,11 +12,14 @@
 - \[#71\] `EndContext.pageItemCounts` is read-only, and the end check costs the same however many pages are loaded. A policy that wrote into it now throws.
 - \[#73\] `ListSmith.async` lists now hold their position by default. An app that corrects the scroll position itself should pass `shouldKeepPosition: false`
 - \[#107\] `ListSmith.sync` holds its position by default, and asserts without `itemIdGetter`. Pass one, or `shouldKeepPosition: false`
-- \[#107\] `ListSmith.sync` asserts in debug on a repeated id, or on `items` edited in place
+- \[#107\] `ListSmith.sync` asserts in debug on `items` edited in place
+- \[#111\] `ListSmith.async` gathers each group into one section across pages, so pages no longer have to arrive grouped
+- \[#111\] `ListSmith.sync` shows a repeated id's 1st item and reports it in debug, instead of asserting
 
 ### Deprecated
 - \[#71\] `ExplicitHasMorePolicy`: return the flag from `PageFetcher.withHasMore` instead. It goes at the next major.
 - \[#71\] `ReloadOnError` and `ReloadToCurrentDepth.onError` do nothing now. Remove them, they go at the next major.
+- \[#111\] `Grouping.by`'s `orderPolicy`, with `GroupOrderPolicy`, `RepairHeadersPolicy` and `FailOnUnorderedPolicy`: groups gather on their own now. Remove the argument, they go at the next major.
 
 ### Fixed
 - \[#71\] A row no longer goes missing or shows twice when an edit shifts rows across a page boundary
@@ -24,6 +27,7 @@
 - \[#107\] A group header showing up or going above the row being read no longer moves it
 - \[#107\] A reversed grouped list's headers sit above their group
 - \[#110\] A new search starts the list at the top
+- \[#111\] Edits still waiting on the server follow a grouping switch on `ListSmith.async`
 
 ## [2.0.1] - 2026-10-07
 ### Fixed
