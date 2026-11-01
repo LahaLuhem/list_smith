@@ -260,6 +260,32 @@ void main() {
       }
     });
 
+    scenarioWidgets('a new grouping places a pending new item by its own groups', (tester) async {
+      final controller = ListSmithController<int>();
+      // Built once, so only the grouping changes.
+      final fetchPage = pagedFetcher(const [
+        [10, 12, 21, 23],
+      ]);
+      Future<void> pumpGroupedBy(GroupKeyOf<int, int> groupBy) => _pumpList<int>(
+        tester,
+        controller: controller,
+        fetchPage: fetchPage,
+        itemIdGetter: _byValue,
+        pageSize: 4,
+        endPolicy: const FixedPageCountPolicy(pageCount: 1),
+        grouping: Grouping.by(groupBy: groupBy, headerBuilder: (_, key) => Text('group $key')),
+      );
+      await pumpGroupedBy((item) => item ~/ 10);
+      await drain(tester);
+      controller.upsert(11);
+      await drain(tester);
+
+      await pumpGroupedBy((item) => item % 2);
+
+      // As if added under odd and even: 11 opens the odd group.
+      check(_shownRows()).deepEquals(_rows([10, 12, 11, 21, 23]));
+    });
+
     scenarioWidgets('a removal while searching still shows in the feed once the search clears', (
       tester,
     ) async {

@@ -293,10 +293,9 @@ renames.
   `resolveSyncSearch` returns a lazy view so the grouped sync path buckets with one copy,
   re-resolving on an items or `grouping` identity change. Hence "hold the `Grouping` stable" on a
   large list.
-- **Sections form where the data lands.** Async forms them from `_displayFor`'s result, sync in
-  `_resolve`, and `KeyedListView` takes them ready, so a rebuild that keeps the items (a keystroke,
-  a parent rebuild) runs no pass. Async keeps them in a memo cell of their own, so a `Grouping.by`
-  built inline, new every rebuild, re-forms the sections without redoing de-dup.
+- **Sections form where the data lands,** from `_displayFor`'s result on async and in `_resolve` on
+  sync, so a rebuild with the same items runs no pass. Async keeps them in their own memo cell, so
+  an inline `Grouping.by` doesn't redo de-dup.
 
 ---
 
@@ -545,9 +544,8 @@ renames.
   chain on one stateful closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per
   element, plus a list per run. The indexed `List.generate` form paid for its flatten and still
   lost. Measured on the per-item header flags the header pass replaced, which walked the same way.
-- **Pages, not a flatten of them.** Over a lazy flatten the pass took 1.5x to 1.7x as long: its
-  iterator adds calls on every item, and once the gather path handed it a `List` too, each of those
-  calls needed a lookup.
+- **Pages, not a lazy flatten,** which took 1.5x to 1.7x as long: its iterator adds calls per item,
+  and the gather path's `List` turned each into a lookup.
 - **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
   or not, and a moved row is checked at several indices before the id map gets built.
 - **Tripwire:** the `group_headers_scaling` micro, and `row_lookup_scaling` for the lookup.
@@ -635,7 +633,8 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
   on every change that shows, since the display memo keys on it.
 - **New items** join the start of their group, else the top, since async groups have to stay
   together, unless an order places them ([#sorted-placement](#sorted-placement)). They stay out of
-  search results: only the server knows what matches.
+  search results: only the server knows what matches. A new grouping places them again, since the
+  display memo keys on it while edits are pending.
 - **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
   setting is about the server sending an empty page, not the user deleting rows.
 - **A removal can land late.** Under an `EditTransition` it's booked when the row's exit ends

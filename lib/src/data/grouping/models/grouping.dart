@@ -28,8 +28,8 @@ sealed class const Grouping<T extends Object>() {
   @internal
   List<T> arrange(Iterable<T> items);
 
-  /// [pagedItems] in section order, with a header at each group's start. Call it when the shown items
-  /// change, not on every build.
+  /// [pagedItems] in section order, a header at each group's start. Call it when the items change, not
+  /// per build.
   @internal
   Sections<T> sectionsOver(List<List<T>> pagedItems);
 

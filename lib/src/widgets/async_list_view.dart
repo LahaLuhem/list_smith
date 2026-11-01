@@ -103,12 +103,19 @@ class _AsyncListViewState<T extends Object>()
   /// Whether a row near the end already booked the next page this frame.
   var _isNextPageBooked = false;
 
-  /// Memo for [_displayFor], keyed on paging-state identity, the edit counter and the mode, so a rebuild
-  /// that changes none of them skips the O(loaded) pass. One cell, so the parts can't drift.
-  ({PagingState<T> raw, int editStamp, bool isSearchMode, _Display<T> display})? _displayMemo;
+  /// Memo for [_displayFor], keyed on the paging state, the edit counter, the mode and, while edits are
+  /// pending, the grouping. One cell, so the parts can't drift.
+  ({
+    PagingState<T> raw,
+    int editStamp,
+    bool isSearchMode,
+    Grouping<T>? editGrouping,
+    _Display<T> display,
+  })?
+  _displayMemo;
 
-  /// Memo for [_sectionsFor], keyed on the shown state and the grouping. A cell of its own, so a
-  /// grouping built inline, new every rebuild, re-forms the sections without re-running [_displayFor].
+  /// Memo for [_sectionsFor], keyed on the shown state and the grouping. Its own cell, so an inline
+  /// grouping doesn't re-run [_displayFor].
   ({PagingState<T> shownState, Grouping<T> grouping, Sections<T> sections})? _sectionsMemo;
 
   final _editStoreNotifier = EditStoreNotifier<T>();
@@ -459,18 +466,27 @@ class _AsyncListViewState<T extends Object>()
 
     final editStamp = _editStoreNotifier.value;
     final isSearchMode = _searchModeNotifier.value;
+    // Only edits read it, so an inline grouping keeps de-dup cached.
+    final editGrouping = _editStoreNotifier.isEmpty ? null : widget.grouping;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
         identical(state, displayMemo.raw) &&
         displayMemo.editStamp == editStamp &&
-        displayMemo.isSearchMode == isSearchMode) {
+        displayMemo.isSearchMode == isSearchMode &&
+        identical(editGrouping, displayMemo.editGrouping)) {
       return displayMemo.display;
     }
 
     final display = _editStoreNotifier.isEmpty
         ? _dedupedDisplay(state)
         : _editedDisplay(state, pages, isSearchMode: isSearchMode);
-    _displayMemo = (raw: state, editStamp: editStamp, isSearchMode: isSearchMode, display: display);
+    _displayMemo = (
+      raw: state,
+      editStamp: editStamp,
+      isSearchMode: isSearchMode,
+      editGrouping: editGrouping,
+      display: display,
+    );
 
     return display;
   }

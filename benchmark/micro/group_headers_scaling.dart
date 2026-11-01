@@ -1,7 +1,6 @@
 /// Micro-benchmark: [resolveGroupHeaders] cost as the loaded list grows.
 ///
-/// Runs per item each time a grouped list's items change, page by page, so a slower scan trips the
-/// gate.
+/// Runs per item each time a grouped list's items change, so a slower scan trips the gate.
 library;
 
 import 'package:benchmark_harness/benchmark_harness.dart';
