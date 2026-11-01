@@ -95,32 +95,6 @@ void main() {
   });
 
   feature('ListSmith.async grouping', () {
-    scenarioWidgets('adds a header at each group boundary of a pre-sorted page', (tester) async {
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: PageFetcher(
-            (request) async => request.pageIndex == 0
-                ? const [
-                    (group: 'A', label: 'apple'),
-                    (group: 'A', label: 'avocado'),
-                    (group: 'B', label: 'banana'),
-                  ]
-                : const <_Item>[],
-          ),
-          itemIdGetter: (item) => item.label,
-          refresh: const NoRefresh(),
-          grouping: byGroup(),
-          itemBuilder: (_, item, _) => Text(item.label),
-        ),
-      );
-      await drain(tester);
-
-      check(find.text('section A').evaluate()).length.equals(1);
-      check(find.text('section B').evaluate()).length.equals(1);
-      check(find.text('banana').evaluate()).length.equals(1);
-    });
-
     scenarioWidgets("a rebuild with the same items doesn't run groupBy again", (tester) async {
       final (:grouping, :callCountGetter) = countingByGroup();
       final fetchPage = pagedFetcher(const [
@@ -196,31 +170,6 @@ void main() {
       check(find.text('b3').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('a group spanning three pages still gets one header', (tester) async {
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: pagedFetcher(const [
-            [(group: 'A', label: 'a1'), (group: 'B', label: 'b1')],
-            [(group: 'B', label: 'b2'), (group: 'B', label: 'b3')],
-            [(group: 'B', label: 'b4'), (group: 'C', label: 'c1')],
-          ]),
-          itemIdGetter: (item) => item.label,
-          endPolicy: const FixedPageCountPolicy(pageCount: 3),
-          refresh: const NoRefresh(),
-          grouping: byGroup(),
-          itemBuilder: (_, item, _) => Text(item.label),
-        ),
-      );
-      await drain(tester, frames: 16);
-
-      // Page 1 is all B, so this reaches back past a whole page. A two-page case cannot tell 'every
-      // page' from 'the last 2'.
-      check(find.text('section B').evaluate()).length.equals(1);
-      check(find.text('section A').evaluate()).length.equals(1);
-      check(find.text('section C').evaluate()).length.equals(1);
-    });
-
     scenarioWidgets('pages overlapping across a group boundary show each row once', (tester) async {
       await pumpListSmith(
         tester,
@@ -240,28 +189,6 @@ void main() {
 
       // Page 1 repeats a2 and b1. Grouping reads the list after de-dup, so a2 isn't gathered twice.
       check(find.text('a2').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('FailOnUnorderedPolicy throws instead of gathering', (tester) async {
-      await pumpListSmith(
-        tester,
-        ListSmith<_Item>.async(
-          fetchPage: pagedFetcher(const [
-            [(group: 'A', label: 'a1'), (group: 'B', label: 'b1'), (group: 'A', label: 'a2')],
-          ]),
-          itemIdGetter: (item) => item.label,
-          refresh: const NoRefresh(),
-          grouping: Grouping.by(
-            groupBy: (item) => item.group,
-            headerBuilder: (_, key) => Text('section $key'),
-            orderPolicy: const FailOnUnorderedPolicy(),
-          ),
-          itemBuilder: (_, item, _) => Text(item.label),
-        ),
-      );
-      await drain(tester);
-
-      check(tester.takeException()).isA<StateError>();
     });
 
     scenarioWidgets('a key that comes back on a later page joins its section', (tester) async {

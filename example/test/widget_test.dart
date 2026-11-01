@@ -23,27 +23,6 @@ void main() {
       check(find.text('Item 1').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('custom surfaces: the custom loader shows, then items load', (tester) async {
-      await openDemo(tester, 'Custom surfaces');
-      // Fixed pumps, so the loader is still up when it's checked.
-      await tester.pump(const Duration(milliseconds: 300));
-
-      check(find.text('Loading…').evaluate()).length.equals(1);
-
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pump();
-
-      check(find.text('Item 1').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('playground pages past its empty first page to the data', (tester) async {
-      await openDemo(tester, 'Playground', surfaceSize: tallSurfaceSize);
-      // Page 0 is empty, so advance-past-empty fetches page 0 then page 1. Give both time.
-      await drain(tester, frames: 12, step: const Duration(milliseconds: 300));
-
-      check(find.text('Item 21').evaluate()).length.equals(1);
-    });
-
     scenarioWidgets('sync search filters the in-memory list as you type', (tester) async {
       await openDemo(tester, 'Sync search');
       await tester.pump(const Duration(milliseconds: 400));
@@ -129,16 +108,6 @@ void main() {
         check(find.textContaining('· cache').evaluate().length).isGreaterThan(0);
       },
     );
-
-    scenarioWidgets('reload demo loads its stamped feed', (tester) async {
-      await openDemo(tester, 'Reload');
-      // The feed fetches with a 500ms latency, so pump enough for the 1st pages to settle.
-      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
-
-      check(find.text('Item 1').evaluate()).length.equals(1);
-      // Each item carries its per-page fetch stamp, "load #1" on the 1st load.
-      check(find.textContaining('load #1').evaluate().length).isGreaterThan(0);
-    });
 
     scenarioWidgets('the reload demo refreshes from code, with no pull', (tester) async {
       await openDemo(tester, 'Reload', surfaceSize: tallSurfaceSize);

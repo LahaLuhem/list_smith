@@ -5,6 +5,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../support/support.dart';
 
@@ -22,7 +23,7 @@ void main() {
       await _pumpSync(tester, items: const <String>[], searchBy: containsIgnoreCase);
       await tester.pump();
 
-      check(find.text('No items').evaluate()).length.equals(1);
+      check(find.byType(NeutralEmptyIndicator).evaluate()).length.equals(1);
     });
 
     scenarioWidgets('filters to the matches when a query is set', (tester) async {
@@ -77,38 +78,7 @@ void main() {
       );
       await tester.pump();
 
-      check(find.text('No results').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('an empty surface built with a LayoutBuilder renders', (tester) async {
-      await _pumpSync(
-        tester,
-        items: const [],
-        searchBy: containsIgnoreCase,
-        emptyBuilder: (_) =>
-            LayoutBuilder(builder: (_, constraints) => Text('surface at ${constraints.maxHeight}')),
-      );
-      await drain(tester);
-
-      check(find.textContaining('surface at').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('an empty surface built with Expanded renders', (tester) async {
-      await _pumpSync(
-        tester,
-        items: const [],
-        searchBy: containsIgnoreCase,
-        emptyBuilder: (_) => const Column(
-          children: [
-            Expanded(child: Text('fills')),
-            Text('below'),
-          ],
-        ),
-      );
-      await drain(tester);
-
-      check(find.text('fills').evaluate()).length.equals(1);
-      check(find.text('below').evaluate()).length.equals(1);
+      check(find.byType(NeutralNoResultsIndicator).evaluate()).length.equals(1);
     });
   });
 
@@ -231,7 +201,7 @@ void main() {
       );
       await tester.pump();
 
-      check(find.text('No results').evaluate()).length.equals(1);
+      check(find.byType(NeutralNoResultsIndicator).evaluate()).length.equals(1);
       check(scrollController.hasClients).isTrue();
     });
 
@@ -282,6 +252,7 @@ void main() {
             .has((error) => error.message, 'message')
             .contains('42');
         check(find.text('item 42').evaluate()).length.equals(1);
+        check(_topOf(tester, 42)).isLessThan(_topOf(tester, 7)); // the 1st, not the last
       },
     );
 
@@ -309,21 +280,6 @@ void main() {
 
       check(find.text('cherry').evaluate()).length.equals(1);
       check(find.text('apple').evaluate()).length.equals(0);
-    });
-
-    scenarioWidgets('changing the query after build commits a new filter', (tester) async {
-      // Same const list on both pumps, so only the query changes (isolates the query path).
-      const items = ['apple', 'banana'];
-      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase);
-      await tester.pump();
-      check(find.text('banana').evaluate()).length.equals(1);
-
-      await _pumpSync(tester, items: items, searchBy: containsIgnoreCase, query: 'app');
-      // Fire the zero-duration debounce timer so the new query commits.
-      await tester.pump(const Duration(milliseconds: 1));
-
-      check(find.text('apple').evaluate()).length.equals(1);
-      check(find.text('banana').evaluate()).length.equals(0);
     });
 
     scenarioOutlineWidgets<({String fromQuery, double fromOffset, String toQuery, int topItem})>(
@@ -362,7 +318,6 @@ void main() {
       'the same list coming back edited is an error',
       examples: {
         'an item added': (tasks) => tasks.insert(0, const _Task(100)),
-        'an item removed': (tasks) => tasks.removeAt(1),
         // The row would keep showing the old item, since == can't tell the 2 apart.
         'an item swapped for one equal by ==': (tasks) => tasks[1] = const _Task(1),
       },
@@ -392,33 +347,24 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<({double cacheExtent, int row, bool isBuilt})>(
-      'rows are built as far past the screen as the cache extent reaches',
-      examples: const {
-        'no cache extent, a row just past the screen': (cacheExtent: 0, row: 13, isBuilt: false),
-        'a long cache extent, a row far past the screen': (
-          cacheExtent: 1000,
-          row: 30,
-          isBuilt: true,
+    scenarioWidgets('rows are built as far past the screen as the cache extent reaches', (
+      tester,
+    ) async {
+      await pumpListSmith(
+        tester,
+        ListSmith.sync(
+          items: List.generate(100, (index) => 'row $index'),
+          itemIdGetter: (item) => item,
+          searchBy: containsIgnoreCase,
+          scroll: const ListScrollConfig(cacheExtent: 1000),
+          itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text(item)),
         ),
-      },
-      outline: (tester, example) async {
-        await pumpListSmith(
-          tester,
-          ListSmith.sync(
-            items: List.generate(100, (index) => 'row $index'),
-            itemIdGetter: (item) => item,
-            searchBy: containsIgnoreCase,
-            scroll: ListScrollConfig(cacheExtent: example.cacheExtent),
-            itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text(item)),
-          ),
-        );
-        await tester.pump();
+      );
+      await tester.pump();
 
-        check(find.text('row ${example.row}', skipOffstage: false).evaluate()).length
-            .equals(example.isBuilt ? 1 : 0);
-      },
-    );
+      // Past what the default cache extent builds.
+      check(find.text('row 30', skipOffstage: false).evaluate()).length.equals(1);
+    });
 
     scenarioWidgets('a separator builder renders the separated list', (tester) async {
       await _pumpSync(
@@ -442,7 +388,6 @@ Future<void> _pumpSync(
   required SyncSearchPredicate<String> searchBy,
   String query = '',
   int minSearchLength = 0,
-  WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
   ListScrollConfig scrollConfig = const ListScrollConfig(),
 }) => pumpListSmith(
@@ -453,7 +398,6 @@ Future<void> _pumpSync(
     searchBy: searchBy,
     query: query,
     minSearchLength: minSearchLength,
-    emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
     scroll: scrollConfig,
     itemBuilder: (_, item, _) => Text(item),

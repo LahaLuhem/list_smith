@@ -403,7 +403,9 @@ void main() {
     scenarioWidgets('a search page superseded by a KeepCache restore stays silent', (tester) async {
       final holdCompleter = Completer<void>();
       final observer = RecordingListSmithObserver();
+      var searchRequestCount = 0;
       final searchFetchPage = SearchPageFetcher<int>((request) async {
+        searchRequestCount++;
         await holdCompleter.future;
 
         return const [99];
@@ -428,6 +430,7 @@ void main() {
       // Enter search: the normal list is snapshotted and the search's 1st page is left in flight.
       await pumpListSmith(tester, build('x'));
       await settle(tester);
+      check(searchRequestCount).equals(1);
 
       // Leave search again, restoring the snapshot while that search page is still out there.
       await pumpListSmith(tester, build(''));

@@ -4,36 +4,31 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../support/support.dart';
 
 void main() {
   feature('ListSmith.async surfaces', () {
-    scenarioOutlineWidgets<({PageFetcher<int> fetchPage, String shownText})>(
+    scenarioOutlineWidgets<({PageFetcher<int> fetchPage, Type surfaceType})>(
       'renders the right surface for the source state',
       examples: {
-        'the first page of items': (
-          fetchPage: PageFetcher(
-            (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-          ),
-          shownText: 'item 1',
-        ),
         'the empty surface when the source has no items': (
           fetchPage: PageFetcher((_) async => const <int>[]),
-          shownText: 'No items',
+          surfaceType: NeutralEmptyIndicator,
         ),
         'the no-more footer once every page has loaded': (
           fetchPage: PageFetcher(
             (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
           ),
-          shownText: 'No more items',
+          surfaceType: NeutralNoMoreItemsIndicator,
         ),
       },
       outline: (tester, example) async {
         await _pumpList(tester, example.fetchPage);
         await drain(tester);
 
-        check(find.text(example.shownText).evaluate()).length.equals(1);
+        check(find.byType(example.surfaceType).evaluate()).length.equals(1);
       },
     );
 
@@ -50,10 +45,9 @@ void main() {
       );
       await drain(tester);
 
-      check(find.text('Something went wrong').evaluate()).length.equals(1);
-      check(find.text('Retry').evaluate()).length.equals(1);
+      check(find.byType(NeutralErrorIndicator).evaluate()).length.equals(1);
 
-      await tester.tap(find.text('Retry'));
+      await tester.tap(find.byType(NeutralRetryButton));
       await drain(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
@@ -77,7 +71,7 @@ void main() {
       check(find.text('item 3').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).isEmpty();
 
-      await tester.tap(find.text('Retry'));
+      await tester.tap(find.byType(NeutralRetryButton));
       await drain(tester);
 
       check(server.attempts[1]).equals(2);
@@ -104,7 +98,7 @@ void main() {
         }, (error, _) => uncaught.add(error));
 
         check(uncaught).single.isA<StateError>();
-        check(find.text('Something went wrong').evaluate()).isEmpty();
+        check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty();
         check(observer.events.contains('error')).isFalse();
       },
     );

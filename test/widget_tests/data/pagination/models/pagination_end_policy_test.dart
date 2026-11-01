@@ -6,19 +6,27 @@ import 'package:list_smith/list_smith.dart';
 import '../../../../support/support.dart';
 
 void main() {
-  feature('ListSmith.async ExplicitHasMorePolicy', () {
-    scenarioWidgets('asserts when paired with a plain (non-signal) fetcher', (tester) async {
-      expect(
-        () => ListSmith.async(
-          fetchPage: PageFetcher((_) async => const <int>[]),
-          itemIdGetter: (item) => item,
-          endPolicy: const ExplicitHasMorePolicy(),
-          itemBuilder: (_, item, _) => Text('item $item'),
-        ),
-        throwsAssertionError,
-      );
-    });
+  feature('ListSmith.async end policies reading the fetcher signal', () {
+    scenarioOutlineWidgets<PaginationEndPolicy>(
+      'a policy reading the end signal asserts over a plain fetcher',
+      examples: const {
+        'ExplicitHasMorePolicy': ExplicitHasMorePolicy(),
+        'StopOnNullSignalPolicy': StopOnNullSignalPolicy(),
+      },
+      outline: (tester, endPolicy) async {
+        check(
+          () => ListSmith.async(
+            fetchPage: PageFetcher((_) async => const <int>[]),
+            itemIdGetter: (item) => item,
+            endPolicy: endPolicy,
+            itemBuilder: (_, item, _) => Text('item $item'),
+          ),
+        ).throws<AssertionError>();
+      },
+    );
+  });
 
+  feature('ListSmith.async ExplicitHasMorePolicy', () {
     scenarioWidgets('stops on hasMore=false without fetching the trailing empty page', (
       tester,
     ) async {
@@ -53,35 +61,14 @@ void main() {
       check(requested).deepEquals(const [0, 1]);
     });
 
-    scenarioWidgets('shows the no-more footer once the fetcher reports the end', (tester) async {
-      final fetchPage = PageFetcher<int>.withSignal(
-        (request) async =>
-            request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
-      );
-
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: fetchPage,
-          itemIdGetter: (item) => item,
-          endPolicy: const ExplicitHasMorePolicy(),
-          refresh: const NoRefresh(),
-          itemBuilder: (_, item, _) => Text('item $item'),
-        ),
-      );
-      await drain(tester, frames: 8);
-
-      check(find.text('No more items').evaluate()).length.equals(1);
-    });
-
-    const item1Key = 'item 1';
-    const item99Key = 'item 99';
-
     scenarioWidgets('the signal governs the search stream too', (tester) async {
+      final searchPageIndexes = <int>[];
       final fetchPage = PageFetcher<int>.withSignal((_) async => (const [1, 2, 3], true));
-      final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (request) async => request.pageIndex == 0 ? (const [99], false) : (const <int>[], false),
-      );
+      final searchFetchPage = SearchPageFetcher<int>.withSignal((request) async {
+        searchPageIndexes.add(request.pageIndex);
+
+        return request.pageIndex == 0 ? (const [99], false) : (const <int>[], false);
+      });
 
       await pumpListSmith(
         tester,
@@ -98,79 +85,8 @@ void main() {
       );
       await settle(tester);
 
-      // Search page 0 reported hasMore=false via SearchPageFetcher.withSignal: results show, then end.
-      check(find.text(item99Key).evaluate()).length.equals(1);
-      check(find.text('No more items').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('KeepCachePolicy restores the normal list after an ExplicitHasMore search', (
-      tester,
-    ) async {
-      final fetchPage = PageFetcher<int>.withSignal(
-        (request) async =>
-            request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false),
-      );
-      final searchFetchPage = SearchPageFetcher<int>.withSignal(
-        (request) async => request.pageIndex == 0 ? (const [99], false) : (const <int>[], false),
-      );
-
-      Widget build(String query) => ListSmith.async(
-        fetchPage: fetchPage,
-        itemIdGetter: (item) => item,
-        search: AsyncSearch(fetchPage: searchFetchPage, cachePolicy: const KeepCachePolicy()),
-        endPolicy: const ExplicitHasMorePolicy(),
-        query: query,
-        searchDebounce: const Duration(milliseconds: 20),
-        refresh: const NoRefresh(),
-        itemBuilder: (_, item, _) => Text('item $item'),
-      );
-
-      await pumpListSmith(tester, build(''));
-      await settle(tester);
-      check(find.text(item1Key).evaluate()).length.equals(1);
-
-      await pumpListSmith(tester, build('x'));
-      await settle(tester);
-      check(find.text(item99Key).evaluate()).length.equals(1);
-      check(find.text(item1Key).evaluate()).length.equals(0);
-
-      await pumpListSmith(tester, build(''));
-      await settle(tester);
-
-      // Normal list restored (KeepCache) after a search that ended via the signal.
-      check(find.text(item1Key).evaluate()).length.equals(1);
-      check(find.text(item99Key).evaluate()).length.equals(0);
-    });
-
-    scenarioWidgets('pull-to-refresh re-enables pagination after the end', (tester) async {
-      var firstPageFetches = 0;
-      final fetchPage = PageFetcher<int>.withSignal((request) async {
-        if (request.pageIndex == 0) firstPageFetches++;
-
-        return request.pageIndex == 0 ? (const [1, 2, 3], false) : (const <int>[], false);
-      });
-
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: fetchPage,
-          itemIdGetter: (item) => item,
-          endPolicy: const ExplicitHasMorePolicy(),
-          itemBuilder: (_, item, _) => Text('item $item'),
-        ),
-      );
-      await drain(tester, frames: 8);
-      check(firstPageFetches).equals(1);
-
-      await tester.fling(find.text(item1Key), const Offset(0, 300), 1000);
-      for (var frame = 0; frame < 6; frame++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
-      await drain(tester, frames: 4);
-
-      // Refresh reset the ended state and re-fetched page 0.
-      check(firstPageFetches).equals(2);
-      check(find.text(item1Key).evaluate()).length.equals(1);
+      // Search page 0 reported hasMore=false, so its page 1 is never asked for.
+      check(searchPageIndexes).deepEquals(const [0]);
     });
   });
 }

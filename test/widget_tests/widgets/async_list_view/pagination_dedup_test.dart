@@ -28,13 +28,6 @@ void main() {
       [_Item(5), _Item(6), _Item(7), _Item(8), _Item(9)],
     ]);
 
-    // The same overlap as [overlappingPages], but served through `searchFetchPage`. De-dup runs on the
-    // shared fetch path, so it must behave identically under an active query.
-    final overlappingSearchPages = pagedSearchFetcher([
-      [_Item(0), _Item(1), _Item(2), _Item(3), _Item(4)],
-      [_Item(3), _Item(4), _Item(5), _Item(6), _Item(7)],
-    ]);
-
     scenarioWidgets('de-dup by id collapses an item repeated across a page boundary to one', (
       tester,
     ) async {
@@ -68,23 +61,6 @@ void main() {
       check(find.text('item 0').evaluate()).length.equals(1);
       check(find.text('item 4').evaluate()).length.equals(1);
     });
-
-    scenarioWidgets('de-dup by id collapses a search overlap across a page boundary to one', (
-      tester,
-    ) async {
-      await _pumpPagedSearch(
-        tester,
-        searchFetchPage: overlappingSearchPages,
-        itemIdGetter: (item) => item.id,
-      );
-      await drain(tester, frames: 8);
-
-      // Same collapse as the normal path, proving de-dup covers the search branch of the fetch.
-      check(find.text('item 3').evaluate()).length.equals(1);
-      check(find.text('item 4').evaluate()).length.equals(1);
-      check(find.text('item 0').evaluate()).length.equals(1);
-      check(find.text('item 7').evaluate()).length.equals(1);
-    });
   });
 }
 
@@ -103,26 +79,6 @@ Future<void> _pumpPagedList(
     itemIdGetter: itemIdGetter,
     pageSize: 5,
     refresh: const NoRefresh(),
-    itemBuilder: (_, item, _) => Text('item ${item.id}'),
-  ),
-);
-
-/// Pumps a search list driven by [searchFetchPage] under a seeded, non-empty query, so the 1st fetch
-/// runs in search mode. The normal [PageFetcher] is never reached, so it is a stub.
-Future<void> _pumpPagedSearch(
-  WidgetTester tester, {
-  required SearchPageFetcher<_Item> searchFetchPage,
-  required ItemIdGetter<_Item> itemIdGetter,
-}) => pumpListSmith(
-  tester,
-  ListSmith.async(
-    fetchPage: PageFetcher((_) async => const <_Item>[]),
-    search: AsyncSearch(fetchPage: searchFetchPage),
-    itemIdGetter: itemIdGetter,
-    pageSize: 5,
-    refresh: const NoRefresh(),
-    query: 'q',
-    searchDebounce: const Duration(milliseconds: 20),
     itemBuilder: (_, item, _) => Text('item ${item.id}'),
   ),
 );

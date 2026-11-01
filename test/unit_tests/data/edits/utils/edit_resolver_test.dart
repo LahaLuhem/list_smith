@@ -26,32 +26,6 @@ void main() {
     acceptsNewItems: acceptsNewItems,
   ).pages.expand((page) => page.items).map((item) => item.label).toList(growable: false);
 
-  /// [pages] resolved by rank, read at stamp 0 unless [readStamps] says otherwise.
-  ({List<int> shown, Set<Object> reported}) resolveRanked(
-    List<List<_Ranked>> pages, {
-    required Map<Object, ItemEdit<_Ranked>> edits,
-    List<int>? readStamps,
-    bool mayHaveRowsAfter = true,
-  }) {
-    final (pages: displayPages, :shownIds) = resolveDisplayPages(
-      pages: pages
-          .mapIndexed(
-            (index, items) => LoadedPage(items: items, readStamp: readStamps?[index] ?? 0),
-          )
-          .toList(growable: false),
-      edits: edits,
-      itemIdGetter: (item) => item.id,
-      groupOf: null,
-      acceptsNewItems: true,
-      sortedPlacement: (comparator: _byRank, mayHaveRowsAfter: mayHaveRowsAfter),
-    );
-
-    return (
-      shown: displayPages.expand((page) => page.items).map((item) => item.id).toList(),
-      reported: shownIds,
-    );
-  }
-
   const editKey = 'edit';
   const shownKey = 'shown';
 
@@ -178,15 +152,10 @@ void main() {
   const addedKey = 'added';
 
   Bdd(resolutionFeature)
-      .scenario('a new item goes to the start of its group, or on top when its group is not loaded')
+      .scenario('a new item goes to the start of its group')
       .given('<$loadedKey> loaded, grouped by the tens digit')
       .when('<$addedKey> are added in turn')
       .then('the list is <$shownKey>')
-      .example(
-        val(loadedKey, const [0, 1, 10, 11]),
-        val(addedKey, const [12, 20]),
-        val(shownKey, const [20, 0, 1, 12, 10, 11]),
-      )
       // 2 into one group, the newer first.
       .example(
         val(loadedKey, const [0, 1, 10, 11]),
@@ -286,28 +255,6 @@ void main() {
       });
 
   Bdd(resolutionFeature)
-      .scenario('while searching, a new item stays out but edits to results still apply')
-      .given('search results, rows 1 and 2')
-      .when('row 1 is edited, row 2 removed and a new row 9 added')
-      .then('only the edited row 1 shows')
-      .run((_) {
-        final labels = resolveLabels(
-          [
-            [(id: 1, label: 'a'), (id: 2, label: 'b')],
-          ],
-          readStamps: const [0],
-          edits: {
-            1: const ItemEdit(item: (id: 1, label: 'mine'), stamp: 1),
-            2: const ItemEdit(item: null, stamp: 2),
-            9: const ItemEdit(item: (id: 9, label: 'new'), stamp: 3),
-          },
-          acceptsNewItems: false,
-        );
-
-        check(labels).deepEquals(const ['mine']);
-      });
-
-  Bdd(resolutionFeature)
       .scenario('overlap duplicates stay hidden while edits are in play')
       .given('2 pages that both carry row 2')
       .when('row 1 is edited')
@@ -328,6 +275,7 @@ void main() {
   const changeKey = 'change';
   const editsKey = 'edits';
   const acceptsNewItemsKey = 'acceptsNewItems';
+  const sortedPlacementKey = 'sortedPlacement';
   const shownIdsKey = 'shownIds';
 
   Bdd(resolutionFeature)
@@ -341,6 +289,7 @@ void main() {
           12: ItemEdit(item: (id: 12, group: 1), stamp: 1),
         }),
         val(acceptsNewItemsKey, true),
+        val(sortedPlacementKey, null),
         val(shownIdsKey, const [0, 1, 10, 11, 12]),
       )
       .example(
@@ -349,12 +298,14 @@ void main() {
           12: ItemEdit(item: (id: 12, group: 1), stamp: 1),
         }),
         val(acceptsNewItemsKey, false),
+        val(sortedPlacementKey, null),
         val(shownIdsKey, const [0, 1, 10, 11]),
       )
       .example(
         val(changeKey, 'a removal'),
         val(editsKey, const <Object, ItemEdit<_Placed>>{1: ItemEdit(item: null, stamp: 1)}),
         val(acceptsNewItemsKey, true),
+        val(sortedPlacementKey, null),
         val(shownIdsKey, const [0, 10, 11]),
       )
       .example(
@@ -363,6 +314,26 @@ void main() {
           0: ItemEdit(item: (id: 0, group: 1), stamp: 1),
         }),
         val(acceptsNewItemsKey, true),
+        val(sortedPlacementKey, null),
+        val(shownIdsKey, const [0, 1, 10, 11]),
+      )
+      // Under an order, a row sorting past the loaded ones waits while rows may follow.
+      .example(
+        val(changeKey, 'a move past the loaded rows, more to come'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{
+          1: ItemEdit(item: (id: 1, group: 2), stamp: 1),
+        }),
+        val(acceptsNewItemsKey, true),
+        val(sortedPlacementKey, (comparator: _byGroupThenId, mayHaveRowsAfter: true)),
+        val(shownIdsKey, const [0, 10, 11]),
+      )
+      .example(
+        val(changeKey, 'a move past the loaded rows, at the end of the data'),
+        val(editsKey, const <Object, ItemEdit<_Placed>>{
+          1: ItemEdit(item: (id: 1, group: 2), stamp: 1),
+        }),
+        val(acceptsNewItemsKey, true),
+        val(sortedPlacementKey, (comparator: _byGroupThenId, mayHaveRowsAfter: false)),
         val(shownIdsKey, const [0, 1, 10, 11]),
       )
       .run((context) {
@@ -377,63 +348,11 @@ void main() {
           itemIdGetter: (item) => item.id,
           groupOf: (item) => item.group,
           acceptsNewItems: context.example.val(acceptsNewItemsKey) as bool,
+          sortedPlacement: context.example.val(sortedPlacementKey) as SortedPlacement<_Placed>?,
         );
 
         check(shownIds).unorderedEquals(pages.expand((page) => page.items).map((item) => item.id));
         check(shownIds).unorderedEquals(context.example.val(shownIdsKey) as List<int>);
-      });
-
-  const rankedPages = [
-    [(id: 0, rank: 0), (id: 1, rank: 10)],
-    [(id: 2, rank: 20), (id: 3, rank: 30)],
-  ];
-
-  Bdd(resolutionFeature)
-      .scenario(
-        'with an order, an edit that moves its row or adds one lands where the order puts it',
-      )
-      .given('rows 0 to 3 ranked 0 to 30, over 2 pages')
-      .when('<$editKey> is made')
-      .then('the list is <$shownKey>')
-      .example(
-        val(editKey, const <Object, ItemEdit<_Ranked>>{
-          1: ItemEdit(item: (id: 1, rank: 25), stamp: 1),
-        }),
-        val(shownKey, const [0, 2, 1, 3]),
-      )
-      .example(
-        val(editKey, const <Object, ItemEdit<_Ranked>>{
-          9: ItemEdit(item: (id: 9, rank: 15), stamp: 1),
-        }),
-        val(shownKey, const [0, 1, 9, 2, 3]),
-      )
-      .run((context) {
-        final (:shown, reported: _) = resolveRanked(
-          rankedPages,
-          edits: context.example.val(editKey) as Map<Object, ItemEdit<_Ranked>>,
-        );
-
-        check(shown).deepEquals(context.example.val(shownKey) as List<int>);
-      });
-
-  const mayHaveRowsAfterKey = 'may have rows after';
-
-  Bdd(resolutionFeature)
-      .scenario('with an order, a row sorting after every loaded one waits while rows may follow')
-      .given('rows 0 to 3 ranked 0 to 30, and whether rows <$mayHaveRowsAfterKey>')
-      .when('row 1 is re-ranked to 99')
-      .then('the list shows and reports <$shownKey>')
-      .example(val(mayHaveRowsAfterKey, true), val(shownKey, const [0, 2, 3]))
-      .example(val(mayHaveRowsAfterKey, false), val(shownKey, const [0, 2, 3, 1]))
-      .run((context) {
-        final (:shown, :reported) = resolveRanked(
-          rankedPages,
-          edits: const {1: ItemEdit(item: (id: 1, rank: 99), stamp: 1)},
-          mayHaveRowsAfter: context.example.val(mayHaveRowsAfterKey) as bool,
-        );
-
-        check(shown).deepEquals(context.example.val(shownKey) as List<int>);
-        check(reported).unorderedEquals(shown);
       });
 
   Bdd(resolutionFeature)
@@ -444,17 +363,30 @@ void main() {
       .when('the edit ranks it 25')
       .then('it shows once, where the later page has it')
       .run((_) {
-        final (:shown, reported: _) = resolveRanked(
-          const [
-            [(id: 0, rank: 0), (id: 1, rank: 10)],
-            [(id: 2, rank: 20), (id: 3, rank: 30), (id: 1, rank: 35)],
+        final pages = resolveDisplayPages<_Ranked>(
+          pages: const [
+            LoadedPage(items: [(id: 0, rank: 0), (id: 1, rank: 10)], readStamp: 0),
+            LoadedPage(
+              items: [(id: 2, rank: 20), (id: 3, rank: 30), (id: 1, rank: 35)],
+              readStamp: 2,
+            ),
           ],
           edits: const {1: ItemEdit(item: (id: 1, rank: 25), stamp: 1)},
-          readStamps: const [0, 2],
-        );
+          itemIdGetter: (item) => item.id,
+          groupOf: null,
+          acceptsNewItems: true,
+          sortedPlacement: (comparator: _byRank, mayHaveRowsAfter: true),
+        ).pages;
 
-        check(shown).deepEquals(const [0, 2, 3, 1]);
+        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+            .deepEquals(const [0, 2, 3, 1]);
       });
 }
 
 int _byRank(_Ranked a, _Ranked b) => a.rank.compareTo(b.rank);
+
+int _byGroupThenId(_Placed a, _Placed b) {
+  final order = a.group.compareTo(b.group);
+
+  return order == 0 ? a.id.compareTo(b.id) : order;
+}

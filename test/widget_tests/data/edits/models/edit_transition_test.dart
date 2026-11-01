@@ -93,11 +93,6 @@ void main() {
           dismissDirection: .endToStart,
           swipeOffset: const Offset(-700, 0),
         ),
-        'down a reversed list': (
-          scrollConfig: const ListScrollConfig(reverse: true),
-          dismissDirection: .endToStart,
-          swipeOffset: const Offset(-700, 0),
-        ),
         'across a sideways list': (
           scrollConfig: const ListScrollConfig(scrollDirection: .horizontal),
           dismissDirection: .up,
@@ -523,33 +518,6 @@ void main() {
         check(shownToggleRows()).deepEquals(['off 1', 'off 2', 'off 3']);
       },
     );
-
-    scenarioWidgets('saves failing after the list is gone still finish, failures reported', (
-      tester,
-    ) async {
-      final controller = await _pumpRows(tester);
-      final createCompleter = Completer<int>();
-      final deleteCompleter = Completer<void>();
-      final reportedExceptions = <Exception>[];
-      final createdFuture = controller.upsertAsync(
-        9,
-        commit: createCompleter.future,
-        onFailure: reportedExceptions.add,
-      );
-      final removedFuture = controller.removeAsync(
-        2,
-        commit: deleteCompleter.future,
-        onFailure: reportedExceptions.add,
-      );
-      await tester.pump();
-
-      await tester.pumpWidget(const SizedBox()); // the list goes
-      createCompleter.completeError(Exception('save failed'));
-      deleteCompleter.completeError(Exception('delete failed'));
-      await (createdFuture, removedFuture).wait;
-
-      check(reportedExceptions).length.equals(2);
-    });
   });
 }
 

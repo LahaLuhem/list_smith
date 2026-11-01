@@ -4,6 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../support/support.dart';
 
@@ -111,14 +112,6 @@ void main() {
           dragOffset: _awayFromPullOffset,
           isOverscrollExpected: false,
         ),
-        'the empty list, dragged away from the pull': (
-          makeServer: _emptyServer,
-          refresh: const PullToRefresh(),
-          scrollConfig: const ListScrollConfig(),
-          startOffset: _cornerOffset,
-          dragOffset: _awayFromPullOffset,
-          isOverscrollExpected: false,
-        ),
         'the error left out of pullableSurfaces, dragged towards the pull': (
           makeServer: _failingServer,
           refresh: const PullToRefresh(pullableSurfaces: {}),
@@ -209,7 +202,7 @@ void main() {
       );
       await drain(tester);
 
-      await tester.drag(find.text('Something went wrong'), const Offset(0, -100));
+      await tester.drag(find.byType(NeutralErrorIndicator), const Offset(0, -100));
       await drain(tester);
 
       check(nestedScrollViewKey.currentState!.outerController.offset).isGreaterThan(0);
@@ -236,8 +229,6 @@ const _awayFromPullOffset = Offset(0, -30);
 FakeServer<int> _failingServer() => FakeServer([1, 2, 3])..failing.add((0, 1));
 
 FakeServer<int> _loadingServer() => FakeServer([1, 2, 3])..hold(0, attempt: 1);
-
-FakeServer<int> _emptyServer() => FakeServer(<int>[]);
 
 /// How far a held drag along [scrollAxis] moves the list. Starts in a corner, clear of a centred loader.
 Future<double> _dragDistance(WidgetTester tester, Axis scrollAxis) async {

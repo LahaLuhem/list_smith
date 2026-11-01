@@ -2,6 +2,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../../../support/support.dart';
 
@@ -89,7 +90,7 @@ void main() {
       );
       await settle(tester);
 
-      check(find.text('No results').evaluate()).length.equals(1);
+      check(find.byType(NeutralNoResultsIndicator).evaluate()).length.equals(1);
     });
 
     scenarioWidgets('KeepCachePolicy restores the normal list on clearing, without refetching', (

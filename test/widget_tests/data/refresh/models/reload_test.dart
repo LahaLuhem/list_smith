@@ -4,6 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../../../support/support.dart';
 
@@ -45,6 +46,27 @@ void main() {
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
       check(find.text('item 2').evaluate()).length.equals(1);
       check(find.text('item 1').evaluate()).length.equals(0);
+    });
+
+    scenarioWidgets('with nothing loaded yet, a pull asks for the 1st page again', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 1));
+
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      final errorIndicatorFinder = find.byType(NeutralErrorIndicator);
+      check(errorIndicatorFinder.evaluate()).length.equals(1); // premise: the 1st page failed
+
+      await pullToRefresh(tester, errorIndicatorFinder);
+
+      check(find.text('item 1').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('one failed page keeps every page old', (tester) async {
@@ -92,31 +114,27 @@ void main() {
       check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 1});
     });
 
-    scenarioWidgets(
-      'a failed page reaches the observer, though the list still shows its old rows',
-      (tester) async {
-        final fetcher = valuedFetcher(failPageOnReload: 1);
-        final observer = RecordingListSmithObserver();
+    scenarioWidgets('a failed page reaches the observer', (tester) async {
+      final fetcher = valuedFetcher(failPageOnReload: 1);
+      final observer = RecordingListSmithObserver();
 
-        await pumpListSmith(
-          tester,
-          ListSmith.async(
-            fetchPage: fetcher.fetchPage,
-            itemIdGetter: (item) => item,
-            endPolicy: const FixedPageCountPolicy(pageCount: 3),
-            refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
-            observer: observer,
-            itemBuilder: (_, item, _) => Text('item $item'),
-          ),
-        );
-        await drain(tester, frames: 12);
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: fetcher.fetchPage,
+          itemIdGetter: (item) => item,
+          endPolicy: const FixedPageCountPolicy(pageCount: 3),
+          refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
+          observer: observer,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester, frames: 12);
 
-        await pullToRefresh(tester, find.text('item 1'));
+      await pullToRefresh(tester, find.text('item 1'));
 
-        check(find.text('item 1001').evaluate()).length.equals(1);
-        check(observer.lastException).isA<Exception>();
-      },
-    );
+      check(observer.lastException).isA<Exception>();
+    });
 
     scenarioWidgets('a reload in search mode reads the search fetcher for its signal', (
       tester,

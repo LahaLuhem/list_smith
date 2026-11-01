@@ -7,6 +7,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../support/support.dart';
 
@@ -27,7 +28,7 @@ void main() {
       );
       await drain(tester);
       // Loaded to the end, so no page-loading spinner is left either.
-      check(find.text('No more items').evaluate()).length.equals(1);
+      check(find.byType(NeutralNoMoreItemsIndicator).evaluate()).length.equals(1);
 
       await tester.pump(const Duration(seconds: 1));
 

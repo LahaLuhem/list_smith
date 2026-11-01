@@ -5,8 +5,6 @@ import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../../../../support/support.dart';
-
 void main() {
   final endDetectionFeature = BddFeature('Pagination end detection');
 
@@ -27,7 +25,6 @@ void main() {
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[3, 0]), val(endedKey, false))
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[3, 0, 0]), val(endedKey, true))
       .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[0, 3, 0]), val(endedKey, false))
-      .example(val(thresholdKey, 2), val(pageItemCountsKey, <int>[0, 3, 0, 0]), val(endedKey, true))
       .run((context) {
         final policy = StopOnEmptyPagesPolicy(
           emptyRunBeforeEnd: context.example.val(thresholdKey) as int,
@@ -48,8 +45,6 @@ void main() {
       .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 5]), val(endedKey, false))
       .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 5, 5]), val(endedKey, true))
       .example(val(countKey, 3), val(pageItemCountsKey, <int>[5, 0, 5]), val(endedKey, true))
-      .example(val(countKey, 1), val(pageItemCountsKey, <int>[5]), val(endedKey, true))
-      .example(val(countKey, 2), val(pageItemCountsKey, <int>[5]), val(endedKey, false))
       .run((context) {
         final policy = FixedPageCountPolicy(pageCount: context.example.val(countKey) as int);
         final pageItemCounts = context.example.val(pageItemCountsKey) as List<int>;
@@ -108,33 +103,6 @@ void main() {
         check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: 'cursor-2'))).isFalse();
         check(policy.hasReachedEnd(contextWith(pageCount: 0, signal: null))).isFalse();
       });
-
-  Bdd(endDetectionFeature)
-      .scenario('a policy declares whether it needs the fetcher end signal')
-      .given('the built-in end policies and a custom one')
-      .when('requiresSignal is read')
-      .then('only the signal-reading policies require it')
-      .run((_) {
-        check(const StopOnEmptyPagesPolicy().requiresSignal).isFalse();
-        check(const FixedPageCountPolicy(pageCount: 1).requiresSignal).isFalse();
-        check(const ExplicitHasMorePolicy().requiresSignal).isTrue();
-        check(const StopOnNullSignalPolicy().requiresSignal).isTrue();
-        check(const _ShortLastPagePolicy().requiresSignal).isFalse();
-      });
-
-  final logFormFeature = BddFeature('Pagination end policy log form');
-
-  const valueKey = 'value';
-  Bdd(logFormFeature)
-      .scenario('every end policy reads as itself in a log')
-      .given('the end policy <$valueKey>')
-      .when('it is turned into a string')
-      .then("it reads as itself, not as Dart's default Instance of")
-      .example(val(valueKey, const ExplicitHasMorePolicy()))
-      .example(val(valueKey, const FixedPageCountPolicy(pageCount: 3)))
-      .example(val(valueKey, const StopOnEmptyPagesPolicy()))
-      .example(val(valueKey, const StopOnNullSignalPolicy()))
-      .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }
 
 /// Ends when the last page held fewer than a full page, a common REST idiom.

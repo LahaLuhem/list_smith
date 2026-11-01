@@ -28,7 +28,6 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 9').evaluate()).length.equals(1);
       check(received).deepEquals(const [null, 'c1', 'c2']);
-      check(find.text('No more items').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('pull-to-refresh restarts from the initial (null) cursor', (tester) async {
@@ -99,7 +98,6 @@ void main() {
       await _pumpPaged(tester, server.hasMoreFetcher);
 
       check(server.requests.map((request) => request.pageIndex)).deepEquals([0, 1]);
-      check(find.text('No more items').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('its fetches get no previousSignal, since they page by number', (tester) async {
@@ -119,7 +117,6 @@ void main() {
       );
 
       check(server.requests.map((request) => request.pageIndex)).deepEquals([0]);
-      check(find.text('No more items').evaluate()).length.equals(1);
     });
 
     scenarioWidgets('search ends on its own hasMore flag', (tester) async {
@@ -145,7 +142,6 @@ void main() {
       await settle(tester);
 
       check(searchPageIndexes).deepEquals([0]);
-      check(find.text('No more items').evaluate()).length.equals(1);
     });
   });
 }

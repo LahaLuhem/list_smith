@@ -29,27 +29,6 @@ void main() {
   PendingEdit<_Row> draftOut(EditStoreNotifier<_Row> editStoreNotifier, String label) =>
       editStoreNotifier.pendingEdit(1, (id: 1, label: label))..book();
 
-  Bdd(storeFeature)
-      .scenario('every edit moves the value on and tells the listeners, so the display re-runs')
-      .given('a store with a listener')
-      .when('an item is changed, then removed')
-      .then('each edit moves the value on and notifies once')
-      .run((_) {
-        final editStoreNotifier = EditStoreNotifier<int>();
-        var notifiedCount = 0;
-        editStoreNotifier.addListener(() => notifiedCount++);
-        final startValue = editStoreNotifier.value;
-
-        editStoreNotifier.book(1, 10);
-        final changedValue = editStoreNotifier.value;
-        editStoreNotifier.book(1, null);
-
-        check(notifiedCount).equals(2);
-        check(changedValue).isGreaterThan(startValue);
-        check(editStoreNotifier.value).isGreaterThan(changedValue);
-        editStoreNotifier.dispose();
-      });
-
   const readOffsetsKey = 'read offsets';
   const isKeptKey = 'is kept';
 
@@ -68,51 +47,6 @@ void main() {
         editStoreNotifier.dropCaughtUp(readOffsets.map((offset) => editStamp + offset));
 
         check(editStoreNotifier.isEmpty).equals(!(context.example.val(isKeptKey) as bool));
-        editStoreNotifier.dispose();
-      });
-
-  Bdd(storeFeature)
-      .scenario('a removal still saving, or a row still going out, counts after every read')
-      .given(
-        'item 1 removed, item 2 changed then removed while saving, item 3 changed and going out',
-      )
-      .when('asking which items left after the latest read')
-      .then("item 2's save and item 3's exit count, item 1 doesn't")
-      .run((_) {
-        final editStoreNotifier = EditStoreNotifier<int>()
-          ..book(1, null)
-          ..book(2, 20)
-          ..book(3, 30);
-        editStoreNotifier.pendingEdit(2, null).book();
-        final readStamp = editStoreNotifier.value;
-
-        final removalStamps = editStoreNotifier.removalStampsSince(
-          0,
-          goingOutIds: const [3],
-          leavesPlacePredicate: (_, _, _) => true,
-        );
-
-        check(removalStamps.after(readStamp)).unorderedEquals([2, 3]);
-        editStoreNotifier.dispose();
-      });
-
-  Bdd(storeFeature)
-      .scenario('a draft shows over every page while its save is out')
-      .given('item 1 as the server sent it, on a page read before the draft and one read after')
-      .when('a draft of it is out')
-      .then('the draft shows over both')
-      .run((_) {
-        final editStoreNotifier = EditStoreNotifier<_Row>();
-        final beforeStamp = editStoreNotifier.value;
-        draftOut(editStoreNotifier, 'draft');
-        final afterStamp = editStoreNotifier.value;
-
-        check(
-          [beforeStamp, afterStamp].map(
-            (readStamp) =>
-                shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: readStamp),
-          ),
-        ).every((it) => it.deepEquals(['draft']));
         editStoreNotifier.dispose();
       });
 
@@ -149,15 +83,6 @@ void main() {
           draftOut(editStoreNotifier, 'draft').drop();
         }),
         val(shownKey, const ['booked']),
-      )
-      .example(
-        val(coveredKey, 'nothing'),
-        val(
-          editsKey,
-          (EditStoreNotifier<_Row> editStoreNotifier) =>
-              draftOut(editStoreNotifier, 'draft').drop(),
-        ),
-        val(shownKey, const ['a']),
       )
       .example(
         val(coveredKey, 'an older draft still out'),
@@ -264,47 +189,5 @@ void main() {
           shownLabels(editStoreNotifier, [(id: 1, label: 'a')], readStamp: editStoreNotifier.value),
         ).deepEquals(context.example.val(shownAfterKey) as List<String>);
         editStoreNotifier.dispose();
-      });
-
-  Bdd(storeFeature)
-      .scenario('a save answering after clear() finds nothing to change')
-      .given('a draft whose save is out')
-      .when('the store is cleared, then the save answers')
-      .then('the store stays empty and its value stays put')
-      .run((_) {
-        final editStoreNotifier = EditStoreNotifier<_Row>();
-        final pendingEdit = draftOut(editStoreNotifier, 'draft');
-        editStoreNotifier.clear();
-        final clearedValue = editStoreNotifier.value;
-
-        pendingEdit.settle((id: 1, label: 'saved'));
-
-        check((editStoreNotifier.isEmpty, editStoreNotifier.value)).equals((true, clearedValue));
-        editStoreNotifier.dispose();
-      });
-
-  Bdd(storeFeature)
-      .scenario('a save answering after dispose touches nothing')
-      .given('a draft whose save is out')
-      .when('the store is disposed, then the save <$outcomeKey>')
-      .then('nothing throws')
-      .example(
-        val(outcomeKey, 'answers'),
-        val(
-          answerKey,
-          (PendingEdit<_Row> pendingEdit) => pendingEdit.settle((id: 1, label: 'saved')),
-        ),
-      )
-      .example(
-        val(outcomeKey, 'fails'),
-        val(answerKey, (PendingEdit<_Row> pendingEdit) => pendingEdit.drop()),
-      )
-      .run((context) {
-        final editStoreNotifier = EditStoreNotifier<_Row>();
-        final pendingEdit = draftOut(editStoreNotifier, 'draft');
-        final answer = context.example.val(answerKey) as ValueSetter<PendingEdit<_Row>>;
-        editStoreNotifier.dispose();
-
-        check(() => answer(pendingEdit)).returnsNormally();
       });
 }

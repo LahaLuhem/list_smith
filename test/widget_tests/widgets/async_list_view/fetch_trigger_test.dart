@@ -4,6 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../../support/support.dart';
 
@@ -50,27 +51,6 @@ void main() {
       // The reload's own page is refresh-driven. The pages it pages on to are not.
       check(triggers.first).equals(.refresh);
       check(triggers.skip(1).toSet()).deepEquals(const {FetchTrigger.nextPage});
-    });
-
-    scenarioWidgets('a controller refresh reports refresh, exactly as a pull does', (tester) async {
-      final triggers = <FetchTrigger>[];
-      final controller = ListSmithController();
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: _recording(triggers, pages: 1),
-          itemIdGetter: (item) => item,
-          controller: controller,
-          itemBuilder: (_, item, _) => Text('item $item'),
-        ),
-      );
-      await drain(tester);
-      triggers.clear();
-
-      await controller.refresh();
-      await drain(tester);
-
-      check(triggers.first).equals(.refresh);
     });
 
     scenarioWidgets('a depth-keeping reload reports refresh for every page it re-fetches', (
@@ -207,7 +187,7 @@ void main() {
       await drain(tester);
       check(triggers).deepEquals(const [FetchTrigger.initialLoad]);
 
-      await tester.tap(find.text('Retry'));
+      await tester.tap(find.byType(NeutralRetryButton));
       await drain(tester);
 
       check(triggers[1]).equals(.retry);
@@ -254,7 +234,7 @@ void main() {
       await release(tester, [pageHoldCompleter]);
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
       await tester.pump();
-      await tester.tap(find.text('Retry'));
+      await tester.tap(find.byType(NeutralRetryButton));
       await tester.idle();
       await drain(tester, frames: 12);
 

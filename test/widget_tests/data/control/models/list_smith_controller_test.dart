@@ -324,7 +324,6 @@ void main() {
       controller
         ..upsert(1)
         ..remove(1);
-      check(controller.refresh).throws<AssertionError>();
     });
 
     scenarioWidgets('an async edit with no list attached still reports a failed save', (

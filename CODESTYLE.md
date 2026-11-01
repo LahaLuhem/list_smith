@@ -798,7 +798,6 @@ re-exported by the `support.dart` barrel, so import that one file:
 | `FakeServer(items)`                                                            | a store to edit mid-test, with fetchers you can hold or fail per page and attempt                                   |
 | `release(tester, holdCompleters)`                                              | lets held fetches through, then drains                                                                              |
 | `ToggleRow(item)`, `shownToggleRows()`                                         | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen                                  |
-| `check(value).readsAsItself()`                                                 | its `toString` isn't Dart's default `Instance of '…'`                                                               |
 
 A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin
 delegation carrying only that suite's own `ListSmith` config, never a re-declared scaffold or drain
@@ -806,6 +805,27 @@ loop. For the observer, extend `ListSmithObserver` with a recording double like
 `RecordingListSmithObserver`. A mock generator can't help: the observer is `abstract base`, so
 mockito's generated `implements` won't compile against it, and nothing else at the test seams is
 class-shaped to mock.
+
+<a id="test-conventions"></a>
+### Conventions
+
+- **Test the library, not its dependencies.** Flutter and the packages in `pubspec.yaml` carry their
+  own suites, and what a dependency does by itself (an indicator's drag physics, a pool's queue) is
+  its authors' to test. Test what list_smith adds on top, like the key a row gets or the order it
+  wires things in.
+- **A test pins a behaviour a user would agree with, said as a sentence.** A value that only carries
+  it (a default, a log line, an enum's name) isn't one: compare against its source or the state
+  before.
+- **A guarantee the design rests on is a behaviour too,** even with no screen to show it breaking: a
+  rebuild with the same items never runs `groupBy` again.
+- **One behaviour, one scenario.** A check another scenario already makes goes, one that 2
+  scenarios share moves into a scenario of its own, and each example row takes a branch no other
+  row does.
+- **Assert what the user gets, not the string,** unless 2 messages on one screen mean different
+  things.
+- **Prove a regression test fails:** break what it guards, watch it go red, put it back.
+- **A scenario asserting that nothing happened needs the same in reverse:** break the mechanism
+  itself and watch it go red, or it passes just as happily when the feature never worked at all.
 
 ---
 

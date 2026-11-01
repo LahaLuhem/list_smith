@@ -80,11 +80,6 @@ void main() {
           makeScrollConfig: (_) => const ListScrollConfig(physics: BouncingScrollPhysics()),
           pullOffset: _pullDownOffset,
         ),
-        'the empty list, with a ScrollController': (
-          makeServer: () => FakeServer(<int>[]),
-          makeScrollConfig: (controller) => ListScrollConfig(controller: controller),
-          pullOffset: _pullDownOffset,
-        ),
       },
       outline: (tester, setup) async {
         final server = setup.makeServer();

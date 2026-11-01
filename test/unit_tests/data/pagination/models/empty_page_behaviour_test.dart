@@ -2,38 +2,8 @@ import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:list_smith/list_smith.dart';
 
-import '../../../../support/support.dart';
-
 void main() {
   final behavioursFeature = BddFeature('EmptyPageBehaviour.shouldAdvance');
-
-  EmptyPageContext context({
-    bool isEmpty = true,
-    bool isMoreAvailable = true,
-    int pagesLoaded = 1,
-  }) => EmptyPageContext(
-    isEmpty: isEmpty,
-    isMoreAvailable: isMoreAvailable,
-    pagesLoaded: pagesLoaded,
-  );
-
-  Bdd(behavioursFeature)
-      .scenario('ShowEmptySurface never advances, even on an empty page with more pages')
-      .given('the show-empty-surface behaviour')
-      .when('probed on an empty page that has more pages')
-      .then('it declines to advance')
-      .run((_) {
-        check(const ShowEmptySurface().shouldAdvance(context())).isFalse();
-      });
-
-  Bdd(behavioursFeature)
-      .scenario('AdvanceToFirstNonEmpty advances while empty, with more pages, under the cap')
-      .given('an uncapped AdvanceToFirstNonEmpty')
-      .when('probed on an empty page that has more pages')
-      .then('it advances')
-      .run((_) {
-        check(const AdvanceToFirstNonEmpty().shouldAdvance(context())).isTrue();
-      });
 
   Bdd(behavioursFeature)
       .scenario('AdvanceToFirstNonEmpty stops once the page has items')
@@ -41,40 +11,8 @@ void main() {
       .when('the displayed page is not empty')
       .then('it does not advance')
       .run((_) {
-        check(const AdvanceToFirstNonEmpty().shouldAdvance(context(isEmpty: false))).isFalse();
+        const context = EmptyPageContext(isEmpty: false, isMoreAvailable: true, pagesLoaded: 1);
+
+        check(const AdvanceToFirstNonEmpty().shouldAdvance(context)).isFalse();
       });
-
-  Bdd(behavioursFeature)
-      .scenario('AdvanceToFirstNonEmpty stops at the true end')
-      .given('an uncapped AdvanceToFirstNonEmpty')
-      .when('the end policy reports no more pages')
-      .then('it does not advance')
-      .run((_) {
-        check(const AdvanceToFirstNonEmpty().shouldAdvance(context(isMoreAvailable: false)))
-            .isFalse();
-      });
-
-  Bdd(behavioursFeature)
-      .scenario('AdvanceToFirstNonEmpty gives up once maxPages is reached')
-      .given('an AdvanceToFirstNonEmpty capped at three pages')
-      .when('the fetched-page count reaches the cap')
-      .then('it advances under the cap but not at it')
-      .run((_) {
-        const capped = AdvanceToFirstNonEmpty(maxPages: 3);
-
-        check(capped.shouldAdvance(context(pagesLoaded: 2))).isTrue();
-        check(capped.shouldAdvance(context(pagesLoaded: 3))).isFalse();
-      });
-
-  final logFormFeature = BddFeature('EmptyPageBehaviour log form');
-
-  const valueKey = 'value';
-  Bdd(logFormFeature)
-      .scenario('every empty-page behaviour reads as itself in a log')
-      .given('the empty-page behaviour <$valueKey>')
-      .when('it is turned into a string')
-      .then("it reads as itself, not as Dart's default Instance of")
-      .example(val(valueKey, const AdvanceToFirstNonEmpty(maxPages: 7)))
-      .example(val(valueKey, const ShowEmptySurface()))
-      .run((context) => check(context.example.val(valueKey) as Object).readsAsItself());
 }

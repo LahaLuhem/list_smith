@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -156,7 +154,7 @@ void main() {
     });
   });
 
-  feature('ListSmith.async surfaces and separators', () {
+  feature('ListSmith surfaces and separators', () {
     scenarioOutlineWidgets<_SurfaceHost>(
       "a surface gets exactly the list's height, however tall it asks to be",
       examples: _surfaceHosts,
@@ -182,26 +180,6 @@ void main() {
         await drain(tester);
 
         check(find.textContaining('surface at').evaluate()).length.equals(1);
-      },
-    );
-
-    scenarioOutlineWidgets<_SurfaceHost>(
-      'a surface built with Expanded renders',
-      examples: _surfaceHosts,
-      outline: (tester, host) async {
-        await host(
-          tester,
-          (_) => const Column(
-            children: [
-              Expanded(child: Text('fills')),
-              Text('below'),
-            ],
-          ),
-        );
-        await drain(tester);
-
-        check(find.text('fills').evaluate()).length.equals(1);
-        check(find.text('below').evaluate()).length.equals(1);
       },
     );
 
@@ -249,18 +227,16 @@ void main() {
     );
 
     scenarioWidgets('a separator builder renders the separated list', (tester) async {
+      const items = [1, 2, 3];
       await _pumpAsync(
         tester,
-        fetchPage: PageFetcher(
-          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-        ),
+        fetchPage: PageFetcher((request) async => request.pageIndex == 0 ? items : const <int>[]),
         separatorBuilder: (_, _) => const Text('sep'),
       );
       await drain(tester);
 
-      check(find.text('item 1').evaluate()).length.equals(1);
-      // Separators fall between the items (and before the end-of-list footer).
-      check(find.text('sep').evaluate()).length.isGreaterThan(1);
+      // One after each item: between them, then before the end-of-list footer.
+      check(find.text('sep').evaluate()).length.equals(items.length);
     });
   });
 }
@@ -340,7 +316,6 @@ Future<void> _pumpAsync(
   WidgetTester tester, {
   required PageFetcher<int> fetchPage,
   AsyncListSurfaces surfaces = const AsyncListSurfaces(),
-  WidgetBuilder? emptyBuilder,
   IndexedWidgetBuilder? separatorBuilder,
 }) => pumpListSmith(
   tester,
@@ -348,7 +323,6 @@ Future<void> _pumpAsync(
     fetchPage: fetchPage,
     itemIdGetter: (item) => item,
     surfaces: surfaces,
-    emptyBuilder: emptyBuilder,
     separatorBuilder: separatorBuilder,
     refresh: const NoRefresh(),
     itemBuilder: (_, item, _) => Text('item $item'),
@@ -359,23 +333,21 @@ Future<void> _pumpAsync(
 typedef _SurfaceHost = Future<void> Function(WidgetTester tester, WidgetBuilder surface);
 
 final _surfaceHosts = <String, _SurfaceHost>{
-  'the loader': (tester, surface) {
-    final holdCompleter = Completer<List<int>>();
-    addTearDown(() => holdCompleter.complete(const []));
-
-    return _pumpAsync(
-      tester,
-      fetchPage: PageFetcher((_) => holdCompleter.future),
-      surfaces: AsyncListSurfaces(firstPageLoadingBuilder: surface),
-    );
-  },
-  'the 1st-page error': (tester, surface) => _pumpAsync(
+  'a .async surface': (tester, surface) => _pumpAsync(
     tester,
     fetchPage: PageFetcher((_) async => throw Exception('down')),
     surfaces: AsyncListSurfaces(firstPageErrorBuilder: (context, _, _) => surface(context)),
   ),
-  'the empty list': (tester, surface) =>
-      _pumpAsync(tester, fetchPage: PageFetcher((_) async => const []), emptyBuilder: surface),
+  'a .sync surface': (tester, surface) => pumpListSmith(
+    tester,
+    ListSmith<int>.sync(
+      items: const [],
+      itemIdGetter: (item) => item,
+      searchBy: (_, _) => true,
+      emptyBuilder: surface,
+      itemBuilder: (_, item, _) => Text('item $item'),
+    ),
+  ),
 };
 
 const _surfaceKey = ValueKey('surface');

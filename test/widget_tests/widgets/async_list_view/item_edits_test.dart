@@ -379,6 +379,7 @@ void main() {
     Future<(FakeServer<_Row>, ListSmithController<_Row>)> pumpRows(
       WidgetTester tester, {
       Refresh refresh = const PullToRefresh(reload: ReloadToCurrentDepth()),
+      EditTransition editTransition = const NoEditTransition(),
     }) async {
       final server = FakeServer<_Row>([(id: 1, label: 'a'), (id: 2, label: 'b')]);
       final controller = await _pumpList<_Row>(
@@ -388,6 +389,7 @@ void main() {
         labelOf: _rowLabel,
         endPolicy: const FixedPageCountPolicy(pageCount: 1),
         refresh: refresh,
+        editTransition: editTransition,
       );
       await drain(tester);
 
@@ -629,6 +631,25 @@ void main() {
       check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
     });
 
+    scenarioWidgets('a delete whose save throws an Error is undone, and the Error goes on', (
+      tester,
+    ) async {
+      final (_, controller) = await pumpRows(tester);
+      final deleteCompleter = Completer<void>();
+      final removedFuture = controller.removeAsync((
+        id: 2,
+        label: 'b',
+      ), commit: deleteCompleter.future);
+      await tester.pump();
+      check(_shownRows()).deepEquals(_rows(['1 a'])); // premise: hidden while the save is out
+
+      deleteCompleter.completeError(StateError('bug in the delete'));
+
+      await check(removedFuture).throws<StateError>();
+      await tester.pump();
+      check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
+    });
+
     scenarioWidgets('reset() mid-save drops the draft, and its late answer changes nothing', (
       tester,
     ) async {
@@ -652,38 +673,46 @@ void main() {
       check(_shownRows()).deepEquals(_rows(['1 a', '2 b']));
     });
 
-    scenarioWidgets('saves answering after the list is gone still finish, failures reported', (
-      tester,
-    ) async {
-      final (_, controller) = await pumpRows(tester);
-      final saveCompleter = Completer<_Row>();
-      final createCompleter = Completer<_Row>();
-      final deleteCompleter = Completer<void>();
-      final reportedExceptions = <Exception>[];
-      final savedFuture = controller.upsertAsync((
-        id: 1,
-        label: 'mine',
-      ), commit: saveCompleter.future);
-      final createdFuture = controller.upsertAsync(
-        (id: 9, label: 'new'),
-        commit: createCompleter.future,
-        onFailure: reportedExceptions.add,
-      );
-      final removedFuture = controller.removeAsync(
-        (id: 2, label: 'b'),
-        commit: deleteCompleter.future,
-        onFailure: reportedExceptions.add,
-      );
-      await tester.pump();
+    scenarioOutlineWidgets<EditTransition>(
+      'saves answering after the list is gone still finish, failures reported',
+      examples: const {
+        'rows changing at once': NoEditTransition(),
+        'rows animating in and out': EditTransition(
+          duration: Duration(milliseconds: 300),
+          transitionBuilder: AnimatedSwitcher.defaultTransitionBuilder,
+        ),
+      },
+      outline: (tester, editTransition) async {
+        final (_, controller) = await pumpRows(tester, editTransition: editTransition);
+        final saveCompleter = Completer<_Row>();
+        final createCompleter = Completer<_Row>();
+        final deleteCompleter = Completer<void>();
+        final reportedExceptions = <Exception>[];
+        final savedFuture = controller.upsertAsync((
+          id: 1,
+          label: 'mine',
+        ), commit: saveCompleter.future);
+        final createdFuture = controller.upsertAsync(
+          (id: 9, label: 'new'),
+          commit: createCompleter.future,
+          onFailure: reportedExceptions.add,
+        );
+        final removedFuture = controller.removeAsync(
+          (id: 2, label: 'b'),
+          commit: deleteCompleter.future,
+          onFailure: reportedExceptions.add,
+        );
+        await tester.pump();
 
-      await tester.pumpWidget(const SizedBox()); // the list goes
-      saveCompleter.complete((id: 1, label: 'saved'));
-      createCompleter.completeError(Exception('save failed'));
-      deleteCompleter.completeError(Exception('delete failed'));
-      await (savedFuture, createdFuture, removedFuture).wait;
+        await tester.pumpWidget(const SizedBox()); // the list goes
+        saveCompleter.complete((id: 1, label: 'saved'));
+        createCompleter.completeError(Exception('save failed'));
+        deleteCompleter.completeError(Exception('delete failed'));
+        await (savedFuture, createdFuture, removedFuture).wait;
 
-      check(reportedExceptions).length.equals(2);
-    });
+        check(reportedExceptions).length.equals(2);
+      },
+    );
   });
 }
 
@@ -697,6 +726,7 @@ Future<ListSmithController<T>> _pumpList<T extends Object>(
   PaginationEndPolicy endPolicy = const StopOnEmptyPagesPolicy(),
   EmptyPageBehaviour onEmptyPage = const ShowEmptySurface(),
   Refresh refresh = const PullToRefresh(),
+  EditTransition editTransition = const NoEditTransition(),
   Grouping<T>? grouping,
   Search<T> search = const NoSearch(),
   String query = '',
@@ -713,6 +743,7 @@ Future<ListSmithController<T>> _pumpList<T extends Object>(
       endPolicy: endPolicy,
       onEmptyPage: onEmptyPage,
       refresh: refresh,
+      editTransition: editTransition,
       itemIdGetter: itemIdGetter,
       grouping: grouping,
       search: search,

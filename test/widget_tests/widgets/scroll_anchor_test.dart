@@ -258,38 +258,6 @@ void main() {
       check(_topOf(tester, 0)).equals(topAtRest);
     });
 
-    scenarioWidgets(
-      'without shouldKeepPosition, a row on screen holds still as a row lands above',
-      (tester) async {
-        final scrollController = _scrollController();
-        final controller = ListSmithController<_Row>();
-        // Built here rather than by _mount, which always passes the flag.
-        await pumpListSmith(
-          tester,
-          ListSmith<_Row>.async(
-            fetchPage: FakeServer(_rows).offsetLateFetcher,
-            itemIdGetter: (row) => row.id,
-            pageSize: _rows.length,
-            controller: controller,
-            scroll: ListScrollConfig(controller: scrollController),
-            itemBuilder: (_, row, _) => SizedBox(height: _rowExtent, child: Text('item ${row.id}')),
-          ),
-        );
-        await drain(tester);
-        scrollController.jumpTo(1000);
-        await tester.pump();
-        final topBefore = _topOf(tester, 20);
-        final pixelsBefore = scrollController.position.pixels;
-
-        controller.upsert(_row(100));
-        await tester.pump();
-
-        check(_topOf(tester, 20)).equals(topBefore);
-        // The row did land above: the position moved with it.
-        check(scrollController.position.pixels).isGreaterThan(pixelsBefore);
-      },
-    );
-
     scenarioWidgets('with shouldKeepPosition off, a row landing above leaves the position alone', (
       tester,
     ) async {

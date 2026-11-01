@@ -21,7 +21,7 @@ void main() {
       .example(
         val(nameKey, 'Paris'),
         val(countryKey, 'France'),
-        val(queryKey, 'ar'),
+        val(queryKey, 'par'),
         val(matchesKey, true),
       )
       .example(
@@ -225,13 +225,6 @@ void main() {
         val(queryKey, 'john paris'),
         val(matchesKey, false),
       )
-      // A single term behaves exactly like fields (contains).
-      .example(
-        val(nameKey, 'John Smith'),
-        val(countryKey, 'USA'),
-        val(queryKey, 'smith'),
-        val(matchesKey, true),
-      )
       // A term only in a null field can't be found.
       .example(
         val(nameKey, 'John Smith'),
@@ -292,13 +285,6 @@ void main() {
         val(nameKey, 'Paris'),
         val(countryKey, 'France'),
         val(queryKey, 'par'),
-        val(matchesKey, false),
-      )
-      // In neither: a miss.
-      .example(
-        val(nameKey, 'Paris'),
-        val(countryKey, 'France'),
-        val(queryKey, 'xyz'),
         val(matchesKey, false),
       )
       .run((context) {

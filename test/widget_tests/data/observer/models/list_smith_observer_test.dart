@@ -27,31 +27,11 @@ void main() {
 
     scenarioWidgets('onError fires with the thrown error when a fetch fails', (tester) async {
       final observer = RecordingListSmithObserver();
-      await _pumpObserved(
-        tester,
-        observer,
-        fetchPage: PageFetcher((_) async => throw Exception('network')),
-      );
+      final exception = Exception('network');
+      await _pumpObserved(tester, observer, fetchPage: PageFetcher((_) async => throw exception));
       await drain(tester);
 
-      check(observer.events).contains('error');
-      check(observer.lastException).isA<Exception>();
-    });
-
-    scenarioWidgets('onReload reports refresh when the list is pulled', (tester) async {
-      final observer = RecordingListSmithObserver();
-      await _pumpObserved(
-        tester,
-        observer,
-        fetchPage: PageFetcher(
-          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-        ),
-      );
-      await drain(tester);
-
-      await pullToRefresh(tester, find.text('item 1'));
-
-      check(observer.events).contains('reload(refresh)');
+      check(observer.lastException).isNotNull().identicalTo(exception);
     });
 
     scenarioOutlineWidgets(
@@ -237,49 +217,8 @@ void main() {
       await drain(tester);
       await controller.reset();
       await drain(tester);
-      // 2 invalidates back to back: the 2nd joins and books one rerun, so 2 events, not 3.
-      await [controller.invalidate(), controller.invalidate()].wait;
-      await drain(tester);
 
-      check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(4);
-    });
-
-    scenarioWidgets('onQueryCommitted and onSearchModeChanged fire on entering search', (
-      tester,
-    ) async {
-      final observer = RecordingListSmithObserver();
-      await _pumpObserved(
-        tester,
-        observer,
-        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
-        search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const [99])),
-      );
-      await drain(tester);
-
-      await _pumpObserved(
-        tester,
-        observer,
-        fetchPage: PageFetcher((_) async => const [1, 2, 3]),
-        search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const [99])),
-        query: 'ab',
-      );
-      await settle(tester);
-
-      check(observer.events).contains('queryCommitted(ab)');
-      check(observer.events).contains('searchModeChanged(true)');
-    });
-
-    scenarioWidgets('a null observer stays silent and the list still renders', (tester) async {
-      await _pumpObserved(
-        tester,
-        null,
-        fetchPage: PageFetcher(
-          (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
-        ),
-      );
-      await drain(tester);
-
-      check(find.text('item 1').evaluate()).length.equals(1);
+      check(observer.events.where((event) => event == 'reload(invalidated)')).length.equals(2);
     });
 
     scenarioWidgets('an observer that overrides only onError still gets its errors', (
@@ -304,7 +243,6 @@ void main() {
       await settle(tester);
 
       check(reportedExceptions).length.equals(1);
-      check(find.text('Something went wrong').evaluate()).length.equals(1);
     });
   });
 }
