@@ -13,7 +13,7 @@ import 'scroll_anchor.dart';
 /// go, it keeps its state and anything it's animating.
 @internal
 class const KeyedListView<T extends Object>({
-  /// The rows, formed into sections where the data lands, so a rebuild doesn't form them again.
+  /// The rows in sections, formed where the data lands, not per build.
   required final Sections<T> sections,
 
   /// Builds each row.

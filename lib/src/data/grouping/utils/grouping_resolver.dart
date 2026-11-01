@@ -14,8 +14,7 @@ import '../typedefs/group_key_of.dart';
 List<T> bucketByGroup<T extends Object>(Iterable<T> items, GroupKeyOf<T, Object> keyOf) =>
     items.groupListsBy(keyOf).values.flattened.toList(growable: false);
 
-/// Each group's header, at its 1st item. `CellLayout` moves it after the group's last item on a
-/// reversed list.
+/// Each group's header, at its 1st item. `CellLayout` handles a reversed list.
 ///
 /// When a key comes back after its run, [policy] either gathers [pagedItems] into `gatheredItems` or
 /// throws. It stays null for grouped items, so they're never copied.
@@ -47,8 +46,8 @@ List<T> bucketByGroup<T extends Object>(Iterable<T> items, GroupKeyOf<T, Object>
 
 /// A header at the start of each group's run, or null once a key comes back after its run.
 ///
-/// Loops over the pages, not a flatten of them, since it runs per item each time the shown items change
-/// (`APPENDIX.md#scan-loops`). It doubles as the order check, so grouped items need no 2nd pass.
+/// A loop over the pages, not their flatten (`APPENDIX.md#scan-loops`). It doubles as the order check,
+/// so grouped items need no 2nd pass.
 @visibleForTesting
 List<GroupHeader>? groupHeadersIfContiguous<T extends Object>(
   List<List<T>> pagedItems,

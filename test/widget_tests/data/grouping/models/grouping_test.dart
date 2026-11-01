@@ -14,7 +14,7 @@ void main() {
   Grouping<_Item> oneSection() =>
       Grouping.by(groupBy: (_) => 'all', headerBuilder: (_, key) => Text('section $key'));
 
-  // Counts groupBy's calls, so a test sees whenever the sections form.
+  // Counts groupBy's calls, so a test sees the sections form.
   ({Grouping<_Item> grouping, ValueGetter<int> callCountGetter}) countingByGroup() {
     var callCount = 0;
 
@@ -148,7 +148,7 @@ void main() {
     });
 
     scenarioWidgets('a new grouping re-forms the sections at once', (tester) async {
-      // Built once, so the switch is all that changes between the 2 builds.
+      // Built once, so only the grouping changes.
       final fetchPage = pagedFetcher(const [
         [(group: 'A', label: 'apple'), (group: 'B', label: 'banana')],
       ]);

@@ -11,10 +11,9 @@ void main() {
   const isHeaderAfterItemKey = 'isHeaderAfterItem';
   const cellsKey = 'cells';
 
-  // Groups a (items 0 and 1) and b (item 2): headers before items 0 and 2, or after 1 and 2 as on a
-  // reversed list.
+  // a: items 0 and 1, b: item 2.
   const longFirstGroupHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 2, key: 'b')];
-  // Groups a (item 0) and b (items 1 and 2), so a reversed list puts b's header after the last item.
+  // a: item 0, b: items 1 and 2, so b's reversed header isn't at its start.
   const longLastGroupHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 1, key: 'b')];
 
   CellLayout layoutOf(BddContext context) => CellLayout(

@@ -684,9 +684,9 @@ Worth knowing:
 
 - **Type the `groupBy` parameter**, or pass a typed function reference, so the key type infers
   instead of widening to `Object`.
-- **Hold the `Grouping` stable** on a large list: keep it in a field. One built inline is new on
-  every rebuild, so each rebuild forms the sections again, and `.sync` re-buckets too. That cost is
-  in [Performance](#performance).
+- **Hold the `Grouping` stable** on a large list: keep it in a field. One built inline re-forms the
+  sections on every rebuild, and on `.sync` re-buckets too. That cost is in
+  [Performance](#performance).
 
 </details>
 

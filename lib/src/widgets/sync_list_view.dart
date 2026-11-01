@@ -195,7 +195,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   }
 }
 
-/// What renders for the committed query, as items and in sections, and whether it's a search.
+/// What renders for the committed query.
 typedef _Display<T extends Object> = ({
   List<T> visibleItems,
   Sections<T> sections,
