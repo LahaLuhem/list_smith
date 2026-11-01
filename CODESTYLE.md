@@ -10,22 +10,42 @@ focused classes.
 Every heading carries an explicit `<a id="…">` anchor. Link by anchor, not heading text, so renames
 don't break callers.
 
-<!-- TOC start -->
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
-- [Type safety & nullability](#type-safety)
+- [Type safety & nullability](#type-safety--nullability)
 - [Naming](#naming)
 - [Directory layout](#directory-layout)
 - [Imports](#imports)
 - [Formatting](#formatting)
-- [Constants & magic numbers](#constants)
+- [Constants & magic numbers](#constants--magic-numbers)
 - [Class structure](#class-structure)
-- [Package-specific patterns](#package-patterns)
+- [Package-specific patterns](#package-specific-patterns)
+    * [Behaviour lives in the sealed type, not in an orchestrator type-switch](#behaviour-lives-in-the-sealed-type-not-in-an-orchestrator-type-switch)
+    * [A consumer handle carries intents, never engine state](#a-consumer-handle-carries-intents-never-engine-state)
 - [Idioms](#idioms)
-- [Prose & voice](#prose)
-- [Comments & dartdoc](#dartdoc)
-- [DCM rules (applied by hand)](#dcm-rules)
+    * [Static dot shorthands](#static-dot-shorthands)
+    * [Drop redundant `<Type>` on collection literals](#drop-redundant-type-on-collection-literals)
+    * [The SDK's callback typedefs over written-out function types](#the-sdks-callback-typedefs-over-written-out-function-types)
+    * [`Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps](#rowspacing--columnspacing--wrapspacing-over-interleaved-sizedbox-gaps)
+    * [Enhanced enums for per-variant config](#enhanced-enums-for-per-variant-config)
+    * [`Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops](#navigatormaybeof-over-navigatorof-for-fire-and-forget-pops)
+    * [Collection-`for` / collection-`if` over `Iterable.map(…).toList()`](#collection-for--collection-if-over-iterablemaptolist)
+    * [Library pipeline methods over hand-rolled loops (for data manipulation)](#library-pipeline-methods-over-hand-rolled-loops-for-data-manipulation)
+    * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
+    * [`Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value](#futuresyncvaluex-over-futuresync--x-for-an-already-available-value)
+    * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
+    * [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs](#urihttps--urihttp-over-uriparse-for-known-urls)
+    * [`part` / `part of` only when structurally needed](#part--part-of-only-when-structurally-needed)
+    * [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#valuenotifier--valuelistenablebuilder-over-setstate)
+    * [Plain `if`s over clever `switch` arms](#plain-ifs-over-clever-switch-arms)
+    * [Catch `Exception`, let `Error` through](#catch-exception-let-error-through)
+- [Prose & voice](#prose--voice)
+- [Comments & dartdoc](#comments--dartdoc)
+    * [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
+- [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
 - [Test style](#test-style)
-- [Documentation conventions (Markdown)](#documentation-conventions)
+    * [Conventions](#conventions)
+- [Documentation conventions (Markdown)](#documentation-conventions-markdown)
 
 <!-- TOC end -->
 
@@ -428,12 +448,12 @@ rather than defining parallel `kDefault<Variant>Xxx` constants the build site br
 ```dart
 // Prefer:
 enum LoadState {
-  idle(showsSpinner: false),
-  loading(showsSpinner: true),
-  error(showsSpinner: false);
+    idle(showsSpinner: false),
+    loading(showsSpinner: true),
+    error(showsSpinner: false);
 
-  final bool showsSpinner;
-  const LoadState({required this.showsSpinner});
+    final bool showsSpinner;
+    const LoadState({required this.showsSpinner});
 }
 
 // Over: parallel kDefault… constants + a plain enum + per-arm lookups.
@@ -469,7 +489,7 @@ reads as data, where `.map(…).toList()` reads as a pipeline that happens to pr
 ```dart
 // Prefer:
 children: [
-  for (final item in items) ListTile(title: Text(item.label)),
+for (final item in items) ListTile(title: Text(item.label)),
 ]
 
 // Over:
@@ -505,7 +525,7 @@ final newItems = incoming.toSet().difference(seenIds);
 // Over, a loop that re-derives `difference` by hand:
 final newItems = <Item>{};
 for (final item in incoming) {
-  if (!seenIds.contains(item.id)) newItems.add(item);
+if (!seenIds.contains(item.id)) newItems.add(item);
 }
 ```
 
@@ -594,8 +614,8 @@ late final _result = ValueNotifier(_resolve());
 void _onChanged() => _result.value = _resolve();
 @override
 Widget build(BuildContext context) => ValueListenableBuilder(
-  valueListenable: _result,
-  builder: (context, result, _) => /* only the part that depends on result */,
+    valueListenable: _result,
+    builder: (context, result, _) => /* only the part that depends on result */,
 );
 
 // Over: setState re-runs all of build, and nothing marks which part actually changed.
@@ -623,12 +643,12 @@ if (debt != null) unawaited(_runReload(debt));
 
 // Over:
 switch (snapshot) {
-  case null:
-    observer?.onReload(.queryChanged);
-  case _Snapshot(:final debt?):
-    unawaited(_runReload(debt));
-  case _Snapshot(debt: null):
-  // nothing to do
+case null:
+observer?.onReload(.queryChanged);
+case _Snapshot(:final debt?):
+unawaited(_runReload(debt));
+case _Snapshot(debt: null):
+// nothing to do
 }
 ```
 
@@ -644,13 +664,13 @@ An `Exception` is a failure the code can handle, so catch it, and type whatever 
 ```dart
 // Prefer:
 } on Exception catch (exception) {
-  state = state.failed(exception);
+state = state.failed(exception);
 }
 
 // Over: handles a bug as if it were a failure.
 } on Object catch (error) {
-  state = state.copyWith(error: error);
-  if (error is! Exception) rethrow;
+state = state.copyWith(error: error);
+if (error is! Exception) rethrow;
 }
 ```
 

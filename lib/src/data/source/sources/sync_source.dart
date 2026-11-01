@@ -23,5 +23,6 @@ final class const SyncSource<T extends Object>({
   this;
 
   @override
-  String toString() => 'SyncSource(shouldKeepPosition: $shouldKeepPosition)';
+  String toString() =>
+      'SyncSource(items: ${items.length}, shouldKeepPosition: $shouldKeepPosition)';
 }

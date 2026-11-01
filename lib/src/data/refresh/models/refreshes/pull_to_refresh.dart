@@ -39,5 +39,10 @@ final class const PullToRefresh({
   };
 
   @override
-  String toString() => 'PullToRefresh()';
+  String toString() =>
+      'PullToRefresh('
+      'indicatorExtent: $indicatorExtent, '
+      'reload: $reload, '
+      'pullableSurfaces: $pullableSurfaces'
+      ')';
 }
