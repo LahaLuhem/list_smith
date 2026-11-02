@@ -205,25 +205,23 @@ void main() {
       check(scrollController.hasClients).isTrue();
     });
 
-    scenarioWidgets('without ids, keeping its position is an error', (tester) async {
+    scenarioWidgets('without ids, asking to keep the position is an error', (tester) async {
       check(
         () => ListSmith<int>.sync(
           items: const [1],
           searchBy: (_, _) => true,
+          shouldKeepPosition: true,
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       ).throws<AssertionError>();
     });
 
-    scenarioWidgets('without ids, a list that keeps no position still shows its rows', (
-      tester,
-    ) async {
+    scenarioWidgets('without ids, a list still shows its rows', (tester) async {
       await pumpListSmith(
         tester,
         ListSmith<int>.sync(
           items: const [1, 2],
           searchBy: (_, _) => true,
-          shouldKeepPosition: false,
           itemBuilder: (_, item, _) => Text('item $item'),
         ),
       );

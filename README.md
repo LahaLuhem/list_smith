@@ -497,9 +497,8 @@ setState(() => _contacts = [..._contacts, added]);  // not _contacts.add(added)
 Editing the list you passed shows nothing, and asserts in debug.
 
 With an `itemIdGetter`, rows follow their item here too, and the row being read holds still. Always
-pass one, since a later release requires it: without one, `.sync` asserts in debug unless you pass
-`shouldKeepPosition: false`. Each item needs its own id, and a repeat shows only its 1st item,
-reported in debug.
+pass one, since a later release requires it. Without one, rows follow their position and nothing
+holds still. Each item needs its own id, and a repeat shows only its 1st item, reported in debug.
 
 ## Search
 

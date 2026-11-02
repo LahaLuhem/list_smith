@@ -134,18 +134,18 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// the whole point. [searchDebounce] defaults to zero, an in-memory filter being instant.
   ///
   /// [itemIdGetter] tells the items apart, so each row keeps its state as rows come and go. Always pass
-  /// it: a later release requires it. Without it, rows follow their position, and
-  /// [shouldKeepPosition] has to be off. Each item needs its own id: a repeat shows only its 1st item,
-  /// and is reported in debug.
+  /// it: a later release requires it. Without it, rows follow their position, and the position isn't
+  /// kept. Each item needs its own id: a repeat shows only its 1st item, and is reported in debug.
   ///
-  /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change. Turn it
-  /// off if your app keeps its own scroll position.
+  /// [shouldKeepPosition] keeps the row the user is reading in place when rows above it change. It's on
+  /// whenever [itemIdGetter] is given, which it needs. Turn it off if your app keeps its own scroll
+  /// position.
   new sync({
     required Iterable<T> items,
     required SyncSearchPredicate<T> searchBy,
     required this.itemBuilder,
     ItemIdGetter<T>? itemIdGetter,
-    bool shouldKeepPosition = true,
+    bool? shouldKeepPosition,
     this.query = '',
     this.minSearchLength = 0,
     this.searchDebounce = .zero,
@@ -159,14 +159,14 @@ class ListSmith<T extends Object> extends StatelessWidget {
        observer = null,
        controller = null,
        assert(
-         itemIdGetter != null || !shouldKeepPosition,
-         'Keeping the position needs itemIdGetter. Pass one, or shouldKeepPosition: false.',
+         itemIdGetter != null || shouldKeepPosition != true,
+         'Keeping the position needs itemIdGetter.',
        ),
        grouping = grouping ?? NoGrouping<T>(),
        _source = SyncSource(
          items: items,
          searchBy: searchBy,
-         shouldKeepPosition: shouldKeepPosition,
+         shouldKeepPosition: shouldKeepPosition ?? itemIdGetter != null,
          itemIdGetter: itemIdGetter,
        );
 
