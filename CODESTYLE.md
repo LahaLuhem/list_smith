@@ -781,6 +781,8 @@ and a unit run stays separate (`flutter test test/unit_tests`).
   files splits along them.
 - **A library too big for one file gets a folder of its name,** one file per behaviour, like the
   engine's `widgets/async_list_view/`.
+- **A rule all value types share gets one file of its own,** like `data/to_string_test.dart`, which
+  finds the types it covers by reading `lib/src`.
 
 What each kind holds:
 
