@@ -1,307 +1,178 @@
-Package code style. Project facts live in [`.ai/AGENTS.md`](.ai/AGENTS.md), design rationale in
+Package code style. Project facts live in [`.ai/AGENTS.md`](.ai/AGENTS.md), rationale in
 [`APPENDIX.md`](APPENDIX.md).
 
-The lint posture is deliberately strict:
-[dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
-which [`analysis_options.yaml`](analysis_options.yaml) includes, promote a long list of lints to
-errors. The house style wants explicit types, no ambient mutability, and small
-focused classes.
+The lints are strict on purpose:
+[dartender's shared set](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+included by [`analysis_options.yaml`](analysis_options.yaml), makes many of them errors. The house
+style: explicit types, no ambient mutability, small focused classes.
 
-Every heading carries an explicit `<a id="…">` anchor. Link by anchor, not heading text, so renames
-don't break callers.
+<!-- TOC start -->
 
-<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
-
-- [Type safety & nullability](#type-safety--nullability)
+- [Type safety & nullability](#type-safety)
 - [Naming](#naming)
 - [Directory layout](#directory-layout)
 - [Imports](#imports)
 - [Formatting](#formatting)
-- [Constants & magic numbers](#constants--magic-numbers)
+- [Constants & magic numbers](#constants)
 - [Class structure](#class-structure)
-- [Package-specific patterns](#package-specific-patterns)
-    * [Behaviour lives in the sealed type, not in an orchestrator type-switch](#behaviour-lives-in-the-sealed-type-not-in-an-orchestrator-type-switch)
-    * [A consumer handle carries intents, never engine state](#a-consumer-handle-carries-intents-never-engine-state)
+- [Package-specific patterns](#package-patterns)
+  - [Behaviour lives in the sealed type, not in an orchestrator type-switch](#patterns-behaviour-in-the-type)
+  - [A consumer handle carries intents, never engine state](#patterns-controller-contract)
 - [Idioms](#idioms)
-    * [Static dot shorthands](#static-dot-shorthands)
-    * [Drop redundant `<Type>` on collection literals](#drop-redundant-type-on-collection-literals)
-    * [The SDK's callback typedefs over written-out function types](#the-sdks-callback-typedefs-over-written-out-function-types)
-    * [`Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps](#rowspacing--columnspacing--wrapspacing-over-interleaved-sizedbox-gaps)
-    * [Enhanced enums for per-variant config](#enhanced-enums-for-per-variant-config)
-    * [`Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops](#navigatormaybeof-over-navigatorof-for-fire-and-forget-pops)
-    * [Collection-`for` / collection-`if` over `Iterable.map(…).toList()`](#collection-for--collection-if-over-iterablemaptolist)
-    * [Library pipeline methods over hand-rolled loops (for data manipulation)](#library-pipeline-methods-over-hand-rolled-loops-for-data-manipulation)
-    * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
-    * [`Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value](#futuresyncvaluex-over-futuresync--x-for-an-already-available-value)
-    * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
-    * [`Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs](#urihttps--urihttp-over-uriparse-for-known-urls)
-    * [`part` / `part of` only when structurally needed](#part--part-of-only-when-structurally-needed)
-    * [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#valuenotifier--valuelistenablebuilder-over-setstate)
-    * [Plain `if`s over clever `switch` arms](#plain-ifs-over-clever-switch-arms)
-    * [Catch `Exception`, let `Error` through](#catch-exception-let-error-through)
-- [Prose & voice](#prose--voice)
-- [Comments & dartdoc](#comments--dartdoc)
-    * [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
-- [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
+  - [Static dot shorthands](#idioms-dot-shorthands)
+  - [Drop redundant `<Type>` on collection literals](#idioms-drop-redundant-type-args)
+  - [The SDK's callback typedefs over written-out function types](#idioms-sdk-callback-typedefs)
+  - [`spacing` over interleaved `SizedBox` gaps](#idioms-flex-spacing)
+  - [Enhanced enums for per-variant config](#idioms-enhanced-enums)
+  - [`Navigator.maybeOf` for fire-and-forget pops](#idioms-navigator-maybeof)
+  - [Collection-`for` / collection-`if` over `Iterable.map(…).toList()`](#idioms-collection-for)
+  - [Library pipeline methods over hand-rolled loops](#idioms-pipeline-methods)
+  - [`dart:async` `wait` extensions over `Future.wait(...)`](#idioms-async-wait)
+  - [`Future.syncValue(x)` for a value already in hand](#idioms-future-syncvalue)
+  - [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#idioms-unmodifiable-collections)
+  - [`Uri.https(…)` / `Uri.http(…)` for known URLs](#idioms-uri-construction)
+  - [`part` / `part of` only when structurally needed](#idioms-parts)
+  - [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#idioms-fine-grained-rebuilds)
+  - [Plain `if`s over clever `switch` arms](#idioms-plain-conditionals)
+  - [Catch `Exception`, let `Error` through](#idioms-catch-exceptions)
+- [Prose & voice](#prose)
+- [Comments & dartdoc](#dartdoc)
+  - [`@docImport` for dartdoc-only references](#dartdoc-docimport)
+- [DCM rules (applied by hand)](#dcm-rules)
 - [Test style](#test-style)
-    * [Conventions](#conventions)
-- [Documentation conventions (Markdown)](#documentation-conventions-markdown)
+  - [Conventions](#test-conventions)
+- [Documentation conventions (Markdown)](#documentation-conventions)
 
 <!-- TOC end -->
 
 <a id="type-safety"></a>
 ## Type safety & nullability
 
-- **Type-annotate every public symbol.** Inference is fine on locals, per
-  `omit_local_variable_types`. A public surface is not the place to lean on it.
-- **`final` by default for fields and locals.** Parameters are not, per `avoid_final_parameters`.
-  The actual bad behaviour, mutating a parameter inside the body, is what `parameter_assignments`
-  forbids.
-- **Nullability is explicit.** `T?` everywhere a value can be missing.
-  `cast_nullable_to_non_nullable` means `as T` on a `T?` fails lint, and a cast is never the way to
-  launder nullability away.
-- **Constrain generic type parameters to `<T extends Object>` by default.** Unbounded `<T>` lets
-  `null` and `dynamic` satisfy `T`, the same hole the explicit-nullability rule and the
-  [`dynamic`-escape-hatch ban](.ai/AGENTS.md#hard-rules) close elsewhere. Bind to `Object` and the
-  type system enforces "some real value". A call site that needs `null` spells it `T?`.
+- **Type-annotate every public symbol.** Locals infer.
+- **`final` fields and locals.** Not parameters (`avoid_final_parameters`), which
+  `parameter_assignments` already keeps from being reassigned.
+- **Nullability is explicit.** `T?` wherever a value can be missing, and never `as T` to strip it.
+- **Bound type parameters to `<T extends Object>`.** A bare `<T>` lets `null` and `dynamic` in, so a
+  call site that needs `null` writes `T?`. The exception: a `T` passed straight to an unbounded
+  external API that uses `null` as a sentinel.
+- **No Java ceremony:** no getter-only abstract bases, factories or interface per class. Sealed
+  classes, records, mixins, extension types and enums, where they add clarity.
 
-  ```dart
-  // Prefer:
-  class PagedList<T extends Object> extends StatefulWidget { … }
-
-  // Over:
-  class PagedList<T> extends StatefulWidget { … }
-  ```
-
-  Exception: `T` flows straight into an external API that is itself unbounded *and* uses `null` as
-  a sentinel. Don't reach for it speculatively. A bounded `T` is a subtype of an unbounded one in
-  parameter positions, so wrapping a raw-`<T>` upstream widget in a bound one stays type-safe.
-- **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`, no
-  interface-per-class. Use mixins, sealed classes, records, extension types, and enums where they
-  add clarity, not weight.
-
-The `dynamic`-escape-hatch ban and the `print()`-in-library ban are contracts, not style. They live
-under [*Hard rules* in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules).
+The `dynamic` and `print()` bans are [hard rules](.ai/AGENTS.md#hard-rules), not style.
 
 ---
 
 <a id="naming"></a>
 ## Naming
 
-- **Spell domain terms out, no abbreviations or initialisms.** Expand, in code, comments, dartdocs
-  and log messages alike. Well-known protocol and platform initialisms (HTTP, DNS, TCP, TLS, iOS,
-  OS) stay. Everything else spells out, because shorthand that's obvious to the author reads as a
-  typo to the next person.
-
-  | Don't write            | Write instead                                                    |
-  |------------------------|------------------------------------------------------------------|
-  | `cb`                   | `callback` (or the semantic role: `onRefresh`, `onQueryChanged`) |
-  | `fn`                   | `function` / `handler` / spell out the role                      |
-  | `cfg`                  | `config`                                                         |
-  | `idx`                  | `index` (loop counters keep `i` / `j` per genre convention)      |
-  | `tmp`                  | `temporary`, or a name describing what it holds                  |
-  | `req` / `res` / `resp` | `request` / `response`                                           |
-  | `ctx`                  | `context` (Flutter's `BuildContext` arg stays `context`)         |
-  | `evt`                  | `event`                                                          |
-
-  This binds *every* identifier: fields, locals, parameters, pattern bindings. The carve-outs are
-  the genre conventions: loop counters (`i`, `j`), `e` in `catch (e)`, `(a, b)` in comparator pairs,
-  `x`/`y` for coordinates.
-- **Variable names carry a concise type-suffix, fields included.** Without IDE inlay-hints an
-  inferred type is invisible, so the name does that work. Where a domain type exists, the suffix is
-  its name (`pageResult`, not `result`, `_pagingStateNotifier`, not `_pagingState`). A role name goes
-  in front of the suffix, not instead of it (`firstLoadHoldCompleter`, not `firstLoadHold`), so the
-  name says what a thing is for and what it is. A plural is enough for a collection. A public
-  parameter keeps its API name (`fetchPage`), since that's the name every caller reads and types.
-  Callback parameters are exempt and stay single-word (`value`, `query`, `items`), since the call
-  site already pins the type. Generic suffixes (`Data`, `Info`, `Result`) lose exactly the
-  disambiguation the rule is for.
-- **A boolean reads as a question.** `isMoreAvailable`, `didFail`, `hasHeader`, `drawsHeader`,
-  `reportsSignal`, never a bare `moreAvailable` or `compact`. The exception is a Flutter mirror
-  (`reverse` on `ListScrollConfig`), which keeps the framework's name.
-- **A function typedef is named for its job, so it reads as something you call.** `ItemIdGetter`,
-  not `ItemId`, which reads as the id itself. Flutter does the same: `ValueGetter`,
-  `ChildIndexGetter`.
-- **Unused closure parameters take the discard `_`, not a real name.** An identifier you never
-  reference is noise, and `_` makes the unused-ness immediate.
-
-  ```dart
-  // Prefer:
-  builder: (_) => const SizedBox.shrink()
-  builder: (_, index) => itemBuilder(index)   // two-arg builder, first unused
-
-  // Over:
-  builder: (context) => const SizedBox.shrink()   // context never referenced
-  ```
-
-  Dartdoc examples too, and each discard in a signature is its own `_`. The genre-conventional
-  letters (`i`, `e`) keep their letter even when unused.
-- **Don't rename callback params to dodge a same-named outer variable.** Lexical scoping always
-  picks the innermost binding, so there is no ambiguity to resolve and renaming signals a
-  distinction that doesn't exist. The exception is a body that needs *both*: rename the inner one
-  and say which is which in the callback's dartdoc, not in the parameter name.
-- **Files mirror the primary public class name.** `PagedListView` in `paged_list_view.dart`,
-  `PagedListController` in `paged_list_controller.dart`, enforced by `file_names`. One primary
-  public class per file, though private `_helper` classes may share it, and so may a public type
-  only that class hands out. Placement follows [Directory layout](#directory-layout).
+- **Spell terms out:** `callback`, `index`, `request`, `context`, `temporary`, never `cb`, `idx`,
+  `req`, `ctx`, `tmp`. Protocol and platform initialisms (HTTP, iOS) stay, and so do the genre
+  conventions: `i` / `j` counters, `e` in `catch (e)`, `(a, b)` in comparators, `x` / `y`.
+- **A name ends in its type,** fields included, since nothing else shows an inferred type:
+  `pageResult`, `_pagingStateNotifier`. A role goes in front (`firstLoadHoldCompleter`), a plural
+  covers a collection, and `Data`, `Info` or `Result` say nothing. A public parameter keeps its API
+  name (`fetchPage`), and a callback parameter stays one word (`value`, `query`).
+- **A boolean reads as a question:** `isMoreAvailable`, `didFail`, `hasHeader`. A Flutter mirror
+  keeps Flutter's name (`reverse`).
+- **A function typedef names its job:** `ItemIdGetter`, not `ItemId`, like Flutter's `ValueGetter`.
+- **An unused closure parameter is `_`,** one per slot, dartdoc examples included:
+  `builder: (_, index) => …`. `i` and `e` keep their letter.
+- **Don't rename a callback parameter to dodge an outer name.** The inner one wins anyway. A body
+  that needs both renames the inner and says which is which in the dartdoc.
+- **A file is named for its primary public class,** one per file. Private helpers, and a public
+  type only that class hands out, may share it.
 
 ---
 
 <a id="directory-layout"></a>
 ## Directory layout
 
-`lib/src/` is organised **by kind at the top level, then by feature, then by kind again within each
-feature**:
+`lib/src/` goes by kind, then feature, then kind again:
 
-- **`data/`** holds pure vocabulary, sub-grouped by feature (`data/pagination/`, `data/search/`,
-  `data/refresh/`, `data/presentation/`, `data/source/`). Within a feature, files are grouped by
-  kind: `models/` (classes: sealed types, immutable data, policy objects), `typedefs/` (standalone
-  function-type aliases), `enums/`, `extensions/`, and `utils/` (pure functions). Sealed cases nest
-  one level under the base's kind and stay `part`s of the base: `models/policies/` for the policy
-  cases, `source/sources/` for the source cases. Each feature exports its libraries from a barrel
-  named after it, like `data/pagination/pagination.dart`.
-- **`widgets/`** holds everything that is a `Widget`, with the neutral default surfaces under
-  `widgets/defaults/`, behind its `defaults.dart` barrel.
-- **`utils/`** (top level) holds cross-cutting helpers tied to no single feature
-  (`utils/neutral_theme.dart`, `utils/query_debouncer.dart`).
+- **`data/<feature>/`** is pure vocabulary: `models/`, `typedefs/`, `enums/`, `extensions/` and
+  `utils/` (pure functions). Sealed cases sit one level under their base as `part`s
+  (`models/policies/`), and each feature has a barrel named after it.
+- **`widgets/`** is every widget, the neutral defaults under `widgets/defaults/`.
+- **`utils/`** is what no single feature owns.
 
-The placement rules that earn their keep:
+Two placements earn a rule:
 
-- **A typedef with a single home type stays in that type's file.** Only a standalone typedef with
-  no such home gets its own file under the feature's `typedefs/`. So `RefreshIndicatorBuilder` sits
-  with `ListSmithRefreshState` in `refresh/models/`, while `ItemIdGetter` and `ItemBuilder` stand
-  alone in their features' `typedefs/`. A callable class is not a typedef: `PageFetcher` and
-  `SearchPageFetcher` live under `models/`.
-- **A resolver is an unexported `extension` in `<feature>/extensions/`**, named
-  `<thing>_resolver_extension.dart`. A pure top-level *function* resolver goes in
-  `<feature>/utils/` instead, like `resolveSyncSearch`. Either way the public type stays pure data
-  and its decision logic gets a widget-free, unit-testable home. Rationale in
-  [`APPENDIX.md`](APPENDIX.md#src-directory-layout).
+- **A typedef with one home type lives in its file.** Only a standalone one gets `typedefs/`. A
+  callable class (`PageFetcher`) is a model.
+- **A resolver is an unexported extension,** `<feature>/extensions/<thing>_resolver_extension.dart`,
+  or a pure function in `utils/` (`resolveSyncSearch`). The public type stays pure data, and the
+  decision tests without a widget ([why](APPENDIX.md#src-directory-layout)).
 
 ---
 
 <a id="imports"></a>
 ## Imports
 
-**Relative within a feature, the other feature's barrel across features.** Same-feature targets use
-a path relative to the importing file. Another feature is reached through its barrel (see
-[Directory layout](#directory-layout)), and another top-level area through the file itself, both with
-a leading `/`, which Dart resolves from `lib/`, so `/src/data/…` is `package:list_smith/src/data/…`.
-That slash is a deliberate visual cue: own-feature imports read as bare relatives, cross-feature
-ones stand out.
+**Relative within a feature, the other feature's barrel across features.** A leading `/` resolves
+from `lib/` and marks the cross-feature ones:
 
 ```dart
 // in widgets/async_list_view.dart
 import '/src/data/pagination/pagination.dart'; // other feature: its barrel
-import '/src/utils/query_debouncer.dart';      // other area: leading /
+import '/src/utils/query_debouncer.dart';      // other area: the file
 import 'paged_view.dart';                      // same folder: relative
-import 'refresh_binding.dart';                 // same folder: relative
 ```
 
-The split holds inside a feature too: `search/extensions/…_extension.dart` reaches its own model as
-`../models/search_cache_policy.dart`, never root-relative and never through its own barrel, which
-would loop back to the importing file. Tests take a feature's barrel too, as
-`package:list_smith/src/data/pagination/pagination.dart`. The exception is pure Dart: the benchmark
-micros, and the code they compile, import the exact file where a feature's barrel pulls in Flutter.
-[`benchmark.yml`](.github/workflows/benchmark.yml) builds the micros on any `lib/` change, which
-catches a slip. `@docImport` follows the same rule, and `part` / `part of` are always same-feature
-so always relative. The example app does the same with `/features/…` (see
-[`example/CODESTYLE.md`](example/CODESTYLE.md)).
+A feature never imports its own barrel, which loops back. Tests take barrels too
+(`package:list_smith/src/data/pagination/pagination.dart`). The exception is pure Dart: the
+benchmark micros import the exact file where a barrel pulls in Flutter, and
+[`benchmark.yml`](.github/workflows/benchmark.yml) compiles them on any `lib/` change.
+`@docImport` follows the same rules, and `part` is always relative. The example app does the same
+with `/features/…`.
 
 ---
 
 <a id="formatting"></a>
 ## Formatting
 
-- **Wrap text-file content at 100 columns.** `formatter.page_width` in the shared lints is
-  authoritative for Dart, [`.editorconfig`](.editorconfig) matches it for Markdown and YAML, and
-  they move together. `dart format` does *not* reflow comment prose, so a `///` or `//` block
-  wrapped narrow stays narrow forever.
-- **Fill a comment line to 100, then wrap.** Keep adding words while the line is still under 100
-  columns, so the word that crosses the boundary stays on that line instead of starting the next
-  one. Wrapping early is the thing to avoid. A long `[Identifier]` landing on the boundary can push
-  a line to ~120, which is fine. Reflow when you're already touching the block rather than churning
-  files to widen them.
-- **Markdown is a hard 100, though.** `rumdl`'s `MD013` fails the build over it, so the
-  crossing-word licence above is for `///` and `//` only. Prose in a `.md` file wraps at 100 or
-  under.
-- **Blank lines separate logical chunks within a method.** Guards, setup, the main action, the
-  return, one blank line between, so a reader can skip the chunks they don't need.
-- **Prefer expression bodies** (`prefer_expression_function_bodies`) and **single quotes**
-  (`prefer_single_quotes`).
+- **100 columns, every text file.** The shared lints' `formatter.page_width` rules Dart, and
+  [`.editorconfig`](.editorconfig) matches it.
+- **A comment fills to 100, then wraps,** the crossing word staying on its line. `dart format`
+  never reflows comments. Markdown is a hard 100, since `rumdl`'s `MD013` fails over it.
+- **Blank lines between a method's chunks:** guards, setup, action, return.
 
 ---
 
 <a id="constants"></a>
 ## Constants & magic numbers
 
-- **No magic numbers in `lib/` code.** Pull them to named `static const`s with a descriptive
-  identifier: a default page size, a debounce duration, a scroll threshold. A type's own constants
-  live on that type, close to where they're read. Check for an existing shared constant before
-  adding a cross-cutting one.
-- **Inline single-use defaults, don't promote them to a named `kDefault…` constant.** The name
-  earns its place only when the value is read from **more than 1 place**, typically a field
-  default *and* a build-method substitution (`foo ?? kDefaultFoo`). One reader means nothing to
-  diverge from, and a top-level `kDefaultXxx` shows up in auto-complete and rendered dartdoc as
-  noise a downstream user skims past.
-
-  A dartdoc reference (`Defaults to [kDefaultXxx]`) is not a 2nd use. Once inlined, the dartdoc
-  spells out the literal instead (`Defaults to \`20\``).
+- **No magic numbers in `lib/`.** Name them as a `static const` on the type that reads them.
+- **A default read in one place stays inline,** not a top-level `kDefault…` cluttering autocomplete
+  and dartdoc. A 2nd reader earns it a name, typically a field default plus a `foo ?? kDefaultFoo`.
+  A dartdoc mention isn't a reader: write the literal (``Defaults to `20` ``).
 
 ---
 
 <a id="class-structure"></a>
 ## Class structure
 
-- **Fields, then constructors, then other members.** A reader scans the state shape, then how to
-  build it, then how to use it. Unnamed constructor before named and factory
-  (`sort_unnamed_constructors_first`), statics after the instance members.
-- **`assert` for dev-time errors, `throw` for runtime ones, a report for bad data.** A constraint a
-  caller can see violated while developing (a negative page size, an empty required list, a list
-  edited in place) is an `assert`: stripped in release, free at runtime. `throw` is for conditions
-  the caller genuinely can't guarantee at compile time. Data list_smith can work around, like a
-  repeated id or a page out of order, goes through `reportBadData` in debug, once where it lands.
-  The app may not control that data, so the list keeps working and shows what release would.
-  Init-list asserts, with messages, per `prefer_asserts_in_initializer_lists` and
-  `prefer_asserts_with_message`.
-- **Enforce constructor invariants with `assert(condition, message)` in the initializer list, not
-  by silently accepting params and ignoring them downstream.** When 2 parameters are mutually
-  exclusive, or one is only meaningful when another is set, say so loudly at construction time:
-
-  ```dart
-  const PagedListView({
-    this.itemsPerPage,
-    this.pageLoader,
-  }) : assert(
-         pageLoader != null || itemsPerPage == null,
-         'itemsPerPage only applies when a pageLoader drives pagination.',
-       );
-  ```
-
-  A silently-dropped param is the "ghost param" this package exists to avoid: someone sets it,
-  finds it in the dartdoc, and never learns it does nothing. Prefer compile-time exclusivity where
-  the invariant splits into 2 constructors. `assert` is for what a signature can't express:
-  cross-parameter conditions, value ranges, length constraints.
-- **Value types override `toString`.** The default `Instance of 'ClassName'` is hostile in logs and
-  test failures, so immutable data classes return `'ClassName(field1: value1, ...)'` as an
-  expression-bodied one-liner after the constructors. Skip opaque fields (controllers, listenables,
-  builder callbacks) whose `.toString()` is just `Closure: …`: they add noise, and interpolating a
-  callable bare trips DCM's `avoid-missed-calls`. Widget subclasses are exempt, since Flutter's
-  diagnostics already wire theirs.
-- **Pick a public class's modifier by how an app tests against it.** A value an app builds or
-  receives (a config, the state handed to a builder) is `final`, since a test builds a real one. A
-  class an app calls and stubs in its tests stays open, because `final` and `base` block the
-  `implements` that mocktail and mockito mocks need. `ListSmithController` is one: an unattached
-  real one asserts on `refresh()`. Adding a method to an open class keeps those mocks compiling, and
-  only breaks a hand-written fake.
-- **Inline logic with one caller.** A private helper called from one place reads better in it.
-  Extract once a 2nd caller shows up, or when it's a cleaner seam to test, as `@visibleForTesting`.
-  The exception is a method the
+- **Fields, constructors, then the rest,** unnamed constructor first, statics last.
+- **`assert` for wiring mistakes, `throw` for what a caller can't rule out, a report for bad data.**
+  A negative page size asserts, free in release. Data list_smith can work around, like a repeated id
+  or a page out of order, goes through `reportBadData` once, in debug, where it lands, and the list
+  shows what release would. Asserts sit in the initializer list, with a message.
+- **A parameter that does nothing in some combination asserts at construction,** never sits ignored.
+  That ghost param is what this package exists to remove. Prefer 2 constructors where the signature
+  can say it, and assert what it can't: cross-parameter rules, ranges, lengths.
+- **Value types override `toString`** as `'ClassName(field1: value1, ...)'`, an expression body
+  after the constructors, since `Instance of …` helps nobody in a log. Skip opaque fields
+  (callbacks, controllers, listenables), whose text is noise and whose bare interpolation trips
+  DCM's `avoid-missed-calls`. Widgets are exempt.
+- **Pick a public class's modifier by how an app tests with it.** One an app builds or receives (a
+  config, a builder's state) is `final`, since a test makes a real one. One an app calls and stubs
+  stays open, since `final` and `base` block the `implements` a mock needs (`ListSmithController`).
+- **Inline a private helper with one caller,** until a 2nd caller or a test seam
+  (`@visibleForTesting`) shows up. A method the
   [Code Complexity plugin](https://github.com/nikolaikopernik/code-complexity-plugin) scores over
-  100%: split it into its decisions, like `RenderScrollAnchor.performLayout`.
-- **Members stay private.** One another library has to reach takes `@internal`, or
-  `@visibleForTesting` when only tests need it. A type only the package uses takes `@internal`
-  itself, which covers its members, and a member a subclass must not override takes `@nonVirtual`.
+  100% splits into its decisions instead, like `RenderScrollAnchor.performLayout`.
+- **Members stay private.** One another library needs takes `@internal`, or `@visibleForTesting` if
+  only tests do. A package-only type takes `@internal` itself, and a member no subclass may
+  override takes `@nonVirtual`.
 
 ---
 
@@ -311,23 +182,14 @@ so always relative. The example app does the same with `/features/…` (see
 <a id="patterns-behaviour-in-the-type"></a>
 ### Behaviour lives in the sealed type, not in an orchestrator type-switch
 
-An injected, sealed behaviour axis (`PaginationEndPolicy`, `EmptyPageBehaviour`,
-`SearchCachePolicy`, `Grouping`) carries its own logic as a polymorphic method the engine calls
-blindly. The engine must not `is`-test the concrete variant and implement each case itself.
+An injected axis (`PaginationEndPolicy`, `EmptyPageBehaviour`, `SearchCachePolicy`, `Grouping`)
+carries its logic as a method the engine calls blindly, never `is`-testing a variant. A new variant
+drops in without touching the engine, and each one unit-tests alone.
 
-**Why:** the engine stays a thin dispatcher, the way the framework calls `Widget.build` without
-knowing the subtype, so new variants and new axes drop in without touching it and each behaviour
-unit-tests on its own. Already the shape of `hasReachedEnd`, `actionFor`, `sectionsOver`, and
-`shouldAdvance`.
-
-**How:**
-
-- Pure decisions take a *data* context and return a value, like
-  `shouldAdvance(EmptyPageContext)`. The engine gathers the facts, the type decides, and the
+- A decision takes a data context and returns a value: `shouldAdvance(EmptyPageContext)`. The
   context is exported.
-- Effectful actions take a *capability* context, the `BuildContext` analogue, and return a
-  `Future`, like `Reload.run(ReloadContext)`. That context stays unexported: it hands out mutation
-  hooks (`fetch` / `commit` / `reset`) no consumer should call, and the axis is sealed so none can.
+- An effect takes a capability context and returns a `Future`: `Reload.run(ReloadContext)`. That
+  context stays unexported, since its hooks (`fetch`, `commit`, `reset`) are the engine's.
 
 ```dart
 // bad: the engine knows the variants
@@ -337,30 +199,22 @@ if (onEmptyPage is AdvanceToFirstNonEmpty) { /* advance logic lives here */ }
 if (onEmptyPage.shouldAdvance(EmptyPageContext(/* … */))) { /* just act */ }
 ```
 
-The one `switch` that legitimately stays engine-side is widget-tree assembly, where `Refresh`
-on/off decides whether to wrap the subtree in `RefreshBinding`. No type can own that.
+The one engine-side `switch` is tree assembly: whether `Refresh` wraps the subtree in
+`RefreshBinding`.
 
 <a id="patterns-controller-contract"></a>
 ### A consumer handle carries intents, never engine state
 
-A handle the consumer constructs and passes in (`ListSmithController`) exposes verbs, not
-machinery. No paging state, no read-back of paging internals.
+`ListSmithController` exposes verbs, never paging state, since watching is the observer's job
+([why](APPENDIX.md#controller-handle)).
 
-**Why:** the pager is hidden on purpose, and a handle that hands state back re-exposes it by the
-back door. Watching the list is the observer's job. Full rationale:
-[`APPENDIX.md#controller-handle`](APPENDIX.md#controller-handle).
-
-**How:**
-
-- One verb per consumer intent, returning a `Future` that completes when the work does. `upsert` and
-  `remove` have no work to wait for, so they're sync `void`
-  ([`APPENDIX.md#edit-layer`](APPENDIX.md#edit-layer)).
-- The engine implements `ListSmithControllerHost` and attaches itself, so the gesture and the handle
-  run the same entry point and the handle can't carry a 2nd implementation that drifts.
-- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached no-ops rather
-  than throwing. Assert only for what can only be wiring, meaning nothing ever attached.
-- A new intent is one method on the host and one forwarding verb on the handle, nothing else. The
-  host is `@internal`, the `ReloadContext` shape: consumers hold the handle, never the engine.
+- One verb per intent, its `Future` completing with the work. `upsert` and `remove` have none to
+  wait for, so they're sync `void` ([edit layer](APPENDIX.md#edit-layer)).
+- The engine implements the `@internal` `ListSmithControllerHost` and attaches itself, so the
+  gesture and the handle share one entry point. A new intent is a host method plus a forwarding
+  verb, nothing else.
+- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached is a no-op, and
+  only never-attached, which can only be wiring, asserts.
 
 ---
 
@@ -370,47 +224,24 @@ back door. Watching the list is the observer's job. Full rationale:
 <a id="idioms-dot-shorthands"></a>
 ### Static dot shorthands
 
-Where the context type is known, drop the leading type name. Not just the obvious enum case:
-
-- Enum values in patterns and arg slots: `crossAxisAlignment: .start`, `mainAxisSize: .min`,
-  `case .android => …`.
-- `EdgeInsets`-typed slots: `padding: const .all(16)`,
-  `padding: const .symmetric(horizontal: 12)`, `margin: .zero`.
-- Named constructors / static factories when the return or context type pins them.
-- **Constructor field defaults** whose declared type pins the context:
-
-  ```dart
-  final Axis scrollDirection;
-  const Foo({this.scrollDirection = .vertical});   // not Axis.vertical
-  ```
-
-  Top-level and `static const` initialisers are the exception, with no LHS type to infer from.
-
-Skip it where the context type isn't obvious without re-reading. Once a prefix leaves a file
-entirely, drop it from any `show` clause too.
+Drop the type wherever the context pins it: enum values (`mainAxisSize: .min`), `EdgeInsets`
+(`padding: const .all(16)`), named constructors, and field defaults
+(`this.scrollDirection = .vertical`). Not in a top-level or `static const` initialiser, which has no
+type to infer from, nor where a reader would have to look the type up. A prefix gone from the file
+leaves its `show` clause too.
 
 <a id="idioms-drop-redundant-type-args"></a>
 ### Drop redundant `<Type>` on collection literals
 
-When the context already pins the element, key or value type (a parameter slot, an assignment
-target), the explicit `<Type>` prefix is dead weight:
-
-```dart
-// Prefer:
-states.resolve({WidgetState.selected, if (!enabled) WidgetState.disabled})
-
-// Over:
-states.resolve(<WidgetState>{WidgetState.selected, if (!enabled) WidgetState.disabled})
-```
-
-Keep `<Type>` where inference would fall back to `dynamic`: empty literals with no slot
-(`final xs = <Foo>[];`), and top-level or `static const` initialisers with no LHS type.
+Skip it where the slot pins the type:
+`states.resolve({WidgetState.selected, if (!enabled) WidgetState.disabled})`. Keep it where
+inference would fall back to `dynamic`: an empty literal with no slot (`final xs = <Foo>[];`), or a
+top-level or `static const` initialiser.
 
 <a id="idioms-sdk-callback-typedefs"></a>
 ### The SDK's callback typedefs over written-out function types
 
-Where a function type matches one of Flutter's typedefs, use the most specific one. It names the
-callback's job, where `void Function(Exception exception)` has to be read as a signature.
+The most specific one names the callback's job:
 
 | Written out                | Typedef                                                            |
 |----------------------------|--------------------------------------------------------------------|
@@ -420,221 +251,145 @@ callback's job, where `void Function(Exception exception)` has to be read as a s
 | `Future<void> Function()`  | `AsyncCallback`                                                    |
 | `Future<void> Function(T)` | `AsyncValueSetter<T>`                                              |
 
-Keep it written out where the parameter's name says something its type doesn't, since a typedef's
-parameter is a bare `value`. Several parameters, or a value returned from one, have no typedef.
+Write it out where a parameter's name says what the typedef's bare `value` can't. Several
+parameters, or one plus a return value, have no typedef.
 
 <a id="idioms-flex-spacing"></a>
-### `Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps
+### `spacing` over interleaved `SizedBox` gaps
 
-Reach for `spacing` instead of interleaving a `SizedBox` between every pair.
-
-```dart
-// Prefer:
-Row(mainAxisSize: .min, spacing: 8, children: [icon, label])
-
-// Over:
-Row(mainAxisSize: .min, children: [icon, SizedBox(width: 8), label])
-```
-
-It keeps `children` about content and puts the layout metadata on the parent. Doesn't apply when
-gaps differ between pairs, where explicit `SizedBox`es are the answer.
+`Row(mainAxisSize: .min, spacing: 8, children: [icon, label])`, so `children` stays content. Same
+for `Column` and `Wrap`. Uneven gaps keep their `SizedBox`es.
 
 <a id="idioms-enhanced-enums"></a>
 ### Enhanced enums for per-variant config
 
-When each of an enum's values carries config that diverges per value, hang the data off the enum
-rather than defining parallel `kDefault<Variant>Xxx` constants the build site branches on.
+Hang per-value config off the enum, not parallel `kDefault<Variant>…` constants:
 
 ```dart
-// Prefer:
 enum LoadState {
-    idle(showsSpinner: false),
-    loading(showsSpinner: true),
-    error(showsSpinner: false);
+  idle(showsSpinner: false),
+  loading(showsSpinner: true),
+  error(showsSpinner: false);
 
-    final bool showsSpinner;
-    const LoadState({required this.showsSpinner});
+  final bool showsSpinner;
+  const LoadState({required this.showsSpinner});
 }
-
-// Over: parallel kDefault… constants + a plain enum + per-arm lookups.
 ```
 
-Adding a variant then forces the choice at compile time. Don't force it: a discriminator-only
-enum whose values carry no config stays plain.
+A new value then has to choose. An enum whose values carry nothing stays plain.
 
 <a id="idioms-navigator-maybeof"></a>
-### `Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops
+### `Navigator.maybeOf` for fire-and-forget pops
 
-Dismissing a route from a callback whose only job is the pop? Reach for
-`Navigator.maybeOf(context)?.pop(value)`, not `Navigator.of(context).pop(value)`.
-
-```dart
-// Prefer:
-onPressed: (context) => Navigator.maybeOf(context)?.pop(true)
-
-// Over:
-onPressed: (context) => Navigator.of(context).pop(true)   // throws if no Navigator
-```
-
-A pop that finds no route should be a silent no-op, which `maybeOf` plus `?.pop(…)` gives you.
-Keep `Navigator.of` where you need `push`'s result and a missing Navigator is a bug you want loud.
-Not `Navigator.maybePop`, a different thing.
+A callback that only pops writes `Navigator.maybeOf(context)?.pop(value)`, a no-op without a route.
+`Navigator.of` stays where you need `push`'s result and a missing navigator is a bug. Not
+`Navigator.maybePop`, which is something else.
 
 <a id="idioms-collection-for"></a>
 ### Collection-`for` / collection-`if` over `Iterable.map(…).toList()`
 
-When *building* a literal collection, a widget `children:` list above all, embedded control flow
-reads as data, where `.map(…).toList()` reads as a pipeline that happens to produce it.
+Building a literal, a `children:` list above all, embeds the control flow:
+
+```dart
+children: [
+  for (final item in items) ListTile(title: Text(item.label)),
+]
+```
+
+It lays out known elements. Filtering (`items.where(…)`) and flattening or mapping a source
+(`pages.expand((p) => p).map(key).toSet()`) aren't construction, they're
+[pipelines](#idioms-pipeline-methods). Collection-`if` weaves an optional element into a literal
+you're building: `[header, if (isX) badge, body]`.
+
+<a id="idioms-pipeline-methods"></a>
+### Library pipeline methods over hand-rolled loops
+
+Transforming, filtering, flattening or reducing data is a chain that says what it does:
 
 ```dart
 // Prefer:
-children: [
-for (final item in items) ListTile(title: Text(item.label)),
-]
-
-// Over:
-children: items.map((item) => ListTile(title: Text(item.label))).toList()
-```
-
-Keep explicit generic type args when inference would fall back to `dynamic`
-(`MaterialPageRoute<void>(builder: …)` stays).
-
-**Filtering is not construction.** A predicate keeping a subset of existing items is a *filter*, so
-it belongs to the [pipeline rule](#idioms-pipeline-methods) (`items.where(pred)`), even when you
-materialise the result for a builder. Collection-`if` is for weaving optional elements into a
-literal you are building (`[header, if (isX) badge, body]`), not for selecting from a source.
-
-**Flattening or mapping a source is not construction either.** A literal whose body is a `for`
-walking a source to transform it (`{for (final p in pages) for (final x in p) key(x)}`) is a
-pipeline in a literal's clothing. Write `pages.expand((p) => p).map(key).toSet()`. Collection-`for`
-lays out *known* elements, a header and a fixed set of children, and never derives one collection
-from another.
-
-<a id="idioms-pipeline-methods"></a>
-### Library pipeline methods over hand-rolled loops (for data manipulation)
-
-The deliberate flip side of the [collection-`for` rule](#idioms-collection-for). That one is about
-*constructing* a literal, this one about *transforming, filtering, flattening or reducing* data,
-where a chain reads as exactly what it is and a loop with a mutable accumulator hides the intent
-while re-implementing a method the SDK already ships.
-
-```dart
-// Prefer, set algebra states the intent directly:
 final newItems = incoming.toSet().difference(seenIds);
 
-// Over, a loop that re-derives `difference` by hand:
+// Over:
 final newItems = <Item>{};
 for (final item in incoming) {
-if (!seenIds.contains(item.id)) newItems.add(item);
+  if (!seenIds.contains(item.id)) newItems.add(item);
 }
 ```
 
-The tell: seeding an empty collection and mutating it in a loop is usually a pipeline wearing a
-loop's clothes. Where `dart:core` has no matching method, reach for the `collection` package
-(already a dependency) before hand-rolling. `groupListsBy`, `splitBetween`, `whereIndexed`,
-`mapIndexed`, `foldIndexed` and `slices` cover most grouping, adjacent-run and indexed scans.
+The tell is an empty collection filled in a loop. Before hand-rolling one, check the `collection`
+package (`groupListsBy`, `splitBetween`, `whereIndexed`, `mapIndexed`, `foldIndexed`, `slices`).
 
-**Stay lazy, materialise deliberately.** No reflexive `.toList()` at the end of a chain. Leave it an
-`Iterable` and let the terminal consumer drive evaluation. Materialise when the result is iterated
-twice or an API genuinely needs a `List`, and then `.toList(growable: false)` says it won't be
-mutated.
-
-**A per-item scan on the build path gets measured before it becomes a chain.** An iterator per
-element, and a list per run with `splitBetween`, cost several times a single-pass loop
-([`APPENDIX.md#scan-loops`](APPENDIX.md#scan-loops)). There, the loop is the honest form.
-Page-granularity work stays a chain.
+- **Stay lazy.** Materialise only for a 2nd pass or an API that needs a `List`, and then
+  `.toList(growable: false)`.
+- **A per-item scan on the build path is measured first.** An iterator per element costs several
+  times a loop, and there the loop is the honest form ([scan loops](APPENDIX.md#scan-loops)).
+  Page-sized work stays a chain.
 
 <a id="idioms-async-wait"></a>
-### `dart:async` `wait` extensions over static `Future.wait(...)`
+### `dart:async` `wait` extensions over `Future.wait(...)`
 
-A fixed number of differently-typed futures takes the record form, `(f1, f2).wait`, which
-destructures directly. A dynamic number of same-typed ones takes `futures.wait`. Either way a
-failure arrives as a `ParallelWaitError` carrying the per-slot values, which `Future.wait` loses.
-
-The exception is a failure that has to reach an `on Exception` handler as itself, like a failed
-page read on its way to the error surface. Keep `Future.wait(…, eagerError: true)` there. A
-`ParallelWaitError` is an `Error`, so that handler misses it, and `wait` only fails once every
-future is done.
+`(f1, f2).wait` for a fixed set of differently typed futures, `futures.wait` for a list. A failure
+arrives as a `ParallelWaitError` with every slot's value. Keep `Future.wait(…, eagerError: true)`
+where a failure has to reach an `on Exception` handler as itself, like a failed page on its way to
+the error surface, since `ParallelWaitError` is an `Error` and only arrives once every future ends.
 
 <a id="idioms-future-syncvalue"></a>
-### `Future.syncValue(x)` over `Future.sync(() => x)` for an already-available value
-
-For a completed `Future` around a value *already in hand*, or a synchronous side-effecting call you
-don't await, reach for `Future.syncValue(value)`. `Future.sync` is for a computation that *might*
-turn out async.
+### `Future.syncValue(x)` for a value already in hand
 
 ```dart
-// Prefer, refresh() is synchronous and returns nothing to await:
-Future<void> _onRefresh() => Future.syncValue(_controller.refresh());
-
-// Over, sync(...) implies a computation that could be async:
-Future<void> _onRefresh() => Future.sync(_controller.refresh);
+Future<void> _onRefresh() => Future.syncValue(_controller.refresh()); // not Future.sync(…)
 ```
 
-Keep `Future.sync` where you specifically want a synchronous throw captured into the returned
-future rather than propagating out synchronously.
+`Future.sync` is for a computation that might turn out async, or a synchronous throw you want inside
+the future.
 
 <a id="idioms-unmodifiable-collections"></a>
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
-Default to `List.unmodifiable(…)`, and the `Set`/`Map` equivalents, for exposing an immutable
-collection. It *copies*, so you get a snapshot. The `…View` only *wraps*, so whoever still holds
-the original can mutate what the view shows, which is the point when you want a read-through view
-of private mutable state and a bug otherwise.
-
-Over data that never changes once built, a view just saves the copy:
-`UnmodifiableListView(pages.map((page) => page.items))`. Say at the call site why it can't change.
-Not over a filter, which the view walks again on every read, and not where the result is read
-several times, since each read runs the mapping again.
+`List.unmodifiable` (and the `Set` / `Map` ones) copies, so nobody can change it under you. A view
+only wraps, which is right for a read-through view of private state and a bug elsewhere. Over data
+that never changes, a view saves the copy: `UnmodifiableListView(pages.map((page) => page.items))`,
+saying at the call site why it can't change. Never over a filter or anything read often, since
+every read runs the mapping again.
 
 <a id="idioms-uri-construction"></a>
-### `Uri.https(…)` / `Uri.http(…)` over `Uri.parse(…)` for known URLs
+### `Uri.https(…)` / `Uri.http(…)` for known URLs
 
-For a compile-time-known URL, use the named constructor and pass path and query as separate
-arguments. Component-wise makes host, path and query visible at a glance and short-circuits the
-typos `Uri.parse` silently accepts. `Uri.parse` stays right for runtime input.
+Host, path and query as separate arguments, where `Uri.parse` quietly takes a typo. `Uri.parse`
+stays for runtime input.
 
 <a id="idioms-parts"></a>
 ### `part` / `part of` only when structurally needed
 
-Legitimate uses: sealed-class cases across files, since Dart requires one library for sealed
-subtypes, a class implementing a `base` class, which only that class's own library may do, and
-code-generation outputs (`*.g.dart`). Not for general organisation. Imports are explicit, and parts
-leak `_private` symbols across files.
+For sealed cases across files, since Dart wants sealed subtypes in one library, a class implementing
+a `base` class, which only that class's own library may do, and generated code (`*.g.dart`). Never
+for organising: parts leak `_private` symbols and hide imports.
 
 <a id="idioms-fine-grained-rebuilds"></a>
 ### `ValueNotifier` + `ValueListenableBuilder` over `setState`
 
-In a `StatefulWidget`, hold the changing value in a `ValueNotifier<T>` and wrap only the dependent
-subtree in a `ValueListenableBuilder`, rather than calling `setState`. `setState` re-runs all of
-`State.build`, so the rebuild scope stays implied instead of visible at the call site.
+Only the wrapped subtree rebuilds, and the call site shows which:
 
 ```dart
-// Prefer: only the wrapped subtree rebuilds on change, and which subtree is explicit.
 late final _result = ValueNotifier(_resolve());
 void _onChanged() => _result.value = _resolve();
 @override
 Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: _result,
-    builder: (context, result, _) => /* only the part that depends on result */,
+  valueListenable: _result,
+  builder: (context, result, _) => /* only the part that depends on result */,
 );
-
-// Over: setState re-runs all of build, and nothing marks which part actually changed.
-late var _result = _resolve();
-void _onChanged() => setState(() => _result = _resolve());
 ```
 
-Dispose the notifier in `State.dispose`. Same reasoning the example applies to its view-models, see
-[`example/CODESTYLE.md`](example/CODESTYLE.md) *State management*. `setState` is the coarse
-fallback, for when genuinely many independent parts of one widget change at once and a single
-rebuild beats many builders.
+Dispose the notifier in `dispose`, as the example's view-models do
+([`example/CODESTYLE.md`](example/CODESTYLE.md)). `setState` is for many independent parts changing
+at once.
 
 <a id="idioms-plain-conditionals"></a>
 ### Plain `if`s over clever `switch` arms
 
-A `switch` earns its place dispatching on a sealed type or an enum. Don't reach for it to branch on
-a nullable value, and don't lean on object patterns (`Foo(:final bar?)`, `Foo(bar: null)`) to spell
-out conditions an `if` says directly.
+A `switch` dispatches on a sealed type or an enum. A nullable check is an `if`, never an object
+pattern:
 
 ```dart
 // Prefer:
@@ -642,94 +397,78 @@ if (snapshot == null) observer?.onReload(.queryChanged);
 final debt = snapshot?.debt;
 if (debt != null) unawaited(_runReload(debt));
 
-// Over:
+// Over: 2 null checks dressed as a type dispatch.
 switch (snapshot) {
-case null:
-observer?.onReload(.queryChanged);
-case _Snapshot(:final debt?):
-unawaited(_runReload(debt));
-case _Snapshot(debt: null):
-// nothing to do
+  case null:
+    observer?.onReload(.queryChanged);
+  case _Snapshot(:final debt?):
+    unawaited(_runReload(debt));
+  case _Snapshot(debt: null):
+  // nothing to do
 }
 ```
-
-**Why:** 2 null checks hidden behind destructuring, and an exhaustive-arms shape that suggests a
-type dispatch that isn't there.
 
 <a id="idioms-catch-exceptions"></a>
 ### Catch `Exception`, let `Error` through
 
-An `Exception` is a failure the code can handle, so catch it, and type whatever holds it as one. An
-`Error` is a bug: let it reach the app, where development shows it.
+An `Exception` is a failure to handle, and whatever holds one is typed as one. An `Error` is a bug,
+so it reaches the app:
 
 ```dart
 // Prefer:
 } on Exception catch (exception) {
-state = state.failed(exception);
+  state = state.failed(exception);
 }
 
-// Over: handles a bug as if it were a failure.
+// Over: handles a bug as if it were a failure, and avoid_catching_errors misses it.
 } on Object catch (error) {
-state = state.copyWith(error: error);
-if (error is! Exception) rethrow;
+  state = state.copyWith(error: error);
+  if (error is! Exception) rethrow;
 }
 ```
-
-**Why:** `avoid_catching_errors` only flags `on Error`, so an `on Object` catch gets past it.
 
 ---
 
 <a id="prose"></a>
 ## Prose & voice
 
-**Read <https://noslopgrenade.com/> before writing any prose here.** Open it, don't cite it from
-memory. It is short and it carries the examples and the intent behind every line below.
+**Read <https://noslopgrenade.com/> before writing any prose here,** the page itself, not a memory
+of it. It covers every surface a person reads: dartdoc, comments, Markdown, commit messages, PR and
+issue bodies.
 
-Covers every surface a person reads: dartdoc, comments, READMEs, APPENDIX entries, commit messages,
-PR and issue bodies.
-
-- Keep it trimmed and compacted to reduce noise. Brief, concise, succinct. No over-explaining.
-- Comment at the call site, rather than a preamble wall-of-text.
-- **Point at the source, never copy the value.** Anything a file or a command already states, an
-  SDK floor, a version, a count, a file list, gets referenced rather than restated: "the floor in
-  `pubspec.yaml`'s `environment:` block", not "Dart 3.13". A copy is redundant the day it lands and
-  wrong the day the source moves, and nothing fails when it rots. A CHANGELOG is the exception: it
-  records what was true at that release and must not be updated to match today.
-- Use the Markdown features that improve readability: subsection layout, tables, (un)ordered lists,
-  show-hide sections. Structure replaces prose rather than getting added to it.
-- Prefer not using technical buzz-words, use ELI18 level instead.
-- No AI-tell-tale signs like em-dashes, `;` and others, and no filler vocabulary (leverage, robust,
+- Say the thing, then stop. No over-explaining, no restating what the code or the diff shows.
+- Comment at the call site, never in a preamble.
+- **Point at the source, never copy the value.** An SDK floor, a version, a count or a file list
+  gets referenced ("the floor in `pubspec.yaml`"), since a copy rots silently. The CHANGELOG is the
+  exception: it records what was true at its release.
+- Markdown structure (tables, lists, `<details>`) replaces prose, never adds to it.
+- Plain words over buzzwords. Informal, light, no em-dashes, semicolons or filler (leverage, robust,
   seamless, simply, powerful, comprehensive).
-- Keep the tone informal and light. Give it a natural flow.
-- **Numerals, not number words.** `2 headers`, `3 exceptions`, `the 1st page`, `every 10th item`.
-  Counting and position only: `one` stays a word where it works as "a" (`one header per group`,
-  `the ready-made one`), `first` stays one where it is an adverb (`ask first`, `newest first`) or
-  part of a compound (`first-page loading`, `one-line pointer`), and a `second` of time is never
-  `2nd`. Changing a heading changes its GitHub anchor, so fix the links in the same edit.
+- **Numerals for counts and positions:** `2 headers`, `the 1st page`. `one` stays where it means "a"
+  (`one header per group`), `first` stays an adverb (`ask first`) or in a compound
+  (`first-page loading`), and a `second` of time is never `2nd`. A heading change moves its GitHub
+  anchor, so fix its links in the same edit.
 
-Reflowing a block you have edited is part of this. The wrap rule is in [Formatting](#formatting).
+Reflow a block you've edited ([Formatting](#formatting)).
 
 ---
 
 <a id="dartdoc"></a>
 ## Comments & dartdoc
 
-Public symbols carry `///` dartdoc explaining *why* and *what guarantee*, not the mechanical
-*what*, which the type already says. `public_member_api_docs` is on (see
-[hard rule 4 in `.ai/AGENTS.md`](.ai/AGENTS.md#hard-rules)), and it will force a line onto a member
-with nothing to say. `Creates it.` is a complete answer there, not a placeholder to expand.
+Public symbols carry `///` explaining the *why* and the guarantee, not the *what* the type already
+says ([hard rule 4](.ai/AGENTS.md#hard-rules)). Where `public_member_api_docs` forces a line with
+nothing to say, `Creates it.` is complete.
 
-**Aim for 1 or 2 lines.** A guideline, not a cap: an explanation that earns its length keeps it,
-and a decision a reader would otherwise question is worth the sentence. What doesn't earn it is
-restating the signature, or rationale that belongs in [`APPENDIX.md`](APPENDIX.md) behind a one-line
-pointer naming the anchor. Surplus lines are noise the next reader pays for and they bury the
-comment that mattered, so trim the neighbours whenever you edit a file.
+**1 or 2 lines.** A decision a reader would question earns a sentence. Restating the signature
+doesn't, and rationale goes to [`APPENDIX.md`](APPENDIX.md) behind a one-line pointer to its anchor.
+Trim the neighbours whenever you edit a file.
 
+<a id="dartdoc-docimport"></a>
 ### `@docImport` for dartdoc-only references
 
-When a file needs a symbol *only* for `[Name]` references in dartdoc, never a regular `import`:
-that pulls the dependency into the runtime graph and hides the intent. Use the dartdoc-only
-directive:
+A symbol needed only for a `[Name]` reference never gets a real `import`, which would put it in the
+runtime graph:
 
 ```dart
 /// @docImport 'paged_list_view.dart';
@@ -738,136 +477,95 @@ library;
 import 'page_result.dart'; // Real code import.
 ```
 
-A regular `import` declares a runtime dependency, so if the only reason is `comment_references`
-resolution, the graph lies. The `@docImport` directives go as `///` comments directly above the
-file's `library;`, which `unnecessary_library_directive` then leaves alone. Drop the last `[Name]`
-a docImport served and the directive (and its `library;`) go too.
+The directives sit as `///` comments right above `library;`. Drop the last `[Name]` one served and
+the directive goes, with its `library;`.
 
 ---
 
 <a id="dcm-rules"></a>
 ## DCM rules (applied by hand)
 
-`dart analyze` does not run these, and neither does CI. The project treats them as non-negotiable
-and expects to be clean under the DCM CLI (`dcm analyze <dir>`):
+Neither `dart analyze` nor CI runs these, and the tree stays clean under `dcm analyze <dir>`:
 
-- **`no-empty-block`**: every block has code or a `// TODO(handle): …` explaining the gap. Empty
-  catch clauses are excused. `onRefresh: () {}` is a violation, so give it work or a TODO. A
-  deliberately-empty API (an observer's no-op defaults) takes a file-level `ignore_for_file` with
-  its reason, once, rather than a comment in each body.
-- **`newline-before-return`**: one blank line between a block-final `return` and the non-return
-  statement before it. Inline guards (`if (cond) return;`) don't need it.
-- **`prefer-commenting-analyzer-ignores`**: every `// ignore:` needs an adjacent `//` explanation.
-  A dartdoc `///` doesn't count.
-- **`avoid-returning-widgets`**: a helper returning a `Widget` fragment trips this. Subclass
-  `StatelessWidget` for anything reused or appearing twice, and reach for a `// ignore:` with a
-  reason only for a genuine one-off.
-- **`prefer-correct-edge-insets-constructor`**: always the simplest valid `EdgeInsets` constructor,
-  so `EdgeInsets.all(0)` becomes `EdgeInsets.zero` and symmetric-equal sides collapse to
-  `EdgeInsets.all(v)`. Holds even when mirroring an upstream Flutter constant. If the upstream form
-  is kept for traceability, say so in the constant's dartdoc.
+- **`no-empty-block`**: a block holds code or a `// TODO(handle): …`. Empty `catch`es are excused.
+  A deliberately empty API (the observer's no-op defaults) takes one file-level `ignore_for_file`
+  with its reason.
+- **`newline-before-return`**: a blank line before a block-final `return`. Inline guards
+  (`if (cond) return;`) are exempt.
+- **`prefer-commenting-analyzer-ignores`**: every `// ignore:` has a `//` reason beside it. A `///`
+  doesn't count.
+- **`avoid-returning-widgets`**: a helper returning a `Widget` becomes a `StatelessWidget`. A
+  genuine one-off takes an `// ignore:` with its reason.
+- **`prefer-correct-edge-insets-constructor`**: the simplest valid constructor, `EdgeInsets.zero`
+  over `.all(0)`, `.all(v)` over equal sides, even mirroring a Flutter constant.
 
 ---
 
 <a id="test-style"></a>
 ## Test style
 
-Tests split by kind under `test/`, and each kind mirrors `lib/src/`. So `reload.dart` in
-`lib/src/data/refresh/models/` is pinned by `test/widget_tests/data/refresh/models/reload_test.dart`,
-and a unit run stays separate (`flutter test test/unit_tests`).
+Tests split by kind under `test/` (`unit_tests/`, `widget_tests/`), each kind mirroring
+`lib/src/`.
 
-- **One test file per library,** its `part` files included. A file with no behaviour of its own (a
+- **One test file per library,** its `part`s included. A file with no behaviour of its own (a
   typedef, an enum, a plain value) gets none.
-- **A scenario goes with the file that owns the rule it pins,** so a suite reaching across several
-  files splits along them.
-- **A library too big for one file gets a folder of its name,** one file per behaviour, like the
-  engine's `widgets/async_list_view/`.
+- **A scenario goes with the file that owns the rule it pins,** so a suite spanning files splits
+  along them.
+- **A library too big for one file gets a folder of its name,** one file per behaviour, like
+  `widgets/async_list_view/`.
 - **A rule all value types share gets one file of its own,** like `data/to_string_test.dart`, which
   finds the types it covers by reading `lib/src`.
 
-What each kind holds:
+The 2 kinds:
 
-- **`test/unit_tests/`** holds pure-logic units in `bdd_framework` + `checks`. Frame behaviour as a
-  `BddFeature` with `Bdd(...).scenario().given().when().then()`, and keep the parameter matrix in
-  one place as `.example(val(...), ...)` rows read via `context.example.val('name')`, never literals
-  scattered through the body.
-- **`test/widget_tests/`** holds widget behaviour, framed with the local Gherkin helper in
-  `test/support/bdd.dart`: `feature`, `scenarioWidgets`, `scenarioOutlineWidgets`. The helper is
-  local because `bdd_framework` **cannot** drive widget tests, wrapping `test()` with no
-  `WidgetTester` and so no `pumpWidget`.
+- **`test/unit_tests/`**: pure logic in `bdd_framework`, a `BddFeature` with
+  `Bdd(...).scenario().given().when().then()`. The parameter matrix sits in one place, as
+  `.example(val(...))` rows read via `context.example.val('name')`.
+- **`test/widget_tests/`**: widget behaviour through the local Gherkin helper in
+  `test/support/bdd.dart` (`feature`, `scenarioWidgets`, `scenarioOutlineWidgets`), since
+  `bdd_framework` wraps `test()` and can't hand out a `WidgetTester`.
 
-Assert with `checks` throughout (`check(x).equals(...)`, `.isA<T>()`, `.throws<E>()`). It has no
-finder API, so bridge a `flutter_test` finder by evaluating it:
-`check(find.text(...).evaluate()).length.equals(1)`.
+Assert with `checks`. It has no finder API, so evaluate the finder:
+`check(find.text(...).evaluate()).length.equals(1)`. Drive fixed `pump()`s, never
+`pumpAndSettle`, which hides how many frames ran and skips in-between states like a loader before
+its page. Cover the failure paths too.
 
-Keep tests deterministic and exercise the failure paths, not just the happy one. Drive fixed
-`pump()`s, never `pumpAndSettle`: it hides how many frames ran, and it skips past in-between states
-like a loader before its page lands. The example app keeps its own copy of the Gherkin helper, since
-a local helper can't cross a package boundary.
-
-**Widget tests share one harness, not per-file copies.** The pieces live under `test/support/`,
-re-exported by the `support.dart` barrel, so import that one file:
-
-| Helper                                                                         | What it does                                                                                                        |
-|--------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `pumpListSmith(tester, child)`                                                 | wraps the list in the `Directionality` + `MediaQuery` scaffold every test needs                                     |
-| `drain(tester, {frames})`                                                      | pumps a fixed number of frames                                                                                      |
-| `settle(tester, {debounce})`                                                   | advances past a search debounce, then drains                                                                        |
-| `commitQuery(tester, queryNotifier, query)`                                    | sets a query that reaches the list through a notifier, then pumps the frame that starts its debounce and settles    |
-| `pullToRefresh(tester, anchor, {offset})`                                      | pulls from `anchor`, down unless `offset` says otherwise, far enough to refresh, then pumps timed frames so it runs |
-| `scrollToEnd(tester, controller)`, `allShownTexts(tester, controller, prefix)` | scrolls until the list stops growing, and reads every row's text there, top to bottom                               |
-| `containsIgnoreCase`                                                           | sync-search predicate                                                                                               |
-| `pagedFetcher([...])`                                                          | multi-page or overlapping data (a single page reads clearer inline)                                                 |
-| `FakeServer(items)`                                                            | a store to edit mid-test, with fetchers you can hold or fail per page and attempt                                   |
-| `release(tester, holdCompleters)`                                              | lets held fetches through, then drains                                                                              |
-| `ToggleRow(item)`, `shownToggleRows()`                                         | a 50 px row that reads `off N` until a tap makes it `on N`, and the ones on screen                                  |
-
-A per-suite `_pump*` wrapper is fine where a file repeats a construction, as long as it stays a thin
-delegation carrying only that suite's own `ListSmith` config, never a re-declared scaffold or drain
-loop. For the observer, extend `ListSmithObserver` with a recording double like
-`RecordingListSmithObserver`. A mock generator can't help: the observer is `abstract base`, so
-mockito's generated `implements` won't compile against it, and nothing else at the test seams is
-class-shaped to mock.
+**Widget tests share one harness** in `test/support/`, behind the `support.dart` barrel. Check it
+before writing a helper, and keep a per-suite `_pump*` wrapper a thin delegation carrying only that
+suite's `ListSmith` config. Observer tests extend `ListSmithObserver` with a recording double,
+since mockito's generated `implements` won't compile against its `abstract base`. The example app
+keeps its own copy of the Gherkin helper, which can't cross a package boundary.
 
 <a id="test-conventions"></a>
 ### Conventions
 
-- **Test the library, not its dependencies.** Flutter and the packages in `pubspec.yaml` carry their
-  own suites, and what a dependency does by itself (an indicator's drag physics, a pool's queue) is
-  its authors' to test. Test what list_smith adds on top, like the key a row gets or the order it
-  wires things in.
+- **Test the library, not its dependencies.** What Flutter or a package does by itself (an
+  indicator's drag physics, a pool's queue) is its authors' to test. Test what list_smith adds, like
+  the key a row gets or the order it wires things in.
 - **A test pins a behaviour a user would agree with, said as a sentence.** A value that only carries
   it (a default, a log line, an enum's name) isn't one: compare against its source or the state
   before.
-- **A guarantee the design rests on is a behaviour too,** even with no screen to show it breaking: a
+- **A guarantee the design rests on is a behaviour too,** with no screen to show it breaking: a
   rebuild with the same items never runs `groupBy` again.
-- **One behaviour, one scenario.** A check another scenario already makes goes, one that 2
-  scenarios share moves into a scenario of its own, and each example row takes a branch no other
-  row does.
+- **One behaviour, one scenario.** A check another scenario already makes goes, one 2 scenarios
+  share moves into its own, and each example row takes a branch no other row does.
 - **Assert what the user gets, not the string,** unless 2 messages on one screen mean different
   things.
 - **Prove a regression test fails:** break what it guards, watch it go red, put it back.
 - **A scenario asserting that nothing happened needs the same in reverse:** break the mechanism
-  itself and watch it go red, or it passes just as happily when the feature never worked at all.
+  itself, or it passes just as happily when the feature never worked.
 
 ---
 
 <a id="documentation-conventions"></a>
 ## Documentation conventions (Markdown)
 
-- **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls and workflow stay in
-  `.ai/AGENTS.md` and `.ai/CLAUDE.md`. The "why we do it this way" lives in
-  [`APPENDIX.md`](APPENDIX.md). Rationale bullets stay compact too: the decision and its why in a
-  few lines. Rejected alternatives belong in the issue, not here. What each part and seam does lives
-  in [`doc/how-it-works.md`](doc/how-it-works.md), so an entry never restates a seam's promise.
-- **Explicit `<a id="…">` anchors** sit above every APPENDIX and CODESTYLE heading. Link via the
-  anchor, never the heading text. Anchor stability is load-bearing: renaming a heading keeps the
-  existing anchor, or you grep the repo and update every caller in the same change.
-- **Bare `flutter` / `dart` in command examples, never `fvm flutter`.** FVM is a local detail
-  (`.fvmrc` pins the channel), and docs stay tool-agnostic so an external contributor isn't forced
-  into it.
-- **British spelling in prose and identifiers** (`normalise`, `behaviour`, `initialise`). The one
-  carve-out is names fixed by the SDK or a dependency (`toJson`, `compareTo`, `hashCode`, `color`,
-  `center`).
-- **Prose follows [Prose & voice](#prose)**, every Markdown file here included, and that section
-  starts by telling you to read the page it links.
+- **[`APPENDIX.md`](APPENDIX.md) holds the rationale,** a decision and its why in a few lines.
+  Rejected alternatives stay in the issue. Hard rules and workflow live in `.ai/`, what each part
+  and seam does in [`doc/how-it-works.md`](doc/how-it-works.md), which an entry never restates.
+- **Every APPENDIX and CODESTYLE heading has an `<a id="…">` anchor.** Link by it, never by heading
+  text. A renamed heading keeps its anchor, or every link to it changes in the same edit.
+- **Bare `flutter` / `dart` in commands,** never `fvm flutter`. FVM is a local detail
+  (`.fvmrc`).
+- **British spelling** (`normalise`, `behaviour`), except names the SDK or a dependency fixes
+  (`toJson`, `hashCode`, `color`).

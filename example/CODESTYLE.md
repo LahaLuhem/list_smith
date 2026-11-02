@@ -1,92 +1,75 @@
-Example-app code style. Package style lives in [`../CODESTYLE.md`](../CODESTYLE.md), example scope
-and facts in [`.ai/AGENTS.md`](.ai/AGENTS.md).
-
-The example includes the same shared lints as the package, relaxing only
-`public_member_api_docs`. Everything in the package guide applies here too.
+Example-app code style, on top of the [package's](../CODESTYLE.md), which applies here too, bar the
+lints `analysis_options.yaml` relaxes. Scope and facts live in [`.ai/AGENTS.md`](.ai/AGENTS.md).
 
 ## Example-specific conventions
 
 ### State management (pmvvm)
 
-Use a scoped `ValueNotifier` (exposed as a `ValueListenable` getter) + `ValueListenableBuilder` for
-state that rebuilds a **small** part of a view. Only call `notifyListeners()` on the `ViewModel`
-(which rebuilds the whole `MVVM.builder` subtree) when **many** sites must update together.
+A **small** part of a view rebuilds through a scoped `ValueNotifier`, exposed as a `ValueListenable`
+getter, and a `ValueListenableBuilder`. `notifyListeners()` on the `ViewModel` rebuilds the whole
+`MVVM.builder` subtree, list and all, so it's for a change **many** places share, where one builder
+per field would cost a subscription each.
 
-- **Why:** `notifyListeners()` rebuilds everything under the view's `Consumer`, so a control that
-  only changes its own widget shouldn't use it, `ListSmith` list and all. The flip side is that one
-  `ValueListenableBuilder` per field is O(n) subscriptions, so a single change touching many places
-  is better off with one `notifyListeners()`.
-- **How to apply:** back the field with a private `ValueNotifier<T>` named `_<thing>Notifier`,
-  expose it as a `<thing>Listenable` getter (a boolean `<thing>` reads as a question), wrap only the
-  dependent widget in a `ValueListenableBuilder`, write through a small handler assigning `.value`,
-  and dispose the notifier in the VM's `dispose()`.
+Back the field with a private `_<thing>Notifier`, expose `<thing>Listenable` (a boolean `<thing>`
+reads as a question), wrap only the dependent widget, write through a small handler, and dispose
+the notifier in the view-model's `dispose()`:
 
-  ```dart
-  // Prefer: only the switch rebuilds on toggle.
-  final _shouldInjectFailuresNotifier = ValueNotifier(false);
-  ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
-  void onInjectFailuresToggled({required bool value}) =>
-      _shouldInjectFailuresNotifier.value = value;
+```dart
+// Prefer: only the switch rebuilds on toggle.
+final _shouldInjectFailuresNotifier = ValueNotifier(false);
+ValueListenable<bool> get shouldInjectFailuresListenable => _shouldInjectFailuresNotifier;
+void onInjectFailuresToggled({required bool value}) =>
+    _shouldInjectFailuresNotifier.value = value;
 
-  // Over: rebuilds the whole MVVM subtree for a one-widget change.
-  var _shouldInjectFailures = false;
-  void onInjectFailuresToggled({required bool value}) {
-    _shouldInjectFailures = value;
-    notifyListeners();
-  }
-  ```
+// Over: rebuilds the whole MVVM subtree for a one-widget change.
+var _shouldInjectFailures = false;
+void onInjectFailuresToggled({required bool value}) {
+  _shouldInjectFailures = value;
+  notifyListeners();
+}
+```
 
-- **List-typed reactive state uses `ListNotifier` (from `listenable_collections`), not a
-  `ValueNotifier<List<T>>`.** A `ValueNotifier` only notifies on identity change, so a growing list
-  forces a fresh `List` on every mutation (`value = [x, ...value]`) purely to fire the
-  notification. `ListNotifier<T>` is itself a `ValueListenable<List<T>>` you mutate in place, one
-  notification per change, so the getter and builder are unchanged while the writes read as
-  ordinary list ops. The Async search demo's event log uses it.
+**A list is a `ListNotifier`** (`listenable_collections`), not a `ValueNotifier<List<T>>`, which
+only notifies on a new identity and so needs a fresh `List` per change. A `ListNotifier` is already
+a `ValueListenable<List<T>>` you edit in place, so the getter and the builder stay the same.
 
 ### Directory layout
 
-Feature-first MVVM, mirroring the sibling examples:
+Feature-first MVVM:
 
-- `lib/main.dart`: the app shell (`PlatformApp` + the app-wide theme-mode notifier).
-- `lib/app/`: app-wide scopes (e.g. `theme_scope.dart`).
-- `lib/features/<feature>/`: one folder per demo, holding `<feature>_view.dart` +
-  `<feature>_view_model.dart`, plus a `widgets/` subfolder for widgets used only by that feature.
-- `lib/features/core/`: shared building blocks: `data/models/` (immutable models), `data/constants/`
-  (theme), `mixins/` (view-model state several demos share), `repos/` (fake data sources), `views/`
-  (the home hub), `widgets/` (`DemoScaffold`, the row tile, the knobs).
+- `lib/main.dart`: the app shell. `lib/app/`: app-wide scopes.
+- `lib/features/<feature>/`: one demo, as `<feature>_view.dart` plus `<feature>_view_model.dart`,
+  with a `widgets/` folder for widgets only it uses.
+- `lib/features/core/`: what demos share, from models and fake sources to `DemoScaffold`.
 
-One primary public class per file, file name matching, as in the package. Cross-feature imports
-take the package-root form (`/features/...`), same-feature ones stay relative.
+Cross-feature imports take the `/features/…` form, same-feature ones stay relative.
 
 ### Views and view-models
 
-- A view is a `StatelessWidget` whose `build` returns
-  `MVVM.builder(viewModel: XxxViewModel(), viewBuilder: ...)`, handing its hint, controls and list
-  to a `DemoScaffold(title: ...)`, which spaces them. Its dartdoc names the list_smith API the demo
-  exercises and stops there (see [`AGENTS.md`](AGENTS.md), where a demo's explanation goes).
-- A view-model is a `final class XxxViewModel extends ViewModel`. Expose state through getters and
-  name mutation handlers `on<Thing>Changed` / `on<Thing>Toggled`. A boolean handler takes a named
-  `{required bool value}`, per `avoid_positional_boolean_parameters`, and the view adapts it:
+- **A view** is a `StatelessWidget` building
+  `MVVM.builder(viewModel: XxxViewModel(), viewBuilder: ...)`, which hands its hint, controls and
+  list to a `DemoScaffold(title: ...)` to space them. Its dartdoc names the list_smith API the demo
+  exercises, and stops ([where explanations go](AGENTS.md)).
+- **A view-model** is a `final class XxxViewModel extends ViewModel`, with state behind getters and
+  handlers named `on<Thing>Changed` / `on<Thing>Toggled`. A boolean handler takes
+  `{required bool value}`, and the view adapts:
   `onChanged: (value) => viewModel.onThingToggled(value: value)`.
 
 ### Widget composition
 
-- **No `Widget _buildX()` helpers**, per DCM's `avoid-returning-widgets`. Extract a private
-  `StatelessWidget`. A `switch` yielding a widget goes in a local inside `build`, not a helper.
-- Let generic type arguments infer when the arguments pin them: `ListSmith.async(...)`, not
+- **A `switch` yielding a widget is a local in `build`,** not a helper, which DCM's
+  `avoid-returning-widgets` rules out anyway.
+- **Let type arguments infer** where the arguments pin them: `ListSmith.async(...)`, not
   `ListSmith<DemoItem>.async(...)`.
 
 ### Icons
 
-Prefer `platform_icons` (`PlatformIcon(PlatformIcons.x)`), reaching for
-`platformValue(material:, cupertino:)` only when the glyph isn't in the library. `platformValue`
-throws on desktop and web, which is why the example targets Android and iOS.
+`platform_icons` (`PlatformIcon(PlatformIcons.x)`) first, and `platformValue(material:, cupertino:)`
+only for a glyph it lacks.
 
 ### Tests
 
-Widget tests use the local Gherkin helper in `test/support/bdd.dart` with `checks`, under the
-package's rules: [`CODESTYLE.md`](../CODESTYLE.md#test-style). That helper is a byte-identical copy
-of the package's, since a local one can't cross a package boundary, so edit both.
-
-Import `test/support/support.dart`, which adds the example's own harness: `openDemo` taps a demo
-open from the hub, and `drain` pumps a run of frames. No scenario hand-rolls either.
+The package's [test style](../CODESTYLE.md#test-style) applies. `test/support/bdd.dart` is a
+byte-identical copy of the package's Gherkin helper, which can't cross a package boundary, so edit
+both. Import `test/support/support.dart` for the example's own harness on top, rather than
+hand-rolling a demo open or a frame drain.

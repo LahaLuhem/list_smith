@@ -1,46 +1,38 @@
 # AGENTS.md for `example/`
 
-Tool-agnostic brief for the runnable demo app under `example/`. Package (library) conventions live
-in the parent [`AGENTS.md`](../AGENTS.md), example-specific code style in
-[`CODESTYLE.md`](../CODESTYLE.md). Read both before working in this subdirectory.
+Brief for the demo app. The package's rules are in the root [`AGENTS.md`](../../AGENTS.md), the
+example's code style in [`CODESTYLE.md`](../CODESTYLE.md). Read both.
 
 ## Scope
 
-- Runnable demo of `list_smith`, wired to the parent via `list_smith: { path: ../ }`.
-- Not published (`publish_to: 'none'`), so no semver discipline and it may depend on whatever
-  ecosystem packages it likes.
-- Keep it building and analysing clean on the strict lint set it inherits via `include`.
-  dartender's CI, called from [`ci.yml`](../../.github/workflows/ci.yml), checks it along with the
-  package.
+- A runnable demo, depending on the package by `path: ../`.
+- Unpublished, so no semver, and it may depend on any package it likes.
+- It builds and analyses clean under the lints it inherits, which dartender's CI, called from
+  [`ci.yml`](../../.github/workflows/ci.yml), checks along with the package.
 
 ## Architecture
 
-Feature-first MVVM on the maintainer's platform-adaptive stack, mirroring the sibling examples
-(`platform_adaptive_widgets`, `better_internet_connectivity_checker`):
+Feature-first MVVM on the maintainer's platform-adaptive stack:
 
-- **State**: `pmvvm` (`MVVM.builder` + `ViewModel`). [`CODESTYLE.md`](../CODESTYLE.md) has the
-  reactivity rule and the view / view-model shape.
-- **Surfaces**: `platform_adaptive_widgets` (Material on Android, Cupertino on iOS), with
-  `material_ui` / `cupertino_ui` and `platform_icons`. That doubles as the showcase: list_smith's
-  neutral surfaces drop into both shells unchanged.
-- **Layout**: `lib/main.dart` (app shell), `lib/app/` (scopes), `lib/features/` (one folder per
-  demo, plus `features/core/` for shared pieces). Full layout in [`CODESTYLE.md`](../CODESTYLE.md).
+- **State:** `pmvvm` (`MVVM.builder` + `ViewModel`), shaped as [`CODESTYLE.md`](../CODESTYLE.md)
+  says.
+- **Surfaces:** `platform_adaptive_widgets`, Material on Android and Cupertino on iOS, with
+  `platform_icons`. It doubles as the showcase: list_smith's neutral surfaces drop into both shells
+  unchanged.
 
-The app is a hub, `features/core/views/home_view.dart`, and that file *is* the list of demos. The
-README points at it rather than copying it, so adding one leaves no stale list behind.
+The app is a hub, and `features/core/views/home_view.dart` *is* the list of demos, which the README
+points at rather than copying.
 
-**Adding a demo:** create `lib/features/<name>/<name>_view.dart` plus `_view_model.dart`, add a
-`_DemoTile` to the hub, and add a smoke scenario to `test/widget_test.dart`. Reuse `DemoScaffold`
-for the layout, `DemoItemTile` for the rows, and the `core` fake sources and mixins.
+**Adding a demo:** `lib/features/<name>/` with its view and view-model, a `_DemoTile` on the hub,
+and a smoke scenario in `test/widget_test.dart`. Reuse `DemoScaffold`, `DemoItemTile` and the
+`core` fake sources and mixins.
 
-**Where a demo's explanation goes.** Each knob explains itself in a one-line `subtitle`, and a
-screen adds one hint line on top only for a gesture nothing else shows. The hub tile's
-`description` is its one-line pitch, and the view's dartdoc names the list_smith API it exercises
-and stops there. Otherwise the same sentence ends up in 3 places and drifts into 3 versions of
-itself. Why next to the knob: a preamble pushes the list off a phone's screen, and drifts from the
-knobs it describes.
+**Where a demo's explanation goes:** each knob explains itself in a one-line `subtitle`, and a
+screen adds a hint line only for a gesture nothing else shows. The hub tile's `description` is its
+one-line pitch, and the view's dartdoc names the list_smith API it exercises. Anything more lands in
+3 places and drifts, and a preamble pushes the list off a phone's screen.
 
 ## Mobile-targeted
 
-`platformValue` throws anywhere but Android and iOS, and `PlatformIcon` throws on web, so run this
-on a mobile device or simulator.
+`platformValue` throws anywhere but Android and iOS, and `PlatformIcon` throws on web, so run it on
+a phone or a simulator.

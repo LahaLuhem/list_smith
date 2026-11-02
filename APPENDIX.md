@@ -1,19 +1,15 @@
 # APPENDIX for `list_smith`
 
-Design rationale: the "why" behind decisions the code and hard rules don't explain on their own.
-Hard rules and workflow live in [`.ai/AGENTS.md`](.ai/AGENTS.md), code style in
-[`CODESTYLE.md`](CODESTYLE.md), the map of parts and seams in
-[`doc/how-it-works.md`](doc/how-it-works.md). A decision log, appended as decisions land.
-
-Every heading carries an `<a id="…">` anchor. Link by anchor and keep anchors stable across
-renames.
+Why list_smith is built the way it is, where the code and the rules don't say. Hard rules live in
+[`.ai/AGENTS.md`](.ai/AGENTS.md), style in [`CODESTYLE.md`](CODESTYLE.md), what each part does in
+[`doc/how-it-works.md`](doc/how-it-works.md). New decisions append.
 
 <!-- TOC start -->
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#ai-files-symlinked)
 - [Consumer-facing surfaces impose no design system](#design-system-agnostic)
 - [`lib/src/` directory layout](#src-directory-layout)
-- [Pull-to-refresh resets the list on V1](#pull-to-refresh-resets-v1)
+- [A pull resets the list by default](#pull-to-refresh-resets-v1)
 - [Async override surfaces group, universal ones stay flat](#async-surfaces-holder)
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
 - [Async search: one paging state, 2 views](#async-two-view-search)
@@ -52,682 +48,473 @@ renames.
 <a id="ai-files-symlinked"></a>
 ## `AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`
 
-- **Decision:** the canonical text lives under [`.ai/`](.ai/), the root holds symlinks
-  (`AGENTS.md -> .ai/AGENTS.md`, `CLAUDE.md -> .ai/CLAUDE.md`).
-- **Why:** agents auto-discover `CLAUDE.md` / `AGENTS.md` at the root, but loose files there add
-  tree noise. `.ai/` keeps them together and the symlinks preserve discovery. `.gitignore` ignores
-  the root symlinks and commits the `.ai/` targets, `.pubignore` excludes both, so nothing ships.
-- **Cross-platform:** symlinks survive `git clone` on macOS and Linux. A Windows host without
-  symlink support may show a text file holding the target path instead, where the fallback is real
-  files at the root, hand-synced.
+Agents look for them at the root, so the root holds symlinks and `.ai/` holds the text, keeping the
+tree tidy. `.gitignore` commits only the `.ai/` targets, and `.pubignore` ships neither. A Windows
+checkout without symlinks gets a file holding the path, where the fallback is hand-synced copies.
 
 ---
 
 <a id="design-system-agnostic"></a>
 ## Consumer-facing surfaces impose no design system
 
-- **Decision:** list_smith's code, and every default it ships for a visible surface, builds on
-  `package:flutter/widgets.dart` only, never `material.dart` or `cupertino.dart`. Every surface
-  stays overridable and the defaults are neutral widgets-layer widgets.
-- **Scope is our surfaces, not what a dependency does inside.** A dependency may import Material
-  internally, as `custom_refresh_indicator` does. We neutralise it by filling every slot it draws
-  in, so no Material appears in our own look. Migrating that dependency's internals once Flutter
-  unbundles Material is its problem, not ours.
-- **Why:** developer experience, since list_smith drops into a Material, Cupertino or bespoke app
-  without importing a look the consumer never chose. And forward-compatibility, since Flutter is
-  decoupling `material` / `cupertino` from core
-  (<https://github.com/orgs/flutter/projects/220>), which makes the widgets layer where a neutral
-  package belongs.
-- **Consequences:** the widgets layer ships no spinner, so the loading and refresh defaults are
-  small widgets-layer implementations (a `CustomPainter`), not `CircularProgressIndicator`. When
-  wrapping a dependency that has Material defaults, a null default-builder slot is a defect, since
-  its Material default leaks onto our surface. Fill every slot.
+- **Decision:** list_smith builds on `package:flutter/widgets.dart` only, never Material or
+  Cupertino, and every visible default is a neutral widget the app can override.
+- **Why:** it drops into any app without a look nobody chose, and Flutter is moving Material and
+  Cupertino out of core (<https://github.com/orgs/flutter/projects/220>).
+- **Our surfaces, not a dependency's insides.** `custom_refresh_indicator` imports Material, so we
+  fill every slot it draws: an empty one leaks its Material default onto our surface.
+- **The widgets layer has no spinner,** so the loading and refresh defaults are small
+  `CustomPainter`s.
 
 ---
 
 <a id="src-directory-layout"></a>
 ## `lib/src/` directory layout
 
-- **Decision:** by kind at the top (`data/`, `widgets/`, `utils/`), then by feature
-  (`data/pagination/`, `data/search/`, ...), then by kind again inside a feature (`models/`,
-  `typedefs/`, `enums/`, `extensions/`, `utils/`), one primary public symbol per file. Sealed cases
-  nest one level under the base's kind as `part`s. A small feature stays flat until its vocabulary
-  earns the 3rd level.
-- **Why:** it matches the maintainer's other Flutter packages, so a contributor moving between them
-  meets the same shape. By-kind at the top separates data from behaviour, by-feature keeps a
-  concern's pieces together, and by-kind inside a feature keeps a grown one scannable.
-- **Rejected:** top-level `enums/` / `typedefs/` folders, which scatter a feature's vocabulary
-  across the tree. A typedef with one home type lives in that type's file.
-- **`data/` over `models/`:** the folder also holds enums and typedefs, which are not models.
+- **Decision:** by kind (`data/`, `widgets/`, `utils/`), then feature, then kind again inside a
+  feature, one primary public symbol per file, sealed cases as `part`s. A small feature stays flat
+  until it needs the 3rd level.
+- **Why:** it matches the maintainer's other packages. Kind at the top splits data from behaviour,
+  and feature keeps a concern's pieces together.
+- **`data/`, not `models/`,** since it holds enums and typedefs too. Top-level `enums/` and
+  `typedefs/` would scatter a feature's vocabulary.
 
 ---
 
 <a id="pull-to-refresh-resets-v1"></a>
-## Pull-to-refresh resets the list on V1
+## A pull resets the list by default
 
-- **Decision (V1):** a pull resets the paging state, so the list clears and the first-page loader
-  shows while the fresh page loads.
-- **Why not hold the indicator until fresh data:** it would spin beside the loader. A `refresh()`
-  from code still waits for the fresh page, since a button has no loader to hand over to.
-- **Since landed as an option:** `ReloadToCurrentDepth` keeps the old items and holds the indicator
-  until the re-fetch is done ([#reload-run](#reload-run)).
+- **Decision:** a pull resets the paging state, so the 1st-page loader shows while the fresh page
+  loads. Holding the indicator instead would spin it beside the loader.
+- **`refresh()` from code waits for the fresh page,** since a button has no loader to hand over to.
+- **`ReloadToCurrentDepth`** keeps the old items and holds the indicator until it's done
+  ([#reload-run](#reload-run)).
 
 ---
 
 <a id="async-surfaces-holder"></a>
 ## Async override surfaces group, universal ones stay flat
 
-- **Decision:** the async-only override surfaces (first and new-page loading and error, the
-  end-of-list footer) bundle into one `AsyncListSurfaces` passed as `surfaces:`. Surfaces every list
-  has, `emptyBuilder` and `noResultsBuilder`, stay flat constructor parameters.
-- **The rule, flat if universal:** a surface is flat if every list has it, and moves into the async
-  holder if only async lists do. Behaviour config (`pageSize`, `endPolicy`, the `refresh` seam) is
-  not a surface and stays flat regardless.
-- **The pull-to-refresh indicator is the deliberate exception.** It rides the `PullToRefresh` case
-  of the `refresh` seam, next to the on/off choice, so an indicator can only be set on a list that
-  refreshes. In the holder, a `NoRefresh` list could set one that never shows, exactly the ghost
-  this package removes. Wider principle: [unified opt-in idioms](#opt-in-idioms).
-- **Why:** the `.async` constructor had grown a run of optional builders that buried the behavioural
-  parameters. Grouping them mirrors `ListScrollConfig`, shortens the call site, and lets a consumer
-  reuse one surface set across lists. Autocomplete still lists every slot inside the holder.
-- **Why not group `emptyBuilder` too:** the sync path has an empty state but none of the async
-  surfaces, so a shared holder would let a `.sync` list set builders that do nothing.
+- **Decision:** the async-only surfaces (1st- and new-page loading and error, the end footer) group
+  into `AsyncListSurfaces`, passed as `surfaces:`. Surfaces every list has, `emptyBuilder` and
+  `noResultsBuilder`, stay flat, so a `.sync` list can't set a builder that never shows. Behaviour
+  config (`pageSize`, `endPolicy`) isn't a surface and stays flat.
+- **The pull indicator rides `PullToRefresh`,** so only a list that refreshes can set one
+  ([#opt-in-idioms](#opt-in-idioms)).
+- **Why:** a run of optional builders buried the `.async` behaviour parameters. The holder shortens
+  the call site, and one set serves many lists.
 
 ---
 
 <a id="sync-search-shape"></a>
 ## Sync search: flat input, a pure resolver
 
-- **Decision:** `.sync` takes its search input (`query`, `minSearchLength`, `searchDebounce`) as
-  flat parameters, not a `SearchConfig` holder, even though the override surfaces were grouped.
-- **Why flat:** `AsyncListSurfaces` groups builders a consumer sets once. `query` is the opposite,
-  changing on nearly every rebuild, so burying it in a holder reads badly. The debounce default also
-  diverges by path (zero on sync, 300ms on async), which flat per-constructor defaults express and a
-  shared holder could not.
-- **Pure resolver:** the predicate filtering lives in a widget-free `resolveSyncSearch(...)`
-  returning `(visibleItems, isSearching)`, unit-tested directly. The trim and the min-length gate
-  come before it, in the `QueryDebouncer` both lists share, so the committed query is the one that
-  searches. An empty or too-short query shows everything, an active query with no matches is the
-  no-results surface.
-- **Surfaces stay flat:** `emptyBuilder` and `noResultsBuilder` are shared with the async path, per
-  the [flat-if-universal rule](#async-surfaces-holder). A sync list carries no async surfaces, so
-  `.sync` takes no `AsyncListSurfaces` at all.
-- **The iterable is copied once:** `SyncSource` keeps the consumer's raw iterable, and
-  `SyncListView` turns it into a list once, again only when the iterable identity changes, so an
-  unchanged list is never re-copied or re-filtered per build. A change has to come as a new object,
-  and the same one edited in place asserts in debug.
-- **`scrollCacheExtent`, not `cacheExtent`:** Flutter deprecated `ScrollView.cacheExtent` (`double`)
-  for `scrollCacheExtent` (`ScrollCacheExtent`). `ListScrollConfig.cacheExtent` stays a public
-  `double?`, and both views read it through an unexported extension that wraps it in
-  `ScrollCacheExtent.pixels(...)`, from `package:flutter/rendering.dart` rather than a design
-  system.
+- **Decision:** `.sync` takes `query`, `minSearchLength` and `searchDebounce` flat. `query` changes
+  nearly every build, and the debounce default differs by path (zero on sync), which a shared holder
+  couldn't say.
+- **A pure resolver:** `resolveSyncSearch(...)` filters without a widget and returns
+  `(visibleItems, isSearching)`. Trim and min length come first, in the `QueryDebouncer` both lists
+  share, so the committed query is the one that searches.
+- **The iterable is copied once,** and again only when its identity changes, so an unchanged list
+  never re-filters. A change comes as a new object, and editing the old one in place asserts in
+  debug.
+- **`ListScrollConfig.cacheExtent` stays a `double?`,** wrapped as `ScrollCacheExtent.pixels(...)`
+  for Flutter's `scrollCacheExtent`.
 
 ---
 
 <a id="async-two-view-search"></a>
 ## Async search: one paging state, 2 views
 
-- **Decision:** async search rides a single paging state. A mode-aware fetch reads the debounced
-  committed query: empty runs the normal `fetchPage`, non-empty runs the `AsyncSearch` fetcher.
-  Search is opt-in, and search mode needs both a non-empty query and an `AsyncSearch`.
-- **Why one state:** pagination and pull-to-refresh compose for free, one end policy and one
-  `refresh()` serve both modes, and there is no 2nd state to keep in sync. `refresh()` re-reads the
-  query, so pulling in search mode reloads the current search.
-- **Cache policy is a pure decision plus an impure execution.** On a committed-query change,
-  `actionFor(wasSearching, isSearching)` returns a `CacheAction` (`refresh` / `snapshotThenRefresh`
-  / `restoreNormal`), unit-tested directly, and the engine executes it. Keep snapshots the paging
-  state on the way in and restores it on the way out, an instant return with no refetch. Replace
-  always refetches. A search-to-search change refetches under either.
-- **The kept feed carries a debt.** A pull, `refresh()` or `invalidate()` made while searching can't
-  reach the parked feed, so the snapshot books the ask (`.refresh` outranks `.invalidated`) and the
-  restore pays it: pages back as they were, then a `ReloadToCurrentDepth` over them reporting that
-  trigger. A snapshot taken under a live feed run is born owing what a caller asked of it, since the
-  reset that follows strands it. `reset()` drops the snapshot instead, page 0 being the verb.
-- **Reading the search case:** search mode is `query.isNotEmpty && source.supportsSearch`, and the
-  fetch pattern-matches the `AsyncSearch` case to reach its fetcher, so there is no nullable
-  fetcher to bang. A query set without an `AsyncSearch` asserts in debug and degrades to normal
-  pagination in release.
-- **Shared `QueryDebouncer`:** the timer, trim and skip-unchanged logic was extracted from
-  `SyncListView` into an unexported helper both views own. The owner seeds the initial query
-  synchronously and schedules later changes, and a zero-debounce change commits on the next tick,
-  which removed a `setState`-during-`didUpdateWidget` hazard the async path would have hit.
+- **Decision:** async search shares the one paging state. The fetch reads the committed query:
+  empty runs `fetchPage`, anything else the `AsyncSearch` fetcher. Search mode needs both.
+- **Why one state:** paging, pull-to-refresh, the end policy and `refresh()` serve both modes, with
+  no 2nd state to keep in step. `refresh()` while searching reloads the search.
+- **Cache policy is a pure decision the engine runs.** `actionFor(wasSearching, isSearching)`
+  returns a `CacheAction`. Keep snapshots the feed on the way in and restores it on the way out,
+  with no refetch. Replace always refetches, and so does a search-to-search change under either.
+- **The kept feed carries a debt.** A pull, `refresh()` or `invalidate()` while searching can't
+  reach the parked feed, so the snapshot books it (`.refresh` outranks `.invalidated`) and the
+  restore pays it with a `ReloadToCurrentDepth` reporting that trigger. A snapshot taken under a
+  live feed run is born owing, since the reset strands that run. `reset()` drops the snapshot.
+- **No nullable fetcher.** The fetch pattern-matches `AsyncSearch` to reach it. A query without one
+  asserts in debug and pages normally in release.
+- **A shared `QueryDebouncer`** owns the timer, trim and skip-unchanged. It seeds the 1st query
+  synchronously and commits a zero-debounce change on the next tick, so no `setState` lands during
+  `didUpdateWidget`.
 
 ---
 
 <a id="opt-in-idioms"></a>
 ## Unified opt-in idioms: every optional behaviour is a sealed, defaulted seam
 
-- **Decision:** each optional async behaviour is opted into the same way, by passing a non-default
-  case of a sealed, defaulted seam. Refresh is `Refresh` (`PullToRefresh` default, `NoRefresh` off),
-  async search is `Search` (`NoSearch` default, `AsyncSearch` on), and grouping plus the end and
-  cache policies already had this shape. The `.async` surface then reads one way: a default you can
-  ignore, or a named case for the feature.
-- **What it replaced:** a default-on `bool pullToRefresh` and a nullable `searchFetchPage` whose
-  presence was the opt-in. 3 shapes for "turn a feature on" made the surface harder to learn
-  than it needed to be.
-- **It also removes ghosts:** the loose shapes leaked 2 inert params. `searchCachePolicy` sat on
-  every `.async` list doing nothing without a search fetcher, and `refreshBuilder` did nothing when
-  `pullToRefresh` was false. Folding a feature's config into its own case means a knob can only be
-  set on a list that uses it.
-- **The rule:** an optional behaviour is a sealed, defaulted seam opted into by passing a case.
-  Behaviour that is the whole reason a constructor exists stays required, like `.sync`'s `searchBy`,
-  since an in-memory list with no predicate is just a `ListView.builder`. Live input that changes
-  every build stays flat, since a holder rebuilt every frame buys nothing.
+- **Decision:** an optional behaviour is a sealed seam with a default, opted into by passing a case:
+  `Refresh` (`PullToRefresh`, `NoRefresh`), `Search` (`NoSearch`, `AsyncSearch`), grouping, the end
+  and cache policies. The `.async` surface reads one way.
+- **It removes ghosts.** A knob lives on its feature's case, so it can only be set where it works.
+  The bool and nullable shapes it replaced left `searchCachePolicy` and `refreshBuilder` inert.
+- **Not everything is a seam.** A constructor's whole reason stays required (`.sync`'s `searchBy`),
+  and live input that changes every build stays flat.
 
 ---
 
 <a id="observer-seam"></a>
 ## Observer seam: async-only, no-op-method sink
 
-- **Decision:** an optional `ListSmithObserver` injected via `ListSmith.async(observer: ...)`,
-  modelled on `better_internet_connectivity_checker`'s `ConnectivityObserver`. An
-  `abstract base class` with a no-op default per event, so a subclass overrides only what it wants,
-  plus a `LoggingListSmithObserver` that logs each via `dart:developer`.
-- **Discrete events only.** The seam fires from callbacks outside `build`: the page fetch, a
-  reload's start, the debounced-query commit. No-results, empty and end-reached are excluded on
-  purpose, since they exist only as a function of paging and filter state *during* `build`, so
-  firing there would re-fire on every rebuild and risk a `setState`-during-build. End-reached is
-  worth revisiting, but needs a latched post-frame dispatch, more machinery than the discrete events
-  carry.
-- **One reload event, carrying the reason.** `onReload(FetchTrigger)` replaced `onRefresh()` once a
-  2nd reload-shaped intent was on the way. One event per reload the engine starts, with the
-  trigger its pages report, instead of a no-op method per verb. Query-driven reloads fire it too. A
-  `KeepCache` restore fires nothing unless it pays a debt
+- **Decision:** an optional `ListSmithObserver` on `ListSmith.async(observer: ...)`, an
+  `abstract base` class with a no-op per event, plus the ready-made `LoggingListSmithObserver`.
+- **Discrete events only,** fired outside `build`: a fetch, a reload's start, a query commit. Empty,
+  no-results and end-reached exist only as `build`-time state, where firing would repeat every
+  rebuild. End-reached would need a latched post-frame dispatch.
+- **One reload event with its reason,** `onReload(FetchTrigger)`, for every reload the engine
+  starts, query-driven ones included. A `KeepCache` restore fires nothing unless it pays a debt
   ([#async-two-view-search](#async-two-view-search)).
-- **Async-only.** The observer earns its place by surfacing what the hidden engine keeps out of
-  reach. A sync list has no paging, fetch or refresh, and the consumer owns the query it filters
-  on, so an observer there would be exactly the ghost that the
-  [flat-if-universal rule](#async-surfaces-holder) rules out. A `SyncListSmithObserver` stays
-  additive if a real use case turns up.
-- **Fully hidden, non-generic.** Every callback takes plain values, never the paging state, so
-  wiring up diagnostics can't reach an internal handle.
-  Non-generic because logging and analytics want counts and mode. A generic variant stays open if
-  item payloads are ever wanted.
-- **`abstract base`, extend-only,** so a new lifecycle event can ship as a no-op method in a later
-  minor release without breaking existing subclasses. It is a dispatch seam, not a decision seam, so
-  it carries no pure resolver of its own and is covered by widget tests driving a
-  `RecordingListSmithObserver`.
-- **No-op bodies, not commented ones.** The class dartdoc says once that every default is a no-op,
-  and a file-level `ignore_for_file: no-empty-block` carries the reason, rather than a comment in
-  each body.
+- **Async-only.** A sync list has no paging or fetch, and the app owns its query, so an observer
+  there would be a ghost.
+- **Plain values, non-generic.** No callback hands out paging state, and logging wants counts and
+  modes, not items.
+- **`abstract base`, extend-only,** so a new event ships as a no-op method in a minor. The logging
+  sink `implements` it from inside its library instead, so a new event won't compile until it's
+  logged.
+- **No-op bodies,** with one file-level `ignore_for_file: no-empty-block` and its reason.
 
 ---
 
 <a id="grouping-shape"></a>
 ## Grouping: erased key, gathered sections
 
-- **Decision:** an optional `Grouping<T>` on both constructors, default `NoGrouping`, opted into
-  with `Grouping.by(groupBy:, headerBuilder:)`. A sealed, defaulted seam like the end and cache
-  policies. Chosen over a nullable `ListGrouping<T>?`, another inert nullable, and over flat
-  `groupBy` + `headerBuilder`, which allows the ghost combo of a header builder with no grouper.
-  The sealed seam makes "off" a real case.
-- **`NoGrouping<T>` is generic, defaulted per construction** via `grouping ?? NoGrouping<T>()`,
-  rather than one shared `const NoGrouping()`. Why it has to be is under
-  [#grouping-polymorphic-dispatch](#grouping-polymorphic-dispatch). The cost is one small allocation
-  per ungrouped list, off any hot path.
-- **The key type is erased, so `ListSmith` stays single-generic.** `Grouping.by<T, K>` infers `K`
-  from `groupBy`, keeps it typed in `headerBuilder`, then stores `Object`-keyed closures. A 2nd
-  generic `ListSmith<T, K>` was rejected because Dart can't default a type parameter, so every
-  non-grouping list would carry a meaningless `K`. The `key as K` downcast is sound: every key
-  reaching the header came from the same instance's `groupBy`. Caveat: an untyped inline `groupBy`
-  widens `T` to `Object`, so type the parameter or pass a typed function.
-- **Header cells, not a sticky sliver.** Cells keep the rows one flat sliver, so list_smith keeps
-  owning the scrollable. One pass per change of the shown items places the headers
-  ([#scan-loops](#scan-loops)). Sticky headers would need a sliver `CustomScrollView` and, on async,
-  a split pager plus scroll-offset tracking, exactly the fragility this package rejects. Deferred.
-- **Not part of a row either.** A row that gained or lost its group's header changed size, which
-  moved the row being read, and a reversed list drew the header between the group's 1st and 2nd
-  items.
-- **Both gather each group into one run.** Sync buckets its filtered items on every query
-  (`bucketByGroup` over `collection`'s `groupListsBy`: groups in first-appearance order, items in
-  order within a group). Async gathers only once a key comes back after its run. The header pass
-  already tracks every key, so it spots that for free and grouped pages are never copied, where a
-  2nd scan would cost as much as the header pass (`group_headers_scaling`).
-- **`orderPolicy` is deprecated, going at the next major.** Gathering left it nothing to choose:
-  `RepairHeadersPolicy` is what happens anyway, and `FailOnUnorderedPolicy` would crash a list that
-  renders fine. Until then that one keeps arrival order and throws.
-- **A presentation transform, not a source or policy.** `grouping` is a shared `ListSmith` param
-  passed to both engines, not a field on the sealed source. Its ordering and boundary logic stays
-  widget-free and unit-tested (`bucketByGroup`, `resolveGroupHeaders`, `groupHeadersIfContiguous`),
-  and the engines get their sections from the type, through `Grouping.sectionsOver`.
-  `resolveSyncSearch` returns a lazy view so the grouped sync path buckets with one copy,
-  re-resolving on an items or `grouping` identity change. Hence "hold the `Grouping` stable" on a
-  large list.
+- **Decision:** an optional `Grouping<T>` on both constructors, `NoGrouping` by default, opted into
+  with `Grouping.by(groupBy:, headerBuilder:)`. The seam makes "off" a real case, where a header
+  builder without a grouper would be a ghost.
+- **The key type is erased,** so `ListSmith` keeps one generic. `Grouping.by<T, K>` keeps `K` typed
+  for `headerBuilder` and stores `Object`-keyed closures, and `key as K` is sound since every key
+  came from that instance's `groupBy`. Dart can't default a type parameter, so `ListSmith<T, K>`
+  would burden every list. An untyped inline `groupBy` widens `T` to `Object`, so type it.
+- **Headers are cells,** not part of a row or a sticky sliver. A header inside a row changed its
+  size and moved the row being read. Sticky headers need a `CustomScrollView` and, on async, a split
+  pager: deferred.
+- **Each group gathers into one run.** Sync buckets its filtered items on every query
+  (`bucketByGroup`: groups by 1st appearance, items in order). Async gathers only once a key comes
+  back after its run, which the header pass already spots, so grouped pages are never copied
+  ([#scan-loops](#scan-loops)).
+- **`orderPolicy` is deprecated** for the next major, since gathering left it nothing to choose.
+  Until then `FailOnUnorderedPolicy` keeps arrival order and throws.
 - **Sections form where the data lands,** from `_displayFor`'s result on async and in `_resolve` on
   sync, so a rebuild with the same items runs no pass. Async keeps them in their own memo cell, so
-  an inline `Grouping.by` doesn't redo de-dup.
+  an inline `Grouping.by` doesn't redo de-dup. A new `Grouping` still re-resolves sync, so hold it
+  stable on a large list.
 
 ---
 
 <a id="grouping-polymorphic-dispatch"></a>
 ## Grouping dispatches on the type, so the views don't branch
 
-- **Decision:** the flat-vs-grouped choice lives on the sealed `Grouping<T>` as 2 `@internal`
-  methods, so the view calls one delegate instead of testing `is KeyedGrouping` in 3 places.
-  `arrange(items)` is the sync display ordering, `sectionsOver(pagedItems)` returns the per-build
-  rows and headers, null headers without groups. Same "delegate to the type, keep the shell
-  branch-free" move as the open end-policy ([#explicit-end-signals](#explicit-end-signals)).
-- **Sealed stays sealed.** Unlike `PaginationEndPolicy`, opened for consumer strategies, there is no
-  compelling consumer-defined-grouping case, and the methods return neutral types so nothing leaks.
-  Opening it later is a one-line change. `@internal` makes them callable across the package but not
-  consumer API, since grouping is configured through `Grouping.by`.
-- **`NoGrouping` had to become generic.** A `T`-typed parameter on an instance reified at `Never`
-  rejects a real argument at runtime, since Dart makes such parameters covariant and checks them, so
-  `arrange(<String>[...])` on a `Grouping<Never>` throws. The old `const NoGrouping()` default was
-  exactly that, and would have crashed every ungrouped list the moment `arrange` or `sectionsOver`
-  ran.
-  Hence `NoGrouping<T>` and the `grouping ?? NoGrouping<T>()` default. A bare `const NoGrouping()`
-  in a consumer's own call still infers `NoGrouping<Foo>`. Only the library's generic default
-  couldn't name `T` inside a `const`.
-- **The ungrouped path skips the pass.** `sectionsOver` takes the pages, and only `KeyedGrouping`
-  walks them, so an ungrouped list skips the O(loaded) pass. Dispatch is once per change of the
-  shown items rather than per item, one virtual call replacing one `is` check, so the render path is
-  unchanged. Confirmed perf-neutral against the `benchmark/micro` baseline.
+- **Decision:** `Grouping<T>` carries 2 `@internal` methods, `arrange(items)` for the sync order and
+  `sectionsOver(pagedItems)` for rows plus headers, so the views call one delegate instead of
+  testing `is KeyedGrouping` ([CODESTYLE](CODESTYLE.md#patterns-behaviour-in-the-type)).
+- **Sealed stays sealed.** No app needs its own grouping yet, and opening it is one line.
+- **`NoGrouping` is generic** (`grouping ?? NoGrouping<T>()`). A `T` parameter on an instance
+  reified at `Never` rejects real arguments at runtime, so a `const NoGrouping()` library default
+  would crash every ungrouped list. An app's own `const NoGrouping()` still infers its `T`.
+- **The ungrouped path skips the pass,** since only `KeyedGrouping` walks the pages. Dispatch runs
+  once per change of the shown items, measured neutral.
 
 ---
 
 <a id="overlap-dedup"></a>
 ## Overlap de-dup runs at the display layer, not before storage
 
-- **Decision:** de-dup by id is a computed view over the paging state, `_displayFor` running
-  `PagingState.filterItems` in the build, not a filter on the stored pages. The state keeps the raw
-  pages, and only what renders is de-duped.
-- **Why not de-dup before storage:** the end policy reads each stored page's item count. De-dup
-  first lets a fully-duplicate page collapse to empty, which `StopOnEmptyPagesPolicy` reads as
-  end-of-data even though the backend had more past the overlap. Partial-boundary overlap never hit
-  this. A fully-duplicate mid-stream page, reachable with small page sizes, did.
-- **One path covers search for free.** Both fetch modes flow through one paging state and one
-  display derivation, so search-mode overlaps de-dup exactly like normal-mode ones.
-- **Cost, and why it's acceptable:** O(loaded items), re-run on each state change. There is no
-  cheaper seam without storing de-duped pages plus a parallel raw-count side-channel for the end
-  policy. The [benchmark report](benchmark/reports/SUMMARY.md) measures it with no real overlap.
-  Memoised on paging-state identity, so a keystroke before the debounce commits reuses the last
-  view. Sub-millisecond for most lists, with the cliff only at tens of thousands in one live list,
-  which strains widget count and memory regardless.
-- **The side-channel design was rejected, for now.** Incremental de-dup in the fetch plus a
-  raw-count side-channel would erase the cost, but that state has to snapshot and restore in
-  lockstep with `KeepCachePolicy`, and a bug there corrupts pagination rather than just display.
-  Not worth it while realistic lists stay under the cliff. `benchmark/micro/dedup_scaling.dart` is
-  the tripwire.
+- **Decision:** de-dup by id is a view over the paging state (`_displayFor` running
+  `PagingState.filterItems`), not a filter on the stored pages.
+- **Why not before storage:** the end policy reads each stored page's count, and a fully duplicate
+  page de-duped to empty reads as the data's end.
+- **Search gets it free,** since both modes share the state and the view.
+- **Cost:** a pass over the loaded items per state change, memoised on the state, so a keystroke
+  before the debounce reuses the last view. The [benchmark report](benchmark/reports/SUMMARY.md)
+  measures it. It only bites at tens of thousands of live items, where widget count bites anyway.
+- **Rejected for now:** de-dup in the fetch plus a raw-count side-channel, which would have to
+  snapshot and restore in lockstep with `KeepCachePolicy`, where a bug corrupts paging.
+  `dedup_scaling` is the tripwire.
 
 ---
 
 <a id="explicit-end-signals"></a>
 ## Explicit end signals: an open policy plus a fetcher building block
 
-- **Decision:** `PaginationEndPolicy` is an open `abstract class` a consumer can implement, not a
-  sealed set, and the end decision is a public `hasReachedEnd(EndContext)`. A consumer can add a
-  policy of their own with no change here.
-- **Why open, not sealed.** A sealed policy forced list_smith to enumerate every strategy. Opening
-  it makes the common page-derivable rules a few lines of consumer code, and tests call
-  `hasReachedEnd` directly.
-- **The signal is a fetcher output, orthogonal to the policy.** It lives in the network response,
-  which only the fetcher sees, so the policy decides and the fetcher supplies. `PageFetcher` and
-  `SearchPageFetcher` are small callable classes with 3 constructors: `.new` returns items only,
-  `.withHasMore` returns `(items, hasMore: bool)`, `.withSignal` returns `(items, Object? signal)`.
-  The common path pays a one-constructor wrap, so `T` stays the consumer's DTO rather than a
-  `Response<T>` wrapper.
-- **A `hasMore` flag ends the list from the fetcher.** It means one thing, so `withHasMore` types it
-  as a `bool` and acts on it, with no policy to pair, so `ExplicitHasMorePolicy` is deprecated. It
-  pages by number, so it gets no `previousSignal` and a depth reload fetches its pages in parallel.
-- **The signal is erased to `Object?`.** A consumer's cursor policy reads it as their cursor.
-  Erasure, grouping's key trick, avoids a 2nd `ListSmith` generic. A return value beat a mutation
-  channel (a `Completer` or sink): it fits the package's value-object grain and, unlike a `void`
-  completer, can carry a cursor.
-- **list_smith owns the signal's lifecycle, so policies stay pure.** The last fetch's signal lives
-  in `_lastPageSignal`, which is not derivable from the paging state. It feeds each
-  `EndContext.lastPageSignal`, resets on refresh, and snapshots with the normal state across a
-  `KeepCachePolicy` toggle, so every policy is a pure function of its `EndContext` with no
-  consumer-side reset wiring. A guard asserts a signal policy is paired with a fetcher that returns
-  a signal.
-- **Layout:** `PageFetcher` and `SearchPageFetcher` live under `models/` now that they are classes.
-  `typedefs/` keeps only real typedefs.
+- **Decision:** `PaginationEndPolicy` is an open `abstract class` with a public
+  `hasReachedEnd(EndContext)`, so an app adds its own policy and a test calls it directly.
+- **The signal comes from the fetcher,** which alone sees the response. `PageFetcher` and
+  `SearchPageFetcher` are callable classes: `.new` for items, `.withHasMore` for
+  `(items, hasMore:)`, `.withSignal` for `(items, Object? signal)`. `T` stays the app's DTO.
+- **`hasMore` ends the list by itself.** It means one thing, so `withHasMore` acts on it with no
+  policy to pair, and `ExplicitHasMorePolicy` is deprecated. It pages by number, so a depth reload
+  fetches its pages in parallel.
+- **The signal is `Object?`,** erased like grouping's key to spare a 2nd generic. A return value
+  beat a mutation channel: it fits the value-object grain and can carry a cursor.
+- **list_smith owns the signal's lifecycle.** `_lastPageSignal` feeds `EndContext.lastPageSignal`,
+  resets on refresh and snapshots with the feed, so every policy is a pure function of its context.
+  A signal policy paired with a signal-less fetcher asserts.
 
 ---
 
 <a id="cursor-driven-pagination"></a>
 ## Cursor-driven pagination: the signal, fed back
 
-- **Decision:** a cursor drives the next fetch, not just the end. The `withSignal` channel became
-  bidirectional, so the `Object?` a page returns reaches the next fetch as `previousSignal`, null
-  for the 1st page. `StopOnNullSignalPolicy` ends the list on a null cursor.
-- **No new constructor, fetcher type or generic.** A page is still found by its index, and the
-  cursor rides `_lastPageSignal`, the field already tracking the signal for end-detection.
-- **Retry and refresh fall out for free.** `_lastPageSignal` only advances after a fetch succeeds,
-  so a retried page re-fetches with the same cursor, and refresh nulls the field so the reload
-  restarts from the initial null.
-- **The cursor stays `Object?`,** for the reason the end signal does
-  ([#explicit-end-signals](#explicit-end-signals)). The consumer casts `previousSignal as MyCursor?`
-  once, in their own closure. `SearchPageFetcher.withSignal` took the same argument, so
-  cursor-driven search needs no separate seam: the two-view engine already snapshots the signal per
-  stream, and the `requiresSignal` guard covers both fetchers.
+- **Decision:** the signal a page returns reaches the next fetch as `previousSignal`, null for the
+  1st page, and `StopOnNullSignalPolicy` ends on a null cursor. No new constructor, fetcher or
+  generic: the cursor rides `_lastPageSignal`.
+- **Retry and refresh come free.** `_lastPageSignal` only moves after a success, so a retry reuses
+  its cursor, and refresh nulls it.
+- **The cursor stays `Object?`,** cast once in the app's closure. `SearchPageFetcher.withSignal`
+  works the same, and the two-view engine already snapshots the signal per stream.
 
 ---
 
 <a id="sync-searchable-fields"></a>
 ## Sync predicate builders (`SyncSearchPredicates`)
 
-- **What:** a namespace of static builders returning a `SyncSearchPredicate`, so a `.sync` list
-  skips hand-rolling the usual matching. `fields` (contains), `prefix` (starts-with), `exact`
-  (equals), `allTerms` (every whitespace term must hit some field, the multi-word case `contains`
-  misses), plus `any` / `every` to combine. All case-insensitive, all skipping `null` fields. The
-  raw `searchBy` stays the escape hatch for case-sensitive, diacritic or fuzzy matching.
-- **Knob-free, named factories.** Each is named for what it does rather than taking a `mode:` flag,
-  which keeps the primitive's no-baked-in-policy stance: nothing sits inert, you pick a builder or
-  drop to `searchBy`. `fields` / `prefix` / `exact` share a private `_anyField(extractors, test)`,
-  so each is a one-liner.
-- **A holder, not `SyncSearchPredicate.fields`.** `SyncSearchPredicate` is a real typedef and Dart
-  typedefs can't carry statics. Making it a callable class would break bare-closure `searchBy` and
-  contradict the typedef/class split, so the holder returns the typedef instead: additive, closures
-  still work, consistent with `Grouping.by` and `PageFetcher.withSignal`. `abstract final`, a pure
-  namespace, and `prefer_constructors_over_static_methods` stays quiet because the builders return
-  the typedef rather than the holder.
-- **`String?` extractors** let a nullable field compile with no `?? ''`, with nulls dropped via
-  `.nonNulls`. The query arrives trimmed and gated by `resolveSyncSearch`, so a builder never
-  re-trims or handles an empty query.
-- **Used inline, pin `T` on the list.** The widget's element type and a builder's type parameter
-  infer together, so the un-annotated extractor closures come out nullable. `ListSmith<City>.sync`
-  names it once and covers every builder, which beats annotating each. Inherent to any generic
-  builder used inline, not a consequence of the holder.
+- **What:** builders for the common `SyncSearchPredicate`s: `fields` (contains), `prefix`, `exact`,
+  `allTerms` (every word hits some field), and `any` / `every` to combine. Case-insensitive,
+  skipping `null` fields. `searchBy` stays the escape hatch.
+- **Named builders, no `mode:` flag,** so nothing sits inert.
+- **A holder, since a typedef can't carry statics.** A callable class would break bare-closure
+  `searchBy`. `abstract final`, a pure namespace.
+- **`String?` extractors,** nulls dropped. The query arrives trimmed and gated, so a builder never
+  sees an empty one.
+- **Used inline, pin `T` on the list** (`ListSmith<City>.sync`), or the extractors infer nullable.
 
 ---
 
 <a id="controller-handle"></a>
 ## A narrow controller: intents out, nothing back
 
-- **Decision:** an optional `ListSmithController` on `ListSmith.async`, carrying intents:
-  `refresh()`, `invalidate()`, `reset()` and the [edits](#edit-layer). A bounded exception to the
-  hidden pager, and the line held is that no paging state is reachable through it.
-- **No scrolling verbs.** A consumer already scrolls through `ListScrollConfig.controller`, and
-  index-scrolling needs fixed extents, which puts it with the sliver and grid work.
-- **Intents, not state.** No `isRefreshing`, count or `hasMore`. Notification is the observer's job
-  ([#observer-seam](#observer-seam)), and a state-bearing handle re-exposes the pager by the back
-  door.
-- **One refresh path.** The engine implements `ListSmithControllerHost` and attaches itself, so the
-  gesture and the handle run the same `refresh()`. The configured `Reload` and the search-mode
-  behaviour are shared by construction rather than by a 2nd implementation that could drift.
-- **`NoRefresh` means no gesture, not no refresh**, so its previously-unreachable arm now runs
-  `ResetToFirstPage`. A gesture-less list therefore can't pick a strategy. A per-call
-  `refresh({Reload? using})`, or a `Reload` getter on the `Refresh` seam, is the build-upward path.
-- **Silent.** Animating the indicator would flash it and then hand straight to the first-page loader
-  under the default `ResetToFirstPage`, the two-spinner outcome
-  [#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1) rejected. The button owns its progress.
-- **Coalesced.** A 2nd `refresh()` while one runs joins it, page 0 included, so a double-tapped
-  button sends 1 request.
-- **A host interface, not a callback.** `ListSmithControllerHost` is `@internal`, the
-  `ReloadContext` shape, so each intent is a method on the host and a forwarding verb on the handle.
-- **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless. One
-  through a controller no list ever received is a wiring mistake.
+- **Decision:** an optional `ListSmithController` on `.async` carrying intents: `refresh()`,
+  `invalidate()`, `reset()` and the [edits](#edit-layer). No paging state is reachable through it.
+- **No scrolling verbs.** Apps scroll through `ListScrollConfig.controller`, and index scrolling
+  needs fixed extents.
+- **Intents, not state.** No `isRefreshing`, count or `hasMore`: notifying is the
+  [observer's](#observer-seam) job, and state would re-expose the pager.
+- **One path.** The engine attaches itself as the `ListSmithControllerHost`, so the gesture and the
+  handle run the same `refresh()`.
+- **`NoRefresh` means no gesture, not no refresh,** so `refresh()` there runs `ResetToFirstPage`. A
+  per-call `refresh({Reload? using})` is the build-upward path.
+- **Silent.** Animating the indicator would flash it before the 1st-page loader
+  ([#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1)). The button owns its progress.
+- **Coalesced.** A 2nd `refresh()` while one runs joins it, so a double tap sends 1 request.
+- **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless, one
+  through a controller no list received is wiring.
 
 ---
 
 <a id="reload-run"></a>
 ## Each reload is a run that knows its stream
 
-- **Decision:** a `Reload` runs through a per-run `_ReloadRun`, not the State. The run carries the
-  trigger its pages report and the generation it was born into, and `isStale` compares the two.
-- **Why:** the depth reload is the one long writer, and it bumped the generation without ever reading
-  it. A reset, a query change, a `KeepCache` restore or a dispose during its awaits was overwritten
-  by its late `commit()`. A stale run now drops its commit, skips its remaining fetches, and is never
-  joined.
-- **Own writes don't stale a run.** Its commit and its reset move the epoch along, so a refresh asked
-  while a `ResetToFirstPage` run fetches its page 0 still joins it.
-- **Why any other pair runs once more,** `.refresh` winning: a write landing on a page the run
-  already read would otherwise never be re-read. A joiner's future completes with the run it joined,
-  and `reset()` takes the slot so the next caller meets its page 0.
-- **Page-0 loads are runs** so the join rule sees them. The engine's own are nobody's ask, so a feed
-  parked during one owes nothing for it.
-- **`invalidate()` has its own strategy,** always `ReloadToCurrentDepth`. A pull snapping back to
-  the start is a convention, a local write doing it is a bug, and a `NoRefresh` list has no pull
-  config to lean on.
-- **Accepted edge:** the pull indicator spins through a superseded run until its fetches finish.
-- **Build upward: a run that owns its stream.** A feed reload cut off by entering search burns its
-  fetches and the restore re-reads the same pages. Correct and safe, just wasteful. A run that
-  commits into the parked stream fixes it, worth taking when a 2nd parked stream, a reactive
-  source or `reloadPage` arrives.
+- **Decision:** a `Reload` runs as a `_ReloadRun` carrying its trigger and the generation it was
+  born into, and `isStale` compares the two.
+- **Why:** the depth reload's late `commit()` overwrote any reset, query change, restore or dispose
+  during its awaits. A stale run drops its commit, skips its remaining fetches and is never joined.
+- **Its own writes don't stale it,** so a refresh during a `ResetToFirstPage` run's page 0 joins.
+- **Any other pair runs once more,** `.refresh` winning, or a write on a page the run already read
+  would never be re-read. A joiner completes with the run it joined, and `reset()` takes the slot.
+- **Page-0 loads are runs,** so the join rule sees them. The engine's own are nobody's ask, so a
+  feed parked during one owes nothing.
+- **`invalidate()` always reloads to depth.** A pull jumping to the start is a convention, a local
+  write doing it is a bug.
+- **Accepted:** the indicator spins through a superseded run until its fetches finish.
+- **Build upward:** a feed reload cut off by entering search wastes its fetches. A run that commits
+  into the parked stream fixes it, once a 2nd parked stream, a reactive source or `reloadPage`
+  arrives.
 
 ---
 
 <a id="page-request-object"></a>
 ## Fetchers take a request object, not an argument list
 
-- **Decision:** `PageFetcher` and `SearchPageFetcher` take one `PageRequest` / `SearchPageRequest`
-  instead of a positional argument list.
-- **Why:** a fetch-time fact like the [trigger](#fetch-trigger) becomes a field, which a consumer who
-  only reads the request never has to change for, where another positional argument breaks every
-  closure.
-- **`base` plus `final`, not a sealed pair.** Consumers only ever read these, so the hierarchy needs
-  no exhaustive switch, and the shared base is there to declare the 3 common fields once.
-  `SearchPageRequest` keeps `query` non-null rather than the normal path carrying a nullable one
-  that is never set.
-- **The return side is untouched.** `.new` still means items-only and `.withSignal`
-  items-plus-signal. That split is about the *output* tuple
-  ([#explicit-end-signals](#explicit-end-signals)), and unifying the input convention is no argument
-  for reopening it. A `PageResult` wrapper stays rejected for the same reason as the 1st time.
-- **A bulk rewrite needs a real check, not a green suite.** The 60-site pass silently turned
-  `'cursor$pageIndex'` into `'cursor$request.pageIndex'`, interpolating the request and appending a
-  literal `.pageIndex`. Analyzer clean, tests green, value wrong, because the cursor was only ever
-  checked for null in that scenario. Grep for `$request.` after any such rename.
+- **Decision:** a fetcher takes one `PageRequest` or `SearchPageRequest`, so a new fact like the
+  [trigger](#fetch-trigger) is a field no closure breaks over.
+- **`base` plus `final`, not sealed.** Apps only read them, and the base declares the shared fields
+  once. `SearchPageRequest.query` is non-null.
+- **The return side stays** ([#explicit-end-signals](#explicit-end-signals)), and a `PageResult`
+  wrapper stays rejected.
 
 ---
 
 <a id="fetch-trigger"></a>
 ## Fetchers are told why they were called
 
-- **Decision:** every `PageRequest` carries a `FetchTrigger` saying why it was asked for, so a
-  caching repository can bypass its cache for a pull-to-refresh.
-- **A fact, not an instruction.** A `shouldBypassCache` bool was rejected: this package can't know
-  whether the right answer is bypass, revalidate or stale-while-revalidate, and a bool can't hold a
-  many-valued fact. A 2nd `onBypassCacheFetchPage` was rejected too: it needs a mirror on
-  `AsyncSearch`, and nothing would keep the two agreeing.
-- **Plain enum.** The one candidate for per-value config is "does this restart the cursor chain",
-  and both reset paths already funnel through `_resetPaging()`, so attaching it would restate what
-  that helper enforces. Trip-wire: the 1st trigger needing that reset elsewhere earns an
-  enhanced-enum field.
-- **`retry` costs a field, and the alternative is a lie.** A fetch clears `error` as it starts, and
-  so does a depth reload's commit, so a retry isn't derivable from paging state.
-  One `_lastFailedPageIndex`, cleared when that page succeeds and on restart. Without it a retry
-  reports `nextPage` and the repository serves the cached miss that just failed. `queryChanged` is
-  its own value for the same reason, rather than folded into `initialLoad`.
-- **`restoreNormal` drops the retry marker,** or a failed search page could mark the restored list's
-  next page as a retry. `commit()` needn't: a reload commits exactly `depth` pages, so the next fetch
-  is `depth` and can't collide with a lower failed index.
+- **Decision:** every `PageRequest` carries a `FetchTrigger` saying why, so a caching repository
+  can bypass its cache on a pull.
+- **A fact, not an instruction.** Bypass, revalidate or stale-while-revalidate is the app's call,
+  which a `shouldBypassCache` bool can't hold. A 2nd fetcher for bypassing would need a mirror on
+  `AsyncSearch`.
+- **A plain enum.** Both reset paths go through `_resetPaging()`, so a "restarts the cursor" field
+  would restate it. The 1st trigger needing that elsewhere earns one.
+- **`retry` costs a field.** A fetch clears the error as it starts, so a retry isn't derivable.
+  `_lastFailedPageIndex` clears when that page succeeds and on restart. Without it a retry reports
+  `nextPage` and the cache serves the miss that just failed. `queryChanged` stays apart from
+  `initialLoad` for the same reason.
+- **`restoreNormal` drops the retry marker,** or a failed search page could mark the restored
+  feed's next page. A reload's `commit()` needn't, since its next fetch is `depth`, past any failed
+  index.
 
 ---
 
 <a id="scan-loops"></a>
 ## Per-item scans on the build path stay loops
 
-- **Decision:** `groupHeadersIfContiguous` is a single-pass loop over the loaded pages, without
-  flattening them.
-- **Why:** it walks every loaded item each time a grouped list's items change. Against the loop, a
-  chain on one stateful closure cost about 3x and a `splitBetween` chain 7x to 9x: an iterator per
-  element, plus a list per run. The indexed `List.generate` form paid for its flatten and still
-  lost. Measured on the per-item header flags the header pass replaced, which walked the same way.
-- **Pages, not a lazy flatten,** which took 1.5x to 1.7x as long: its iterator adds calls per item,
-  and the gather path's `List` turned each into a lookup.
-- **`RowLookup.itemAt`** is a typed binary search. `lowerBound` cost 2x to 6x more, typed `compare`
-  or not, and a moved row is checked at several indices before the id map gets built.
-- **Tripwire:** the `group_headers_scaling` micro, and `row_lookup_scaling` for the lookup.
+- **Decision:** a scan that walks every loaded item on each change, like `groupHeadersIfContiguous`,
+  is a single-pass loop over the pages, not a chain or a flatten.
+- **Why:** a chain costs an iterator per element, and `splitBetween` a list per run, several times
+  the loop. A lazy flatten adds calls per item too.
+- **`RowLookup.itemAt`** is a typed binary search, which beat `lowerBound`. It runs several times
+  per moved row.
+- **Tripwires:** the `group_headers_scaling` and `row_lookup_scaling` micros.
 
 ---
 
 <a id="ci-format-sdk"></a>
 ## The format gate runs Flutter's Dart, not standalone Dart
 
-Whatever CI rejects, a local `dart format .` has to fix. Standalone Dart stable runs ahead of
-Flutter's bundled Dart and the formatter changed between them, so a tree that was clean locally
-once met a red gate reformatting files the pull request never touched.
-
-dartender's Format job runs Flutter's Dart, on the stable channel like the rest of its jobs. It
-doesn't read [`.fvmrc`](.fvmrc), which only picks the SDK FVM gives you locally.
+A local `dart format .` has to fix whatever CI rejects. Standalone Dart stable runs ahead of
+Flutter's, and its formatter once failed files no PR had touched. So dartender's Format job runs
+Flutter's Dart on stable, ignoring [`.fvmrc`](.fvmrc), which only picks your local SDK.
 
 ---
 
 <a id="root-analysis-skips-bench-app"></a>
 ## The root analysis skips `benchmark/app`
 
-`benchmark/app` is its own Flutter package, and the root `flutter pub get` resolves only the package
-and `example/`. So CI's `dart analyze .` at the root would fail on the app's unresolved
-`integration_test` imports. The shared lints the root includes exclude `benchmark/app/**`, and
-[`bench-app.yml`](.github/workflows/bench-app.yml) analyses it after a `pub get` of its own. The
-app gets the same exclude through its own `include:`, where it matches nothing, so its run still
-analyses every file.
+`benchmark/app` is a package of its own that the root `flutter pub get` doesn't resolve, so a root
+`dart analyze .` would fail on its imports. The shared lints exclude `benchmark/app/**`, and
+[`bench-app.yml`](.github/workflows/bench-app.yml) analyses it after its own `pub get`. The app
+inherits the exclude too, where it matches nothing.
 
 ---
 
 <a id="dependabot-automerge"></a>
 ## Dependabot's PRs auto-merge through dartender
 
-Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job in
-[dartender](https://github.com/LahaLuhem/dartender)'s shared `ci.yml`. What still bites here:
+Every Dependabot PR, majors included, auto-merges through dartender's `ci.yml`. What bites here:
 
-- **The rulesets are the load-bearing half.** Auto-merge only waits on required checks, so it's
-  safe only while `main` requires every check in [hard rule 6](.ai/AGENTS.md#hard-rules). Keep
-  `required_signatures` out: GitHub's rebase-merge makes unsigned commits, so that rule would block
-  every merge, bot or human.
-- **An Actions major can change CI and still pass, which is what hard rule 8 is for.** dartender's
-  Action inputs check fails on an input an action no longer takes, but not on a default it flipped.
-  `setup-uv` v9 flipped `prune-cache` to `false`, and v10 made `enable-cache: auto` skip
-  `pull_request_target`, `workflow_run`, `release` and tag pushes. v10 was a no-op here only because
-  every `setup-uv` step in this repo's own workflows already wrote `enable-cache: true`.
-- **A required workflow can't have a `paths:` filter.** A filtered run never reports on a PR outside
-  its paths, so the PR waits forever. That's why `bench-app.yml` runs on every PR, as the only
-  analysis of a host app that gets bumps of its own ([why](#root-analysis-skips-bench-app)).
-  [`benchmark.yml`](.github/workflows/benchmark.yml) keeps its filter and stays unrequired, since no
-  Dependabot PR touches the `lib/**` it measures.
-- **Auto-merge uses `GITHUB_TOKEN`, not the changelog App.** The App sits in both rulesets' bypass
-  lists so its changelog commit gets through, and merging as the App would skip the checks. The
-  cost: a `GITHUB_TOKEN` merge starts no workflows, so `main`'s push run is skipped for auto-merged
-  PRs.
+- **The rulesets carry it.** Auto-merge waits only on required checks, so it's safe while `main`
+  requires every check in [hard rule 6](.ai/AGENTS.md#hard-rules). No `required_signatures`:
+  rebase-merge makes unsigned commits.
+- **An action major can flip a default and stay green,** which dartender's input check can't see.
+  Hence hard rule 8: `setup-uv` flipped `prune-cache` and `enable-cache` that way.
+- **A required workflow can't filter `paths:`,** or it never reports on a PR outside them and blocks
+  it. So `bench-app.yml` runs on every PR, and [`benchmark.yml`](.github/workflows/benchmark.yml)
+  keeps its filter and stays unrequired.
+- **Auto-merge uses `GITHUB_TOKEN`,** since merging as the changelog App, which the rulesets let
+  past, would skip the checks. A `GITHUB_TOKEN` merge starts no workflows, so an auto-merged PR gets
+  no push run on `main`.
 
 ---
 
 <a id="edit-layer"></a>
 ## Local edits live beside the pages, not in them
 
-- **Why beside the pages:** the end policy counts what the backend returned, and a depth reload or
-  `KeepCachePolicy` writes the pages back, so an edit made inside them would end the list early, or
-  be undone.
-- **Each page carries a read stamp,** the edit counter when its fetch went out, and an edit
-  covers only pages read before it. A page read after already has the server's answer. Once every
-  loaded and parked page was read after an edit, the edit is forgotten.
-- **Values, not transforms.** An edit is re-applied over whatever the server sends until it
-  expires, so a `likes + 1` would count twice.
-- **`upsert` and `remove` are sync and `void`,** since the change is already true on the server or
-  in the store. `upsertAsync` and `removeAsync` are for one that isn't yet.
-- **A failed save never throws.** `onFailure` gets the exception and the future completes, like the
-  other verbs, so a call nobody awaits needs no try/catch. An `Error` is undone too, then goes on to
-  the app.
-- **A pending edit counts as true from the far future,** `2^53 - 1`, the web's largest exact int, so
-  it covers every page, read before it or after. Its save's answer stamps it from the counter then,
-  so the display pass, expiry and new-item placement need nothing new.
-- **Each item keeps its edits in the order they were made.** A failed one drops out and the newest
-  left shows, so a rollback can't wipe an edit under it. An answer settles its own edit in place, so
-  a create doesn't jump when it saves.
-- **The saved item keeps the draft's id,** asserted. A swapped temp id is a removal plus a new item,
-  which reorders new items and loses the row's state.
-- **`reset()` clears every edit,** pending ones too, so a logout can't show the old account's draft.
-- **Never bumps `_generation`.** That counter means the stream restarted, and bumping it drops the
-  in-flight page's cursor, so the next page repeats. The edit store moves its own counter instead,
-  on every change that shows, since the display memo keys on it.
-- **New items** join the start of their group, else the top, since async groups have to stay
-  together, unless an order places them ([#sorted-placement](#sorted-placement)). They stay out of
-  search results: only the server knows what matches. A new grouping places them again, since the
-  display memo keys on it while edits are pending.
-- **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says. That
-  setting is about the server sending an empty page, not the user deleting rows.
-- **A removal can land late.** Under an `EditTransition` it's booked when the row's exit ends
-  ([#edit-transitions](#edit-transitions)), so a page read during the exit still counts as read
-  before it.
+- **Edits live beside the pages.** The end policy counts what the server sent, and a depth reload or
+  `KeepCachePolicy` writes pages back, so an edit inside them would end the list early or be undone.
+- **Each page carries a read stamp,** the edit counter when its fetch went out, and an edit covers
+  only pages read before it. Once every loaded and parked page was read after an edit, it's
+  forgotten.
+- **Values, not transforms.** An edit re-applies over every server copy until it expires, so a
+  `likes + 1` would count twice.
+- **`upsert` and `remove` are sync `void`,** for a change already true. `upsertAsync` and
+  `removeAsync` are for one that isn't yet.
+- **A failed save never throws.** `onFailure` gets the exception and the future completes, so a
+  fire-and-forget call needs no try/catch. An `Error` is undone, then goes on to the app.
+- **A pending edit is stamped in the far future** (`2^53 - 1`, the web's largest exact int), so it
+  covers every page. Its answer restamps it from the counter, so nothing downstream changes.
+- **Each item keeps its edits in order.** A failed one drops out and the newest left shows, so a
+  rollback can't wipe an edit under it. An answer settles its edit in place, so a create doesn't
+  jump.
+- **The saved item keeps the draft's id,** asserted. A swapped temp id would be a removal plus a new
+  item.
+- **`reset()` clears every edit,** pending ones too, so a logout can't show the last account's
+  draft.
+- **Never bumps `_generation`,** which means the stream restarted and drops the in-flight cursor.
+  The edit store moves its own counter, which the display memo keys on.
+- **New items join the start of their group, else the top,** unless an order places them
+  ([#sorted-placement](#sorted-placement)), and a new grouping places them again. They stay out of
+  search results, since only the server knows what matches.
+- **Edits that empty the screen load the next page,** whatever `EmptyPageBehaviour` says, which is
+  about the server.
+- **A removal under an `EditTransition` is booked when its exit ends**
+  ([#edit-transitions](#edit-transitions)), so a page read during the exit counts as before it.
 
 ---
 
 <a id="pull-indicator-layout"></a>
 ## list_smith places the pull indicator, the builder only draws it
 
-- **Decision:** `indicatorBuilder` returns just the indicator. `RefreshBinding` owns the slot and
-  the push, and only builds the indicator while a pull is in progress, so `ListSmithRefreshPhase`
-  has no resting phase.
-- **Why:** when each indicator owned the whole pull layout, each had to get its own lifetime right.
-  The neutral one kept a spinner mounted at rest, asking for a frame on every screen refresh. Now
-  nothing is built at rest, ours or a consumer's, and placement lives in one spot.
-- **Placement follows the pull:** the slot hugs the edge the pull starts from, read off its
-  direction, and the list is pushed only by what its own bounce hasn't opened. Clamping physics get
-  the push, bouncing ones keep their native look, and no platform is special-cased.
+- **Decision:** `indicatorBuilder` draws only the indicator. `RefreshBinding` owns the slot and the
+  push, and builds the indicator only mid-pull, so `ListSmithRefreshPhase` has no resting phase.
+- **Why:** each indicator owning the layout had to get its lifetime right, and the neutral one kept
+  a spinner asking for frames at rest. Now nothing is built at rest.
+- **Placement follows the pull:** the slot hugs the edge it starts from, and the list is pushed only
+  by what its own bounce hasn't opened, so no platform is special-cased.
 
 ---
 
 <a id="item-id-required"></a>
 ## `itemIdGetter` is required
 
-- **Decision:** `ListSmith.async` takes an `itemIdGetter`, with no default, because de-dup, edits and
-  [row identity](#row-identity) all find items by it. It's there for correctness, not speed.
-- **Why not `(item) => item` as the default:** most JSON models have no `==`, so an upserted copy
-  never matches the loaded one and shows as a 2nd row, and a re-read hands every row a new identity,
-  wiping its state. The README suggests it for values that do.
-- **Cost:** the display pass now runs on every list, at the price
-  [#overlap-dedup](#overlap-dedup) measures.
-- **`.sync` takes it optional for now,** since requiring it breaks every `.sync` call. Without it a
-  row can't follow its item, so `.sync` asserts in debug while `shouldKeepPosition` is on, instead
-  of sliding unnoticed.
+- **Decision:** `ListSmith.async` requires `itemIdGetter`, since de-dup, edits and
+  [row identity](#row-identity) all find items by it.
+- **Why no `(item) => item` default:** most JSON models have no `==`, so an upsert would show as a
+  2nd row and a re-read would wipe every row's state. The README suggests it for values that do.
+- **Cost:** the display pass runs on every list ([#overlap-dedup](#overlap-dedup)).
+- **`.sync` takes it optional for now,** since requiring it breaks every call. It asserts in debug
+  while `shouldKeepPosition` is on, rather than sliding unnoticed.
 
 ---
 
 <a id="row-identity"></a>
 ## Rows follow their item, not their index
 
-- **Decision:** each row is keyed by its item's id, and the list finds a row that moved through
-  `findChildIndexCallback`. So a row keeps its state, and anything it's animating, while rows above
-  it come and go.
-- **The lookup:** a row's key carries the index it was last built at, and that's checked first. Only
-  a row that moved builds the id-to-index map, once per rebuild. The
-  [`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart) micro tracks both cases.
-- **A repeated id keeps its 1st item.** 2 built rows on one key fail Flutter's child-order assert,
-  which blanks the list. `.async`'s de-dup already drops repeats, and `.sync` does the same when
-  `items` changes, reporting it in debug.
+- **Decision:** rows are keyed by their item's id, and `findChildIndexCallback` finds a moved one,
+  so a row keeps its state, and its animations, while rows above it change.
+- **The lookup** tries the index a row was last built at first. Only a move builds the id map, once
+  per rebuild ([`row_lookup_scaling`](benchmark/micro/row_lookup_scaling.dart)).
+- **A repeated id keeps its 1st item,** since 2 rows on one key fail Flutter's child-order assert
+  and blank the list. `.async`'s de-dup drops repeats, and `.sync` does too, reporting it in debug.
 
 ---
 
 <a id="edit-transitions"></a>
 ## Edit transitions animate the rows edits add and take
 
-- **Decision:** an `EditTransition(duration:, transitionBuilder:)` seam, `NoEditTransition()` by
-  default. The builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming
-  in and in reverse for one going out. list_smith brings the timing, never a look of its own. Only
-  an `upsert` of a new, shown id, a `remove` of a shown one, or a rollback of either starts one, so
-  page loads can't.
-- **A removal lands when its exit ends.** Until then the row is still in the display, exactly where
-  it was, so there's no leaving copy to keep in step, and an upsert meanwhile turns the same
-  controller round.
-- **Each exit holds what to do when it ends:** book a removal, a pending one, or drop a failed
-  create. A restart's settle runs the same thing, so it can't turn a pending delete plain.
-- **Rollbacks animate.** A failed create leaves like a `remove`, a failed delete comes back like an
-  `upsert`, so the user sees the change didn't stick. The gaps are in
-  [how-it-works](doc/how-it-works.md#known-gaps).
-- **A row that shrank itself skips the exit.** A frame after `remove()`, a row that isn't built or
-  has no extent left goes at once. Dismissible and Slidable collapse themselves and throw if kept in
-  the tree after, and this way `remove()` needs no flag for them.
-- **Wrapped only while it animates,** with the child under a `GlobalKey` so its state survives the
-  wrapper coming and going. Around the consumer's widget only, never the header, or a group-first
-  row that shrank itself would still read the header's height.
-- **Restarts settle** (`reset()`, a query change, a pull that starts over, a `KeepCachePolicy`
-  restore), booking what the exits held back so nothing animates onto a fresh list. A depth
-  reload's commit doesn't, so a pull that keeps depth lets running animations finish.
+- **Decision:** `EditTransition(duration:, transitionBuilder:)`, `NoEditTransition()` by default.
+  The builder is Flutter's `AnimatedSwitcherTransitionBuilder`, run forward for a row coming in and
+  backward for one going out, so list_smith brings the timing, never a look. Only an edit that adds
+  or takes a shown row, or its rollback, animates, never a page load.
+- **A removal lands when its exit ends.** Until then the row stays in the display where it was, so
+  there's no leaving copy to keep in step, and an upsert meanwhile turns the same controller round.
+- **Each exit holds what to do at its end:** book a removal, a pending one, or drop a failed create.
+  A restart's settle runs the same, so a pending delete stays pending.
+- **Rollbacks animate,** so the user sees the change didn't stick
+  ([known gaps](doc/how-it-works.md#known-gaps)).
+- **A row that shrank itself skips its exit.** One unbuilt or with no extent a frame after
+  `remove()` goes at once, so Dismissible and Slidable, which throw if kept, need no flag.
+- **Wrapped only while it animates,** the child under a `GlobalKey` so its state survives. Never
+  around the header, whose height would hide a group-first row's shrink.
+- **Restarts settle** (`reset()`, a query change, a resetting pull, a `KeepCachePolicy` restore), so
+  nothing animates onto a fresh list. A depth reload's commit doesn't, so its animations finish.
 
 ---
 
 <a id="own-paging"></a>
 ## list_smith pages on its own
 
-- **Decision:** the paging state, the next-page fetch and the near-end trigger are list_smith's own.
-  `infinite_scroll_pagination` is gone, its dependencies with it.
-- **Why:** its view asked for page 0 a frame after a reset, and only if the new state differed by
-  value, so 2 restarts a frame apart left the list on its loader for good
-  ([upstream #382](https://github.com/EdsonBueno/infinite_scroll_pagination/issues/382), closed
-  as not planned). A page 0 nobody owned also slipped past the [run slot](#reload-run).
-- **Not leftovers of the old package:** the retry marker ([#fetch-trigger](#fetch-trigger)) and the
-  microtask that pages past an empty page. Both are list_smith's own.
+- **Decision:** the paging state, the next-page fetch and the near-end trigger are list_smith's own,
+  with no `infinite_scroll_pagination`.
+- **Why:** its view asked for page 0 a frame after a reset, and only if the state differed by value,
+  so 2 restarts a frame apart left the list loading for good
+  ([upstream #382](https://github.com/EdsonBueno/infinite_scroll_pagination/issues/382), closed as
+  not planned). Its page 0 also slipped past the [run slot](#reload-run).
+- **Not leftovers:** the retry marker ([#fetch-trigger](#fetch-trigger)) and the microtask that
+  pages past an empty page are list_smith's own.
 
 ---
 
@@ -736,93 +523,84 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 
 - **Decision:** on the rows, and on the error and empty surfaces while
   `PullToRefresh.pullableSurfaces` lists them, as it does by default. Never on the 1st-page loader,
-  whose page is already on its way.
-- **Why only a drag's start is refused:** a pull the list changes under still ends and lets go.
+  whose page is on its way.
+- **Only a drag's start is refused:** a pull the list changes under still ends and lets go.
 - **The scroll rule asks whether a surface shows,** not whether anything overflows, so short rows
-  still bounce away from the pull on iOS, like a plain `ListView`.
-- **Why one set of physics:** swapping them per surface cancels a held drag inside layout, where the
-  indicator's `setState` asserts, so the rule above reads what shows as the drag goes. They sit below
-  the app's, so a `NeverScrollableScrollPhysics` still wins.
-- **Why surfaces sit in the list, unmeasured:** a `LayoutBuilder` or `Expanded` works and a short one
-  can't scroll, while a taller one scrolls itself. Built outside it, a surface would take the list out
-  of the tree and detach the app's `ScrollController`.
+  still bounce on iOS like a `ListView`.
+- **One set of physics,** since swapping them per surface cancels a held drag mid-layout, where the
+  indicator's `setState` asserts. They sit below the app's, so `NeverScrollableScrollPhysics` wins.
+- **Surfaces sit in the list, unmeasured,** so a `LayoutBuilder` or `Expanded` works, a short one
+  can't scroll and a tall one scrolls. Built outside, a surface would detach the app's
+  `ScrollController`.
 
 ---
 
 <a id="removal-reread"></a>
 ## A removal reads the page before again
 
-- **Decision:** once rows the list holds were removed, the next page also reads the page or pages
-  before it and keeps the rows that moved up. An index or offset names a row only while nothing
-  above it changes, so the next page would start a row late per removal, and the rows it skipped
-  would never reach the app.
-- **Moves and new items count too.** An edit that sorts a row elsewhere leaves the same gap. A row
-  is judged by its loaded copy, or a new item by the copy its edit replaced, so an edit that keeps
-  its place reads nothing more.
-- **Removals still saving or animating out count,** since the server may already have them. While
-  one is out, the page before is read once the page lands rather than beside it, or a save landing
-  between the 2 reads could lose a row. A removal that comes in while the page is out gets the same
-  read.
-- **The read reports `invalidated`,** since a page cache would answer `nextPage` with its old copy.
-- **Always on, cursors included.** list_smith can't tell a cursor naming a row from an offset or a
-  `hasMore` flag, so each page read again gets the signal it first went out with. A list whose pages
-  don't shift, like a calendar or a cursor on the last row, pays a wasted read per page after a
-  removal.
-- **Another writer's deletes still shift an offset,** since list_smith never hears of them. Paging by
-  the last row covers those, so the README points there.
+- **Decision:** after rows the list holds were removed, the next page also re-reads the page or
+  pages before it and keeps the rows that moved up. An index or offset names a row only while
+  nothing above it changes, or the rows it skipped would never reach the app.
+- **Moves and new items count,** judged by the row's loaded copy, or a new item's replaced one, so
+  an edit that keeps its place reads nothing more.
+- **Removals still saving or animating out count,** since the server may have them. While one is
+  out, the page before is read after the page lands, not beside it, or a save between the 2 reads
+  could lose a row.
+- **The re-read reports `invalidated`,** since a cache would answer `nextPage` with its old copy.
+- **Always on, cursors included,** since list_smith can't tell a cursor naming a row from an offset.
+  Each page read again gets the signal it first went out with. A list whose pages don't shift pays
+  a wasted read per page after a removal.
+- **Another writer's deletes still shift an offset,** since list_smith never hears of them. The
+  README points at paging by the last row.
 
 ---
 
 <a id="depth-reload-whole"></a>
 ## A depth reload commits a whole list, lined up
 
-- **Why whole:** an old page kept beside fresh ones was read at another time, so rows go missing or
-  repeat where they meet. `onError` and `ReloadOnError` do nothing now, and go at the next major.
-- **Lined up before it commits.** A removal booked any time after page `k - 1` went out could have
-  pulled rows up past page `k`'s start. Once every page landed, page `k - 1` is read again, and each
-  row the fresh pages lack goes in front of the page after the fresh row it follows.
+- **Why whole:** an old page kept beside fresh ones was read at another time, so rows repeat or go
+  missing where they meet. `onError` and `ReloadOnError` do nothing now, and go at the next major.
+- **Lined up before it commits.** A removal booked any time after page `k - 1` went out could pull
+  rows up past page `k`'s start. So once every page landed, page `k - 1` is read again, and each row
+  the fresh pages lack goes in front of the page after the fresh row it follows.
 - **Moves are judged against the fresh pages,** since the old list may lack a new item. A row read
-  either side of its move down sits in 2 of them, and the 1st copy is where it was. A new item on no
-  page counts above every boundary.
-- **"Any time after" has no end.** A slow `remove()` or an exit ending late reaches list_smith after
-  the server already had it, so stopping the count once page `k` landed lost rows.
-- **Line-up reads are part of the run,** so they report its trigger.
+  either side of its move sits in 2 pages, and the 1st copy is where it was. A new item on no page
+  counts above every boundary.
+- **"Any time after" has no end:** a slow `remove()` reaches list_smith after the server had it, so
+  stopping the count at page `k` lost rows.
+- **Line-up reads report the run's trigger.**
 
 ---
 
 <a id="edit-store-scans"></a>
 ## The edit store walks its edits by stamp, unsorted
 
-- **Decision:** the edits stay in one map by item id, and "which edits came after this read" walks
-  all of them, comparing stamps. The display pass looks up every row's edit by id, so the map has to
-  stay, and a list sorted by stamp would be a 2nd copy kept in step on every write.
-- **Sorting buys little.** Stamps come from a counter, so edits arrive in order anyway. One walk
-  serves a page fetch or a reload until the next edit, well under a frame at 10,000 live edits.
-- **The walk is a loop,** since a chain measured about 3.5x slower.
-- **Look again** once that walk passes about 1 ms, or sessions keep tens of thousands of edits.
-- **`ItemEdit` is a class.** A record typed by `T` costs about 10x a class to build, and each edit
-  rebuilds one per live edit.
+- **Decision:** edits stay in one map by item id, and "which edits came after this read" walks them
+  all, comparing stamps. The display pass needs the map, and a stamp-sorted copy would have to stay
+  in step on every write.
+- **Sorting buys little:** stamps come from a counter, and one walk serves until the next edit, well
+  under a frame at thousands of live edits. Look again past about 1 ms.
+- **The walk is a loop** ([#scan-loops](#scan-loops)).
+- **`ItemEdit` is a class,** since a `T`-typed record costs several times as much to build, once per
+  live edit.
 
 ---
 
 <a id="sorted-placement"></a>
 ## An order places edits where the server sorts them
 
-- **Decision:** `ListSmith.async(order: SortedBy(comparator))`, defaulting to `UnknownOrder`, a
-  sealed seam like the others ([#opt-in-idioms](#opt-in-idioms)). A `Comparator<T>` covers any
-  fields and direction.
-- **What moves:** a new item, and an edit the comparator doesn't rank equal to the row's loaded
-  copy. Each goes into the 1st page that doesn't end before it, by binary search, which is cheaper
-  than finding group starts.
+- **Decision:** `ListSmith.async(order: SortedBy(comparator))`, `UnknownOrder` by default, a seam
+  like the others ([#opt-in-idioms](#opt-in-idioms)).
+- **What moves:** a new item, and an edit the comparator doesn't rank equal to its loaded copy. Each
+  goes into the 1st page that doesn't end before it, by binary search.
 - **A row sorting after every loaded one waits for its page** while more may follow.
   `PaginationEndPolicy.stopsAtDataEnd` says whether a reported end is the data's, so a cap doesn't
   show rows past it.
-- **The feed only.** Search results come by relevance, so they keep their own placement.
+- **The feed only.** Search results come by relevance.
 - **Each page read is checked in debug** to be strictly in order, ties included, and reported rather
-  than thrown so it still lands. Not across pages, where another writer's edit between 2 reads
-  would trip it.
-- **Groups gather after placement,** so the order needn't sort by group first.
-- **Moves jump.** Animating one would need 2 copies of one keyed row at once.
+  than thrown. Not across pages, where another writer's edit between reads would trip it.
+- **Groups gather after placement,** so the order needn't sort by group.
+- **Moves jump.** Animating one would need 2 copies of one keyed row.
 
 ---
 
@@ -831,40 +609,34 @@ Every Dependabot PR, majors included, auto-merges through the `Auto-merge` job i
 
 - **Decision:** a proxy sliver around the rows answers a row's move with a `scrollOffsetCorrection`
   of the same size, so no frame shows the slide.
-- **Why the sliver:** the scroll position counts pixels from the start, so any change above moves the
-  view. Layout sees each row's new offset before it paints, so one anchor there covers every cause.
-- **Why not at offset 0:** a new row at the start shows, and a reversed chat at its newest shows the
-  new message.
-- **Why the pull's room counts:** a reload ending while the user is scrolled away would otherwise
-  move every row by it.
-- **A change during an `animateTo` still slides, a frame late**
-  ([flutter#193339](https://github.com/flutter/flutter/issues/193339)).
-- **A `jumpTo(0)` after a change above that isn't built lands short,** since the list places unbuilt
-  rows by estimate. `animateTo(0)`, or a 2nd `jumpTo(0)`, lands exactly. Undoing the list's own
-  corrections at 0 loops past the viewport's 10-cycle limit.
-- **On `.sync` it needs `itemIdGetter`,** as [#item-id-required](#item-id-required) says.
-- **Cost: none measured.** Every bench scenario stayed within the regression gate's threshold of
-  main on Android (iOS too noisy to decide), and `sync_scroll` within it of `.sync` before ids on
-  both phones.
+- **Why a sliver:** the scroll position counts from the start, so any change above moves the view.
+  Layout sees every row's new offset before paint, so one anchor there covers every cause.
+- **Not at offset 0,** so a new row at the start shows, like a chat's newest message.
+- **The pull's room counts,** or a reload ending while scrolled away would move every row by it.
+- **Known gaps:** a change during `animateTo` still slides, a frame late
+  ([flutter#193339](https://github.com/flutter/flutter/issues/193339)). A `jumpTo(0)` after an
+  unbuilt change above lands short, since unbuilt rows are placed by estimate, where `animateTo(0)`
+  or a 2nd `jumpTo(0)` lands exactly. Undoing the list's own corrections at 0 loops past the
+  viewport's 10-cycle limit.
+- **On `.sync` it needs `itemIdGetter`** ([#item-id-required](#item-id-required)).
+- **No cost measured:** every bench scenario stayed within the regression gate on Android, with iOS
+  too noisy to decide.
 
 ---
 
 <a id="search-starts-at-top"></a>
 ## A new search starts at the top
 
-- **Decision:** the engine hands the list its committed query, the one that changes what shows, and
-  a proxy sliver around the rows or surface corrects the offset to 0 at layout when it changes.
+- **Decision:** the engine hands the list its committed query, and a proxy sliver around the rows or
+  surface corrects the offset to 0 at layout when it changes.
 - **Why the top:** the results are a different list, so the old offset points at whatever sits there
-  now. A filter usually moves the row being read outside the built rows, where the anchor can't
-  follow it.
-- **Clearing loses the place.** Going back to it is the build-upward path, and only `.sync` could
-  land it, since a replaced `.async` feed reloads from page 0.
-- **Why a sliver, not a `jumpTo(0)`:** no frame shows the old offset, and it needs no scroll
-  controller.
+  now, and the row being read is usually outside the built rows.
+- **Clearing loses the place.** Returning to it is the build-upward path, which only `.sync` could
+  land, since a replaced `.async` feed reloads from page 0.
+- **A sliver, not `jumpTo(0)`:** no frame shows the old offset, and no scroll controller is needed.
 - **It corrects once.** The short landing [keep-position](#keep-position) warns of never showed
-  after a query change: the list restarts from its 1st row instead of walking back over stale
-  offsets. If one shows up, stay armed while the list corrects itself at the start.
+  after a query change. If it does, stay armed while the list corrects itself at the start.
 
 ---
 
-**Still to record.** The SDK-floor rationale, and what list_smith deliberately does *not* do.
+**Still to record:** the SDK-floor rationale, and what list_smith deliberately doesn't do.

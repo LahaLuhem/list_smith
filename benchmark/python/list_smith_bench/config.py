@@ -30,7 +30,7 @@ APP_DIR: Final[Path] = BENCHMARK_DIR / "app"
 SCENARIOS_DIR: Final[Path] = APP_DIR / "integration_test"
 # Driver passed to `flutter drive`, relative to APP_DIR.
 PERF_DRIVER_TARGET: Final[str] = "test_driver/perf_driver.dart"
-# Needs nothing attached. The committed report comes from phones instead, see ../README.md.
+# Needs nothing attached. The committed report comes from phones instead, see benchmark/README.md.
 DEFAULT_SCENARIO_DEVICE: Final[str] = "macos"
 # What a UI record's `platform` (Dart's `Platform.operatingSystem`) shows as in charts and tables.
 PLATFORM_LABELS: Final[dict[str, str]] = {"android": "Android", "ios": "iOS", "macos": "macOS"}
@@ -42,7 +42,7 @@ DEFAULT_ITERATIONS: Final[int] = 10
 # keep the long one, since those numbers get published.
 MEASURE_WINDOW_MILLIS: Final[int] = 2000
 # The gate only separates 2 sides measured back to back, so it buys its wall clock back here.
-# ../README.md#ci-regression-gate has the evidence.
+# benchmark/README.md#ci-regression-gate has the evidence.
 GATE_MEASURE_WINDOW_MILLIS: Final[int] = 500
 
 # Entrypoints emitting more than one record per run, one per pivot value. Used when picking the

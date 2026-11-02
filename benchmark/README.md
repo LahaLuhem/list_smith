@@ -1,12 +1,8 @@
 # list_smith benchmarks
 
-Reproducible benchmarks for `list_smith`: proving performance claims before they ship, and catching
-regressions in its own paging and in the wrapped `custom_refresh_indicator`.
-Modelled on the maintainer's `better_internet_connectivity_checker` suite, adapted for a widget
-wrapper.
-
-[`.pubignore`](../.pubignore) excludes the whole `benchmark/` tree from the pub.dev tarball, so none
-of it reaches downstream users.
+Reproducible benchmarks that prove `list_smith`'s performance claims before they ship, and catch
+regressions in its paging and in the wrapped `custom_refresh_indicator`.
+[`.pubignore`](../.pubignore) keeps the whole tree out of the pub.dev tarball.
 
 ## 2 layers, 2 fidelities
 
@@ -15,41 +11,38 @@ of it reaches downstream users.
 | **Micro** (`micro/`) | Pure-Dart logic (the resolvers, filters) in isolation | `dart compile exe` + [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) | **Trustworthy absolute µs** (AOT) |
 | **Scenario** (`app/integration_test/`) | UI-isolate blocking / frame cost, driven through the real widgets | `flutter drive --profile` + `integration_test` | **Directional**: real frames, but a Flutter app, not a pure AOT program |
 
-The split is deliberate. A practical ceiling ("sync search suits lists up to ~N") comes from the
-**micro**, which gives real absolute microseconds, while the **scenario** confirms the cost lands on
-the UI thread in one synchronous chunk. `slow_observer` is the exception: its headline is dominated
-by the observer's own `sleep()`, so it is faithful either way.
+A practical ceiling ("sync search suits lists up to ~N") comes from a **micro**, and a **scenario**
+confirms the cost lands on the UI thread in one chunk. `slow_observer` is faithful either way, since
+the observer's own `sleep()` dominates it.
 
-A scenario can only faithfully measure work inside a frame's build or raster phase, which is what
-`FrameTiming` reports. Work on a `Timer` or a microtask is invisible to frame timing and can't be
-bracketed reliably by a `Stopwatch` around `pump()`. The debounced sync-search resolve is exactly
-that, firing in a zero-duration `Timer` before any build, which is why it is a micro. **If a
-proposed scenario would measure off-frame work, make it a micro instead.**
+A scenario only sees work inside a frame's build or raster, which is what `FrameTiming` reports.
+Work on a `Timer` or a microtask, like the debounced sync-search resolve, can't be bracketed by a
+`Stopwatch` around `pump()`. **Off-frame work is a micro.**
 
 ## Layout
 
 ```text
 benchmark/
-├── harness/        shared pure-Dart utilities for the micros (result_writer, scenario_arguments)
+├── harness/        shared pure-Dart utilities for the micros
 ├── micro/          benchmark_harness micro-benches (AOT-compiled)
 ├── app/            minimal Flutter host app for the UI scenarios
-│   ├── integration_test/   the scenarios (+ support/ helpers, e.g. SlowListSmithObserver)
+│   ├── integration_test/   the scenarios, with support/ helpers
 │   └── test_driver/        perf_driver.dart, writes reportData to JSON
-├── python/         orchestration + analysis + reporting (uv-managed)
-├── reports/        committed report output (PNGs + SUMMARY.md), linked from the package README
+├── python/         orchestration, analysis and reporting (uv-managed)
+├── reports/        the committed report (PNGs + SUMMARY.md), linked from the package README
 ├── results-local/  per-machine run outputs (gitignored)
 └── build/          AOT-compiled micro exes (gitignored)
 ```
 
 ## Prerequisites
 
-- The Dart/Flutter SDK from [`.fvmrc`](../.fvmrc). The orchestrator prefers `fvm dart` and
-  `fvm flutter` when fvm is present, falling back to plain `dart`.
-- [`uv`](https://docs.astral.sh/uv/) for the Python orchestrator (`brew install uv`).
-- For the UI scenarios, a device. **macOS desktop** in profile mode by default, needing nothing
-  attached, with the desktop feature flag enabled for the run and **restored afterwards**. The
-  committed report comes from phones instead, one run per platform with `--device <id>` (`flutter
-  devices` lists them), since a desktop window losing focus swamps its timings.
+- The SDK from [`.fvmrc`](../.fvmrc). The orchestrator uses `fvm dart` and `fvm flutter` when fvm
+  is there, plain `dart` otherwise.
+- [`uv`](https://docs.astral.sh/uv/) for the Python side.
+- A device for the UI scenarios. **macOS desktop** in profile mode by default, needing nothing
+  attached, with the desktop feature flag on for the run and **restored after**. The committed
+  report comes from phones, one run per platform with `--device <id>` (`flutter devices` lists
+  them), since a desktop window losing focus swamps its timings.
 - For an iPhone, signing in an untracked `app/ios/Flutter/LocalSigning.xcconfig` holding your
   `DEVELOPMENT_TEAM` and `PRODUCT_BUNDLE_IDENTIFIER`.
 
@@ -64,10 +57,10 @@ uv run python run.py run --iterations 10 --out ../results-local/current/
 uv run python run.py report ../results-local/current/aggregated.json --out ../results-local/current/charts/
 ```
 
-`run` executes the micros and drives the UI scenarios, writing one `aggregated.json`. Useful
-flags: `--skip-scenarios` (micros only, no device needed), `--skip-micros`, `--device <id>`, and
+`run` runs the micros and drives the scenarios into one `aggregated.json`. Useful flags:
+`--skip-scenarios` (micros only, no device), `--skip-micros`, `--device <id>`, and
 `--scenarios <file...>`, which takes file names without `.dart` (`dedup_scaling`,
-`isp_scroll_test`), not the scenario names below.
+`isp_scroll_test`).
 
 The committed report takes a micro run on the host and a UI run per phone:
 
@@ -78,69 +71,61 @@ uv run python run.py run --skip-micros --device <ios id> --iterations 10 --out .
 uv run python run.py report ../results-local/{micros,android,ios}/aggregated.json
 ```
 
-Lint the Python side before committing: `uv run ruff format .` then `uv run ruff check .`.
+Before committing Python: `uv run ruff format .`, then `uv run ruff check .`.
 
 ## Methodology
 
-- **AOT compile the micros**, never JIT. `dart compile exe` gives deterministic warmup and
-  `dart run` doesn't.
-- **UI scenarios run in profile mode**, not release: profile is AOT and release-like in performance
-  while keeping the VM service the driver needs. Absolute frame numbers are device-specific, so
-  the value is the *delta* and the build-thread share.
-- **N >= 10 iterations**, bumped to 30 for a high-variance metric before claiming a regression.
-- **Report median and IQR, never mean.** GC outliers skew means on a single-threaded VM.
-- **`forceGc()` before each micro measurement window.** SDK pinned via `.fvmrc`, since a bump
-  invalidates a baseline. AC power, no competing apps.
+- **Micros run AOT, never JIT.** `dart compile exe` warms up deterministically, `dart run` doesn't.
+- **Scenarios run in profile mode,** which is AOT and release-like but keeps the VM service the
+  driver needs. Absolute frame numbers are device-specific, so the value is the *delta* and the
+  build-thread share.
+- **N >= 10 iterations,** 30 for a noisy metric before claiming a regression.
+- **Median and IQR, never mean,** since GC outliers skew a mean on a single-threaded VM.
+- **`forceGc()` before each micro window,** the SDK pinned (a bump invalidates a baseline), on AC
+  power with no competing apps.
 
 ## Baselines are per-machine, never committed
 
-Perf numbers depend on CPU, GPU, GC tuning, OS scheduler and thermal state, so comparing across
-machines or phones is misleading. `results-local/` is gitignored, and every record embeds its SDK
-version, git SHA and capture date, so each file is self-describing. Capture your own baseline before
-measuring the delta from a change.
+CPU, GPU, GC, the scheduler and heat all move the numbers, so comparing machines misleads.
+`results-local/` is gitignored, and every record carries its SDK version, git SHA and capture date.
+Capture your own baseline before measuring a change.
 
-On Android, frames with little to do run on slow clocks, since the governor keeps idle-looking cores
-at low speed. So light scenarios like `edit_transitions` read several times slower than on iOS, and
-come close to it once background load holds the clocks up.
+Android runs light frames on slow clocks, since the governor keeps idle-looking cores slow. So a
+light scenario like `edit_transitions` reads several times slower than on iOS, and closes in once
+background load holds the clocks up.
 
 ## CI regression gate
 
-[`.github/workflows/benchmark.yml`](../.github/workflows/benchmark.yml) builds and runs the
-micros twice on one runner (the PR head and `origin/main`, built in turn at one path) and fails the
-job on a significant regression past the threshold. 2 things about it are deliberate, so know them
-before trying to speed it up.
+[`benchmark.yml`](../.github/workflows/benchmark.yml) builds and runs the micros twice on one
+runner, the PR head and `origin/main` in turn at one path, and fails on a significant regression
+past the threshold. 2 things about it are deliberate.
 
-**It only triggers on code whose timing it measures:** `lib/**`, `benchmark/micro/**`,
-`benchmark/harness/**`, and the workflow file. A PR touching only `benchmark/python`, the host app
-or docs has no micro-timing delta to catch, so it skips the gate. Keep that filter tight. Widening
-it back to `benchmark/**` makes every unrelated PR pay the full cost for nothing.
+**It only triggers on code it times:** `lib/**`, `benchmark/micro/**`, `benchmark/harness/**` and
+the workflow. A PR touching only the Python, the host app or docs has no timing delta, and widening
+the filter to `benchmark/**` would make every such PR pay for nothing.
 
-**Nearly all of it is measurement, not setup.** Cached Flutter setup and both AOT builds come to
-well under a minute. The rest is `micros x pivots x iterations x 2 sides` cells, each holding a fixed
-time window. Three things keep it serial:
+**Nearly all of it is measurement,** `micros x pivots x iterations x 2 sides` cells, each holding a
+fixed window, and it stays serial:
 
-- Candidate and baseline **must share one runner**, because GitHub VMs vary run to run and a
-  cross-machine baseline would drown real regressions in noise. Caching a baseline across runs is
-  out for the same reason.
-- The 2 sides **build one after the other, at one path.** Private names hash the file path, so a
-  2nd build directory reorders the same code's data, which x86 runners have timed over 20% apart.
-- The micros **can't run concurrently**, since CPU contention corrupts the very timings being
-  measured.
+- Both sides **share one runner,** since GitHub VMs vary run to run, which also rules out a cached
+  baseline.
+- They **build one after the other, at one path.** Private names hash the file path, so a 2nd build
+  directory reorders the same code's data, which x86 runners have timed over 20% apart.
+- The micros **never run concurrently,** since CPU contention corrupts the timings.
 
 **The window is the lever.** `benchmark_harness`'s `measure()` hardcodes 2s per cell
-(`minimumMeasureDurationMillis`), so an 11ns dispatch costs the same as a 41ms scan.
+(`minimumMeasureDurationMillis`), so a nanosecond dispatch costs as much as a long scan.
 [`harness/measure.dart`](harness/measure.dart) opens it up, and `ab` takes a shorter window than
-`run` does. At 500ms a sweep ran 2.8x faster, every median moved under 3.1%, and within-side spread
-was unchanged.
+`run`. At 500ms a sweep ran 2.8x faster, every median moved under 3.1%, and within-side spread held.
 
-Still too slow? Shard by scenario across jobs. `compare` pairs strictly on `(scenario, metric)`, so
-nothing compares across shards, and `ab --scenarios` already takes the split. Trimming pivots or
-iterations works too, but both cost detection power, which
-[`test_gate_power.py`](python/tests/test_gate_power.py) pins.
+Still too slow? Shard by scenario across jobs: `compare` pairs strictly on `(scenario, metric)`, and
+`ab --scenarios` already takes the split. Fewer pivots or iterations work too, but cost detection
+power, which [`test_gate_power.py`](python/tests/test_gate_power.py) pins.
 
 ## Result JSON schema
 
-Each micro/scenario emits records conforming to (see `harness/result_writer.dart`):
+Each micro and scenario emits records like this
+([`result_writer.dart`](harness/result_writer.dart)):
 
 ```json
 {
@@ -155,45 +140,24 @@ Each micro/scenario emits records conforming to (see `harness/result_writer.dart
 }
 ```
 
-The analyzer reads the raw `samples` arrays for median, IQR and significance. `summary` carries
-pre-computed scalars plus the pivot (`list_size`, say). A UI scenario's record also carries
-`iterations`, since it holds every iteration's frames, and `platform`, the OS it ran on.
+The analyzer reads the raw `samples` for median, IQR and significance. `summary` carries
+pre-computed scalars plus the pivot (`list_size`, say). A scenario's record also carries
+`iterations`, since it holds every iteration's frames, and `platform`.
 
 ## Reports
 
-`reports/` is the committed output of `report` (PNGs plus `SUMMARY.md`), linked from the package
-README so pub.dev viewers see the perf shape without cloning. Its UI charts show a bar per platform.
-Committing it is a deliberate maintainer refresh, so contributor runs should pass `--out` to a
-local path.
-`SUMMARY.md` takes its capture date from the records' own `started_at`, so re-rendering an old
-capture reproduces it rather than restamping it with today.
+`reports/` is `report`'s committed output, linked from the package README so pub.dev readers see the
+shape without cloning. Refreshing it is the maintainer's call, so a contributor run passes `--out`
+to a local path. `SUMMARY.md` dates itself from the records' `started_at`, so re-rendering an old
+capture keeps its date.
 
 ## What's measured
 
-| Micro (`micro/`) | Measures |
-|---|---|
-| `sync_search_scaling` | `resolveSyncSearch` cost as the in-memory list grows |
-| `bucket_by_group_scaling` | `bucketByGroup` cost as the list grows, over interleaved input |
-| `first_of_each_id_scaling` | `firstOfEachId` cost as the in-memory list grows, with every id unique |
-| `group_headers_scaling` | `resolveGroupHeaders` cost as the loaded list grows, page by page |
-| `dedup_scaling` | de-dup cost as the loaded list grows, with no real overlap |
-| `edit_layer_scaling` | the edit layer's pass as the loaded list grows, with 10 new items joining groups spread across it |
-| `row_lookup_scaling` | finding each built row again on a rebuild, after a page lands at the end, an item lands on top, or a built row goes |
-| `observer_dispatch` | one no-op observer callback through list_smith's wrapping |
-| `wrapping_overhead` | the per-page end-policy work as loaded pages grow |
+Each micro (`micro/`) and scenario (`app/integration_test/`) says what it measures at the top of its
+file.
 
-| Scenario (`app/integration_test/`) | Measures |
-|---|---|
-| `slow_observer` | render latency when a slow synchronous observer sits on the fetch path |
-| `isp_scroll` | per-frame build cost scrolling a `ListSmith.async` list |
-| `bare_listview` | the same scroll over a plain `ListView.builder`, the attribution control |
-| `sync_scroll` | the same scroll over a `ListSmith.sync` list with ids |
-| `cri_refresh` | per-frame build cost across full pull-to-refresh cycles |
-| `edit_transitions_*` | per-frame build cost while edits come and go, one per transition: `none`, `size`, `fade`, `slide`. `size_scrolled` makes `size`'s edits just above the screen, where the rows on it are held still |
-
-On top of those, `compare` diffs 2 runs with a Mann-Whitney test, and `ab` runs 2 builds' micros
-interleaved so run-order drift lands on both sides equally. Each side runs a copy of its build from
-a path the same length as the other's, so neither process starts laid out differently in memory. A
-micro that's the same program on both sides isn't timed at all: its 2 exes are byte-identical, or
-`build` hashed the same inputs, as the compiler lists them, into `build/inputs/`. Only the input hash
-works on macOS, which stamps every build.
+`compare` diffs 2 runs with a Mann-Whitney test, and `ab` interleaves 2 builds' micros so run-order
+drift lands on both sides. Each side runs a copy of its build from a path of the same length, so
+neither starts laid out differently in memory. A micro that's the same program on both sides isn't
+timed: its 2 exes are byte-identical, or `build` hashed the same inputs, as the compiler lists them,
+into `build/inputs/`. Only the hash works on macOS, which stamps every build.

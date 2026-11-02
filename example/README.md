@@ -1,15 +1,13 @@
 # list_smith example
 
-A runnable showcase for [`list_smith`](../), on a platform-adaptive stack so the package's neutral
-surfaces can be seen dropping into a Material shell (Android) and a Cupertino shell (iOS)
-unchanged.
+A runnable showcase for [`list_smith`](../), whose neutral surfaces drop unchanged into a Material
+shell on Android and a Cupertino one on iOS.
 
 ## Demos
 
-[`home_view.dart`](lib/features/core/views/home_view.dart) is the list, one tile per demo with its
-own one-line description, and the app opens on it.
-
-Each knob says what it does underneath its name, and the app-bar control flips light and dark.
+The app opens on [`home_view.dart`](lib/features/core/views/home_view.dart), a tile per demo with
+its one-line pitch. Each knob says what it does under its name, and the app bar flips light and
+dark.
 
 ## Running
 
