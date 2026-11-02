@@ -1,14 +1,13 @@
-import 'dart:developer' as developer;
-
-import '/src/data/pagination/pagination.dart';
-import '../list_smith_observer.dart';
+part of '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.
 ///
 /// Pass `observer: const LoggingListSmithObserver()` and events show up in the console and DevTools'
 /// logging view, filterable by that name. Want your own name, structured records or filtered telemetry?
 /// Subclass [ListSmithObserver] instead.
-final class const LoggingListSmithObserver() extends ListSmithObserver {
+final class const LoggingListSmithObserver() implements ListSmithObserver {
+  // Implements rather than extends, so a new observer callback won't compile until it's logged.
+
   /// The logger name on every record. Filter DevTools by it.
   static const _name = 'list_smith';
 

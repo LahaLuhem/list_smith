@@ -598,8 +598,9 @@ typos `Uri.parse` silently accepts. `Uri.parse` stays right for runtime input.
 ### `part` / `part of` only when structurally needed
 
 Legitimate uses: sealed-class cases across files, since Dart requires one library for sealed
-subtypes, and code-generation outputs (`*.g.dart`). Not for general organisation. Imports are
-explicit, and parts leak `_private` symbols across files.
+subtypes, a class implementing a `base` class, which only that class's own library may do, and
+code-generation outputs (`*.g.dart`). Not for general organisation. Imports are explicit, and parts
+leak `_private` symbols across files.
 
 <a id="idioms-fine-grained-rebuilds"></a>
 ### `ValueNotifier` + `ValueListenableBuilder` over `setState`

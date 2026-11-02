@@ -2,10 +2,13 @@
 // ignore_for_file: no-empty-block
 
 /// @docImport '/src/widgets/list_smith.dart';
-/// @docImport 'sinks/logging_list_smith_observer.dart';
 library;
 
+import 'dart:developer' as developer;
+
 import '/src/data/pagination/pagination.dart';
+
+part 'sinks/logging_list_smith_observer.dart';
 
 /// Lifecycle sink for a [ListSmith.async] list: logging, telemetry, analytics.
 ///

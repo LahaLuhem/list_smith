@@ -9,7 +9,6 @@ export 'src/data/grouping/models/grouping.dart' show Grouping, NoGrouping;
 export 'src/data/grouping/typedefs/group_header_builder.dart';
 export 'src/data/grouping/typedefs/group_key_of.dart';
 export 'src/data/observer/models/list_smith_observer.dart';
-export 'src/data/observer/models/sinks/logging_list_smith_observer.dart';
 export 'src/data/pagination/enums/fetch_trigger.dart';
 export 'src/data/pagination/models/empty_page_behaviour.dart';
 export 'src/data/pagination/models/empty_page_context.dart';
