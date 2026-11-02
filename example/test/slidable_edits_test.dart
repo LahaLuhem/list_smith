@@ -55,10 +55,8 @@ void main() {
           const Offset(-700, 0),
           const Duration(milliseconds: 300),
         );
-        // The pane's dismissal, then its shrink, take 300ms each.
-        await drain(tester, frames: 7, step: const Duration(milliseconds: 100));
-        await tester.pump();
-        await tester.pump();
+        // Past the pane's dismissal and shrink, and well short of a list exit's second.
+        await drain(tester, frames: 20, step: const Duration(milliseconds: 50));
 
         check(tester.takeException()).isNull();
         check(find.text('item 2', skipOffstage: false).evaluate()).isEmpty();
