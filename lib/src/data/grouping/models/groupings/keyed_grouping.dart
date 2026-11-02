@@ -31,5 +31,8 @@ final class const KeyedGrouping<T extends Object>._({
   }
 
   @override
-  String toString() => 'KeyedGrouping(orderPolicy: $orderPolicy)';
+  String toString() =>
+      'KeyedGrouping('
+      'orderPolicy: $orderPolicy'
+      ')';
 }

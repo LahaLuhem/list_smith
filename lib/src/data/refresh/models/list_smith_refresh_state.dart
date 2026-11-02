@@ -23,7 +23,11 @@ final class const ListSmithRefreshState({
 
   @override
   String toString() =>
-      'ListSmithRefreshState(phase: $phase, value: $value, pullDirection: $pullDirection)';
+      'ListSmithRefreshState('
+      'phase: $phase, '
+      'value: $value, '
+      'pullDirection: $pullDirection'
+      ')';
 
   @override
   bool operator ==(Object other) =>

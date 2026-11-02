@@ -47,7 +47,9 @@ void main() {
                     ? namePart.formalParameters.parameters
                           .where(
                             (parameter) =>
-                                (parameter.finalKeyword != null || parameter.varKeyword != null) &&
+                                (parameter is SuperFormalParameter ||
+                                    parameter.finalKeyword != null ||
+                                    parameter.varKeyword != null) &&
                                 _isShown(parameter.type, parameter.metadata),
                           )
                           .map((parameter) => parameter.name?.lexeme)
@@ -63,7 +65,10 @@ void main() {
 
                 return MapEntry(
                   namePart.typeName.lexeme,
-                  parameterNames.followedBy(bodyFieldNames).toSet(),
+                  parameterNames
+                      .followedBy(bodyFieldNames)
+                      .where((name) => !name.startsWith('_'))
+                      .toSet(),
                 );
               })
               .where((entry) => entry.value.isNotEmpty),
@@ -138,9 +143,48 @@ final _samplesByClassName = <String, _Sample>{
       'shouldKeepPosition': source.shouldKeepPosition,
     },
   ),
+  'CellLayout': _sample(
+    const CellLayout(
+      itemCount: 5,
+      hasSeparators: true,
+      hasFooter: false,
+      headers: [(itemIndex: 0, key: 'a'), (itemIndex: 3, key: 'b')],
+      isHeaderAfterItem: true,
+    ),
+    (layout) => {
+      'itemCount': layout.itemCount,
+      'hasSeparators': layout.hasSeparators,
+      'hasFooter': layout.hasFooter,
+      'headers': layout.headers,
+      'isHeaderAfterItem': layout.isHeaderAfterItem,
+    },
+  ),
+  'EmptyPageContext': _sample(
+    const EmptyPageContext(isEmpty: true, isMoreAvailable: false, pagesLoaded: 3),
+    (context) => {
+      'isEmpty': context.isEmpty,
+      'isMoreAvailable': context.isMoreAvailable,
+      'pagesLoaded': context.pagesLoaded,
+    },
+  ),
+  'EndContext': _sample(
+    const EndContext(pageItemCounts: [17, 17, 3], pageSize: 17, lastPageSignal: 'cursor-37'),
+    (context) => {
+      'pageItemCounts': context.pageItemCounts,
+      'pageSize': context.pageSize,
+      'lastPageSignal': context.lastPageSignal,
+    },
+  ),
   'FixedPageCountPolicy': _sample(
     const FixedPageCountPolicy(pageCount: 4),
     (policy) => {'pageCount': policy.pageCount},
+  ),
+  'GroupHeaders': _sample(
+    GroupHeaders(
+      headers: const [(itemIndex: 0, key: 'a'), (itemIndex: 2, key: 'b')],
+      headerFor: (_, _) => const SizedBox(),
+    ),
+    (groupHeaders) => {'headers': groupHeaders.headers},
   ),
   'ItemEdit': _sample(
     const ItemEdit<int>(item: 7, stamp: 3),
@@ -174,6 +218,23 @@ final _samplesByClassName = <String, _Sample>{
     const ListSmithRefreshState(phase: .armed, value: 0.5, pullDirection: .up),
     (state) => {'phase': state.phase, 'value': state.value, 'pullDirection': state.pullDirection},
   ),
+  'LoadedPage': _sample(
+    const LoadedPage(items: [1, 2, 3], readStamp: 4, previousSignal: 'cursor-3'),
+    (page) => {
+      'items': page.items.length,
+      'readStamp': page.readStamp,
+      'previousSignal': page.previousSignal,
+    },
+  ),
+  'PageRequest': _sample(
+    const PageRequest(pageIndex: 2, pageSize: 17, trigger: .nextPage, previousSignal: 'cursor-34'),
+    (request) => {
+      'pageIndex': request.pageIndex,
+      'pageSize': request.pageSize,
+      'trigger': request.trigger,
+      'previousSignal': request.previousSignal,
+    },
+  ),
   'PagingState': _sample(
     PagingState<int>(
       pages: const [
@@ -206,6 +267,22 @@ final _samplesByClassName = <String, _Sample>{
   'ReloadToCurrentDepth': _sample(
     const ReloadToCurrentDepth(concurrency: 3),
     (reload) => {'concurrency': reload.concurrency},
+  ),
+  'SearchPageRequest': _sample(
+    const SearchPageRequest(
+      query: 'tea',
+      pageIndex: 1,
+      pageSize: 17,
+      trigger: .queryChanged,
+      previousSignal: 'cursor-17',
+    ),
+    (request) => {
+      'query': request.query,
+      'pageIndex': request.pageIndex,
+      'pageSize': request.pageSize,
+      'trigger': request.trigger,
+      'previousSignal': request.previousSignal,
+    },
   ),
   'StopOnEmptyPagesPolicy': _sample(
     const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 3),

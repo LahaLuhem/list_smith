@@ -17,5 +17,8 @@ final class const FixedPageCountPolicy({
   bool get stopsAtDataEnd => false;
 
   @override
-  String toString() => 'FixedPageCountPolicy(pageCount: $pageCount)';
+  String toString() =>
+      'FixedPageCountPolicy('
+      'pageCount: $pageCount'
+      ')';
 }

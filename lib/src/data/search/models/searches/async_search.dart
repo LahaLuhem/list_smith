@@ -14,5 +14,8 @@ final class const AsyncSearch<T extends Object>({
   this;
 
   @override
-  String toString() => 'AsyncSearch(cachePolicy: $cachePolicy)';
+  String toString() =>
+      'AsyncSearch('
+      'cachePolicy: $cachePolicy'
+      ')';
 }

@@ -14,5 +14,9 @@ final class const ItemEdit<T extends Object>({
   this;
 
   @override
-  String toString() => 'ItemEdit(item: $item, stamp: $stamp)';
+  String toString() =>
+      'ItemEdit('
+      'item: $item, '
+      'stamp: $stamp'
+      ')';
 }

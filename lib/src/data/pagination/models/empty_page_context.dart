@@ -17,4 +17,12 @@ final class const EmptyPageContext({
 }) {
   /// Creates it.
   this;
+
+  @override
+  String toString() =>
+      'EmptyPageContext('
+      'isEmpty: $isEmpty, '
+      'isMoreAvailable: $isMoreAvailable, '
+      'pagesLoaded: $pagesLoaded'
+      ')';
 }

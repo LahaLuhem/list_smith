@@ -21,4 +21,13 @@ base class const PageRequest({
 }) {
   /// Creates it.
   this;
+
+  @override
+  String toString() =>
+      'PageRequest('
+      'pageIndex: $pageIndex, '
+      'pageSize: $pageSize, '
+      'trigger: $trigger, '
+      'previousSignal: $previousSignal'
+      ')';
 }

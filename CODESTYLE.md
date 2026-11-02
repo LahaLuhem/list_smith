@@ -162,7 +162,8 @@ with `/features/…`.
 - **Value types override `toString`** as `'ClassName(field1: value1, ...)'`, an expression body
   after the constructors, since `Instance of …` helps nobody in a log. Skip opaque fields
   (callbacks, controllers, listenables), whose text is noise and whose bare interpolation trips
-  DCM's `avoid-missed-calls`. Widgets are exempt.
+  DCM's `avoid-missed-calls`. One field per line, so a new one is a one-line diff. A list of the
+  app's items or pages shows as a count. Widgets are exempt.
 - **Pick a public class's modifier by how an app tests with it.** One an app builds or receives (a
   config, a builder's state) is `final`, since a test makes a real one. One an app calls and stubs
   stays open, since `final` and `base` block the `implements` a mock needs (`ListSmithController`).

@@ -24,5 +24,8 @@ final class const AdvanceToFirstNonEmpty({
   }
 
   @override
-  String toString() => 'AdvanceToFirstNonEmpty(maxPages: $maxPages)';
+  String toString() =>
+      'AdvanceToFirstNonEmpty('
+      'maxPages: $maxPages'
+      ')';
 }

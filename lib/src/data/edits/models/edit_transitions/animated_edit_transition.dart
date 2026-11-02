@@ -13,5 +13,8 @@ final class const AnimatedEditTransition._({
   this : super._();
 
   @override
-  String toString() => 'EditTransition(duration: $duration)';
+  String toString() =>
+      'EditTransition('
+      'duration: $duration'
+      ')';
 }

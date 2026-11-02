@@ -15,5 +15,8 @@ final class const StopOnEmptyPagesPolicy({
   bool hasReachedEnd(EndContext context) => context.trailingEmptyRun >= emptyRunBeforeEnd;
 
   @override
-  String toString() => 'StopOnEmptyPagesPolicy(emptyRunBeforeEnd: $emptyRunBeforeEnd)';
+  String toString() =>
+      'StopOnEmptyPagesPolicy('
+      'emptyRunBeforeEnd: $emptyRunBeforeEnd'
+      ')';
 }

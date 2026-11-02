@@ -80,5 +80,8 @@ final class const ReloadToCurrentDepth({
   }
 
   @override
-  String toString() => 'ReloadToCurrentDepth(concurrency: $concurrency)';
+  String toString() =>
+      'ReloadToCurrentDepth('
+      'concurrency: $concurrency'
+      ')';
 }

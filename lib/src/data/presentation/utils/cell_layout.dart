@@ -102,4 +102,14 @@ final class const CellLayout({
 
     return count;
   }
+
+  @override
+  String toString() =>
+      'CellLayout('
+      'itemCount: $itemCount, '
+      'hasSeparators: $hasSeparators, '
+      'hasFooter: $hasFooter, '
+      'headers: $headers, '
+      'isHeaderAfterItem: $isHeaderAfterItem'
+      ')';
 }

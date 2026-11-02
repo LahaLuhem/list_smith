@@ -23,4 +23,10 @@ final class GroupHeaders({
   /// was.
   int? indexOf(Object key, int lastIndex) =>
       lastIndex < headers.length && headers[lastIndex].key == key ? lastIndex : _indexByKey[key];
+
+  @override
+  String toString() =>
+      'GroupHeaders('
+      'headers: $headers'
+      ')';
 }

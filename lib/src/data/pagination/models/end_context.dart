@@ -28,4 +28,12 @@ final class const EndContext({
   /// How many empty pages sit at the end of [pageItemCounts], in a row.
   int get trailingEmptyRun =>
       pageItemCounts.length - 1 - pageItemCounts.lastIndexWhere((count) => count != 0);
+
+  @override
+  String toString() =>
+      'EndContext('
+      'pageItemCounts: $pageItemCounts, '
+      'pageSize: $pageSize, '
+      'lastPageSignal: $lastPageSignal'
+      ')';
 }

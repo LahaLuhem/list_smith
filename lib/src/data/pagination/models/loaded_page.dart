@@ -18,4 +18,12 @@ final class const LoadedPage<T extends Object>({
 }) {
   /// Creates it.
   this;
+
+  @override
+  String toString() =>
+      'LoadedPage('
+      'items: ${items.length}, '
+      'readStamp: $readStamp, '
+      'previousSignal: $previousSignal'
+      ')';
 }

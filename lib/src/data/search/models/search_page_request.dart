@@ -16,4 +16,14 @@ final class const SearchPageRequest({
 }) extends PageRequest {
   /// Creates it.
   this;
+
+  @override
+  String toString() =>
+      'SearchPageRequest('
+      'query: $query, '
+      'pageIndex: $pageIndex, '
+      'pageSize: $pageSize, '
+      'trigger: $trigger, '
+      'previousSignal: $previousSignal'
+      ')';
 }
