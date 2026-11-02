@@ -1,3 +1,5 @@
+// Wiring only.
+// coverage:ignore-file
 import 'package:flutter/widgets.dart';
 
 class const CustomEnd({super.key}) extends StatelessWidget {

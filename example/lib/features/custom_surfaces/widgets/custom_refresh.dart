@@ -27,9 +27,12 @@ class const _Arrow({required final AxisDirection pointing}) extends StatelessWid
   Widget build(BuildContext context) => RotatedBox(
     quarterTurns: switch (pointing) {
       .down => 0,
-      .left => 1,
       .up => 2,
+      // Unreachable: the demo's list is vertical.
+      // coverage:ignore-start
+      .left => 1,
       .right => 3,
+      // coverage:ignore-end
     },
     child: const PlatformIcon(PlatformIcons.arrowDown),
   );

@@ -6,7 +6,10 @@ import 'app/theme_scope.dart';
 import 'features/core/data/constants/const_theme.dart';
 import 'features/core/views/home_view.dart';
 
+// Entry point: tests pump ListSmithExampleApp.
+// coverage:ignore-start
 void main() => runApp(const ListSmithExampleApp());
+// coverage:ignore-end
 
 class const ListSmithExampleApp({super.key}) extends StatefulWidget {
   @override

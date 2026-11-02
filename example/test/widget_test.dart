@@ -1,8 +1,11 @@
 import 'package:checks/checks.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoTheme;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart' show Slidable;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:list_smith_example/features/core/widgets/bool_knob.dart';
+import 'package:list_smith_example/features/core/widgets/event_log_panel.dart';
+import 'package:material_ui/material_ui.dart' show Theme;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
 
 import 'support/support.dart';
@@ -22,6 +25,148 @@ void main() {
 
       check(find.text('Item 1').evaluate()).length.equals(1);
     });
+
+    scenarioOutlineWidgets<
+      ({TargetPlatform platform, Brightness Function(BuildContext context) brightnessOf})
+    >(
+      'the brightness toggle cycles light, then dark, then back to following the device',
+      examples: {
+        'Material': (platform: .android, brightnessOf: (context) => Theme.of(context).brightness),
+        'Cupertino': (platform: .iOS, brightnessOf: CupertinoTheme.brightnessOf),
+      },
+      outline: (tester, example) async {
+        // On the hub, the app bar's only icon.
+        final toggleFinder = find.descendant(
+          of: find.byType(NavigationToolbar),
+          matching: find.byType(Icon),
+        );
+        Brightness shownBrightness() =>
+            example.brightnessOf(tester.element(find.text('Basic feed')));
+
+        debugDefaultTargetPlatformOverride = example.platform;
+        tester.platformDispatcher.platformBrightnessTestValue = .dark;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        await pumpExampleApp(tester);
+
+        final shownBrightnesses = [shownBrightness()];
+        for (var tap = 0; tap < 3; tap++) {
+          await tester.tap(toggleFinder);
+          await drain(tester, frames: 3, step: const Duration(milliseconds: 100));
+          shownBrightnesses.add(shownBrightness());
+        }
+        tester.platformDispatcher.platformBrightnessTestValue = .light;
+        await drain(tester, frames: 3, step: const Duration(milliseconds: 100));
+        shownBrightnesses.add(shownBrightness());
+        debugDefaultTargetPlatformOverride = null;
+
+        // The last turns light with the device.
+        check(shownBrightnesses).deepEquals([
+          Brightness.dark,
+          Brightness.light,
+          Brightness.dark,
+          Brightness.dark,
+          Brightness.light,
+        ]);
+      },
+    );
+
+    scenarioWidgets('the cursor feed pages on from where the last page ended', (tester) async {
+      await openDemo(tester, 'Cursor feed', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      await tester.drag(find.text('Item 1'), const Offset(0, -800));
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      check(find.text('Item 21').evaluate()).length.equals(1);
+    });
+
+    scenarioOutlineWidgets<({AsyncValueSetter<WidgetTester> failPage, String loadedTitle})>(
+      "the custom error's Retry loads the page once failures are off",
+      examples: {
+        'the 1st page': (
+          failPage: (tester) async {
+            // Past the route's entrance, before the page lands.
+            await tester.pump(const Duration(milliseconds: 400));
+            await tester.tap(knobSwitchFinder('Inject fetch failures'));
+            await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+          },
+          loadedTitle: 'Item 1',
+        ),
+        // Page 1 lands with page 0, so page 2 is the 1st to fail.
+        'a next page': (
+          failPage: (tester) async {
+            await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+            await tester.tap(knobSwitchFinder('Inject fetch failures'));
+            await tester.pump();
+            await tester.scrollUntilVisible(find.text('Could not load more.'), 300);
+          },
+          loadedTitle: 'Item 41',
+        ),
+      },
+      outline: (tester, example) async {
+        await openDemo(tester, 'Custom surfaces', surfaceSize: tallSurfaceSize);
+        await example.failPage(tester);
+        check(find.text(example.loadedTitle, skipOffstage: false).evaluate()).isEmpty();
+
+        await tester.tap(knobSwitchFinder('Inject fetch failures'));
+        await tester.pump();
+        await tester.tap(find.text('Retry'));
+        await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+        check(find.text(example.loadedTitle, skipOffstage: false).evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioWidgets('the custom arrow turns over once the pull is armed', (tester) async {
+      int arrowQuarterTurns() => tester.widget<RotatedBox>(find.byType(RotatedBox)).quarterTurns;
+
+      await openDemo(tester, 'Custom surfaces', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      final gesture = await tester.startGesture(tester.getCenter(find.text('Item 1')));
+      await gesture.moveBy(const Offset(0, 50));
+      await tester.pump();
+      final draggingQuarterTurns = arrowQuarterTurns();
+      await gesture.moveBy(const Offset(0, 250));
+      await tester.pump();
+      final armedQuarterTurns = arrowQuarterTurns();
+      await gesture.up();
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300)); // the refresh
+
+      check(armedQuarterTurns).equals((draggingQuarterTurns + 2) % 4);
+    });
+
+    scenarioOutlineWidgets<({AsyncValueSetter<WidgetTester> turnKnob, Finder shownFinder})>(
+      'a playground knob read only as the list is built gives a fresh list that uses it',
+      examples: {
+        'page size, up to 40': (
+          turnKnob: (tester) => tester.drag(knobSliderFinder('Page size'), const Offset(1000, 0)),
+          shownFinder: find.text('Item 41'),
+        ),
+        // The empty 1st page then ends the list.
+        'empty pages before end, down to 1': (
+          turnKnob: (tester) =>
+              tester.drag(knobSliderFinder('Empty pages before end'), const Offset(-1000, 0)),
+          shownFinder: find.text('No items'),
+        ),
+        'page past empty pages, off': (
+          turnKnob: (tester) => tester.tap(knobSwitchFinder('Page past empty pages')),
+          shownFinder: find.text('No items'),
+        ),
+      },
+      outline: (tester, example) async {
+        await openDemo(tester, 'Playground', surfaceSize: tallSurfaceSize);
+        // Page 0 is empty, so the list pages past it to page 1.
+        await drain(tester, frames: 12, step: const Duration(milliseconds: 300));
+        check(find.text('Item 21').evaluate()).length.equals(1);
+
+        await example.turnKnob(tester);
+        await drain(tester, frames: 12, step: const Duration(milliseconds: 300));
+
+        check(find.text('Item 21').evaluate()).isEmpty();
+        check(example.shownFinder.evaluate()).length.equals(1);
+      },
+    );
 
     scenarioWidgets('sync search filters the in-memory list as you type', (tester) async {
       await openDemo(tester, 'Sync search');
@@ -70,6 +215,22 @@ void main() {
       check(find.textContaining('onPageLoaded').evaluate().length).isGreaterThan(0);
     });
 
+    scenarioWidgets('async search logs a failed fetch with its error', (tester) async {
+      await openDemo(tester, 'Async search', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      await tester.tap(knobSwitchFinder('Inject failures'));
+      await tester.pump();
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
+
+      final loggedErrorFinder = find.descendant(
+        of: find.byType(EventLogPanel),
+        matching: find.textContaining('Simulated network failure'),
+      );
+      check(loggedErrorFinder.evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('sync search groups its list into labelled sections on a switch', (
       tester,
     ) async {
@@ -109,6 +270,62 @@ void main() {
       },
     );
 
+    scenarioWidgets('with Route on trigger off, a pull hands back the cached rows', (tester) async {
+      await openDemo(tester, 'Cache routing', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      await tester.tap(knobSwitchFinder('Route on trigger'));
+      await tester.pump();
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
+
+      // The pull did run, and read the cache.
+      check(find.textContaining('refresh · cache').evaluate()).length.equals(1);
+      check(find.text('from fetch #1').evaluate().length).isGreaterThan(0);
+    });
+
+    scenarioWidgets('after Clear cache, a pull fetches every page from the network', (
+      tester,
+    ) async {
+      Set<String?> shownStamps() => tester
+          .widgetList<Text>(find.textContaining('from fetch #', skipOffstage: false))
+          .map((text) => text.data)
+          .toSet();
+
+      await openDemo(tester, 'Cache routing', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+      final coldStamps = shownStamps();
+
+      await tester.tap(find.text('Clear cache'));
+      await tester.pump();
+      await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
+      await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
+      final pulledStamps = shownStamps();
+
+      check(pulledStamps).isNotEmpty();
+      check(pulledStamps.intersection(coldStamps)).isEmpty();
+    });
+
+    scenarioOutlineWidgets<String>(
+      'Clear empties the event log',
+      examples: const {'async search': 'Async search', 'cache routing': 'Cache routing'},
+      outline: (tester, demoTitle) async {
+        final loggedEventsFinder = find.descendant(
+          of: find.byType(EventLogPanel),
+          matching: find.byType(ListView),
+        );
+
+        await openDemo(tester, demoTitle, surfaceSize: tallSurfaceSize);
+        await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+        check(loggedEventsFinder.evaluate()).isNotEmpty();
+
+        await tester.tap(find.text('Clear'));
+        await tester.pump();
+
+        check(loggedEventsFinder.evaluate()).isEmpty();
+      },
+    );
+
     scenarioWidgets('the reload demo refreshes from code, with no pull', (tester) async {
       await openDemo(tester, 'Reload', surfaceSize: tallSurfaceSize);
       await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
@@ -127,13 +344,7 @@ void main() {
       await openDemo(tester, 'Reload', surfaceSize: const Size(390, 844));
       await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
 
-      final injectKnobFinder = find.ancestor(
-        of: find.text('Inject a failure on reload'),
-        matching: find.byType(BoolKnob),
-      );
-      await tester.tap(
-        find.descendant(of: injectKnobFinder, matching: find.byType(PlatformSwitch)),
-      );
+      await tester.tap(knobSwitchFinder('Inject a failure on reload'));
       await tester.pump();
       await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
       await drain(tester, frames: 10, step: const Duration(milliseconds: 300));

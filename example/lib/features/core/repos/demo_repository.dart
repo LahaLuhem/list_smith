@@ -48,8 +48,6 @@ class DemoRepository({
     await Future<void>.delayed(latency);
 
     final start = cursor is String ? int.parse(cursor) : 0;
-    if (start >= _items.length) return (const <DemoItem>[], null);
-
     final end = start + pageSize;
     final clampedEnd = end > _items.length ? _items.length : end;
     final nextCursor = clampedEnd >= _items.length ? null : '$clampedEnd';

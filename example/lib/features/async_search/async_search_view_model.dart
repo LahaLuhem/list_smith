@@ -28,9 +28,12 @@ final class AsyncSearchViewModel() extends ViewModel with SearchQueryMixin, Fail
     _repository.searchFetchPage(request.query, request.pageIndex, request.pageSize),
   );
 
+  // Wiring only.
+  // coverage:ignore-start
   // Torn off as an onChanged callback, so it can't be a setter.
   // ignore: use_setters_to_change_properties
   void onKeepCacheToggled({required bool value}) => _shouldKeepCacheNotifier.value = value;
+  // coverage:ignore-end
 
   void clearLog() => _eventsNotifier.clear();
 

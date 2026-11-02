@@ -24,8 +24,8 @@ The app is a hub, and `features/core/views/home_view.dart` *is* the list of demo
 points at rather than copying.
 
 **Adding a demo:** `lib/features/<name>/` with its view and view-model, a `_DemoTile` on the hub,
-and a smoke scenario in `test/widget_test.dart`. Reuse `DemoScaffold`, `DemoItemTile` and the
-`core` fake sources and mixins.
+and a scenario in `test/widget_test.dart` for what the demo adds itself. Reuse `DemoScaffold`,
+`DemoItemTile` and the `core` fake sources and mixins.
 
 **Where a demo's explanation goes:** each knob explains itself in a one-line `subtitle`, and a
 screen adds a hint line only for a gesture nothing else shows. The hub tile's `description` is its

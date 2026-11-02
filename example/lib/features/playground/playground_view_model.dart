@@ -45,6 +45,8 @@ final class PlaygroundViewModel() extends ViewModel {
     notifyListeners();
   }
 
+  // Wiring only.
+  // coverage:ignore-start
   void onLatencyChanged(double value) {
     _latencyMs = value;
     notifyListeners();
@@ -59,6 +61,7 @@ final class PlaygroundViewModel() extends ViewModel {
     _separators = value;
     notifyListeners();
   }
+  // coverage:ignore-end
 
   Future<List<DemoItem>> fetchPage(PageRequest request) async {
     final PageRequest(:pageIndex, :pageSize) = request;

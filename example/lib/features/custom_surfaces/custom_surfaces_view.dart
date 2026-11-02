@@ -35,7 +35,10 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
         fetchPage: PageFetcher(viewModel.fetchPage),
         itemIdGetter: (item) => item.id,
         itemBuilder: (_, item, _) => DemoItemTile(item: item),
+        // Unreachable: the demo's source is never empty.
+        // coverage:ignore-start
         emptyBuilder: (_) => const CustomEmpty(),
+        // coverage:ignore-end
         refresh: PullToRefresh(indicatorBuilder: (_, state) => CustomRefresh(state: state)),
         surfaces: AsyncListSurfaces(
           firstPageLoadingBuilder: (_) => const CustomLoading(),
@@ -44,7 +47,10 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
               CustomError(exception: exception, onRetry: onRetry),
           newPageErrorBuilder: (_, exception, onRetry) =>
               CustomError(exception: exception, onRetry: onRetry, isCompact: true),
+          // Wiring only.
+          // coverage:ignore-start
           noMoreItemsBuilder: (_) => const CustomEnd(),
+          // coverage:ignore-end
         ),
       ),
     ),

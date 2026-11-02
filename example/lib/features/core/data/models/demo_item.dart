@@ -8,6 +8,9 @@ class const DemoItem({
 }) {
   bool matches(String query) => title.toLowerCase().contains(query.toLowerCase());
 
+  // Debug-only.
+  // coverage:ignore-start
   @override
   String toString() => 'DemoItem(id: $id, title: $title)';
+  // coverage:ignore-end
 }

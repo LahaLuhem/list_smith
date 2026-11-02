@@ -26,7 +26,10 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
             label: 'Keep list across search',
             subtitle: 'Clearing a search lands back where you were',
             value: shouldKeepCache,
+            // Wiring only.
+            // coverage:ignore-start
             onChanged: (value) => viewModel.onKeepCacheToggled(value: value),
+            // coverage:ignore-end
           ),
         ),
         ValueListenableBuilder(

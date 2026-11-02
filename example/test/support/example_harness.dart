@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:list_smith_example/features/core/widgets/bool_knob.dart';
+import 'package:list_smith_example/features/core/widgets/slider_knob.dart';
 import 'package:list_smith_example/main.dart';
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart'
+    show PlatformSlider, PlatformSwitch;
 
 /// Room for a demo's controls above its list.
 const tallSurfaceSize = Size(800, 1200);
@@ -22,6 +26,16 @@ Future<void> openDemo(WidgetTester tester, String title, {Size? surfaceSize}) as
   await tester.tap(find.text(title));
   await tester.pump();
 }
+
+Finder knobSwitchFinder(String label) => find.descendant(
+  of: find.ancestor(of: find.text(label), matching: find.byType(BoolKnob)),
+  matching: find.byType(PlatformSwitch),
+);
+
+Finder knobSliderFinder(String label) => find.descendant(
+  of: find.ancestor(of: find.text(label), matching: find.byType(SliderKnob)),
+  matching: find.byType(PlatformSlider),
+);
 
 /// Pumps [frames] frames, [step] apart when given.
 Future<void> drain(WidgetTester tester, {int frames = 5, Duration? step}) async {

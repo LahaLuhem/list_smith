@@ -1,3 +1,5 @@
+// Unreachable: the demo's source is never empty.
+// coverage:ignore-file
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;

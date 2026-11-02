@@ -55,12 +55,18 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
         BoolKnob(
           label: 'Pull to refresh',
           value: viewModel.pullToRefresh,
+          // Wiring only.
+          // coverage:ignore-start
           onChanged: (value) => viewModel.onPullToRefreshToggled(value: value),
+          // coverage:ignore-end
         ),
         BoolKnob(
           label: 'Separators',
           value: viewModel.separators,
+          // Wiring only.
+          // coverage:ignore-start
           onChanged: (value) => viewModel.onSeparatorsToggled(value: value),
+          // coverage:ignore-end
         ),
       ],
       list: ListSmith.async(

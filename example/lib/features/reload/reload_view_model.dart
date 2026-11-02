@@ -61,6 +61,8 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
     }, growable: false);
   }
 
+  // Wiring only.
+  // coverage:ignore-start
   void onKeepDepthToggled({required bool value}) {
     _keepDepth = value;
     notifyListeners();
@@ -70,6 +72,7 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
     _concurrency = value.round();
     notifyListeners();
   }
+  // coverage:ignore-end
 
   Future<void> onRefreshPressed() async {
     _isRefreshingNotifier.value = true;

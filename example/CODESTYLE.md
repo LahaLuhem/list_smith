@@ -73,3 +73,6 @@ The package's [test style](../CODESTYLE.md#test-style) applies. `test/support/bd
 byte-identical copy of the package's Gherkin helper, which can't cross a package boundary, so edit
 both. Import `test/support/support.dart` for the example's own harness on top, rather than
 hand-rolling a demo open or a frame drain.
+
+A knob or slot that only hands list_smith a value is marked `// Wiring only.` for coverage, since
+the package tests what it switches.

@@ -24,7 +24,10 @@ class const ReloadView({super.key}) extends StatelessWidget {
           label: 'Keep scroll depth',
           subtitle: 'Reloads every loaded page, not just the 1st',
           value: viewModel.keepDepth,
+          // Wiring only.
+          // coverage:ignore-start
           onChanged: (value) => viewModel.onKeepDepthToggled(value: value),
+          // coverage:ignore-end
         ),
         SliderKnob(
           label: 'Reload concurrency',
