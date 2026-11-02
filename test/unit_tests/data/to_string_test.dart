@@ -18,7 +18,9 @@ void main() {
 
   Bdd(toStringFeature)
       .scenario('each value type shows every field by name, with its value')
-      .given('a value of each class in lib/src whose toString has fields to show')
+      .given(
+        'a value of each class with fields to show, under lib/src/data or with its own toString',
+      )
       .when('each value is turned into a string')
       .then('each of those fields reads as name: value')
       .run((_) {
@@ -27,20 +29,25 @@ void main() {
               .listSync(recursive: true)
               .whereType<File>()
               .where((file) => file.path.endsWith('.dart'))
-              .expand(
-                (file) => parseString(
+              .expand((file) {
+                final isUnderData = file.uri.path.startsWith('lib/src/data/');
+
+                return parseString(
                   content: file.readAsStringSync(),
                   featureSet: .latestLanguageVersion(),
-                ).unit.declarations,
-              )
-              .whereType<ClassDeclaration>()
-              .where(
-                (declaration) =>
-                    !declaration.namePart.typeName.lexeme.startsWith('_') &&
-                    declaration.body.members.whereType<MethodDeclaration>().any(
-                      (member) => member.name.lexeme == 'toString',
-                    ),
-              )
+                ).unit.declarations.whereType<ClassDeclaration>().where(
+                  (declaration) =>
+                      isUnderData ||
+                      declaration.body.members.whereType<MethodDeclaration>().any(
+                        (member) => member.name.lexeme == 'toString',
+                      ),
+                );
+              })
+              .where((declaration) {
+                final className = declaration.namePart.typeName.lexeme;
+
+                return !className.startsWith('_') && !_opaqueTypeNames.contains(className);
+              })
               .map((declaration) {
                 final namePart = declaration.namePart;
                 final parameterNames = namePart is PrimaryConstructorDeclaration
@@ -299,10 +306,12 @@ _Sample _sample<T extends Object>(
   Map<String, Object?> Function(T value) shownValuesGetter,
 ) => (value: value, shownValuesByField: shownValuesGetter(value));
 
-/// Callbacks, fetchers and controllers, which CODESTYLE has toString skip.
+/// Callbacks, fetchers and controllers, which CODESTYLE has toString skip, and which need none of
+/// their own.
 const _opaqueTypeNames = {
   'AnimatedSwitcherTransitionBuilder',
   'Comparator',
+  'ErrorBuilder',
   'GroupHeaderBuilder',
   'GroupKeyOf',
   'ItemIdGetter',
@@ -311,6 +320,7 @@ const _opaqueTypeNames = {
   'ScrollController',
   'SearchPageFetcher',
   'SyncSearchPredicate',
+  'WidgetBuilder',
 };
 
 bool _isShown(TypeAnnotation? type, NodeList<Annotation> metadata) =>
