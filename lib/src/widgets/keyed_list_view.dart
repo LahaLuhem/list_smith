@@ -92,8 +92,10 @@ class const KeyedListView<T extends Object>({
   }
 
   // Rows without ids aren't keyed or anchored, so nothing looks them up.
+  // coverage:ignore-start
   static Object _neverLookedUp(Object _) =>
       throw StateError('Rows without ids are never looked up.');
+  // coverage:ignore-end
 }
 
 /// Unlike `SliverFillRemaining`, never measures the surface or resizes it while scrolling.
@@ -274,11 +276,14 @@ final class const _RowKey(final Object id, final int index) extends LocalKey {
   @override
   bool operator ==(Object other) => other is _RowKey && other.id == id;
 
+  // Debug-only: the sliver only compares keys with ==.
+  // coverage:ignore-start
   @override
   int get hashCode => id.hashCode;
 
   @override
   String toString() => '_RowKey(id: $id, index: $index)';
+  // coverage:ignore-end
 }
 
 /// A header's group key, plus where it was built as a lookup hint. Equal on the key alone, so a
@@ -287,9 +292,12 @@ final class const _HeaderKey(final Object groupKey, final int index) extends Loc
   @override
   bool operator ==(Object other) => other is _HeaderKey && other.groupKey == groupKey;
 
+  // Debug-only: the sliver only compares keys with ==.
+  // coverage:ignore-start
   @override
   int get hashCode => groupKey.hashCode;
 
   @override
   String toString() => '_HeaderKey(groupKey: $groupKey, index: $index)';
+  // coverage:ignore-end
 }

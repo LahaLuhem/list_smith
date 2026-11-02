@@ -1,3 +1,5 @@
+// Structurally covered: `implements` makes it handle every callback.
+// coverage:ignore-file
 part of '../list_smith_observer.dart';
 
 /// A [ListSmithObserver] that logs every event to [developer.log] under the `list_smith` name.

@@ -68,6 +68,8 @@ class RenderScrollAnchor({
   /// Creates it.
   this;
 
+  // Unreachable: the listenable never changes.
+  // coverage:ignore-start
   /// See [ScrollAnchor.pullExtentListenable].
   ValueListenable<double> get pullExtentListenable => _pullExtentListenable;
 
@@ -80,6 +82,7 @@ class RenderScrollAnchor({
     }
     _pullExtentListenable = value;
   }
+  // coverage:ignore-end
 
   bool get _isAtStart => constraints.scrollOffset < precisionErrorTolerance;
 

@@ -14,6 +14,9 @@ final class const StopOnNullSignalPolicy() extends PaginationEndPolicy {
   @override
   bool get requiresSignal => true;
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'StopOnNullSignalPolicy()';
+  // coverage:ignore-end
 }

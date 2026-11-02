@@ -12,6 +12,9 @@ final class const ResetToFirstPage() extends Reload {
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) => context.reset();
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'ResetToFirstPage()';
+  // coverage:ignore-end
 }

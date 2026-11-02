@@ -66,6 +66,9 @@ class const _ArcPainter({required final Color colour}) extends CustomPainter {
     canvas.drawArc(arcRect, _startAngle, _sweepAngle, false, arcPaint);
   }
 
+  // No visible effect: the rotation repaints the arc every frame.
+  // coverage:ignore-start
   @override
   bool shouldRepaint(_ArcPainter oldDelegate) => oldDelegate.colour != colour;
+  // coverage:ignore-end
 }

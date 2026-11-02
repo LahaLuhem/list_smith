@@ -13,6 +13,9 @@ final class const ExplicitHasMorePolicy() extends PaginationEndPolicy {
   @override
   bool get requiresSignal => true;
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'ExplicitHasMorePolicy()';
+  // coverage:ignore-end
 }

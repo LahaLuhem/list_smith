@@ -8,6 +8,9 @@ final class const SortedBy<T extends Object>(
   /// Creates it.
   this : super._();
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'SortedBy()';
+  // coverage:ignore-end
 }

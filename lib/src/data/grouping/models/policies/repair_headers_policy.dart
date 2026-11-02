@@ -11,6 +11,9 @@ final class const RepairHeadersPolicy() extends GroupOrderPolicy {
   )
   this;
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'RepairHeadersPolicy()';
+  // coverage:ignore-end
 }

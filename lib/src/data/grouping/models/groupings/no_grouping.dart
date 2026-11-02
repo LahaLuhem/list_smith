@@ -18,6 +18,9 @@ final class const NoGrouping<T extends Object>() extends Grouping<T> {
   @internal
   GroupKeyOf<T, Object>? get groupOf => null;
 
+  // Structurally covered by to_string_test.dart.
+  // coverage:ignore-start
   @override
   String toString() => 'NoGrouping()';
+  // coverage:ignore-end
 }

@@ -554,6 +554,9 @@ keeps its own copy of the Gherkin helper, which can't cross a package boundary.
 - **Prove a regression test fails:** break what it guards, watch it go red, put it back.
 - **A scenario asserting that nothing happened needs the same in reverse:** break the mechanism
   itself, or it passes just as happily when the feature never worked.
+- **`// coverage:ignore-*` marks only code no test can usefully reach:** unreachable today, guarded
+  another way, or with no effect to see. Its reason goes on a `//` line above, since anything but
+  plain words after the marker switches it off.
 
 ---
 
