@@ -437,6 +437,39 @@ void main() {
       await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
+    scenarioWidgets("an edits row's menu renames that row", (tester) async {
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      await tester.tap(_rowMenuFinder('Item 2'));
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
+      await tester.tap(find.text('Rename'));
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
+      await tester.enterText(find.byType(EditableText), 'Renamed row');
+      await tester.tap(find.text('Save'));
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
+
+      check(find.text('Item 2').evaluate()).isEmpty();
+      check(find.text('Renamed row').evaluate()).length.equals(1);
+      await tester.pump(const Duration(seconds: 1)); // the save answering
+    });
+
+    scenarioWidgets("an edits row's menu deletes that row", (tester) async {
+      await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      await tester.tap(_rowMenuFinder('Item 2'));
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
+      await tester.tap(find.text('Delete'));
+      await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
+      await tester.tap(find.text('Delete').last); // the confirm's
+      await drain(tester, frames: 6, step: const Duration(milliseconds: 200));
+
+      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty();
+      check(find.text('Item 3').evaluate()).length.equals(1);
+      await tester.pump(const Duration(seconds: 1)); // the delete answering
+    });
+
     scenarioWidgets('a save failing after the edits demo is gone changes nothing', (tester) async {
       await openDemo(tester, 'Edits', surfaceSize: tallSurfaceSize);
       await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
@@ -567,3 +600,8 @@ void main() {
     });
   });
 }
+
+Finder _rowMenuFinder(String title) => find.descendant(
+  of: find.ancestor(of: find.text(title), matching: find.byType(Slidable)),
+  matching: find.byTooltip('More'),
+);

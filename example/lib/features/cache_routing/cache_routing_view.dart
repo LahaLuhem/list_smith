@@ -51,11 +51,7 @@ class const _ClearCacheButton({required final VoidCallback onPressed}) extends S
     child: Row(
       children: [
         const Expanded(child: Text('Cached pages')),
-        PlatformButton(
-          onPressed: onPressed,
-          materialButtonVariant: .text,
-          child: const Text('Clear cache'),
-        ),
+        PlatformButton(onPressed: onPressed, emphasis: .low, child: const Text('Clear cache')),
       ],
     ),
   );

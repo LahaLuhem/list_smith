@@ -52,6 +52,7 @@ class const ReloadView({super.key}) extends StatelessWidget {
           valueListenable: viewModel.isRefreshingListenable,
           builder: (context, isRefreshing, _) => PlatformButton(
             onPressed: viewModel.onRefreshPressed,
+            emphasis: .medium,
             isEnabled: !isRefreshing,
             child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
           ),
