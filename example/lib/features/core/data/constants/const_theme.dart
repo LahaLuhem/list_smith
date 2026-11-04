@@ -1,4 +1,4 @@
-import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoThemeData;
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoActivityIndicator, CupertinoThemeData;
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/widgets.dart'
     show Brightness, BuildContext, Center, Color, Opacity, Padding, SizeTransition, Widget;
@@ -6,7 +6,9 @@ import 'package:list_smith/list_smith.dart'
     show AsyncListSurfaces, EditTransition, ListSmithRefreshState;
 import 'package:material_ui/material_ui.dart' show ColorScheme, ThemeData;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart'
-    show PlatformProgressIndicator;
+    show PlatformProgressIndicator, designLanguage;
+
+import '../../widgets/demo_error_indicator.dart';
 
 /// One seed colour drives a Material 3 light and dark scheme plus a matching Cupertino theme.
 abstract final class ConstTheme._() {
@@ -29,12 +31,26 @@ abstract final class ConstTheme._() {
       padding: .all(16),
       child: Center(child: PlatformProgressIndicator()),
     ),
+    firstPageErrorBuilder: (_, exception, onRetry) =>
+        DemoErrorIndicator(exception: exception, onRetry: onRetry),
+    newPageErrorBuilder: (_, exception, onRetry) =>
+        DemoErrorIndicator(exception: exception, onRetry: onRetry, isCompact: true),
   );
 
-  static Widget platformRefreshIndicator(BuildContext _, ListSmithRefreshState state) => Opacity(
-    opacity: clampDouble(state.value, 0, 1),
-    child: const Center(child: PlatformProgressIndicator()),
-  );
+  static Widget platformRefreshIndicator(BuildContext _, ListSmithRefreshState state) {
+    final progress = clampDouble(state.value, 0, 1);
+
+    return Center(
+      child: switch (designLanguage) {
+        .material => Opacity(opacity: progress, child: const PlatformProgressIndicator()),
+        // Ticks in with the pull, as iOS's own refresh control does.
+        .cupertino => switch (state.phase) {
+          .dragging || .armed => CupertinoActivityIndicator.partiallyRevealed(progress: progress),
+          .refreshing || .settling => const CupertinoActivityIndicator(),
+        },
+      },
+    );
+  }
 
   /// A `null` [brightness] follows the device.
   static CupertinoThemeData cupertino(Brightness? brightness) =>
