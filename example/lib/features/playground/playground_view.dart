@@ -3,6 +3,7 @@ import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/data/constants/const_theme.dart';
 import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
@@ -78,7 +79,10 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
         onEmptyPage: viewModel.pagePastEmpty
             ? const AdvanceToFirstNonEmpty()
             : const ShowEmptySurface(),
-        refresh: viewModel.pullToRefresh ? const PullToRefresh() : const NoRefresh(),
+        refresh: viewModel.pullToRefresh
+            ? const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator)
+            : const NoRefresh(),
+        surfaces: ConstTheme.platformSurfaces,
         separatorBuilder: viewModel.separators ? (_, _) => const Divider(height: 1) : null,
         itemBuilder: (_, item, _) => DemoItemTile(item: item),
       ),

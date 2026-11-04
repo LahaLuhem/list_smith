@@ -3,6 +3,7 @@ import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/data/constants/const_theme.dart';
 import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
 import 'cursor_feed_view_model.dart';
@@ -19,6 +20,8 @@ class const CursorFeedView({super.key}) extends StatelessWidget {
         fetchPage: PageFetcher.withSignal(viewModel.cursorFetchPage),
         itemIdGetter: (item) => item.id,
         endPolicy: const StopOnNullSignalPolicy(),
+        refresh: const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator),
+        surfaces: ConstTheme.platformSurfaces,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (_, item, _) => DemoItemTile(item: item),
       ),

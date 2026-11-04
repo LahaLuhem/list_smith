@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/data/constants/const_theme.dart';
 import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
@@ -67,7 +68,11 @@ class const ReloadView({super.key}) extends StatelessWidget {
         fetchPage: PageFetcher(viewModel.fetchPage),
         itemIdGetter: (item) => item.id,
         pageSize: 12,
-        refresh: PullToRefresh(reload: viewModel.reload),
+        refresh: PullToRefresh(
+          reload: viewModel.reload,
+          indicatorBuilder: ConstTheme.platformRefreshIndicator,
+        ),
+        surfaces: ConstTheme.platformSurfaces,
         controller: viewModel.controller,
         observer: viewModel.observer,
         separatorBuilder: (_, _) => const Divider(height: 1),

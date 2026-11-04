@@ -48,6 +48,8 @@ class const EditsView({super.key}) extends StatelessWidget {
         itemIdGetter: (item) => item.id,
         controller: viewModel.controller,
         editTransition: ConstTheme.sizeEditTransition,
+        refresh: const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator),
+        surfaces: ConstTheme.platformSurfaces,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (_, item, _) => _EditableRow(item: item, viewModel: viewModel),
       ),

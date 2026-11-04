@@ -3,6 +3,7 @@ import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
+import '/features/core/data/constants/const_theme.dart';
 import '/features/core/widgets/bool_knob.dart';
 import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
@@ -56,6 +57,8 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
             ),
             observer: viewModel.observer,
             query: query,
+            refresh: const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator),
+            surfaces: ConstTheme.platformSurfaces,
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (_, item, _) => DemoItemTile(item: item),
           ),

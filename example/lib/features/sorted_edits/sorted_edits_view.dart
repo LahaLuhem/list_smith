@@ -40,6 +40,8 @@ class const SortedEditsView({super.key}) extends StatelessWidget {
         controller: viewModel.controller,
         order: viewModel.titleOrder,
         editTransition: ConstTheme.sizeEditTransition,
+        refresh: const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator),
+        surfaces: ConstTheme.platformSurfaces,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, item, _) => DemoItemTile(
           item: item,
