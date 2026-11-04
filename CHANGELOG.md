@@ -10,8 +10,8 @@
 ### Changed
 - \[#71\] A `ReloadToCurrentDepth` reload keeps the old list if any page fails, instead of keeping the pages that reloaded
 - \[#71\] `EndContext.pageItemCounts` is read-only, and the end check costs the same however many pages are loaded. A policy that wrote into it now throws.
+- \[#71\] `EmptyPageBehaviour.shouldAdvance` is internal now, since only the list calls it
 - \[#73\] `ListSmith.async` lists now hold their position by default. An app that corrects the scroll position itself should pass `shouldKeepPosition: false`
-- \[#107\] `ListSmith.sync` holds its position by default, and asserts without `itemIdGetter`. Pass one, or `shouldKeepPosition: false`
 - \[#107\] `ListSmith.sync` asserts in debug on `items` edited in place
 - \[#111\] `ListSmith.async` gathers each group into one section across pages, so pages no longer have to arrive grouped
 - \[#111\] `ListSmith.sync` shows a repeated id's 1st item and reports it in debug, instead of asserting
@@ -28,6 +28,7 @@
 - \[#107\] A reversed grouped list's headers sit above their group
 - \[#110\] A new search starts the list at the top
 - \[#111\] Edits still waiting on the server follow a grouping switch on `ListSmith.async`
+- `PullToRefresh`, `PageRequest`, `SearchPageRequest`, `EndContext` and `EmptyPageContext` print every field
 
 ## [2.0.1] - 2026-10-07
 ### Fixed

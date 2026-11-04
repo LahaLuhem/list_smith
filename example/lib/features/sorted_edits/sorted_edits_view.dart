@@ -9,7 +9,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import '/features/core/data/constants/const_theme.dart';
 import '/features/core/widgets/demo_item_tile.dart';
 import '/features/core/widgets/demo_scaffold.dart';
-import '/features/core/widgets/title_dialog.dart';
+import '/features/core/widgets/title_sheet.dart';
 import 'sorted_edits_view_model.dart';
 
 /// `SortedBy` as `ListSmith.async`'s order, with `ListSmithController.upsertAsync`.
@@ -23,13 +23,14 @@ class const SortedEditsView({super.key}) extends StatelessWidget {
       controls: [
         PlatformButton(
           onPressed: () => unawaited(
-            showTitleDialog(
+            showTitleSheet(
               context,
               heading: 'Add an item',
               hint: 'Title',
               onSaved: viewModel.onAdded,
             ),
           ),
+          emphasis: .medium,
           child: const Text('Add an item'),
         ),
       ],
@@ -43,7 +44,7 @@ class const SortedEditsView({super.key}) extends StatelessWidget {
         itemBuilder: (context, item, _) => DemoItemTile(
           item: item,
           onTap: () => unawaited(
-            showTitleDialog(
+            showTitleSheet(
               context,
               heading: 'Rename',
               hint: item.title,

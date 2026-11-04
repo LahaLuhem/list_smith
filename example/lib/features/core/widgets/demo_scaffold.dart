@@ -17,46 +17,35 @@ class const DemoScaffold({
   @override
   Widget build(BuildContext context) {
     final hint = this.hint;
+    final themeModeNotifier = ThemeScope.of(context);
 
     return PlatformScaffold(
       appBarData: PlatformAppBar(
         title: Text(title),
-        materialAppBarData: const MaterialAppBarData(actions: [_BrightnessToggle()]),
-        cupertinoNavigationBarData: const CupertinoNavigationBarData(trailing: _BrightnessToggle()),
+        actions: [
+          PlatformBarAction(
+            label: 'Brightness',
+            icon: Icon(_brightnessIcon(themeModeNotifier.value)),
+            onPressed: () => themeModeNotifier.value = _nextThemeMode(themeModeNotifier.value),
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: .stretch,
-          children: [
-            if (hint != null || controls.isNotEmpty)
-              Padding(
-                padding: const .all(16),
-                child: Column(
-                  crossAxisAlignment: .stretch,
-                  spacing: 8,
-                  children: [if (hint != null) Text(hint), ...controls],
-                ),
+      useSafeArea: true,
+      body: Column(
+        crossAxisAlignment: .stretch,
+        children: [
+          if (hint != null || controls.isNotEmpty)
+            Padding(
+              padding: const .all(16),
+              child: Column(
+                crossAxisAlignment: .stretch,
+                spacing: 8,
+                children: [if (hint != null) Text(hint), ...controls],
               ),
-            Expanded(child: list),
-            ...footer,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class const _BrightnessToggle() extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final themeModeNotifier = ThemeScope.of(context);
-
-    return GestureDetector(
-      onTap: () => themeModeNotifier.value = _nextThemeMode(themeModeNotifier.value),
-      behavior: .opaque,
-      child: Padding(
-        padding: const .all(12),
-        child: Icon(_brightnessIcon(themeModeNotifier.value), size: 22),
+            ),
+          Expanded(child: list),
+          ...footer,
+        ],
       ),
     );
   }

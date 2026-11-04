@@ -16,4 +16,4 @@ cd example
 flutter run
 ```
 
-Android and iOS only, since the platform-adaptive stack is mobile-only.
+Android and iOS only, the 2 runners it ships.

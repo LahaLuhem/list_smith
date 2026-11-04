@@ -24,11 +24,7 @@ class const EventLogPanel({
               const Expanded(
                 child: Text('Event log', style: TextStyle(fontWeight: .w600)),
               ),
-              PlatformButton(
-                onPressed: onClear,
-                materialButtonVariant: .text,
-                child: const Text('Clear'),
-              ),
+              PlatformButton(onPressed: onClear, emphasis: .low, child: const Text('Clear')),
             ],
           ),
         ),

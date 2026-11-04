@@ -34,5 +34,4 @@ one-line pitch, and the view's dartdoc names the list_smith API it exercises. An
 
 ## Mobile-targeted
 
-`platformValue` throws anywhere but Android and iOS, and `PlatformIcon` throws on web, so run it on
-a phone or a simulator.
+It ships only Android and iOS runners, so run it on a phone or a simulator.

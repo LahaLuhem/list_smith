@@ -18,11 +18,7 @@ class const CustomError({
           child: Row(
             children: [
               const Expanded(child: Text('Could not load more.')),
-              PlatformButton(
-                onPressed: onRetry,
-                materialButtonVariant: .text,
-                child: const Text('Retry'),
-              ),
+              PlatformButton(onPressed: onRetry, emphasis: .low, child: const Text('Retry')),
             ],
           ),
         )
@@ -45,6 +41,7 @@ class const CustomError({
                 Text(exception.toString(), textAlign: .center, maxLines: 3, overflow: .ellipsis),
                 PlatformButton.icon(
                   onPressed: onRetry,
+                  emphasis: .high,
                   icon: const PlatformIcon(PlatformIcons.refresh),
                   label: const Text('Retry'),
                 ),
