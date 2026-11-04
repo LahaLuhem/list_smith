@@ -9,18 +9,31 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart'
 /// Room for a demo's controls above its list.
 const tallSurfaceSize = Size(800, 1200);
 
-Future<void> pumpExampleApp(WidgetTester tester) async {
-  await tester.pumpWidget(const ListSmithExampleApp());
+/// [overlay] draws over the whole app.
+Future<void> pumpExampleApp(WidgetTester tester, {Widget? overlay}) async {
+  await tester.pumpWidget(
+    overlay == null
+        ? const ListSmithExampleApp()
+        : Directionality(
+            textDirection: .ltr,
+            child: Stack(children: [const ListSmithExampleApp(), overlay]),
+          ),
+  );
   await tester.pump();
 }
 
 /// Taps the hub's [title] demo open, leaving its first load for the caller to wait out.
-Future<void> openDemo(WidgetTester tester, String title, {Size? surfaceSize}) async {
+Future<void> openDemo(
+  WidgetTester tester,
+  String title, {
+  Size? surfaceSize,
+  Widget? overlay,
+}) async {
   if (surfaceSize != null) {
     await tester.binding.setSurfaceSize(surfaceSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
-  await pumpExampleApp(tester);
+  await pumpExampleApp(tester, overlay: overlay);
 
   await tester.scrollUntilVisible(find.text(title), 100);
   await tester.tap(find.text(title));
