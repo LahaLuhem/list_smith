@@ -18,5 +18,6 @@ for clip in "$frames"/*/*/; do
   # A white gap between the 2 looks.
   ffmpeg -loglevel error -i "$clip/material/%04d.png" -i "$clip/cupertino/%04d.png" \
     -filter_complex '[0]pad=iw+24:ih:0:0:white[material];[material][1]hstack' "$clip/pair/%04d.png"
-  img2webp -loop 0 -lossy -q 75 -d "$frame_millis" "$clip"/pair/*.png -o "$docs/$folder/$name.webp"
+  # Not lossy, which skips small changes, so a slow fade on a flat colour lags in bands.
+  img2webp -loop 0 -near_lossless 60 -d "$frame_millis" "$clip"/pair/*.png -o "$docs/$folder/$name.webp"
 done

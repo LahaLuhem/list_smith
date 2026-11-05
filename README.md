@@ -46,13 +46,14 @@ config. It owns the scrollable and every loading, error and empty state, so ther
 up.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/1-overview.webp" width="260" alt="list_smith in action: pagination, pull-to-refresh, search, and grouping">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/feed.webp" width="520" alt="A list paging in and refreshing on a pull"><br>
+  <sub><b>Material</b> on the left, <b>Cupertino</b> on the right</sub>
 </p>
 
 <table>
   <tr>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/2-android-material.png" width="240" alt="Grouping demo on Android"><br><sub><b>Android</b> · Material</sub></td>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/3-ios-cupertino.png" width="240" alt="The same demo on iOS"><br><sub><b>iOS</b> · Cupertino</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/edits.webp" width="400" alt="Rows added, swiped away and renamed"><br><sub><b>Edits</b> · add, swipe away, rename</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/screenshots/search.webp" width="400" alt="A search, then its results grouped into sections"><br><sub><b>Search</b> · in memory, then grouped</sub></td>
   </tr>
 </table>
 
@@ -412,6 +413,10 @@ ListSmith.async(
 )
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/clips/sorted.webp" width="400" alt="A renamed row moving to its sorted place">
+</p>
+
 - Match your server's sort exactly, ties included. In debug, a page out of that order is reported.
 - A row sorting after every loaded one waits for its page. Once the data has ended it shows last,
   but never past a `FixedPageCountPolicy` cap.
@@ -429,6 +434,10 @@ controller.upsertAsync(
   onFailure: (_) => showSnackBar("Couldn't save"),
 );
 ```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/clips/rollback.webp" width="400" alt="A new row showing at once, then leaving when its save fails">
+</p>
 
 - The draft shows over every page until `commit` answers, whatever the list reads meanwhile.
 - Then the item `commit` returned shows, and lasts like any edit. It has to keep the draft's id,
@@ -665,6 +674,10 @@ ListSmith.async(
   ),
 )
 ```
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/clips/states.webp" width="400" alt="A custom loader, then a custom error for a failed page, then its retry">
+</p>
 
 Its slots: loading and error for the 1st page and for later ones, and `noMoreItemsBuilder` once
 every page has loaded. The error builders get `(context, error, onRetry)`, so your error view can

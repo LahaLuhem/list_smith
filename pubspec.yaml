@@ -16,15 +16,14 @@ topics:
 
 screenshots:
   - description: >-
-      A tour: async pagination and pull-to-refresh, client-side search with the no-results
-      surface, and grouping into labelled sections.
-    path: doc/screenshots/1-overview.webp
+      Paging and pull-to-refresh, with Material on the left and Cupertino on the right.
+    path: doc/screenshots/feed.webp
   - description: >-
-      Grouping a filtered list into labelled sections, rendered natively on Android (Material).
-    path: doc/screenshots/2-android-material.png
+      Editing loaded rows: adding one, swiping one away and renaming another.
+    path: doc/screenshots/edits.webp
   - description: >-
-      The same list and code, rendered natively on iOS (Cupertino).
-    path: doc/screenshots/3-ios-cupertino.png
+      Searching a list in memory, then grouping the results into labelled sections.
+    path: doc/screenshots/search.webp
 
 environment:
   sdk: ">=3.13.0 <4.0.0"
