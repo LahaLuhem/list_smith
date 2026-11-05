@@ -75,7 +75,7 @@ Future<void> scrollToEnd(WidgetTester tester, ScrollController scrollController)
 }
 
 /// What follows [prefix] in each row, top to bottom, once the list has reached its end.
-Future<List<String>> allShownTexts(
+Future<Set<String>> allShownTexts(
   WidgetTester tester,
   ScrollController scrollController,
   String prefix,
@@ -92,7 +92,7 @@ Future<List<String>> allShownTexts(
           .map((element) => (element.widget as Text).data!.replaceFirst(prefix, '')),
     );
     final position = scrollController.position;
-    if (position.pixels >= position.maxScrollExtent) return shownTexts.toList(growable: false);
+    if (position.pixels >= position.maxScrollExtent) return shownTexts;
     scrollController.jumpTo(
       math.min(position.pixels + position.viewportDimension, position.maxScrollExtent),
     );

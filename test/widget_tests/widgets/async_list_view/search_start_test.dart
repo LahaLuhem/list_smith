@@ -75,7 +75,7 @@ Future<void> _pumpSearch(
   final search = AsyncSearch<int>(
     fetchPage: SearchPageFetcher(
       (request) async => request.pageIndex == 0
-          ? items.where((item) => '$item'.contains(request.query)).toList()
+          ? items.where((item) => '$item'.contains(request.query))
           : const <int>[],
     ),
     cachePolicy: cachePolicy,

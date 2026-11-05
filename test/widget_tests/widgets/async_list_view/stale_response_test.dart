@@ -39,12 +39,11 @@ void main() {
       await tester.idle();
       await drain(tester);
 
-      final leaked = received
-          .where(
-            (fetch) => fetch.cursor != null && !'${fetch.cursor}'.startsWith('${fetch.query}:'),
-          )
-          .toList();
-      check(leaked).isEmpty();
+      check(
+        received.where(
+          (fetch) => fetch.cursor != null && !'${fetch.cursor}'.startsWith('${fetch.query}:'),
+        ),
+      ).isEmpty();
     });
 
     scenarioWidgets('a superseded page does not fire onPageLoaded', (tester) async {
@@ -81,10 +80,8 @@ void main() {
       await drain(tester);
 
       // The reload's own page 1 is the only one the list kept, so the dropped one stays silent.
-      final pageOneLoads = observer.events.where(
-        (event) => event.startsWith('pageLoaded(index: 1,'),
-      );
-      check(pageOneLoads.toList()).length.equals(1);
+      check(observer.events.where((event) => event.startsWith('pageLoaded(index: 1,'))).length
+          .equals(1);
     });
 
     scenarioWidgets('a page superseded by a depth-reload commit stays silent', (tester) async {
@@ -118,8 +115,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // Premise: pages 0 and 1 are in and page 2 is in flight, so the reload's depth is 2.
-      check(observer.events.where((event) => event.startsWith('pageLoaded')).toList()).length
-          .equals(2);
+      check(observer.events.where((event) => event.startsWith('pageLoaded'))).length.equals(2);
 
       await controller.refresh();
       await drain(tester, frames: 16);
@@ -130,8 +126,7 @@ void main() {
 
       // Asked twice: once before the reload (superseded), once after. Only the 2nd announces.
       check(pageTwoCalls).equals(2);
-      check(observer.events.where((event) => event.startsWith('pageLoaded(index: 2,')).toList())
-          .length
+      check(observer.events.where((event) => event.startsWith('pageLoaded(index: 2,'))).length
           .equals(1);
     });
 
@@ -810,8 +805,7 @@ void main() {
       await refreshFuture;
 
       // Page 0 was in flight when the list moved on. Pages 1 and 2 were never asked for.
-      check(source.log.where((entry) => entry.endsWith(':refresh')).toList())
-          .deepEquals(['0#2:refresh']);
+      check(source.log.where((entry) => entry.endsWith(':refresh'))).deepEquals(['0#2:refresh']);
       check(_shown(tester)).deepEquals([3, 1002, 2002]);
     });
 
@@ -838,8 +832,7 @@ void main() {
       await drain(tester, frames: 12);
       await refreshFuture;
 
-      check(source.log.where((entry) => entry.endsWith(':refresh')).toList())
-          .deepEquals(['0#2:refresh']);
+      check(source.log.where((entry) => entry.endsWith(':refresh'))).deepEquals(['0#2:refresh']);
       check(_shown(tester)).deepEquals([3, 1002, 2002]);
     });
 
@@ -934,7 +927,7 @@ List<int> _shown(WidgetTester tester) => tester
     .map((text) => text.data ?? '')
     .where((data) => data.startsWith('item '))
     .map((data) => int.parse(data.split(' ').last))
-    .toList();
+    .toList(growable: false);
 
 /// Pumps a cursor-driven async search list over [searchFetchPage] for [query]. The normal fetcher is
 /// never reached (the query is always non-empty), and refresh is off so only the query drives resets.

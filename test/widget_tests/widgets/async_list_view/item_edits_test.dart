@@ -35,7 +35,8 @@ void main() {
       // Each next page picks up where the one before it ended, so none is asked for twice.
       final cursors = server.requests
           .where((request) => request.trigger == .nextPage)
-          .map((request) => request.previousSignal);
+          .map((request) => request.previousSignal)
+          .toList(growable: false);
       check(cursors.toSet()).length.equals(cursors.length);
     });
 
@@ -447,9 +448,7 @@ void main() {
           endPolicy: const FixedPageCountPolicy(pageCount: 1),
           query: query,
           search: AsyncSearch(
-            fetchPage: SearchPageFetcher(
-              (_) async => server.store.where((row) => row.id.isOdd).toList(growable: false),
-            ),
+            fetchPage: SearchPageFetcher((_) async => server.store.where((row) => row.id.isOdd)),
             cachePolicy: cachePolicy,
           ),
         );
@@ -470,7 +469,9 @@ void main() {
       },
     );
 
-    scenarioOutlineWidgets<({ValueSetter<ListSmithController<_Row>> edit, List<String> shownRows})>(
+    scenarioOutlineWidgets<
+      ({ValueSetter<ListSmithController<_Row>> edit, Iterable<String> shownRows})
+    >(
       'a new item and a delete hold through a re-read while their save is out',
       examples: {
         'a new item': (
@@ -791,8 +792,7 @@ List<String> _shownRows() => find
     .nonNulls
     .toList(growable: false);
 
-List<String> _rows(Iterable<Object> labels) =>
-    labels.map((label) => 'item $label').toList(growable: false);
+Iterable<String> _rows(Iterable<Object> labels) => labels.map((label) => 'item $label');
 
 List<int> _range(int from, int to) => List.generate(to - from + 1, (index) => from + index);
 

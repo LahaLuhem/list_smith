@@ -21,10 +21,10 @@ final class AsyncSearchViewModel() extends ViewModel with SearchQueryMixin, Fail
 
   ValueListenable<List<String>> get eventsListenable => _eventsNotifier;
 
-  Future<List<DemoItem>> fetchPage(PageRequest request) =>
+  Future<Iterable<DemoItem>> fetchPage(PageRequest request) =>
       withInjectedFailures(_repository.fetchPage(request.pageIndex, request.pageSize));
 
-  Future<List<DemoItem>> searchFetchPage(SearchPageRequest request) => withInjectedFailures(
+  Future<Iterable<DemoItem>> searchFetchPage(SearchPageRequest request) => withInjectedFailures(
     _repository.searchFetchPage(request.query, request.pageIndex, request.pageSize),
   );
 

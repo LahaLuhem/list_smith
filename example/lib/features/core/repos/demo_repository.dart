@@ -19,39 +19,26 @@ class DemoRepository({
   List<DemoItem> get items => _items;
 
   /// A page past the data comes back empty, which the default end policy reads as the end.
-  Future<List<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
+  Future<Iterable<DemoItem>> fetchPage(int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
-    final start = pageIndex * pageSize;
-    if (start >= _items.length) return const [];
-
-    final end = start + pageSize;
-
-    return _items.sublist(start, end > _items.length ? _items.length : end);
+    return _items.skip(pageIndex * pageSize).take(pageSize);
   }
 
-  Future<List<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) async {
+  Future<Iterable<DemoItem>> searchFetchPage(String query, int pageIndex, int pageSize) async {
     await Future<void>.delayed(latency);
 
-    final matchingItems = _items.where((item) => item.matches(query)).toList(growable: false);
-    final start = pageIndex * pageSize;
-    if (start >= matchingItems.length) return const [];
-
-    final end = start + pageSize;
-
-    return matchingItems.sublist(start, end > matchingItems.length ? matchingItems.length : end);
+    return _items.where((item) => item.matches(query)).skip(pageIndex * pageSize).take(pageSize);
   }
 
   /// The cursor is the next offset as a string, `null` once the data runs out. list_smith never looks
   /// inside it.
-  Future<(List<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {
+  Future<(Iterable<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {
     await Future<void>.delayed(latency);
 
     final start = cursor is String ? int.parse(cursor) : 0;
     final end = start + pageSize;
-    final clampedEnd = end > _items.length ? _items.length : end;
-    final nextCursor = clampedEnd >= _items.length ? null : '$clampedEnd';
 
-    return (_items.sublist(start, clampedEnd), nextCursor);
+    return (_items.skip(start).take(pageSize), end >= _items.length ? null : '$end');
   }
 }

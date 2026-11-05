@@ -733,7 +733,9 @@ SearchPageFetcher<int> _evenRowsFetcher(FakeServer<int> server, List<int> pageIn
           .take(request.pageSize);
     });
 
-Future<List<int>> _allShownItems(WidgetTester tester, ScrollController scrollController) async =>
-    (await allShownTexts(tester, scrollController, 'item ')).map(int.parse).toList(growable: false);
+Future<Iterable<int>> _allShownItems(
+  WidgetTester tester,
+  ScrollController scrollController,
+) async => (await allShownTexts(tester, scrollController, 'item ')).map(int.parse);
 
 List<int> _range(int from, int to) => List.generate(to - from + 1, (index) => from + index);

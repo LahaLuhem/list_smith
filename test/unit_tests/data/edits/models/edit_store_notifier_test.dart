@@ -9,7 +9,7 @@ typedef _Row = ({int id, String label});
 void main() {
   final storeFeature = BddFeature('Edit store');
 
-  List<String> shownLabels(
+  Iterable<String> shownLabels(
     EditStoreNotifier<_Row> editStoreNotifier,
     List<_Row> rows, {
     required int readStamp,
@@ -23,8 +23,7 @@ void main() {
       )
       .pages
       .expand((page) => page.items)
-      .map((item) => item.label)
-      .toList(growable: false);
+      .map((item) => item.label);
 
   PendingEdit<_Row> draftOut(EditStoreNotifier<_Row> editStoreNotifier, String label) =>
       editStoreNotifier.pendingEdit(1, (id: 1, label: label))..book();

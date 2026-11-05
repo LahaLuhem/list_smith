@@ -591,7 +591,7 @@ class _AsyncListViewState<T extends Object>()
       return;
     }
     // Paid after the query facts, so the observer's events stay in order.
-    final debt = keptSnapshot.debt;
+    final debt = keptSnapshot.debtFetchTrigger;
     if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
   }
 
@@ -616,7 +616,9 @@ class _AsyncListViewState<T extends Object>()
       state: _pagingStateNotifier.value.settled(),
       signal: _lastPageSignal,
       // The restart strands a live run, so the feed inherits its ask.
-      debt: runningReload != null && !runningReload.isStale ? runningReload.pendingAsk : null,
+      debtFetchTrigger: runningReload != null && !runningReload.isStale
+          ? runningReload.pendingAsk
+          : null,
     );
   }
 
@@ -630,7 +632,7 @@ class _AsyncListViewState<T extends Object>()
     _pagingStateNotifier.value = snapshot.state;
     // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
     // anyway.
-    if (snapshot.state.status == .loadingFirstPage && snapshot.debt == null) {
+    if (snapshot.state.status == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
       _startRun(.initialLoad, (run) => run.reset());
     }
   }
@@ -1085,10 +1087,10 @@ final class _NormalSnapshot<T extends Object>({
   required final Object? signal,
 
   /// An ask made while the feed sat here, paid by a re-read once it is put back.
-  var FetchTrigger? debt,
+  var FetchTrigger? debtFetchTrigger,
 }) {
   /// Books [trigger] against the feed. A refresh is never downgraded to a re-read.
-  void owe(FetchTrigger trigger) => debt = _stronger(debt, trigger);
+  void owe(FetchTrigger trigger) => debtFetchTrigger = _stronger(debtFetchTrigger, trigger);
 }
 
 /// What renders, and the ids in it.

@@ -11,7 +11,7 @@ typedef _Ranked = ({int id, int rank});
 void main() {
   final resolutionFeature = BddFeature('Edit resolution');
 
-  List<String> resolveLabels(
+  Iterable<String> resolveLabels(
     List<List<_Row>> pages, {
     required List<int> readStamps,
     required Map<Object, ItemEdit<_Row>> edits,
@@ -24,7 +24,7 @@ void main() {
     itemIdGetter: (item) => item.id,
     groupOf: null,
     acceptsNewItems: acceptsNewItems,
-  ).pages.expand((page) => page.items).map((item) => item.label).toList(growable: false);
+  ).pages.expand((page) => page.items).map((item) => item.label);
 
   const editKey = 'edit';
   const shownKey = 'shown';
@@ -139,14 +139,14 @@ void main() {
   );
 
   /// Resolves int pages grouped by the tens digit, every page read before the edits.
-  List<int> resolveByTens(List<List<int>> pages, Map<Object, ItemEdit<int>> edits) =>
+  Iterable<int> resolveByTens(List<List<int>> pages, Map<Object, ItemEdit<int>> edits) =>
       resolveDisplayPages<int>(
         pages: pages.map((items) => LoadedPage(items: items, readStamp: 0)).toList(growable: false),
         edits: edits,
         itemIdGetter: (item) => item,
         groupOf: (item) => item ~/ 10,
         acceptsNewItems: true,
-      ).pages.expand((page) => page.items).toList(growable: false);
+      ).pages.expand((page) => page.items);
 
   const loadedKey = 'loaded';
   const addedKey = 'added';
@@ -224,7 +224,7 @@ void main() {
           acceptsNewItems: true,
         ).pages;
 
-        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+        check(pages.expand((page) => page.items).map((item) => item.id))
             .deepEquals(const [1, 0, 10, 11]);
       });
 
@@ -250,7 +250,7 @@ void main() {
           acceptsNewItems: true,
         ).pages;
 
-        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+        check(pages.expand((page) => page.items).map((item) => item.id))
             .deepEquals(const [0, 10, 1, 11]);
       });
 
@@ -378,7 +378,7 @@ void main() {
           sortedPlacement: (comparator: _byRank, mayHaveRowsAfter: true),
         ).pages;
 
-        check(pages.expand((page) => page.items).map((item) => item.id).toList())
+        check(pages.expand((page) => page.items).map((item) => item.id))
             .deepEquals(const [0, 2, 3, 1]);
       });
 }

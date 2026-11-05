@@ -321,8 +321,9 @@ for (final item in incoming) {
 The tell is an empty collection filled in a loop. Before hand-rolling one, check the `collection`
 package (`groupListsBy`, `splitBetween`, `whereIndexed`, `mapIndexed`, `foldIndexed`, `slices`).
 
-- **Stay lazy.** Materialise only for a 2nd pass or an API that needs a `List`, and then
-  `.toList(growable: false)`.
+- **Stay lazy.** Pass a chain unnamed into the one call that walks it, since a named one invites a
+  2nd walk that reruns whatever its elements start. Materialise only for a 2nd pass or an API that
+  needs a `List`, and then `.toList(growable: false)`.
 - **A per-item scan on the build path is measured first.** An iterator per element costs several
   times a loop, and there the loop is the honest form ([scan loops](APPENDIX.md#scan-loops)).
   Page-sized work stays a chain.
@@ -351,8 +352,8 @@ the future.
 `List.unmodifiable` (and the `Set` / `Map` ones) copies, so nobody can change it under you. A view
 only wraps, which is right for a read-through view of private state and a bug elsewhere. Over data
 that never changes, a view saves the copy: `UnmodifiableListView(pages.map((page) => page.items))`,
-saying at the call site why it can't change. Never over a filter or anything read often, since
-every read runs the mapping again.
+saying at the call site why it can't change. Never over a filter, whose every read walks the
+source, or a mapping that does work, since every read runs it again.
 
 <a id="idioms-uri-construction"></a>
 ### `Uri.https(…)` / `Uri.http(…)` for known URLs

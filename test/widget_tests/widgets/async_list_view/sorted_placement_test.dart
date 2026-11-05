@@ -301,8 +301,7 @@ int _byTeamThenName(_Row a, _Row b) {
   return order == 0 ? _byName(a, b) : order;
 }
 
-List<String> _namesOf(FakeServer<_Row> server) =>
-    server.store.map((row) => row.name).toList(growable: false);
+Iterable<String> _namesOf(FakeServer<_Row> server) => server.store.map((row) => row.name);
 
 ScrollController _scrollController() {
   final scrollController = ScrollController();
@@ -382,5 +381,5 @@ Future<ListSmithController<_Row>> _pumpSorted(
   return controller;
 }
 
-Future<List<String>> _allShownNames(WidgetTester tester, ScrollController scrollController) =>
+Future<Set<String>> _allShownNames(WidgetTester tester, ScrollController scrollController) =>
     allShownTexts(tester, scrollController, 'row ');

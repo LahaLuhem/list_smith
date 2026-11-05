@@ -7,6 +7,6 @@ import '/features/core/repos/demo_repository.dart';
 final class CursorFeedViewModel() extends ViewModel {
   final _repository = DemoRepository();
 
-  Future<(List<DemoItem>, Object?)> cursorFetchPage(PageRequest request) =>
+  Future<(Iterable<DemoItem>, Object?)> cursorFetchPage(PageRequest request) =>
       _repository.cursorFetchPage(request.previousSignal, request.pageSize);
 }

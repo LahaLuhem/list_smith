@@ -16,13 +16,10 @@ final class SortedEditsViewModel() extends ViewModel {
 
   final titleOrder = const SortedBy(_compareByTitle);
 
-  Future<List<DemoItem>> fetchPage(PageRequest request) async {
+  Future<Iterable<DemoItem>> fetchPage(PageRequest request) async {
     await Future<void>.delayed(_latency);
 
-    return _store.items
-        .skip(request.pageIndex * request.pageSize)
-        .take(request.pageSize)
-        .toList(growable: false);
+    return _store.items.skip(request.pageIndex * request.pageSize).take(request.pageSize);
   }
 
   void onRenamed(DemoItem item, String title) =>

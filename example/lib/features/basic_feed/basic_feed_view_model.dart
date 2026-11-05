@@ -8,6 +8,6 @@ import '/features/core/repos/demo_repository.dart';
 final class BasicFeedViewModel() extends ViewModel {
   final _repository = DemoRepository();
 
-  Future<List<DemoItem>> fetchPage(PageRequest request) =>
+  Future<Iterable<DemoItem>> fetchPage(PageRequest request) =>
       _repository.fetchPage(request.pageIndex, request.pageSize);
 }

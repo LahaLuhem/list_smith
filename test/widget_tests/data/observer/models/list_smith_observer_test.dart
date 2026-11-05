@@ -90,7 +90,7 @@ void main() {
       await settle(tester);
 
       // Cause, then the mode edge, then the reload it started. Page loads left out.
-      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')).toList())
+      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')))
           .deepEquals(['queryCommitted(ab)', 'searchModeChanged(true)', 'reload(queryChanged)']);
     });
 
@@ -194,7 +194,7 @@ void main() {
       await pump('');
       await settle(tester);
 
-      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')).toList())
+      check(observer.events.whereNot((event) => event.startsWith('pageLoaded')))
           .deepEquals(['queryCommitted()', 'searchModeChanged(false)', 'reload(refresh)']);
     });
 

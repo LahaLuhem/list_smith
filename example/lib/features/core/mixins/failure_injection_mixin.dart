@@ -16,7 +16,7 @@ mixin FailureInjectionMixin on ViewModel {
       _shouldInjectFailuresNotifier.value = value;
 
   /// The page, unless failures are on by the time it lands.
-  Future<List<DemoItem>> withInjectedFailures(Future<List<DemoItem>> pageFuture) async {
+  Future<Iterable<DemoItem>> withInjectedFailures(Future<Iterable<DemoItem>> pageFuture) async {
     final page = await pageFuture;
     if (shouldInjectFailures) throw Exception('Simulated network failure');
 

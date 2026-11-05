@@ -49,7 +49,7 @@ final class CacheRoutingViewModel() extends ViewModel {
     .initialLoad || .nextPage || .queryChanged || .invalidated => false,
   };
 
-  List<DemoItem> _stamped(List<DemoItem> page, {required int fetch}) => page
+  List<DemoItem> _stamped(Iterable<DemoItem> page, {required int fetch}) => page
       .map((item) => DemoItem(id: item.id, title: item.title, subtitle: 'from fetch #$fetch'))
       .toList(growable: false);
 
