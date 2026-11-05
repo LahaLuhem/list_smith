@@ -1,43 +1,21 @@
-# Patterns are unanchored unless prefixed with `/`, so `test/` matches `example/test/` too.
+# not `*`, so a listed folder ships whole.
+/*
 
-test/
+!/lib/
+!/pubspec.yaml
+!/README.md
+!/CHANGELOG.md
+!/LICENSE
 
-# Maintainer-only perf measurement. It imports lib/ but ships nothing users need.
-benchmark/
+# pub.dev's gallery, through pubspec.yaml's `screenshots:`.
+!/doc/
+/doc/*
+!/doc/screenshots/
 
-# Local-dev config. Consumer machines have their own.
-.fvmrc
-analysis_options.yaml
-
-# Build / IDE artefacts.
-build/
-*.iml
-
-# `flutter test --coverage` output.
-coverage/
-
-# Maintainer-only tooling.
-tool/
-
-# Context7 doc-indexer config, for context7.com rather than consumers.
-context7.json
-
-# Contributor and AI-agent docs. Pub skips the hidden `.ai/`, but it follows the root `AGENTS.md`
-# and `CLAUDE.md` symlinks into it, so those need entries of their own.
-AGENTS.md
-CLAUDE.md
-APPENDIX.md
-CODESTYLE.md
-example/AGENTS.md
-example/CODESTYLE.md
-
-# pub.dev's Example tab shows only example/lib/, its pubspec and its README, so the platform dirs
-# are dead weight.
-example/android/
-example/ios/
-example/devtools_options.yaml
-
-# doc/ is for contributors, apart from the screenshots pubspec.yaml's `screenshots:` ship for
-# pub.dev's gallery.
-doc/*
-!doc/screenshots/
+# pub.dev's Example tab.
+!/example/
+/example/*
+!/example/lib/
+!/example/pubspec.yaml
+!/example/pubspec.lock
+!/example/README.md
