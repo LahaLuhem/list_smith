@@ -53,7 +53,7 @@ SplayTreeSet<int> resolveRereadIndexes<T extends Object>({
 /// [freshPages] with the rows they lack from [rereadItemsByIndex], each in front of the page after the
 /// fresh row it follows in its read.
 @internal
-List<List<T>> resolveLinedUpPages<T extends Object>({
+Iterable<List<T>> resolveLinedUpPages<T extends Object>({
   required List<List<T>> freshPages,
   required Map<int, List<T>> rereadItemsByIndex,
   required ItemIdGetter<T> itemIdGetter,
@@ -83,12 +83,7 @@ List<List<T>> resolveLinedUpPages<T extends Object>({
       .values
       .groupListsBy((slidRow) => slidRow.pageIndex);
 
-  return freshPages
-      .mapIndexed(
-        (index, items) => [
-          ...?slidRowsByPageIndex[index]?.map((slidRow) => slidRow.item),
-          ...items,
-        ],
-      )
-      .toList(growable: false);
+  return freshPages.mapIndexed(
+    (index, items) => [...?slidRowsByPageIndex[index]?.map((slidRow) => slidRow.item), ...items],
+  );
 }

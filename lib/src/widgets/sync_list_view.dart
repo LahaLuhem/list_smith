@@ -115,11 +115,13 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   void _takeItems() {
     final source = widget.source;
     final itemIdGetter = source.itemIdGetter;
+    // In debug, the copy the in-place check keeps is the one walk of the source.
+    final passedItems = kDebugMode ? source.items.toList(growable: false) : null;
     final (:items, :repeatedId) = itemIdGetter == null
-        ? (items: source.items.toList(growable: false), repeatedId: null)
-        : firstOfEachId(source.items, itemIdGetter);
+        ? (items: passedItems ?? source.items.toList(growable: false), repeatedId: null)
+        : firstOfEachId(passedItems ?? source.items, itemIdGetter);
     _items = items;
-    if (kDebugMode) _passedItems = source.items.toList(growable: false);
+    _passedItems = passedItems;
     if (kDebugMode && repeatedId != null) {
       reportBadData(
         "ListSmith.sync's itemIdGetter gave $repeatedId for more than one item. Ids have to be "

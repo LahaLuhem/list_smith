@@ -254,14 +254,15 @@ class _AsyncListViewState<T extends Object>()
     required FetchTrigger? trigger,
   }) async {
     final generation = _generation;
-    final loadedItems = pages.expand((page) => page.items);
+    // Late, since most reads have no edit to check it against.
+    late final loadedItemsById = _firstItemsById(pages.expand((page) => page.items));
     final lastReadStamp = pages.lastOrNull?.readStamp ?? readStamp;
     int rereadCountFor(RemovalStamps removalStamps) => rereadPageCount(
       removalStamps.after(lastReadStamp).length,
       pageSize: widget.source.pageSize,
       maxCount: pages.length,
     );
-    final removalStamps = _removalStampsSince(lastReadStamp, loadedItems);
+    final removalStamps = _removalStampsSince(lastReadStamp, () => loadedItemsById);
     // A removal still out can reach the server between 2 reads sent together, so the page goes 1st.
     final isRemovalOut = removalStamps.after(readStamp).isNotEmpty;
     final rereadCount = isRemovalOut ? 0 : rereadCountFor(removalStamps);
@@ -282,7 +283,7 @@ class _AsyncListViewState<T extends Object>()
     );
     if (generation != _generation) return null;
 
-    final landedRemovalStamps = _removalStampsSince(lastReadStamp, loadedItems);
+    final landedRemovalStamps = _removalStampsSince(lastReadStamp, () => loadedItemsById);
     // Then the pages before, if a removal was out or came in while the page was.
     final lateRereadCount = isRemovalOut || landedRemovalStamps.after(readStamp).isNotEmpty
         ? rereadCountFor(landedRemovalStamps)
@@ -294,7 +295,7 @@ class _AsyncListViewState<T extends Object>()
 
     final (items, signal) = pageReads.last;
     final itemIdGetter = widget.source.itemIdGetter;
-    late final knownIds = loadedItems.followedBy(items).map(itemIdGetter).toSet();
+    late final knownIds = loadedItemsById.keys.followedBy(items.map(itemIdGetter)).toSet();
 
     return (
       // Only the rows the list lacks, so the end policy still counts what this page sent.
@@ -404,14 +405,13 @@ class _AsyncListViewState<T extends Object>()
       isSearchMode ? null : widget.source.order.comparator;
 
   /// The rows that left their place after [readStamp]: removed, going out, or sorted elsewhere by an
-  /// edit. [loadedItems] and new items count.
-  RemovalStamps _removalStampsSince(int readStamp, Iterable<T> loadedItems) {
+  /// edit. The loaded rows and new items count. Only an edit reads [loadedItemsByIdGetter], once.
+  RemovalStamps _removalStampsSince(
+    int readStamp,
+    ValueGetter<Map<Object, T>> loadedItemsByIdGetter,
+  ) {
     final comparator = _comparatorFor(isSearchMode: _isSearchQuery(_debouncer.committedQuery));
-    // The 1st copy, since a row read either side of its move down sits in 2 pages.
-    late final loadedItemsById = loadedItems.groupFoldBy<Object, T>(
-      widget.source.itemIdGetter,
-      (firstItem, item) => firstItem ?? item,
-    );
+    late final loadedItemsById = loadedItemsByIdGetter();
 
     return _editStoreNotifier.removalStampsSince(
       readStamp,
@@ -425,6 +425,12 @@ class _AsyncListViewState<T extends Object>()
       },
     );
   }
+
+  /// Each row's 1st copy, since a row read either side of its move down sits in 2 pages.
+  Map<Object, T> _firstItemsById(Iterable<T> items) => items.groupFoldBy<Object, T>(
+    widget.source.itemIdGetter,
+    (firstItem, item) => firstItem ?? item,
+  );
 
   Iterable<Future<(List<T>, Object?)>> _rereadsBefore(List<LoadedPage<T>> pages, int count) =>
       Iterable.generate(count, (offset) => pages.length - count + offset).map(
@@ -1006,7 +1012,10 @@ final class _ReloadRun<T extends Object>(
       oldPages: (_startState?.pages ?? const []).map((page) => page.items),
       freshPages: pages,
       readStamps: _readStamps,
-      removalStamps: _engine._removalStampsSince(_readStamps.values.min, pages.flattened),
+      removalStamps: _engine._removalStampsSince(
+        _readStamps.values.min,
+        () => _engine._firstItemsById(pages.flattened),
+      ),
       itemIdGetter: source.itemIdGetter,
       pageSize: source.pageSize,
     );
