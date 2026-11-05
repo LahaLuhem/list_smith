@@ -1,6 +1,6 @@
 # Benchmark results
 
-Captured **2026-10-29** against `2.0.1` at `0b5980d` on Dart SDK 3.13.7, UI scenarios on Android, iOS. N=10 iterations.
+Captured **2026-11-05** against `2.0.1` at `9f468de, 0205ecc` on Dart SDK 3.13.7, UI scenarios on Android, iOS. N=10 iterations.
 
 > Per-device measurements, reflecting each device's CPU, GPU, GC, OS scheduler and thermal state. Yours WILL differ, so capture your own baseline before measuring a delta.
 
@@ -10,14 +10,14 @@ The headline finding. list_smith invokes your observer *synchronously* on the pa
 
 | Platform | Observer delay (ms) | Median render latency (ms) | Render minus observer (ms) | N |
 |---|---:|---:|---:|---:|
-| Android | 0 | 18.8 | 18.8 | 10 |
-| Android | 25 | 54.3 | 29.3 | 10 |
-| Android | 50 | 70.5 | 20.5 | 10 |
-| Android | 100 | 121.6 | 21.6 | 10 |
-| iOS | 0 | 18.0 | 18.0 | 10 |
+| Android | 0 | 18.2 | 18.2 | 10 |
+| Android | 25 | 54.1 | 29.1 | 10 |
+| Android | 50 | 70.4 | 20.4 | 10 |
+| Android | 100 | 127.9 | 27.9 | 10 |
+| iOS | 0 | 18.1 | 18.1 | 10 |
 | iOS | 25 | 50.7 | 25.7 | 10 |
 | iOS | 50 | 67.1 | 17.1 | 10 |
-| iOS | 100 | 117.7 | 17.7 | 10 |
+| iOS | 100 | 117.6 | 17.6 | 10 |
 
 
 ![Render latency vs observer delay](observer_latency.png)
@@ -28,9 +28,9 @@ From the `sync_search_scaling` micro (AOT, `benchmark_harness`). `SyncListView` 
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 373.21 | 9.49 | 0.37 |
-| 10,000 | 10 | 3,973 | 87.60 | 3.97 |
-| 100,000 | 10 | 41,447 | 1,020 | 41.45 |
+| 1,000 | 10 | 379.64 | 8.42 | 0.38 |
+| 10,000 | 10 | 4,022 | 167.93 | 4.02 |
+| 100,000 | 10 | 41,793 | 900.06 | 41.79 |
 
 
 ![Sync-search scaling](sync_search_scaling.png)
@@ -41,9 +41,9 @@ From the `bucket_by_group_scaling` micro (AOT, `benchmark_harness`). Sync groupi
 
 | List size | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 240.21 | 8.70 | 0.24 |
-| 10,000 | 10 | 2,464 | 155.17 | 2.46 |
-| 100,000 | 10 | 27,204 | 1,211 | 27.20 |
+| 1,000 | 10 | 232.95 | 2.63 | 0.23 |
+| 10,000 | 10 | 2,407 | 43.88 | 2.41 |
+| 100,000 | 10 | 26,489 | 605.96 | 26.49 |
 
 
 ![Sync grouping scaling](bucket_by_group_scaling.png)
@@ -54,9 +54,9 @@ From the `dedup_scaling` micro (AOT, `benchmark_harness`). The async list de-dup
 
 | Loaded items | N | Median (us) | IQR (us) | Median (ms) |
 |---:|---:|---:|---:|---:|
-| 1,000 | 10 | 290.75 | 5.18 | 0.29 |
-| 10,000 | 10 | 3,241 | 67.21 | 3.24 |
-| 100,000 | 10 | 38,040 | 871.93 | 38.04 |
+| 1,000 | 10 | 301.64 | 25.31 | 0.30 |
+| 10,000 | 10 | 3,374 | 90.99 | 3.37 |
+| 100,000 | 10 | 40,117 | 2,583 | 40.12 |
 
 
 ![De-dup scaling](dedup_scaling.png)
@@ -68,9 +68,9 @@ Confirms the bookkeeping costs ~nothing. `observer_dispatch` is one no-op observ
 | Micro | Metric | Median (us) |
 |---|---|---:|
 | `observer_dispatch` | us / dispatch | 0.011 |
-| `wrapping_overhead` (1 page) | us / key | 0.165 |
-| `wrapping_overhead` (10 pages) | us / key | 0.165 |
-| `wrapping_overhead` (100 pages) | us / key | 0.166 |
+| `wrapping_overhead` (1 page) | us / key | 0.171 |
+| `wrapping_overhead` (10 pages) | us / key | 0.169 |
+| `wrapping_overhead` (100 pages) | us / key | 0.170 |
 
 ## UI scenarios: per-frame build cost
 
@@ -78,24 +78,24 @@ From the profile-mode `integration_test` scenarios, real frames on one device pe
 
 | Scenario | Platform | Frames | Avg build (ms) | Worst build (ms) | p99 build (ms) | Missed |
 |---|---|---:|---:|---:|---:|---:|
-| `bare_listview` | Android | 610 | 1.22 | 4.79 | 2.76 | 0 |
-| `bare_listview` | iOS | 610 | 0.71 | 1.58 | 1.34 | 0 |
-| `cri_refresh` | Android | 849 | 0.84 | 4.70 | 2.44 | 0 |
-| `cri_refresh` | iOS | 850 | 0.35 | 1.83 | 1.47 | 0 |
-| `edit_transitions_fade` | Android | 500 | 1.11 | 9.36 | 8.08 | 0 |
-| `edit_transitions_fade` | iOS | 500 | 0.29 | 1.79 | 1.71 | 0 |
-| `edit_transitions_none` | Android | 500 | 1.04 | 13.98 | 8.43 | 0 |
-| `edit_transitions_none` | iOS | 500 | 0.25 | 2.92 | 1.73 | 0 |
-| `edit_transitions_size` | Android | 500 | 1.10 | 9.11 | 7.09 | 0 |
-| `edit_transitions_size` | iOS | 500 | 0.38 | 1.90 | 1.59 | 0 |
-| `edit_transitions_size_scrolled` | Android | 500 | 1.07 | 9.83 | 8.44 | 0 |
-| `edit_transitions_size_scrolled` | iOS | 500 | 0.34 | 1.69 | 1.63 | 0 |
-| `edit_transitions_slide` | Android | 500 | 1.30 | 9.95 | 8.87 | 0 |
-| `edit_transitions_slide` | iOS | 500 | 0.32 | 1.93 | 1.78 | 0 |
-| `isp_scroll` | Android | 610 | 1.29 | 4.75 | 3.21 | 0 |
-| `isp_scroll` | iOS | 610 | 0.76 | 2.38 | 1.70 | 0 |
-| `sync_scroll` | Android | 610 | 1.27 | 5.39 | 3.79 | 0 |
-| `sync_scroll` | iOS | 610 | 0.72 | 2.84 | 1.36 | 0 |
+| `bare_listview` | Android | 610 | 1.23 | 5.14 | 2.88 | 0 |
+| `bare_listview` | iOS | 610 | 0.71 | 1.47 | 1.35 | 0 |
+| `cri_refresh` | Android | 849 | 0.89 | 6.73 | 2.79 | 0 |
+| `cri_refresh` | iOS | 849 | 0.36 | 1.72 | 1.49 | 0 |
+| `edit_transitions_fade` | Android | 500 | 1.17 | 9.52 | 9.05 | 0 |
+| `edit_transitions_fade` | iOS | 500 | 0.30 | 1.97 | 1.78 | 0 |
+| `edit_transitions_none` | Android | 500 | 1.06 | 11.90 | 9.32 | 0 |
+| `edit_transitions_none` | iOS | 500 | 0.26 | 2.12 | 1.85 | 0 |
+| `edit_transitions_size` | Android | 500 | 1.16 | 8.86 | 8.49 | 0 |
+| `edit_transitions_size` | iOS | 500 | 0.39 | 1.75 | 1.64 | 0 |
+| `edit_transitions_size_scrolled` | Android | 500 | 1.04 | 9.12 | 7.34 | 0 |
+| `edit_transitions_size_scrolled` | iOS | 500 | 0.34 | 2.01 | 1.69 | 0 |
+| `edit_transitions_slide` | Android | 500 | 1.19 | 9.83 | 8.07 | 0 |
+| `edit_transitions_slide` | iOS | 500 | 0.33 | 1.92 | 1.81 | 0 |
+| `isp_scroll` | Android | 609 | 1.32 | 6.61 | 3.99 | 0 |
+| `isp_scroll` | iOS | 610 | 0.74 | 2.23 | 1.82 | 0 |
+| `sync_scroll` | Android | 609 | 1.30 | 4.93 | 3.20 | 0 |
+| `sync_scroll` | iOS | 610 | 0.72 | 2.39 | 1.35 | 0 |
 
 
 ![Per-frame build cost](frame_costs.png)
@@ -106,24 +106,24 @@ The same frames on the raster thread, which draws what the build produced. `miss
 
 | Scenario | Platform | Frames | Avg raster (ms) | Worst raster (ms) | p99 raster (ms) | Missed |
 |---|---|---:|---:|---:|---:|---:|
-| `bare_listview` | Android | 610 | 2.38 | 6.50 | 3.16 | 0 |
-| `bare_listview` | iOS | 610 | 0.62 | 1.54 | 1.07 | 0 |
-| `cri_refresh` | Android | 849 | 2.44 | 8.59 | 3.62 | 0 |
-| `cri_refresh` | iOS | 850 | 0.55 | 3.47 | 0.71 | 0 |
-| `edit_transitions_fade` | Android | 500 | 2.71 | 8.58 | 4.73 | 0 |
-| `edit_transitions_fade` | iOS | 500 | 0.62 | 2.19 | 0.91 | 0 |
-| `edit_transitions_none` | Android | 500 | 2.43 | 8.40 | 3.58 | 0 |
-| `edit_transitions_none` | iOS | 500 | 0.57 | 1.57 | 0.97 | 0 |
-| `edit_transitions_size` | Android | 500 | 2.48 | 5.80 | 3.73 | 0 |
-| `edit_transitions_size` | iOS | 500 | 0.56 | 0.81 | 0.70 | 0 |
-| `edit_transitions_size_scrolled` | Android | 500 | 2.74 | 8.13 | 3.92 | 0 |
-| `edit_transitions_size_scrolled` | iOS | 500 | 0.56 | 0.98 | 0.70 | 0 |
-| `edit_transitions_slide` | Android | 500 | 2.71 | 6.71 | 4.05 | 0 |
-| `edit_transitions_slide` | iOS | 500 | 0.59 | 2.09 | 1.12 | 0 |
-| `isp_scroll` | Android | 610 | 2.48 | 6.35 | 3.56 | 0 |
-| `isp_scroll` | iOS | 610 | 0.62 | 1.32 | 1.16 | 0 |
-| `sync_scroll` | Android | 610 | 2.56 | 6.64 | 4.44 | 0 |
-| `sync_scroll` | iOS | 610 | 0.61 | 1.29 | 1.09 | 0 |
+| `bare_listview` | Android | 610 | 2.37 | 6.22 | 3.23 | 0 |
+| `bare_listview` | iOS | 610 | 0.61 | 1.26 | 1.09 | 0 |
+| `cri_refresh` | Android | 849 | 2.43 | 8.73 | 4.20 | 0 |
+| `cri_refresh` | iOS | 849 | 0.63 | 56.52 | 0.72 | 1 |
+| `edit_transitions_fade` | Android | 500 | 2.71 | 7.09 | 4.43 | 0 |
+| `edit_transitions_fade` | iOS | 500 | 0.74 | 57.95 | 0.98 | 1 |
+| `edit_transitions_none` | Android | 500 | 2.53 | 5.14 | 3.69 | 0 |
+| `edit_transitions_none` | iOS | 500 | 0.59 | 1.53 | 1.13 | 0 |
+| `edit_transitions_size` | Android | 500 | 2.67 | 6.30 | 4.47 | 0 |
+| `edit_transitions_size` | iOS | 500 | 0.58 | 0.96 | 0.73 | 0 |
+| `edit_transitions_size_scrolled` | Android | 500 | 2.48 | 6.77 | 3.62 | 0 |
+| `edit_transitions_size_scrolled` | iOS | 500 | 0.59 | 1.01 | 0.73 | 0 |
+| `edit_transitions_slide` | Android | 500 | 2.47 | 6.97 | 3.83 | 0 |
+| `edit_transitions_slide` | iOS | 500 | 0.60 | 2.00 | 1.17 | 0 |
+| `isp_scroll` | Android | 609 | 2.61 | 6.52 | 4.02 | 0 |
+| `isp_scroll` | iOS | 610 | 0.61 | 1.25 | 1.12 | 0 |
+| `sync_scroll` | Android | 609 | 2.45 | 5.76 | 3.95 | 0 |
+| `sync_scroll` | iOS | 610 | 0.62 | 1.26 | 1.11 | 0 |
 
 
 ![Per-frame raster cost](frame_raster_costs.png)
