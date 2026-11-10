@@ -9,6 +9,11 @@ on:
   # The release caller runs it first.
   workflow_call:
 
+# Supersedes the run before it. Pull requests only: a cancelled push saves no caches.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # The required check, ci / ok, takes its name from this job.
   ci:
