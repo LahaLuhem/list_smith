@@ -44,6 +44,6 @@ final class _RecordingEndPolicy() extends PaginationEndPolicy {
   bool hasReachedEnd(EndContext context) {
     seenEndContexts.add(context);
 
-    return context.trailingEmptyRun > 0;
+    return context.countTrailingEmptyPages() > 0;
   }
 }

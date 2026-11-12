@@ -9,7 +9,7 @@ The parts, and what each seam between them promises. The reasons are in
 |------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
 | [`ListSmith`](../lib/src/widgets/list_smith.dart)                                  | the public widget, picks the sync or async engine                                                    |
 | [async engine](../lib/src/widgets/async_list_view.dart)                            | owns the paging state and every fetch, runs the reloads, and serves feed and search from one state   |
-| [paging state](../lib/src/data/pagination/models/paging_state.dart)                | the loaded pages and where the stream stands. Its `status` names the surface to show                 |
+| [paging state](../lib/src/data/pagination/models/paging_state.dart)                | the loaded pages and where the stream stands. Its `resolveStatus()` names the surface to show        |
 | [`PagedView`](../lib/src/widgets/paged_view.dart)                                  | picks the surface for the status, the app's builder or a neutral default                             |
 | [`KeyedListView`](../lib/src/widgets/keyed_list_view.dart)                         | both engines' scroll view: keyed rows and headers, or a surface instead, and the near-end trigger    |
 | [`ScrollAnchor`](../lib/src/widgets/scroll_anchor.dart)                            | holds the row the user is reading still as rows above it change, or the pull's room does             |

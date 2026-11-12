@@ -89,7 +89,7 @@ final class RowTransitionsNotifier<T extends Object>({
   }
 
   /// The rows going out, whose removals aren't booked yet.
-  Iterable<Object> get leavingIds => _transitions.entries
+  Iterable<Object> findLeavingIds() => _transitions.entries
       .where((entry) => entry.value.bookRemoval != null)
       .map((entry) => entry.key);
 

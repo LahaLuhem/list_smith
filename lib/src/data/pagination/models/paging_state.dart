@@ -25,7 +25,7 @@ final class const PagingState<T extends Object>({
   this;
 
   /// The surface to show. Counts pages instead of flattening them, so it stays O(pages).
-  PagingStatus status() {
+  PagingStatus resolveStatus() {
     final pages = this.pages;
     if (pages == null) return exception == null ? .loadingFirstPage : .firstPageError;
     if (pages.every((page) => page.items.isEmpty)) {
@@ -37,7 +37,7 @@ final class const PagingState<T extends Object>({
   }
 
   /// Every loaded item, in order. Empty until the 1st page lands.
-  Iterable<T> get items => pages?.expand((page) => page.items) ?? const .empty();
+  Iterable<T> flattenItems() => pages?.expand((page) => page.items) ?? const .empty();
 
   /// A fetch is on its way, so the last one's exception goes.
   PagingState<T> loading() => PagingState(pages: pages, hasNextPage: hasNextPage, isLoading: true);

@@ -12,7 +12,7 @@ final class const StopOnEmptyPagesPolicy({
   this : assert(emptyRunBeforeEnd >= 1, 'emptyRunBeforeEnd must be at least 1.');
 
   @override
-  bool hasReachedEnd(EndContext context) => context.trailingEmptyRun >= emptyRunBeforeEnd;
+  bool hasReachedEnd(EndContext context) => context.countTrailingEmptyPages() >= emptyRunBeforeEnd;
 
   @override
   String toString() =>
