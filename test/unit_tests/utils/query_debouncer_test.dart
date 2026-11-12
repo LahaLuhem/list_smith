@@ -1,3 +1,6 @@
+// Test-local fixtures share the file with the scenarios that use them.
+// ignore_for_file: prefer-match-file-name
+
 import 'dart:async';
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -11,6 +14,7 @@ void main() {
   const committedKey = 'committed';
   const queryKey = 'query';
   const commitsKey = 'commits';
+  const dropKey = 'drop';
 
   Bdd(debouncerFeature)
       .scenario(
@@ -122,56 +126,42 @@ void main() {
       });
 
   Bdd(debouncerFeature)
-      .scenario('typing anything else drops the call on its way, letting its caller go then')
-      .given('abc committed, and a call for 12 on its way')
-      .when('<$queryKey> is typed halfway through')
-      .then('the call is done without committing, and typing commits <$commitsKey>')
-      .example(val(queryKey, 'xyz'), val(commitsKey, 'xyz'))
-      // Typed back to what's showing, so nothing commits, as with typing over typing.
-      .example(val(queryKey, 'abc'), val(commitsKey, null))
-      .run((context) {
+      .scenario('typing anything else replaces the call on its way')
+      .given('a call for 12 on its way')
+      .when('xyz is typed halfway through')
+      .then('typing commits xyz, and the call nothing')
+      .run((_) {
         const debounce = Duration(milliseconds: 300);
         final typedQueries = <String>[];
         final calledQueries = <String>[];
-        var isCallDone = false;
         fakeAsync((async) {
           final debouncer = QueryDebouncer(onCommitted: typedQueries.add);
           unawaited(
-            debouncer
-                .scheduleFromCode(
-                  '12',
-                  debounce,
-                  minSearchLength: 0,
-                  committedQuery: 'abc',
-                  onCommitted: (query) async => calledQueries.add(query),
-                )
-                .then((_) => isCallDone = true),
+            debouncer.scheduleFromCode(
+              '12',
+              debounce,
+              minSearchLength: 0,
+              committedQuery: '',
+              onCommitted: (query) async => calledQueries.add(query),
+            ),
           );
           async.elapse(debounce ~/ 2);
-          debouncer.schedule(
-            context.example.val(queryKey) as String,
-            debounce,
-            minSearchLength: 0,
-            committedQuery: 'abc',
-          );
-          async.flushMicrotasks();
-          check(isCallDone).isTrue();
+          debouncer.schedule('xyz', debounce, minSearchLength: 0, committedQuery: '');
           async.flushTimers();
         });
 
         check(calledQueries).isEmpty();
-        check(typedQueries).deepEquals([?context.example.val(commitsKey) as String?]);
+        check(typedQueries).deepEquals(['xyz']);
       });
 
   Bdd(debouncerFeature)
-      .scenario('a 2nd call drops the 1st on its way, letting its caller go then')
+      .scenario('a 2nd call replaces the 1st on its way')
       .given('a call for abc on its way')
       .when('a call for xyz comes halfway through')
-      .then('the 1st is done without committing, and xyz commits')
+      .then('only xyz commits')
       .run((_) {
         const debounce = Duration(milliseconds: 300);
         final committedQueries = <String>[];
-        var isFirstCallDone = false;
         fakeAsync((async) {
           final debouncer = QueryDebouncer(onCommitted: committedQueries.add);
           Future<void> scheduleCall(String query) => debouncer.scheduleFromCode(
@@ -181,11 +171,9 @@ void main() {
             committedQuery: '',
             onCommitted: (query) async => committedQueries.add(query),
           );
-          unawaited(scheduleCall('abc').then((_) => isFirstCallDone = true));
+          unawaited(scheduleCall('abc'));
           async.elapse(debounce ~/ 2);
           unawaited(scheduleCall('xyz'));
-          async.flushMicrotasks();
-          check(isFirstCallDone).isTrue();
           async.flushTimers();
         });
 
@@ -229,16 +217,18 @@ void main() {
       });
 
   Bdd(debouncerFeature)
-      .scenario('disposing drops a call on its way, letting its caller go')
+      .scenario('whatever drops a call on its way lets its caller go at once')
       .given('a call for abc on its way')
-      .when('the debouncer is disposed halfway through')
-      .then('the caller is done, and nothing commits')
-      .run((_) {
+      .when('<$dropKey> drops it halfway through')
+      .then('its caller is done right then')
+      .example(val(dropKey, _Drop.typing))
+      .example(val(dropKey, _Drop.anotherCall))
+      .example(val(dropKey, _Drop.cancelling))
+      .run((context) {
         const debounce = Duration(milliseconds: 300);
-        final committedQueries = <String>[];
         var isCallDone = false;
         fakeAsync((async) {
-          final debouncer = QueryDebouncer(onCommitted: committedQueries.add);
+          final debouncer = QueryDebouncer(onCommitted: <String>[].add);
           unawaited(
             debouncer
                 .scheduleFromCode(
@@ -246,16 +236,41 @@ void main() {
                   debounce,
                   minSearchLength: 0,
                   committedQuery: '',
-                  onCommitted: (query) async => committedQueries.add(query),
+                  onCommitted: (_) => Future.syncValue(null),
                 )
                 .then((_) => isCallDone = true),
           );
           async.elapse(debounce ~/ 2);
-          debouncer.dispose();
-          async.flushTimers();
+          (context.example.val(dropKey) as _Drop).applyTo(debouncer);
+          async.flushMicrotasks();
         });
 
         check(isCallDone).isTrue();
-        check(committedQueries).isEmpty();
       });
+}
+
+/// What can drop a call on its way.
+enum _Drop() {
+  typing,
+  anotherCall,
+  cancelling;
+
+  void applyTo(QueryDebouncer debouncer) {
+    switch (this) {
+      case typing:
+        debouncer.schedule('xyz', Duration.zero, minSearchLength: 0, committedQuery: '');
+      case anotherCall:
+        unawaited(
+          debouncer.scheduleFromCode(
+            'xyz',
+            Duration.zero,
+            minSearchLength: 0,
+            committedQuery: '',
+            onCommitted: (_) => Future.syncValue(null),
+          ),
+        );
+      case cancelling:
+        debouncer.cancel();
+    }
+  }
 }

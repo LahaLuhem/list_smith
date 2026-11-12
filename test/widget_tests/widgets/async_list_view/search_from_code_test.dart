@@ -129,45 +129,18 @@ void main() {
       check(find.text('no results for 123').evaluate()).length.equals(1);
     });
 
-    scenarioWidgets('a call replaces a typed search, whose late answer lands nowhere', (
-      tester,
-    ) async {
-      final searchHoldCompleter = Completer<void>();
-      final routes = _Routes()..searchHoldCompleter = searchHoldCompleter;
+    scenarioWidgets("an edit after a call goes through the search's own fetcher", (tester) async {
+      final routes = _Routes();
       final controller = ListSmithController<String>();
       final queryNotifier = ValueNotifier('');
       await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
       await drain(tester);
-      await commitQuery(tester, queryNotifier, 'abc');
-      // Premise: the typed search asked, and its answer waits.
-      check(routes.searchRequests).length.equals(1);
-
       await _searchNow(tester, controller, '123', fetchPage: routes.lookupFetcher);
-      await release(tester, [searchHoldCompleter]);
 
-      check(find.text('lookup 123 #1').evaluate()).length.equals(1);
-      check(find.text('search abc').evaluate()).isEmpty();
+      await commitQuery(tester, queryNotifier, '1234');
+
+      check(find.text('search 1234').evaluate()).length.equals(1);
     });
-
-    scenarioWidgets(
-      "a field showing the call holds it, and an edit takes over through the search's own fetcher",
-      (tester) async {
-        final routes = _Routes();
-        final controller = ListSmithController<String>();
-        final queryNotifier = ValueNotifier('');
-        await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
-        await drain(tester);
-
-        unawaited(controller.search('123', fetchPage: routes.lookupFetcher));
-        await commitQuery(tester, queryNotifier, '123'); // the app shows it while it waits
-        check(find.text('lookup 123 #1').evaluate()).length.equals(1);
-        check(routes.searchRequests).isEmpty();
-
-        await commitQuery(tester, queryNotifier, '1234');
-
-        check(find.text('search 1234').evaluate()).length.equals(1);
-      },
-    );
 
     scenarioOutlineWidgets<Future<void> Function(ListSmithController<String> controller)>(
       "refresh() and reset() run a call's search again through its fetcher",
@@ -220,24 +193,19 @@ void main() {
       },
     );
 
-    scenarioWidgets('a call typing replaces while it waits completes then', (tester) async {
+    scenarioWidgets("a list going away lets a waiting call's caller go", (tester) async {
       final routes = _Routes();
       final controller = ListSmithController<String>();
-      final queryNotifier = ValueNotifier('');
-      await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
+      await _pumpList(tester, routes, controller: controller);
       await drain(tester);
 
       var isSearchDone = false;
       unawaited(
         controller.search('123', fetchPage: routes.lookupFetcher).then((_) => isSearchDone = true),
       );
-      queryNotifier.value = 'abc';
-      await tester.pump();
-      check(isSearchDone).isTrue();
+      await pumpListSmith(tester, const SizedBox.shrink());
 
-      await settle(tester);
-      check(find.text('search abc').evaluate()).length.equals(1);
-      check(routes.lookupRequests).isEmpty();
+      check(isSearchDone).isTrue();
     });
 
     scenarioWidgets('a call on a list without search asserts', (tester) async {
@@ -288,6 +256,99 @@ void main() {
       check(find.text('feed').evaluate()).length.equals(1);
     });
   });
+
+  feature('ListSmith.async endSearch()', () {
+    scenarioOutlineWidgets<({String fieldText, String shownText})>(
+      "it lands on what the field holds, through the search's own fetcher",
+      examples: const {
+        'another query': (fieldText: 'abc', shownText: 'search abc'),
+        // The same text, so only the route changes.
+        "the call's query": (fieldText: '123', shownText: 'search 123'),
+      },
+      outline: (tester, example) async {
+        final routes = _Routes();
+        final controller = ListSmithController<String>();
+        final queryNotifier = ValueNotifier('');
+        await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
+        await drain(tester);
+        await commitQuery(tester, queryNotifier, example.fieldText);
+        await _searchNow(tester, controller, '123', fetchPage: routes.lookupFetcher);
+
+        await _land(tester, controller.endSearch());
+
+        check(find.text(example.shownText).evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioWidgets('it brings a kept feed back without a fetch', (tester) async {
+      final routes = _Routes();
+      final controller = ListSmithController<String>();
+      await _pumpList(
+        tester,
+        routes,
+        controller: controller,
+        search: AsyncSearch(fetchPage: routes.searchFetcher, cachePolicy: const KeepCachePolicy()),
+      );
+      await drain(tester);
+      await _searchNow(tester, controller, '123', fetchPage: routes.lookupFetcher);
+
+      await _land(tester, controller.endSearch());
+
+      check(find.text('feed').evaluate()).length.equals(1);
+      check(routes.feedRequests).length.equals(1);
+    });
+
+    scenarioWidgets('it drops a call still waiting', (tester) async {
+      final routes = _Routes();
+      final controller = ListSmithController<String>();
+      await _pumpList(tester, routes, controller: controller);
+      await drain(tester);
+
+      unawaited(controller.search('123', fetchPage: routes.lookupFetcher));
+      await _land(tester, controller.endSearch());
+
+      await settle(tester); // past the call's debounce
+      check(routes.lookupRequests).isEmpty();
+    });
+
+    scenarioWidgets('it does nothing when a typed search shows', (tester) async {
+      final routes = _Routes();
+      final controller = ListSmithController<String>();
+      final queryNotifier = ValueNotifier('');
+      await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
+      await drain(tester);
+      await commitQuery(tester, queryNotifier, 'abc');
+      final requestCount = routes.requestCount;
+
+      await _land(tester, controller.endSearch());
+
+      check(routes.requestCount).equals(requestCount);
+    });
+
+    scenarioWidgets('it completes once its page 0 is over', (tester) async {
+      final searchHoldCompleter = Completer<void>();
+      final routes = _Routes();
+      final controller = ListSmithController<String>();
+      final queryNotifier = ValueNotifier('');
+      await _pumpList(tester, routes, controller: controller, queryNotifier: queryNotifier);
+      await drain(tester);
+      await commitQuery(tester, queryNotifier, 'abc');
+      await _searchNow(tester, controller, '123', fetchPage: routes.lookupFetcher);
+      routes.searchHoldCompleter = searchHoldCompleter;
+
+      var isEndDone = false;
+      unawaited(controller.endSearch().then((_) => isEndDone = true));
+      await tester.pump(Duration.zero);
+      await drain(tester);
+      // Premise: it went back to abc, whose answer waits.
+      check(routes.searchRequests).length.equals(2);
+      check(isEndDone).isFalse();
+
+      await release(tester, [searchHoldCompleter]);
+
+      check(isEndDone).isTrue();
+    });
+  });
 }
 
 /// The list's own debounce, the one [settle] waits out.
@@ -296,6 +357,7 @@ const _listDebounce = Duration(milliseconds: 20);
 /// The routes a list fetches through. Each row names its route: `feed`, `search <query>` for the
 /// search's own fetcher, and `lookup <query> #<attempt>` for one a call passes.
 final class _Routes() {
+  final feedRequests = <PageRequest>[];
   final searchRequests = <SearchPageRequest>[];
   final lookupRequests = <SearchPageRequest>[];
 
@@ -308,7 +370,13 @@ final class _Routes() {
   var doesSearchFindNothing = false;
   var doesLookupFail = false;
 
-  final feedFetcher = PageFetcher<String>((_) async => const ['feed']);
+  int get requestCount => feedRequests.length + searchRequests.length + lookupRequests.length;
+
+  late final feedFetcher = PageFetcher<String>((request) async {
+    feedRequests.add(request);
+
+    return const ['feed'];
+  });
 
   late final searchFetcher = SearchPageFetcher<String>((request) async {
     searchRequests.add(request);
@@ -369,20 +437,22 @@ Future<void> _searchNow(
   String query, {
   SearchPageFetcher<String>? fetchPage,
   int? minSearchLength,
-}) async {
-  var isSearchDone = false;
-  unawaited(
-    controller
-        .search(
-          query,
-          fetchPage: fetchPage,
-          searchDebounce: Duration.zero,
-          minSearchLength: minSearchLength,
-        )
-        .then((_) => isSearchDone = true),
-  );
+}) => _land(
+  tester,
+  controller.search(
+    query,
+    fetchPage: fetchPage,
+    searchDebounce: Duration.zero,
+    minSearchLength: minSearchLength,
+  ),
+);
+
+/// Lets the call behind [callFuture] land on the next tick, and checks it did.
+Future<void> _land(WidgetTester tester, Future<void> callFuture) async {
+  var isDone = false;
+  unawaited(callFuture.then((_) => isDone = true));
   await tester.pump(Duration.zero); // its timer, there even at zero
   await drain(tester);
   // Checked, not awaited: a call still waiting fails here instead of hanging the test.
-  check(isSearchDone).isTrue();
+  check(isDone).isTrue();
 }

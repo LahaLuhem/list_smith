@@ -110,7 +110,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
   @override
   void dispose() {
-    _debouncer.dispose();
+    _debouncer.cancel();
     _displayNotifier.dispose();
 
     super.dispose();

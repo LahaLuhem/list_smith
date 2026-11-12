@@ -182,7 +182,7 @@ class _AsyncListViewState<T extends Object>()
   void dispose() {
     _generation++; // a reload outliving the list must not write into it
     widget.controller?.detach();
-    _debouncer.dispose();
+    _debouncer.cancel();
     _pagingStateNotifier.dispose();
     _searchModeNotifier.dispose();
     _editStoreNotifier.dispose();
@@ -829,11 +829,34 @@ class _AsyncListViewState<T extends Object>()
       searchDebounce ?? widget.searchDebounce,
       minSearchLength: minSearchLength ?? widget.minSearchLength,
       committedQuery: _committedSearch.query,
-      onCommitted: (query) =>
-          _onSearchCommitted(_CommittedSearch(query, fetchPage: fetchPage))?.doneFuture ??
-          Future.syncValue(null),
+      onCommitted: (query) => _commitFromCode(_CommittedSearch(query, fetchPage: fetchPage)),
     );
   }
+
+  @override
+  Future<void> endSearch() {
+    final searchQuery = QueryDebouncer.searchQueryOf(
+      widget.query,
+      minSearchLength: widget.minSearchLength,
+    );
+    if (_committedSearch.query == searchQuery && _committedSearch.fetchPage == null) {
+      _debouncer.cancel(); // a call still waiting
+
+      return Future.syncValue(null);
+    }
+
+    return _debouncer.scheduleFromCode(
+      widget.query,
+      .zero,
+      minSearchLength: widget.minSearchLength,
+      committedQuery: _committedSearch.query,
+      onCommitted: (query) => _commitFromCode(_CommittedSearch(query)),
+    );
+  }
+
+  /// Completes once the run [committedSearch] starts is done.
+  Future<void> _commitFromCode(_CommittedSearch<T> committedSearch) =>
+      _onSearchCommitted(committedSearch)?.doneFuture ?? Future.syncValue(null);
 
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
   /// that loader.

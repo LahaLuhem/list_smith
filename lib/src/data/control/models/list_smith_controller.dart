@@ -62,7 +62,7 @@ class ListSmithController<T extends Object>() {
     Duration? searchDebounce,
     int? minSearchLength,
   }) {
-    assert(query.trim().isNotEmpty, 'search() needs a query.');
+    assert(query.trim().isNotEmpty, 'search() needs a query. To go back, call endSearch().');
     assert(
       _host != null || _wasEverAttached,
       'Pass this ListSmithController to ListSmith.async before calling search().',
@@ -76,6 +76,10 @@ class ListSmithController<T extends Object>() {
         ) ??
         Future<void>.syncValue(null);
   }
+
+  /// Ends a [search], waiting or showing, and lands on what the list's query holds, as typed.
+  /// Completes once its page 0 is over, or at once when that already shows.
+  Future<void> endSearch() => _host?.endSearch() ?? Future<void>.syncValue(null);
 
   /// Shows [item] wherever a copy with its id is loaded, or at the top of the feed if none is. For
   /// a change that's already true on your server or store, and lasts until those pages are read again.

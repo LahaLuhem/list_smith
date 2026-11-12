@@ -31,7 +31,7 @@ class QueryDebouncer({
     if (trimmedQuery == _pendingCodeCommit?.trimmedQuery) return;
 
     // Before the return below, so a query typed back to the committed one drops what's on its way.
-    _drop();
+    cancel();
     final searchQuery = _gate(trimmedQuery, minSearchLength: minSearchLength);
     // The trimmed text too, so a field showing a short search committed from code holds.
     if (committedQuery == trimmedQuery || committedQuery == searchQuery) return;
@@ -52,7 +52,7 @@ class QueryDebouncer({
   }) {
     final trimmedQuery = query.trim();
     final searchQuery = _gate(trimmedQuery, minSearchLength: minSearchLength);
-    _drop();
+    cancel();
     if (searchQuery.isEmpty && committedQuery.isEmpty) return Future.syncValue(null);
 
     final doneCompleter = Completer<void>();
@@ -65,11 +65,9 @@ class QueryDebouncer({
     return doneCompleter.future;
   }
 
-  /// Drops what's on its way. Call from the owner's `dispose`.
-  void dispose() => _drop();
-
-  /// Cancels what's on its way, letting a caller waiting on it go.
-  void _drop() {
+  /// Cancels what's on its way, letting a caller waiting on it go. Call from the owner's `dispose`
+  /// too.
+  void cancel() {
     _timer?.cancel();
     _pendingCodeCommit?.doneCompleter.complete();
     _pendingCodeCommit = null;

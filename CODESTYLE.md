@@ -216,8 +216,8 @@ The one engine-side `switch` is tree assembly: whether `Refresh` wraps the subtr
 - The engine implements the `@internal` `ListSmithControllerHost` and attaches itself, so the
   gesture and the handle share one entry point. A new intent is a host method plus a forwarding
   verb, nothing else.
-- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached is a no-op, and
-  only never-attached, which can only be wiring, asserts.
+- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached is a no-op.
+  Never-attached can only be wiring, and asserts where the call's intent would be lost.
 
 ---
 
