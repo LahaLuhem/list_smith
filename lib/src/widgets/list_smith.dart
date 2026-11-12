@@ -46,10 +46,12 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// The current search query, yours to own and pass in. Trimmed, then gated by [minSearchLength].
   final String query;
 
-  /// Minimum trimmed [query] length before a search runs. Below it the query counts as empty.
+  /// Minimum trimmed [query] length before a search runs. Below it the query counts as empty. A [ListSmithController.search]
+  /// call can pass its own.
   final int minSearchLength;
 
-  /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate.
+  /// How long to wait after [query] changes before it takes effect. [Duration.zero] is immediate. A
+  /// [ListSmithController.search] call can pass its own.
   final Duration searchDebounce;
 
   /// Builds the surface shown when a search matches nothing, sized to the list. Null uses the neutral

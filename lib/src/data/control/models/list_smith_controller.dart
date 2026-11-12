@@ -10,7 +10,7 @@ import '/src/data/search/search.dart';
 import 'list_smith_controller_host.dart';
 
 /// Drives a [ListSmith.async] list from code: a refresh button, a tab re-tap, a re-read after a local
-/// write, a logout.
+/// write, a logout, a scan.
 ///
 /// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
 /// Holds nothing, so there's nothing to dispose.
@@ -47,8 +47,8 @@ class ListSmithController<T extends Object>() {
   /// reports [FetchTrigger.invalidated].
   ///
   /// Cuts in on whatever load is running rather than joining it, and completes once its page 0 is over.
-  /// Keeps the query, so a search restarts, and a feed held by [KeepCachePolicy] starts over once the
-  /// query clears.
+  /// Keeps a search, its fetcher included, so it restarts, and a feed held by [KeepCachePolicy] starts
+  /// over once the search ends.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
 
   /// Searches [query] like typing it, through [fetchPage] or the search's own fetcher. The list's

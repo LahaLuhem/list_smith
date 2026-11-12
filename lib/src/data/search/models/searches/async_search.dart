@@ -4,7 +4,8 @@ part of '../search.dart';
 ///
 /// [cachePolicy] decides what happens to the feed while you search. A clean reload each way by default.
 final class const AsyncSearch<T extends Object>({
-  /// Fetches each page of results for the committed query.
+  /// Fetches each page of results for the committed query, unless a [ListSmithController.search] call
+  /// passed its own.
   required final SearchPageFetcher<T> fetchPage,
 
   /// What happens to cached items when the list enters or leaves search. Defaults to [ReplaceCachePolicy].
