@@ -373,29 +373,25 @@ class _AsyncListViewState<T extends Object>()
     int pageIndex,
     Object? previousSignal,
     FetchTrigger trigger,
-  ) {
-    final source = widget.source;
-
-    return switch (source.search) {
-      final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage(
-        SearchPageRequest(
-          query: _committedSearch.query,
-          pageIndex: pageIndex,
-          pageSize: source.pageSize,
-          trigger: trigger,
-          previousSignal: previousSignal,
-        ),
+  ) => switch (widget.source.search) {
+    final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage(
+      SearchPageRequest(
+        query: _committedSearch.query,
+        pageIndex: pageIndex,
+        pageSize: widget.source.pageSize,
+        trigger: trigger,
+        previousSignal: previousSignal,
       ),
-      AsyncSearch<T>() || NoSearch() => source.fetchPage(
-        PageRequest(
-          pageIndex: pageIndex,
-          pageSize: source.pageSize,
-          trigger: trigger,
-          previousSignal: previousSignal,
-        ),
+    ),
+    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage(
+      PageRequest(
+        pageIndex: pageIndex,
+        pageSize: widget.source.pageSize,
+        trigger: trigger,
+        previousSignal: previousSignal,
       ),
-    };
-  }
+    ),
+  };
 
   /// Reports a page not strictly in [comparator]'s order, rather than throwing, so it still lands.
   void _reportIfOutOfOrder(int pageIndex, List<T> pageItems, Comparator<T>? comparator) {
@@ -475,26 +471,24 @@ class _AsyncListViewState<T extends Object>()
     final pages = pagingState.pages;
     if (pages == null) return (pagingState: pagingState, shownIds: const {});
 
-    final editStamp = _editStoreNotifier.value;
-    final isSearchMode = _searchModeNotifier.value;
     // Only edits read it, so an inline grouping keeps de-dup cached.
     final editGrouping = _editStoreNotifier.isEmpty ? null : widget.grouping;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
         identical(pagingState, displayMemo.raw) &&
-        displayMemo.editStamp == editStamp &&
-        displayMemo.isSearchMode == isSearchMode &&
+        displayMemo.editStamp == _editStoreNotifier.value &&
+        displayMemo.isSearchMode == _searchModeNotifier.value &&
         identical(editGrouping, displayMemo.editGrouping)) {
       return displayMemo.display;
     }
 
     final display = _editStoreNotifier.isEmpty
         ? _dedupedDisplay(pagingState)
-        : _editedDisplay(pagingState, pages, isSearchMode: isSearchMode);
+        : _editedDisplay(pagingState, pages, isSearchMode: _searchModeNotifier.value);
     _displayMemo = (
       raw: pagingState,
-      editStamp: editStamp,
-      isSearchMode: isSearchMode,
+      editStamp: _editStoreNotifier.value,
+      isSearchMode: _searchModeNotifier.value,
       editGrouping: editGrouping,
       display: display,
     );
@@ -504,11 +498,10 @@ class _AsyncListViewState<T extends Object>()
 
   /// No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
   _Display<T> _dedupedDisplay(PagingState<T> pagingState) {
-    final itemIdGetter = widget.source.itemIdGetter;
     final seenIds = <Object>{};
 
     return (
-      pagingState: pagingState.filterItems((item) => seenIds.add(itemIdGetter(item))),
+      pagingState: pagingState.filterItems((item) => seenIds.add(widget.source.itemIdGetter(item))),
       shownIds: seenIds,
     );
   }
@@ -591,20 +584,20 @@ class _AsyncListViewState<T extends Object>()
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
     _committedSearch = _CommittedSearch(committedQuery);
-    final isSearchMode = _isSearchMode;
     final cacheAction = widget.source.search.cacheActionFor(
       wasSearching: wasSearching,
-      isSearching: isSearchMode,
+      isSearching: _isSearchMode,
     );
 
-    _searchModeNotifier.value = isSearchMode;
+    _searchModeNotifier.value = _isSearchMode;
     final keptSnapshot = _runCacheAction(cacheAction);
 
-    final observer = widget.observer;
-    observer?.onQueryCommitted(committedQuery);
-    if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
+    widget.observer?.onQueryCommitted(committedQuery);
+    if (wasSearching != _isSearchMode) {
+      widget.observer?.onSearchModeChanged(isSearchMode: _isSearchMode);
+    }
     if (keptSnapshot == null) {
-      observer?.onReload(.queryChanged); // reset, not restored
+      widget.observer?.onReload(.queryChanged); // reset, not restored
 
       return;
     }
@@ -685,8 +678,6 @@ class _AsyncListViewState<T extends Object>()
 
   @override
   Widget build(BuildContext context) {
-    final surfaces = widget.surfaces;
-
     final pagedList = TripleValueListenableBuilder(
       firstListenable: _pagingStateNotifier,
       secondListenable: _searchModeNotifier,
@@ -719,13 +710,13 @@ class _AsyncListViewState<T extends Object>()
           query: _committedSearch.query,
           startKey: _committedSearch,
           separatorBuilder: widget.separatorBuilder,
-          firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
-          newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
-          firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
-          newPageErrorBuilder: surfaces.newPageErrorBuilder,
+          firstPageLoadingBuilder: widget.surfaces.firstPageLoadingBuilder,
+          newPageLoadingBuilder: widget.surfaces.newPageLoadingBuilder,
+          firstPageErrorBuilder: widget.surfaces.firstPageErrorBuilder,
+          newPageErrorBuilder: widget.surfaces.newPageErrorBuilder,
           emptyBuilder: widget.emptyBuilder,
           noResultsBuilder: widget.noResultsBuilder,
-          noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
+          noMoreItemsBuilder: widget.surfaces.noMoreItemsBuilder,
         );
       },
     );
@@ -760,19 +751,18 @@ class _AsyncListViewState<T extends Object>()
 
   /// [shownState]'s rows, in sections.
   Sections<T> _sectionsFor(PagingState<T> shownState) {
-    final grouping = widget.grouping;
     final sectionsMemo = _sectionsMemo;
     if (sectionsMemo != null &&
         identical(shownState, sectionsMemo.shownState) &&
-        identical(grouping, sectionsMemo.grouping)) {
+        identical(widget.grouping, sectionsMemo.grouping)) {
       return sectionsMemo.sections;
     }
 
-    final sections = grouping.sectionsOver(
+    final sections = widget.grouping.sectionsOver(
       // A view, not a copy. Pages never change once built.
       UnmodifiableListView((shownState.pages ?? const []).map((page) => page.items)),
     );
-    _sectionsMemo = (shownState: shownState, grouping: grouping, sections: sections);
+    _sectionsMemo = (shownState: shownState, grouping: widget.grouping, sections: sections);
 
     return sections;
   }

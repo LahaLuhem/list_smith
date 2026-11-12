@@ -179,14 +179,13 @@ final class const _SurfaceDragPhysics({
     final parentAdjustedOffset = super.applyPhysicsToUserOffset(position, offset);
     if (!showsSurfaceGetter()) return parentAdjustedOffset;
 
-    final currentScrollOffset = position.pixels;
     // Never further out than now, so a pull the list changes under stops instead of snapping back.
     final minScrollOffset = takesPullGetter()
         ? double.negativeInfinity
-        : math.min(position.minScrollExtent, currentScrollOffset);
-    final maxScrollOffset = math.max(position.maxScrollExtent, currentScrollOffset);
+        : math.min(position.minScrollExtent, position.pixels);
+    final maxScrollOffset = math.max(position.maxScrollExtent, position.pixels);
 
-    return currentScrollOffset -
-        (currentScrollOffset - parentAdjustedOffset).clamp(minScrollOffset, maxScrollOffset);
+    return position.pixels -
+        (position.pixels - parentAdjustedOffset).clamp(minScrollOffset, maxScrollOffset);
   }
 }

@@ -76,8 +76,10 @@ class _RefreshBindingState() extends State<RefreshBinding> {
   }
 
   bool _trackBounce(ScrollUpdateNotification notification) {
-    final metrics = notification.metrics;
-    _bounceDistance = math.max(0, metrics.minScrollExtent - metrics.pixels);
+    _bounceDistance = math.max(
+      0,
+      notification.metrics.minScrollExtent - notification.metrics.pixels,
+    );
     _updatePullExtent();
 
     // Keeps bubbling, since custom_refresh_indicator reads the same notifications further up.
@@ -97,8 +99,6 @@ class _RefreshBindingState() extends State<RefreshBinding> {
     notificationPredicate: _isForIndicator,
     child: NotificationListener(onNotification: _trackBounce, child: widget.child),
     builder: (context, child, controller) {
-      // A pull always starts at the list's start, so its direction also says which edge it came from.
-      final pullDirection = controller.direction;
       final refreshState = controller.refreshState;
       final indicatorExtent = widget.indicatorExtent;
       // Built only mid-pull, so no indicator can keep ticking while the list sits idle.
@@ -106,7 +106,8 @@ class _RefreshBindingState() extends State<RefreshBinding> {
           ? const SizedBox.shrink()
           : widget.indicatorBuilder?.call(context, refreshState) ??
                 NeutralRefreshIndicator(state: refreshState);
-      final (edgeAlignment, indicatorSize, pushOffset) = switch (pullDirection) {
+      // A pull always starts at the list's start, so its direction also says which edge it came from.
+      final (edgeAlignment, indicatorSize, pushOffset) = switch (controller.direction) {
         .down => (Alignment.topCenter, Size.fromHeight(indicatorExtent), const Offset(0, 1)),
         .up => (Alignment.bottomCenter, Size.fromHeight(indicatorExtent), const Offset(0, -1)),
         .right => (Alignment.centerLeft, Size.fromWidth(indicatorExtent), const Offset(1, 0)),
