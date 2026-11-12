@@ -48,7 +48,8 @@ dev_dependencies:
     git:
       url: https://github.com/LahaLuhem/dartender.git
       path: lints
-      ref: main
+      # Before Dart 3.14's lints, which 3.13 rejects. Back to main with the SDK bump.
+      ref: cc451a5
   dependency_validator: ^5.1.0
   fake_async: ^1.3.3
   analyzer: ^14.7.0

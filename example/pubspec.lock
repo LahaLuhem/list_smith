@@ -133,8 +133,8 @@ packages:
     dependency: "direct dev"
     description:
       path: lints
-      ref: main
-      resolved-ref: "3ad0d9940c5a21264ea040523e994bb2579b12af"
+      ref: cc451a5
+      resolved-ref: cc451a59352d5248d6835da7cf421a9e03513112
       url: "https://github.com/LahaLuhem/dartender.git"
     source: git
     version: "0.0.0"
