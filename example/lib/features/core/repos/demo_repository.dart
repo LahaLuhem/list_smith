@@ -31,6 +31,16 @@ class DemoRepository({
     return _items.where((item) => item.matches(query)).skip(pageIndex * pageSize).take(pageSize);
   }
 
+  /// An exact match on the item's number, the way a scanned code is looked up.
+  Future<Iterable<DemoItem>> lookUpFetchPage(String code, int pageIndex, int pageSize) async {
+    await Future<void>.delayed(latency);
+
+    return _items
+        .where((item) => item.title == 'Item $code')
+        .skip(pageIndex * pageSize)
+        .take(pageSize);
+  }
+
   /// The cursor is the next offset as a string, `null` once the data runs out. list_smith never looks
   /// inside it.
   Future<(Iterable<DemoItem>, Object?)> cursorFetchPage(Object? cursor, int pageSize) async {

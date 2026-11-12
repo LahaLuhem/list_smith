@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:list_smith/list_smith.dart';
 import 'package:material_ui/material_ui.dart' show Divider;
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformButton;
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/data/constants/const_theme.dart';
@@ -12,7 +13,8 @@ import '/features/core/widgets/event_log_panel.dart';
 import 'async_search_view_model.dart';
 
 /// `ListSmith.async` plus `AsyncSearch`, switching `SearchCachePolicy` between Keep and Replace, with a
-/// `ListSmithObserver` whose events stream into an `EventLogPanel`.
+/// `ListSmithObserver` whose events stream into an `EventLogPanel`, and `ListSmithController.search`
+/// and `endSearch` searching from code.
 class const AsyncSearchView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -43,6 +45,21 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
           ),
         ),
         DemoSearchBar(onChanged: viewModel.onQueryChanged),
+        Row(
+          spacing: 8,
+          children: [
+            PlatformButton(
+              onPressed: viewModel.onLookUpPressed,
+              emphasis: .medium,
+              child: const Text('Look up ${AsyncSearchViewModel.scannedCode} from code'),
+            ),
+            PlatformButton(
+              onPressed: viewModel.onEndSearchPressed,
+              emphasis: .medium,
+              child: const Text('End search'),
+            ),
+          ],
+        ),
       ],
       list: ValueListenableBuilder(
         valueListenable: viewModel.shouldKeepCacheListenable,
@@ -56,6 +73,7 @@ class const AsyncSearchView({super.key}) extends StatelessWidget {
               cachePolicy: shouldKeepCache ? const KeepCachePolicy() : const ReplaceCachePolicy(),
             ),
             observer: viewModel.observer,
+            controller: viewModel.controller,
             query: query,
             refresh: const PullToRefresh(indicatorBuilder: ConstTheme.platformRefreshIndicator),
             surfaces: ConstTheme.platformSurfaces,
