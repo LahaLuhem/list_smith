@@ -52,7 +52,7 @@ class const PagedView<T extends Object>({
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
 
-  /// The committed query, which [noResultsBuilder] gets when [isSearchMode] and nothing matched.
+  /// The committed query, for [noResultsBuilder].
   required final String query,
 
   /// Starts the list from the top when it changes.

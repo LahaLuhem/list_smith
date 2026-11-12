@@ -433,10 +433,9 @@ so it reaches the app:
 <a id="idioms-getters-cheap-reads"></a>
 ### A getter is a cheap read, work is a method
 
-`obj.field` reads as a field, so a caller repeats it rather than hoisting it into a local. A getter
-stays cheap: no walk over a collection and no side effect. A branch building a small object from
-fields still counts. Anything that walks or changes state is a method named with a verb, or gets
-computed once into a field:
+`obj.field` reads as free, so callers repeat it instead of hoisting it. A getter walks no
+collection and has no side effect, though a branch building a small object is fine. Anything
+heavier is a verb-named method, or a field computed once:
 
 ```dart
 // Prefer:
@@ -446,9 +445,8 @@ PagingStatus resolveStatus() { /* walks the pages */ }
 PagingStatus get status { /* walks the pages */ }
 ```
 
-Effective Dart lets a getter do significant work. This repo doesn't. A case in between is a
-judgement call, so ask rather than bucket it. A getter the language or an interface fixes
-(`hashCode`, `ValueListenable.value`) stays one.
+Effective Dart allows heavier getters, this repo doesn't. In-between cases get asked about, not
+bucketed. Getters the language or an interface fixes (`hashCode`, `ValueListenable.value`) stay.
 
 ---
 
