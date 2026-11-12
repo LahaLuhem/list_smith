@@ -152,7 +152,7 @@ class _AsyncListViewState<T extends Object>()
     _editStoreNotifier.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
     // A run too, so a reload asked meanwhile meets this load instead of cutting it.
-    _startRun(.initialLoad, (run) => run.reset());
+    _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
   }
 
   @override
@@ -213,7 +213,7 @@ class _AsyncListViewState<T extends Object>()
     final generation = _generation;
     final pages = _pagingStateNotifier.value.pages ?? const [];
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
-    final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
+    final previousSignal = !_signalKind.threadsSignal ? null : _lastPageSignal;
 
     try {
       final pageRead = await _readWithRereads(
@@ -337,7 +337,7 @@ class _AsyncListViewState<T extends Object>()
   /// Asks again for the page that failed, from an error surface.
   void _retryPage() {
     if (_pagingStateNotifier.value.pages == null) {
-      _startRun(.retry, (run) => run.reset()); // a run, like every 1st-page load
+      _startRun(.retry, (reloadRun) => reloadRun.reset()); // a run, like every 1st-page load
     } else {
       unawaited(_fetchNextPage());
     }
@@ -593,7 +593,8 @@ class _AsyncListViewState<T extends Object>()
     return shouldAdvance;
   }
 
-  void _onSearchCommitted(_CommittedSearch<T> committedSearch) {
+  /// The run the commit starts, or null when a kept feed comes back owing nothing.
+  _ReloadRun<T>? _onSearchCommitted(_CommittedSearch<T> committedSearch) {
     final wasSearching = _searchModeNotifier.value;
     _committedSearch = committedSearch;
     final cacheAction = widget.source.search.cacheActionFor(
@@ -602,7 +603,7 @@ class _AsyncListViewState<T extends Object>()
     );
 
     _searchModeNotifier.value = _isSearchMode;
-    final keptSnapshot = _runCacheAction(cacheAction);
+    final (:keptSnapshot, :reloadRun) = _runCacheAction(cacheAction);
 
     widget.observer?.onQueryCommitted(committedSearch.query);
     if (wasSearching != _isSearchMode) {
@@ -611,25 +612,32 @@ class _AsyncListViewState<T extends Object>()
     if (keptSnapshot == null) {
       widget.observer?.onReload(.queryChanged); // reset, not restored
 
-      return;
+      return reloadRun;
     }
     // Paid after the query facts, so the observer's events stay in order.
-    final debt = keptSnapshot.debtFetchTrigger;
-    if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
+    final debtFetchTrigger = keptSnapshot.debtFetchTrigger;
+
+    return debtFetchTrigger == null
+        ? reloadRun
+        : _runReload(debtFetchTrigger, reload: const ReloadToCurrentDepth());
   }
 
-  /// Parks, restores or restarts the stream as [cacheAction] says. The feed it put back, or null when
-  /// it started over.
-  _NormalSnapshot<T>? _runCacheAction(CacheAction cacheAction) {
-    final keptSnapshot = cacheAction == .restoreNormal ? _normalSnapshot : null;
-    if (keptSnapshot == null) {
-      if (cacheAction == .snapshotThenRefresh) _parkFeed();
-      _startRun(.queryChanged, (run) => run.reset());
-    } else {
-      _restoreFeed(keptSnapshot);
+  /// Parks, restores or restarts the stream as [cacheAction] says. Returns the feed it put back, if
+  /// any, and the run it started.
+  ({_NormalSnapshot<T>? keptSnapshot, _ReloadRun<T>? reloadRun}) _runCacheAction(
+    CacheAction cacheAction,
+  ) {
+    final keptSnapshot = cacheAction != .restoreNormal ? null : _normalSnapshot;
+    if (keptSnapshot != null) {
+      return (keptSnapshot: keptSnapshot, reloadRun: _restoreFeed(keptSnapshot));
     }
 
-    return keptSnapshot;
+    if (cacheAction == .snapshotThenRefresh) _parkFeed();
+
+    return (
+      keptSnapshot: null,
+      reloadRun: _startRun(.queryChanged, (reloadRun) => reloadRun.reset()),
+    );
   }
 
   /// Puts the feed aside while searching. Settled, since a restore re-fetches over both flags anyway.
@@ -639,14 +647,14 @@ class _AsyncListViewState<T extends Object>()
       state: _pagingStateNotifier.value.settled(),
       signal: _lastPageSignal,
       // The restart strands a live run, so the feed inherits its ask.
-      debtFetchTrigger: runningReload != null && !runningReload.isStale
-          ? runningReload.pendingAsk
-          : null,
+      debtFetchTrigger: runningReload == null || runningReload.isStale
+          ? null
+          : runningReload.pendingAsk,
     );
   }
 
-  /// Puts the feed kept while searching back.
-  void _restoreFeed(_NormalSnapshot<T> snapshot) {
+  /// Puts the feed kept while searching back. The run that loads its owed 1st page, if any.
+  _ReloadRun<T>? _restoreFeed(_NormalSnapshot<T> snapshot) {
     _rowTransitionsNotifier.settle();
     _generation++;
     _lastFailedPageIndex = null;
@@ -656,8 +664,10 @@ class _AsyncListViewState<T extends Object>()
     // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
     // anyway.
     if (snapshot.state.resolveStatus() == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
-      _startRun(.initialLoad, (run) => run.reset());
+      return _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
     }
+
+    return null;
   }
 
   /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
@@ -789,11 +799,40 @@ class _AsyncListViewState<T extends Object>()
   Future<void> reset() {
     widget.observer?.onReload(.invalidated);
     _normalSnapshot = null; // the kept feed starts over too: the restore falls through to page 0
-    final doneFuture = _startRun(.invalidated, (run) => run.reset()).doneFuture;
+    final doneFuture = _startRun(.invalidated, (reloadRun) => reloadRun.reset()).doneFuture;
     // After the run settles held exits, so none books into the fresh list.
     _editStoreNotifier.clear();
 
     return doneFuture;
+  }
+
+  @override
+  Future<void> search(
+    String query, {
+    SearchPageFetcher<T>? fetchPage,
+    Duration? searchDebounce,
+    int? minSearchLength,
+  }) {
+    assert(
+      widget.source.supportsSearch,
+      'search() needs a list with search. Pass search: AsyncSearch(...) to ListSmith.async.',
+    );
+    assert(
+      fetchPage == null || !widget.source.endPolicy.requiresSignal || fetchPage.signalKind != .none,
+      'This end policy needs a signal-reporting search fetcher. Build the one passed to search() '
+      'with SearchPageFetcher.withSignal.',
+    );
+    if (!widget.source.supportsSearch) return Future.syncValue(null);
+
+    return _debouncer.scheduleFromCode(
+      query,
+      searchDebounce ?? widget.searchDebounce,
+      minSearchLength: minSearchLength ?? widget.minSearchLength,
+      committedQuery: _committedSearch.query,
+      onCommitted: (query) =>
+          _onSearchCommitted(_CommittedSearch(query, fetchPage: fetchPage))?.doneFuture ??
+          Future.syncValue(null),
+    );
   }
 
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
@@ -934,7 +973,11 @@ class _AsyncListViewState<T extends Object>()
       return runningReload;
     }
 
-    return _startRun(trigger, (run) => (reload ?? _reloadFor(trigger)).run(run), announces: true);
+    return _startRun(
+      trigger,
+      (reloadRun) => (reload ?? _reloadFor(trigger)).run(reloadRun),
+      announces: true,
+    );
   }
 
   /// Called directly it cuts in, since [_runReload] is where a caller meets the live run.
@@ -943,19 +986,19 @@ class _AsyncListViewState<T extends Object>()
     AsyncValueSetter<_ReloadRun<T>> work, {
     bool announces = false,
   }) {
-    final run = _ReloadRun(this, trigger);
-    _runningReload = run;
+    final reloadRun = _ReloadRun(this, trigger);
+    _runningReload = reloadRun;
     if (announces) widget.observer?.onReload(trigger);
     unawaited(
-      work(run).whenComplete(() {
-        if (identical(_runningReload, run)) _runningReload = null;
-        run.finish();
-        final rerunTrigger = run.rerunTrigger;
-        if (rerunTrigger != null && !run.isStale) _runReload(rerunTrigger);
+      work(reloadRun).whenComplete(() {
+        if (identical(_runningReload, reloadRun)) _runningReload = null;
+        reloadRun.finish();
+        final rerunTrigger = reloadRun.rerunTrigger;
+        if (rerunTrigger != null && !reloadRun.isStale) _runReload(rerunTrigger);
       }),
     );
 
-    return run;
+    return reloadRun;
   }
 
   /// A re-read keeps the user's place. A refresh does what the pull is configured to do, falling back

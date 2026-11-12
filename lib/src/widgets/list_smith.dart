@@ -40,7 +40,7 @@ class ListSmith<T extends Object> extends StatelessWidget {
   /// Lifecycle events for logging or telemetry. Null is silent. Async only, like [surfaces].
   final ListSmithObserver? observer;
 
-  /// Refreshes the list from code. Null leaves refresh gesture-only. Async only.
+  /// Drives the list from code. Null leaves it to gestures. Async only.
   final ListSmithController<T>? controller;
 
   /// The current search query, yours to own and pass in. Trimmed, then gated by [minSearchLength].

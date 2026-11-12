@@ -156,7 +156,7 @@ final class RowTransitionsNotifier<T extends Object>({
   Animation<double>? _animationOf(Object id) {
     final transition = _transitions[id];
 
-    return transition != null && transition.hasStarted ? transition.controller : null;
+    return transition == null || !transition.hasStarted ? null : transition.controller;
   }
 
   bool _isLeaving(Object id) => _transitions[id]?.bookRemoval != null;

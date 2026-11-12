@@ -1,6 +1,7 @@
 // No-op defaults are the design: a subclass overrides only what it cares about.
 // ignore_for_file: no-empty-block
 
+/// @docImport '/src/data/control/control.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
@@ -49,10 +50,9 @@ abstract base class const ListSmithObserver() {
   /// it owes a reload asked while searching.
   void onReload(FetchTrigger trigger) {}
 
-  /// A new search [query] took effect, after trimming, gating and debounce.
+  /// A search [query] took effect, after trimming, gating and debounce. Empty means back to the feed.
   ///
-  /// What's actually searched on, not every keystroke. Empty means back to the normal feed. The query
-  /// a list is built with doesn't fire, only changes do.
+  /// Fires on a change and on every [ListSmithController.search], not on the query a list starts with.
   void onQueryCommitted(String query) {}
 
   /// The list crossed between normal and search mode. The edge only: [onQueryCommitted] fires on every

@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '/src/data/search/search.dart';
+
 /// What a [ListSmithController] drives: the engine's own entry points, one per intent.
 ///
 /// The engine implements it and attaches itself, so the handle and the gesture can't drift apart.
@@ -16,6 +18,14 @@ abstract interface class ListSmithControllerHost<T extends Object>._() {
 
   /// See [ListSmithController.reset].
   Future<void> reset();
+
+  /// See [ListSmithController.search].
+  Future<void> search(
+    String query, {
+    SearchPageFetcher<T>? fetchPage,
+    Duration? searchDebounce,
+    int? minSearchLength,
+  });
 
   /// See [ListSmithController.upsert].
   void upsert(T item);
