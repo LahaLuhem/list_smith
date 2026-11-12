@@ -417,7 +417,7 @@ class _AsyncListViewState<T extends Object>()
 
     return _editStoreNotifier.removalStampsSince(
       readStamp,
-      goingOutIds: _rowTransitionsNotifier.leavingIds,
+      goingOutIds: _rowTransitionsNotifier.findLeavingIds(),
       leavesPlacePredicate: (itemId, replacedItem, editedItem) {
         final listedItem = loadedItemsById[itemId] ?? replacedItem;
         if (listedItem == null) return false;
@@ -562,7 +562,7 @@ class _AsyncListViewState<T extends Object>()
     final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
     final isMoreAvailable = _nextPageIndex(state.pages) != null;
     // The user emptied it, not the server, so there's more to show.
-    if (isEmpty && state.items.isNotEmpty && isMoreAvailable) return true;
+    if (isEmpty && state.flattenItems().isNotEmpty && isMoreAvailable) return true;
 
     return widget.source.onEmptyPage.shouldAdvance(
       EmptyPageContext(
@@ -635,7 +635,7 @@ class _AsyncListViewState<T extends Object>()
     _pagingStateNotifier.value = snapshot.state;
     // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
     // anyway.
-    if (snapshot.state.status() == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
+    if (snapshot.state.resolveStatus() == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
       _startRun(.initialLoad, (run) => run.reset());
     }
   }
@@ -736,7 +736,7 @@ class _AsyncListViewState<T extends Object>()
     .ongoing || .subsequentPageError || .completed => false,
   };
 
-  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).status();
+  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).resolveStatus();
 
   /// What the list shows of [state]. While it pages past an empty page, that's the loader, and the
   /// empty surface waits for the true end (or the maxPages give-up).
@@ -853,7 +853,7 @@ class _AsyncListViewState<T extends Object>()
 
   /// Whether [book] brought in a new row.
   bool _bookGrowingIn(T item, VoidCallback book) {
-    final animation = _editAnimation;
+    final animation = _resolveEditAnimation();
     if (animation == null) {
       book();
 
@@ -873,7 +873,7 @@ class _AsyncListViewState<T extends Object>()
   void remove(T item) => _bookShrinkingOut(item, () => _edit(item, null));
 
   void _bookShrinkingOut(T item, VoidCallback book) {
-    final animation = _editAnimation;
+    final animation = _resolveEditAnimation();
     final id = widget.source.itemIdGetter(item);
     if (animation == null || !_isShown(id)) {
       book();
@@ -891,7 +891,7 @@ class _AsyncListViewState<T extends Object>()
 
   /// The edit transition, unless there is none, the platform asks for less motion, or a save answered
   /// after the list was gone.
-  AnimatedEditTransition? get _editAnimation => switch (widget.source.editTransition) {
+  AnimatedEditTransition? _resolveEditAnimation() => switch (widget.source.editTransition) {
     final AnimatedEditTransition transition
         when mounted && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
       transition,
@@ -969,6 +969,8 @@ final class _ReloadRun<T extends Object>(
   /// it stale.
   int _epoch = _engine._generation;
 
+  final PagingState<T> _startState = _engine._pagingStateNotifier.value;
+
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
   FetchTrigger? rerunTrigger;
 
@@ -988,8 +990,6 @@ final class _ReloadRun<T extends Object>(
   @override
   bool get isStale => _engine._generation != _epoch;
 
-  PagingState<T>? _startState;
-
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
@@ -997,7 +997,7 @@ final class _ReloadRun<T extends Object>(
   final _previousSignals = <int, Object?>{};
 
   @override
-  int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
+  int get depth => _startState.pages?.length ?? 0;
 
   @override
   bool get isSignalBased => _engine._signalKind.threadsSignal;
@@ -1015,7 +1015,7 @@ final class _ReloadRun<T extends Object>(
     if (isStale) return;
     final source = _engine.widget.source;
     final rereadIndexes = resolveRereadIndexes(
-      oldPages: (_startState?.pages ?? const []).map((page) => page.items),
+      oldPages: (_startState.pages ?? const []).map((page) => page.items),
       freshPages: pages,
       readStamps: _readStamps,
       removalStamps: _engine._removalStampsSince(

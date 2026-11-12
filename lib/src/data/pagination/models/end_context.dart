@@ -4,7 +4,7 @@ library;
 
 /// What a [PaginationEndPolicy] sees when deciding whether an async list has run out of data.
 ///
-/// Rebuilt after each page lands, so a policy stays a pure function of its input.
+/// Built fresh each time the list asks, so a policy stays a pure function of its input.
 final class const EndContext({
   /// The item count of each page fetched so far, in fetch order. Read-only.
   required final List<int> pageItemCounts,
@@ -26,8 +26,12 @@ final class const EndContext({
   int get lastPageItemCount => pageItemCounts.lastOrNull ?? 0;
 
   /// How many empty pages sit at the end of [pageItemCounts], in a row.
-  int get trailingEmptyRun =>
+  int countTrailingEmptyPages() =>
       pageItemCounts.length - 1 - pageItemCounts.lastIndexWhere((count) => count != 0);
+
+  /// See [countTrailingEmptyPages].
+  @Deprecated('Call countTrailingEmptyPages() instead. It goes at the next major.')
+  int get trailingEmptyRun => countTrailingEmptyPages();
 
   @override
   String toString() =>

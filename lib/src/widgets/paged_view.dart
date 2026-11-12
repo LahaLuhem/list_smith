@@ -88,7 +88,7 @@ class const PagedView<T extends Object>({
 
   @override
   Widget build(BuildContext context) {
-    final status = state.status();
+    final status = state.resolveStatus();
     // The error surfaces read `state.exception!`, non-null because only an error status builds them.
     final surfaceWidget = switch (status) {
       .loadingFirstPage =>

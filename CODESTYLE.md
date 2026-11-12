@@ -35,6 +35,7 @@ style: explicit types, no ambient mutability, small focused classes.
   - [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#idioms-fine-grained-rebuilds)
   - [Plain `if`s over clever `switch` arms](#idioms-plain-conditionals)
   - [Catch `Exception`, let `Error` through](#idioms-catch-exceptions)
+  - [A getter is a cheap read, work is a method](#idioms-getters-cheap-reads)
 - [Prose & voice](#prose)
 - [Comments & dartdoc](#dartdoc)
   - [`@docImport` for dartdoc-only references](#dartdoc-docimport)
@@ -428,6 +429,26 @@ so it reaches the app:
   if (error is! Exception) rethrow;
 }
 ```
+
+<a id="idioms-getters-cheap-reads"></a>
+### A getter is a cheap read, work is a method
+
+`obj.field` reads as a field, so a caller repeats it rather than hoisting it into a local. A getter
+stays cheap: no walk over a collection and no side effect. A branch building a small object from
+fields still counts. Anything that walks or changes state is a method named with a verb, or gets
+computed once into a field:
+
+```dart
+// Prefer:
+PagingStatus resolveStatus() { /* walks the pages */ }
+
+// Over: reads as free, so a caller asks twice.
+PagingStatus get status { /* walks the pages */ }
+```
+
+Effective Dart lets a getter do significant work. This repo doesn't. A case in between is a
+judgement call, so ask rather than bucket it. A getter the language or an interface fixes
+(`hashCode`, `ValueListenable.value`) stays one.
 
 ---
 
