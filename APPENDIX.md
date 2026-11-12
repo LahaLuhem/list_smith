@@ -139,9 +139,10 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
   live feed run is born owing, since the reset strands that run. `reset()` drops the snapshot.
 - **No nullable fetcher.** The fetch pattern-matches `AsyncSearch` to reach it. A query without one
   asserts in debug and pages normally in release.
-- **A shared `QueryDebouncer`** owns the timer, trim and skip-unchanged. It seeds the 1st query
-  synchronously and commits a zero-debounce change on the next tick, so no `setState` lands during
-  `didUpdateWidget`.
+- **A shared `QueryDebouncer`** owns the timer, trim and skip-unchanged, and holds no query. Each
+  list keeps its committed one and passes it in, so there's no 2nd copy to keep in step. A list
+  seeds its 1st query synchronously, and a zero-debounce change commits on the next tick, so no
+  `setState` lands during `didUpdateWidget`.
 
 ---
 
