@@ -79,8 +79,10 @@ class _AsyncListViewState<T extends Object>()
     extends State<AsyncListView<T>>
     with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
-  late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
-  late _CommittedSearch _committedSearch;
+  late final _debouncer = QueryDebouncer(
+    onCommitted: (query) => _onSearchCommitted(_CommittedSearch(query)),
+  );
+  late _CommittedSearch<T> _committedSearch;
 
   /// The pages and where the stream stands. Only the engine writes it, so a fetch starts only when the
   /// engine asks for one.
@@ -189,11 +191,15 @@ class _AsyncListViewState<T extends Object>()
 
   bool get _isSearchMode => _committedSearch.query.isNotEmpty && widget.source.supportsSearch;
 
-  /// What the current mode's fetcher returns beside its items.
-  SignalKind get _signalKind => switch (widget.source.search) {
-    final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage.signalKind,
-    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.signalKind,
+  /// The committed search's fetcher, null on the feed.
+  SearchPageFetcher<T>? get _searchFetcher => switch (widget.source.search) {
+    final AsyncSearch<T> asyncSearch when _isSearchMode =>
+      _committedSearch.fetchPage ?? asyncSearch.fetchPage,
+    AsyncSearch<T>() || NoSearch() => null,
   };
+
+  /// What the current mode's fetcher returns beside its items.
+  SignalKind get _signalKind => _searchFetcher?.signalKind ?? widget.source.fetchPage.signalKind;
 
   /// Fetches the next page into the current stream, unless one is already on its way or the stream has
   /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
@@ -373,25 +379,28 @@ class _AsyncListViewState<T extends Object>()
     int pageIndex,
     Object? previousSignal,
     FetchTrigger trigger,
-  ) => switch (widget.source.search) {
-    final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage(
-      SearchPageRequest(
-        query: _committedSearch.query,
-        pageIndex: pageIndex,
-        pageSize: widget.source.pageSize,
-        trigger: trigger,
-        previousSignal: previousSignal,
-      ),
-    ),
-    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage(
-      PageRequest(
-        pageIndex: pageIndex,
-        pageSize: widget.source.pageSize,
-        trigger: trigger,
-        previousSignal: previousSignal,
-      ),
-    ),
-  };
+  ) {
+    final searchFetcher = _searchFetcher;
+
+    return searchFetcher == null
+        ? widget.source.fetchPage(
+            PageRequest(
+              pageIndex: pageIndex,
+              pageSize: widget.source.pageSize,
+              trigger: trigger,
+              previousSignal: previousSignal,
+            ),
+          )
+        : searchFetcher(
+            SearchPageRequest(
+              query: _committedSearch.query,
+              pageIndex: pageIndex,
+              pageSize: widget.source.pageSize,
+              trigger: trigger,
+              previousSignal: previousSignal,
+            ),
+          );
+  }
 
   /// Reports a page not strictly in [comparator]'s order, rather than throwing, so it still lands.
   void _reportIfOutOfOrder(int pageIndex, List<T> pageItems, Comparator<T>? comparator) {
@@ -581,9 +590,9 @@ class _AsyncListViewState<T extends Object>()
     return shouldAdvance;
   }
 
-  void _onQueryCommitted(String committedQuery) {
+  void _onSearchCommitted(_CommittedSearch<T> committedSearch) {
     final wasSearching = _searchModeNotifier.value;
-    _committedSearch = _CommittedSearch(committedQuery);
+    _committedSearch = committedSearch;
     final cacheAction = widget.source.search.cacheActionFor(
       wasSearching: wasSearching,
       isSearching: _isSearchMode,
@@ -592,7 +601,7 @@ class _AsyncListViewState<T extends Object>()
     _searchModeNotifier.value = _isSearchMode;
     final keptSnapshot = _runCacheAction(cacheAction);
 
-    widget.observer?.onQueryCommitted(committedQuery);
+    widget.observer?.onQueryCommitted(committedSearch.query);
     if (wasSearching != _isSearchMode) {
       widget.observer?.onSearchModeChanged(isSearchMode: _isSearchMode);
     }
@@ -1090,7 +1099,12 @@ final class _ReloadRun<T extends Object>(
 
 /// What the list shows, the feed when [query] is empty. A new one per commit, for the scroll start
 /// to key on.
-final class _CommittedSearch(final String query);
+final class _CommittedSearch<T extends Object>(
+  final String query, {
+
+  /// Where its pages come from, null for the search's own.
+  final SearchPageFetcher<T>? fetchPage,
+});
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
 final class _NormalSnapshot<T extends Object>({
