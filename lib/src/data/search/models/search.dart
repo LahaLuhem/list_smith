@@ -1,3 +1,4 @@
+/// @docImport '/src/data/control/control.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 

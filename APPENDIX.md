@@ -42,6 +42,7 @@ Why list_smith is built the way it is, where the code and the rules don't say. H
 - [An order places edits where the server sorts them](#sorted-placement)
 - [The row the user is reading holds still](#keep-position)
 - [A new search starts at the top](#search-starts-at-top)
+- [Code starts the one search, as typing does](#search-from-code)
 
 <!-- TOC end -->
 
@@ -126,8 +127,9 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 <a id="async-two-view-search"></a>
 ## Async search: one paging state, 2 views
 
-- **Decision:** async search shares the one paging state. The fetch reads the committed query:
-  empty runs `fetchPage`, anything else the `AsyncSearch` fetcher. Search mode needs both.
+- **Decision:** async search shares the one paging state. The fetch reads the committed search: an
+  empty query runs `fetchPage`, anything else the `AsyncSearch` fetcher, or the one a
+  [`search()`](#search-from-code) call passed. Search mode needs both.
 - **Why one state:** paging, pull-to-refresh, the end policy and `refresh()` serve both modes, with
   no 2nd state to keep in step. `refresh()` while searching reloads the search.
 - **Cache policy is a pure decision the engine runs.** `actionFor(wasSearching, isSearching)`
@@ -290,7 +292,8 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 ## A narrow controller: intents out, nothing back
 
 - **Decision:** an optional `ListSmithController` on `.async` carrying intents: `refresh()`,
-  `invalidate()`, `reset()` and the [edits](#edit-layer). No paging state is reachable through it.
+  `invalidate()`, `reset()`, the [search verbs](#search-from-code) and the [edits](#edit-layer). No
+  paging state is reachable through it.
 - **No scrolling verbs.** Apps scroll through `ListScrollConfig.controller`, and index scrolling
   needs fixed extents.
 - **Intents, not state.** No `isRefreshing`, count or `hasMore`: notifying is the
@@ -629,8 +632,9 @@ Every Dependabot PR, majors included, auto-merges through dartender's `ci.yml`. 
 <a id="search-starts-at-top"></a>
 ## A new search starts at the top
 
-- **Decision:** the engine hands the list its committed query, and a proxy sliver around the rows or
-  surface corrects the offset to 0 at layout when it changes.
+- **Decision:** the engine hands the list its committed search, a new one per commit, and a proxy
+  sliver around the rows or surface corrects the offset to 0 at layout when it changes. So a repeat
+  `search()` starts at the top too.
 - **Why the top:** the results are a different list, so the old offset points at whatever sits there
   now, and the row being read is usually outside the built rows.
 - **Clearing loses the place.** Returning to it is the build-upward path, which only `.sync` could
@@ -638,6 +642,24 @@ Every Dependabot PR, majors included, auto-merges through dartender's `ci.yml`. 
 - **A sliver, not `jumpTo(0)`:** no frame shows the old offset, and no scroll controller is needed.
 - **It corrects once.** The short landing [keep-position](#keep-position) warns of never showed
   after a query change. If it does, stay armed while the list corrects itself at the start.
+
+---
+
+<a id="search-from-code"></a>
+## Code starts the one search, as typing does
+
+- **Decision:** `search()` and `endSearch()` reach the commit step typing does, so past it only a
+  fetcher the call passed tells them apart. A barcode scan was the case: a lookup's hits replace the
+  list, as typing the code would.
+- **The route comes with the call,** null meaning the search's own, so any number of endpoints need
+  nothing declared on the list. Declaring them on `AsyncSearch` is the build-upward path.
+- **Typing's debounce and gate by default,** so a call behaves like typing unless it passes its own.
+- **Each call is its own event,** so a repeat runs, and a failed lookup retries.
+- **It reports as typing does.** `FetchTrigger` names what happened to the list, not who did it, as
+  `refresh` does for the pull and `refresh()`. A new value would break every exhaustive switch.
+- **`endSearch()` lands on what `query` holds,** like clearing, so a kept feed comes back without a
+  fetch.
+- **A passed fetcher's signal is asserted at the call,** since it never meets the constructor.
 
 ---
 
