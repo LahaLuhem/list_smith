@@ -163,7 +163,10 @@ class _AsyncListViewState<T extends Object>()
       oldWidget.controller?.detach();
       widget.controller?.attach(this);
     }
-    if (widget.query != oldWidget.query) {
+    if (oldWidget.source.supportsSearch && !widget.source.supportsSearch) {
+      // Lands like a cleared query, at once, so the results never page on with the feed's fetcher.
+      _debouncer.schedule('', .zero, minSearchLength: 0, committedQuery: _committedSearch.query);
+    } else if (widget.query != oldWidget.query) {
       _debouncer.schedule(
         widget.query,
         widget.searchDebounce,
