@@ -11,11 +11,22 @@ import '/features/core/repos/demo_repository.dart';
 final class AsyncSearchViewModel() extends ViewModel with SearchQueryMixin, FailureInjectionMixin {
   static const _maxLoggedEvents = 50;
 
+  /// Typed, it also matches 113 and 130 to 137, so the lookup's own endpoint shows.
+  static const scannedCode = '13';
+
   final _repository = DemoRepository();
   final _shouldKeepCacheNotifier = ValueNotifier(false);
   final _eventsNotifier = ListNotifier<String>();
 
   late final observer = _EventLogObserver(_record);
+
+  final controller = ListSmithController<DemoItem>();
+
+  late final _lookUpFetcher = SearchPageFetcher(
+    (request) => withInjectedFailures(
+      _repository.lookUpFetchPage(request.query, request.pageIndex, request.pageSize),
+    ),
+  );
 
   ValueListenable<bool> get shouldKeepCacheListenable => _shouldKeepCacheNotifier;
 
@@ -34,6 +45,12 @@ final class AsyncSearchViewModel() extends ViewModel with SearchQueryMixin, Fail
   // ignore: use_setters_to_change_properties
   void onKeepCacheToggled({required bool value}) => _shouldKeepCacheNotifier.value = value;
   // coverage:ignore-end
+
+  /// A scan stand-in: no wait, and its own endpoint.
+  Future<void> onLookUpPressed() =>
+      controller.search(scannedCode, fetchPage: _lookUpFetcher, searchDebounce: .zero);
+
+  Future<void> onEndSearchPressed() => controller.endSearch();
 
   void clearLog() => _eventsNotifier.clear();
 

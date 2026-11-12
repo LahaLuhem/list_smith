@@ -681,7 +681,7 @@ class _AsyncListViewState<T extends Object>()
 
     // Once the current work is done, so a reload's events fire before its page is asked for, and resets
     // made in one go send one request.
-    return Future.microtask(() async {
+    return .microtask(() async {
       if (generation == _generation) await _fetchNextPage(trigger: trigger);
     });
   }
