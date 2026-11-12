@@ -118,13 +118,12 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
   /// Copies the source's items, each id once, since keyed rows can't share one.
   void _takeItems() {
-    final source = widget.source;
-    final itemIdGetter = source.itemIdGetter;
+    final itemIdGetter = widget.source.itemIdGetter;
     // In debug, the copy the in-place check keeps is the one walk of the source.
-    final passedItems = kDebugMode ? source.items.toList(growable: false) : null;
+    final passedItems = kDebugMode ? widget.source.items.toList(growable: false) : null;
     final (:items, :repeatedId) = itemIdGetter == null
-        ? (items: passedItems ?? source.items.toList(growable: false), repeatedId: null)
-        : firstOfEachId(passedItems ?? source.items, itemIdGetter);
+        ? (items: passedItems ?? widget.source.items.toList(growable: false), repeatedId: null)
+        : firstOfEachId(passedItems ?? widget.source.items, itemIdGetter);
     _items = items;
     _passedItems = passedItems;
     if (kDebugMode && repeatedId != null) {
@@ -137,12 +136,11 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
   _Display<T> _resolve() {
     final searchResult = resolveSyncSearch(_items, widget.source.searchBy, _committedQuery);
-    final grouping = widget.grouping;
-    final visibleItems = grouping.arrange(searchResult.visibleItems);
+    final visibleItems = widget.grouping.arrange(searchResult.visibleItems);
 
     return (
       visibleItems: visibleItems,
-      sections: grouping.sectionsOver([visibleItems]),
+      sections: widget.grouping.sectionsOver([visibleItems]),
       isSearching: searchResult.isSearching,
     );
   }
@@ -175,7 +173,6 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
         } else {
           surfaceWidget = null;
         }
-        final scrollConfig = widget.scrollConfig;
 
         return KeyedListView(
           sections: display.sections,
@@ -189,12 +186,12 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
               ? null
               : KeyedSubtree(key: ValueKey(isEmpty), child: surfaceWidget),
           separatorBuilder: widget.separatorBuilder,
-          controller: scrollConfig.controller,
-          scrollDirection: scrollConfig.scrollDirection,
-          reverse: scrollConfig.reverse,
-          physics: scrollConfig.physics,
-          padding: scrollConfig.padding,
-          scrollCacheExtent: scrollConfig.scrollCacheExtent,
+          controller: widget.scrollConfig.controller,
+          scrollDirection: widget.scrollConfig.scrollDirection,
+          reverse: widget.scrollConfig.reverse,
+          physics: widget.scrollConfig.physics,
+          padding: widget.scrollConfig.padding,
+          scrollCacheExtent: widget.scrollConfig.scrollCacheExtent,
         );
       },
     );

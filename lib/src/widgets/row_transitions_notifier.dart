@@ -213,19 +213,18 @@ class _TransitionRowState<T extends Object>() extends State<_TransitionRow<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final transitionsNotifier = widget.rowTransitionsNotifier;
-    final leavingChild = transitionsNotifier._leavingChildOf(widget.id);
+    final leavingChild = widget.rowTransitionsNotifier._leavingChildOf(widget.id);
     final child = leavingChild ?? widget.buildChild(context);
     if (leavingChild == null) _lastChild = child;
     final keyedChild = KeyedSubtree(key: _childKey, child: child);
 
     return ListenableBuilder(
-      listenable: transitionsNotifier,
+      listenable: widget.rowTransitionsNotifier,
       builder: (_, _) {
-        final animation = transitionsNotifier._animationOf(widget.id);
+        final animation = widget.rowTransitionsNotifier._animationOf(widget.id);
         if (animation == null) return keyedChild;
 
-        final isLeaving = transitionsNotifier._isLeaving(widget.id);
+        final isLeaving = widget.rowTransitionsNotifier._isLeaving(widget.id);
 
         // Nobody taps a row that's going, or hears it read out.
         return IgnorePointer(
