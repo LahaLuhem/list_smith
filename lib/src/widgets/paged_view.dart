@@ -52,9 +52,11 @@ class const PagedView<T extends Object>({
   /// Whether the current results are a search: picks the no-results surface over the empty one.
   required final bool isSearchMode,
 
-  /// The committed query. The list starts from the top when it changes, and [noResultsBuilder] gets
-  /// it when [isSearchMode] and nothing matched.
+  /// The committed query, which [noResultsBuilder] gets when [isSearchMode] and nothing matched.
   required final String query,
+
+  /// Starts the list from the top when it changes.
+  required final Object startKey,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -86,7 +88,7 @@ class const PagedView<T extends Object>({
 
   @override
   Widget build(BuildContext context) {
-    final status = state.status;
+    final status = state.status();
     // The error surfaces read `state.exception!`, non-null because only an error status builds them.
     final surfaceWidget = switch (status) {
       .loadingFirstPage =>
@@ -119,13 +121,13 @@ class const PagedView<T extends Object>({
       },
       pullExtentListenable: pullExtentListenable,
       shouldKeepPosition: shouldKeepPosition,
-      startKey: query,
+      startKey: startKey,
       // Keyed by status, so one surface replacing another starts fresh.
       surface: surfaceWidget == null
           ? null
           : KeyedSubtree(key: ValueKey(status), child: surfaceWidget),
       // Only an ongoing list asks for more, so a failed page waits for Retry.
-      onNearEnd: status == .ongoing ? onNearEnd : null,
+      onNearEnd: status != .ongoing ? null : onNearEnd,
       separatorBuilder: separatorBuilder,
       controller: scrollConfig.controller,
       scrollDirection: scrollConfig.scrollDirection,

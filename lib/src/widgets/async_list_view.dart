@@ -64,7 +64,7 @@ class const AsyncListView<T extends Object>({
   /// Lifecycle events for logging or telemetry. Null is silent.
   final ListSmithObserver? observer,
 
-  /// Refreshes this list from code. Null leaves refresh gesture-only.
+  /// Drives this list from code. Null leaves it to gestures.
   final ListSmithController<T>? controller,
   super.key,
 }) extends StatefulWidget {
@@ -80,6 +80,7 @@ class _AsyncListViewState<T extends Object>()
     with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
+  late _CommittedSearch _committedSearch;
 
   /// The pages and where the stream stands. Only the engine writes it, so a fetch starts only when the
   /// engine asks for one.
@@ -120,7 +121,7 @@ class _AsyncListViewState<T extends Object>()
 
   final _editStoreNotifier = EditStoreNotifier<T>();
 
-  /// Whether the controller currently reflects search results (drives the empty/no-results surface).
+  /// Whether the shown pages are search results, which picks the no-results surface over the empty one.
   late final ValueNotifier<bool> _searchModeNotifier;
 
   /// The run in flight, a reload or a 1st-page load, null when there is none.
@@ -137,7 +138,8 @@ class _AsyncListViewState<T extends Object>()
     super.initState();
 
     _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
-    _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
+    _committedSearch = _CommittedSearch(_debouncer.committedQuery);
+    _searchModeNotifier = ValueNotifier(_isSearchMode);
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
@@ -180,12 +182,11 @@ class _AsyncListViewState<T extends Object>()
     super.dispose();
   }
 
-  bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
+  bool get _isSearchMode => _committedSearch.query.isNotEmpty && widget.source.supportsSearch;
 
   /// What the current mode's fetcher returns beside its items.
   SignalKind get _signalKind => switch (widget.source.search) {
-    final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
-      asyncSearch.fetchPage.signalKind,
+    final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage.signalKind,
     AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.signalKind,
   };
 
@@ -339,7 +340,7 @@ class _AsyncListViewState<T extends Object>()
     FetchTrigger trigger,
   ) async {
     final generation = _generation;
-    final isSearchMode = _isSearchQuery(_debouncer.committedQuery);
+    final isSearchMode = _isSearchMode;
 
     try {
       final (items, signal) = await _requestPage(pageIndex, previousSignal, trigger);
@@ -369,12 +370,11 @@ class _AsyncListViewState<T extends Object>()
     FetchTrigger trigger,
   ) {
     final source = widget.source;
-    final committedQuery = _debouncer.committedQuery;
 
     return switch (source.search) {
-      final AsyncSearch<T> asyncSearch when _isSearchQuery(committedQuery) => asyncSearch.fetchPage(
+      final AsyncSearch<T> asyncSearch when _isSearchMode => asyncSearch.fetchPage(
         SearchPageRequest(
-          query: committedQuery,
+          query: _committedSearch.query,
           pageIndex: pageIndex,
           pageSize: source.pageSize,
           trigger: trigger,
@@ -410,7 +410,7 @@ class _AsyncListViewState<T extends Object>()
     int readStamp,
     ValueGetter<Map<Object, T>> loadedItemsByIdGetter,
   ) {
-    final comparator = _comparatorFor(isSearchMode: _isSearchQuery(_debouncer.committedQuery));
+    final comparator = _comparatorFor(isSearchMode: _isSearchMode);
     late final loadedItemsById = loadedItemsByIdGetter();
 
     return _editStoreNotifier.removalStampsSince(
@@ -573,7 +573,8 @@ class _AsyncListViewState<T extends Object>()
 
   void _onQueryCommitted(String committedQuery) {
     final wasSearching = _searchModeNotifier.value;
-    final isSearchMode = _isSearchQuery(committedQuery);
+    _committedSearch = _CommittedSearch(committedQuery);
+    final isSearchMode = _isSearchMode;
     final cacheAction = widget.source.search.cacheActionFor(
       wasSearching: wasSearching,
       isSearching: isSearchMode,
@@ -632,7 +633,7 @@ class _AsyncListViewState<T extends Object>()
     _pagingStateNotifier.value = snapshot.state;
     // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
     // anyway.
-    if (snapshot.state.status == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
+    if (snapshot.state.status() == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
       _startRun(.initialLoad, (run) => run.reset());
     }
   }
@@ -698,7 +699,8 @@ class _AsyncListViewState<T extends Object>()
           pullExtentListenable: _pullExtentNotifier,
           shouldKeepPosition: widget.source.shouldKeepPosition,
           isSearchMode: isSearchMode,
-          query: _debouncer.committedQuery,
+          query: _committedSearch.query,
+          startKey: _committedSearch,
           separatorBuilder: widget.separatorBuilder,
           firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
           newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
@@ -732,7 +734,7 @@ class _AsyncListViewState<T extends Object>()
     .ongoing || .subsequentPageError || .completed => false,
   };
 
-  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).status;
+  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).status();
 
   /// What the list shows of [state]. While it pages past an empty page, that's the loader, and the
   /// empty surface waits for the true end (or the maxPages give-up).
@@ -1078,6 +1080,10 @@ final class _ReloadRun<T extends Object>(
     if (!_handOverCompleter.isCompleted) _handOverCompleter.complete();
   }
 }
+
+/// The search the list shows, the feed when [query] is empty. One per commit, which the scroll start
+/// keys on by identity.
+final class _CommittedSearch(final String query);
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
 final class _NormalSnapshot<T extends Object>({
