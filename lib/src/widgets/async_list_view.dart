@@ -137,8 +137,9 @@ class _AsyncListViewState<T extends Object>()
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
-    _committedSearch = _CommittedSearch(_debouncer.committedQuery);
+    _committedSearch = _CommittedSearch(
+      QueryDebouncer.searchQueryOf(widget.query, minSearchLength: widget.minSearchLength),
+    );
     _searchModeNotifier = ValueNotifier(_isSearchMode);
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
@@ -162,6 +163,7 @@ class _AsyncListViewState<T extends Object>()
         widget.query,
         widget.searchDebounce,
         minSearchLength: widget.minSearchLength,
+        committedQuery: _committedSearch.query,
       );
     }
     // Turned off mid-animation: a leaving row would otherwise build its deleted item again.

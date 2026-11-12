@@ -18,7 +18,7 @@ import 'keyed_list_view.dart';
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and shows it in the same keyed list as `.async`.
 ///
-/// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
+/// No paging and no pull-to-refresh, since in-memory data has nothing to page or refresh.
 @internal
 class const SyncListView<T extends Object>({
   /// The items and the predicate that filters them.
@@ -61,6 +61,7 @@ class const SyncListView<T extends Object>({
 
 class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
+  late String _committedQuery;
   late final ValueNotifier<_Display<T>> _displayNotifier;
   late List<T> _items;
 
@@ -72,7 +73,10 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
+    _committedQuery = QueryDebouncer.searchQueryOf(
+      widget.query,
+      minSearchLength: widget.minSearchLength,
+    );
     _takeItems();
     _displayNotifier = ValueNotifier(_resolve());
   }
@@ -99,6 +103,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
         widget.query,
         widget.searchDebounce,
         minSearchLength: widget.minSearchLength,
+        committedQuery: _committedQuery,
       );
     }
   }
@@ -131,11 +136,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   }
 
   _Display<T> _resolve() {
-    final searchResult = resolveSyncSearch(
-      _items,
-      widget.source.searchBy,
-      _debouncer.committedQuery,
-    );
+    final searchResult = resolveSyncSearch(_items, widget.source.searchBy, _committedQuery);
     final grouping = widget.grouping;
     final visibleItems = grouping.arrange(searchResult.visibleItems);
 
@@ -146,7 +147,10 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
     );
   }
 
-  void _onQueryCommitted(String committedQuery) => _displayNotifier.value = _resolve();
+  void _onQueryCommitted(String committedQuery) {
+    _committedQuery = committedQuery;
+    _displayNotifier.value = _resolve();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +170,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
           surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
         } else if (display.isSearching && display.visibleItems.isEmpty) {
           surfaceWidget =
-              widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
+              widget.noResultsBuilder?.call(context, _committedQuery) ??
               const NeutralNoResultsIndicator();
         } else {
           surfaceWidget = null;
@@ -178,7 +182,7 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
           itemBuilder: widget.itemBuilder,
           pullExtentListenable: const AlwaysStoppedAnimation(0),
           shouldKeepPosition: widget.source.shouldKeepPosition,
-          startKey: _debouncer.committedQuery,
+          startKey: _committedQuery,
           itemIdGetter: widget.source.itemIdGetter,
           // Keyed by which surface, so one replacing the other starts fresh.
           surface: surfaceWidget == null

@@ -6,29 +6,32 @@ import 'package:list_smith/src/utils/query_debouncer.dart';
 void main() {
   final debouncerFeature = BddFeature('Query debouncing');
 
-  const seedKey = 'seed';
-  const queryKey = 'query';
   const committedKey = 'committed';
+  const queryKey = 'query';
+  const commitsKey = 'commits';
 
   Bdd(debouncerFeature)
       .scenario('commits the trimmed query, and one shorter than minSearchLength as no query')
-      .given('a debouncer seeded with <$seedKey>, minSearchLength 3')
+      .given('<$committedKey> committed, minSearchLength 3')
       .when('<$queryKey> is scheduled with no debounce')
-      .then('it commits <$committedKey>')
-      .example(val(seedKey, 'apple'), val(queryKey, ' app '), val(committedKey, 'app'))
-      .example(val(seedKey, 'apple'), val(queryKey, 'ap'), val(committedKey, ''))
+      .then('it commits <$commitsKey>')
+      .example(val(committedKey, 'apple'), val(queryKey, ' app '), val(commitsKey, 'app'))
+      .example(val(committedKey, 'apple'), val(queryKey, 'ap'), val(commitsKey, ''))
       // Still no search either side, so nothing commits.
-      .example(val(seedKey, 'a'), val(queryKey, 'ab'), val(committedKey, null))
+      .example(val(committedKey, ''), val(queryKey, 'ab'), val(commitsKey, null))
       .run((context) {
         final committedQueries = <String>[];
         fakeAsync((async) {
-          QueryDebouncer(onCommitted: committedQueries.add)
-            ..seed(context.example.val(seedKey) as String, minSearchLength: 3)
-            ..schedule(context.example.val(queryKey) as String, Duration.zero, minSearchLength: 3);
+          QueryDebouncer(onCommitted: committedQueries.add).schedule(
+            context.example.val(queryKey) as String,
+            Duration.zero,
+            minSearchLength: 3,
+            committedQuery: context.example.val(committedKey) as String,
+          );
           async.flushTimers();
         });
 
-        check(committedQueries).deepEquals([?context.example.val(committedKey) as String?]);
+        check(committedQueries).deepEquals([?context.example.val(commitsKey) as String?]);
       });
 
   Bdd(debouncerFeature)
@@ -41,14 +44,12 @@ void main() {
         final committedQueries = <String>[];
         fakeAsync((async) {
           final debouncer = QueryDebouncer(onCommitted: committedQueries.add)
-            ..seed('', minSearchLength: 3)
-            ..schedule('abc', debounce, minSearchLength: 3);
+            ..schedule('abc', debounce, minSearchLength: 3, committedQuery: '');
           async.elapse(debounce ~/ 2);
-          debouncer.schedule('ab', debounce, minSearchLength: 3);
+          debouncer.schedule('ab', debounce, minSearchLength: 3, committedQuery: '');
           async.flushTimers();
-
-          check(committedQueries).isEmpty();
-          check(debouncer.committedQuery).equals('');
         });
+
+        check(committedQueries).isEmpty();
       });
 }
