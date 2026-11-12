@@ -302,8 +302,9 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 - **Silent.** Animating the indicator would flash it before the 1st-page loader
   ([#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1)). The button owns its progress.
 - **Coalesced.** A 2nd `refresh()` while one runs joins it, so a double tap sends 1 request.
-- **Detached is inert, never-attached asserts.** A refresh racing a navigation is harmless, one
-  through a controller no list received is wiring.
+- **Detached is inert, never-attached asserts where the intent is lost.** A refresh racing a
+  navigation is harmless, one through a controller no list received is wiring. `endSearch()` has
+  nothing to lose there, so it stays silent.
 
 ---
 

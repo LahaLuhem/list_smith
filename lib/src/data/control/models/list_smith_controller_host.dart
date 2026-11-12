@@ -27,6 +27,9 @@ abstract interface class ListSmithControllerHost<T extends Object>._() {
     int? minSearchLength,
   });
 
+  /// See [ListSmithController.endSearch].
+  Future<void> endSearch();
+
   /// See [ListSmithController.upsert].
   void upsert(T item);
 
