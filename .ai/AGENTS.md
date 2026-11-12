@@ -97,8 +97,8 @@ Read [`CODESTYLE.md`](../CODESTYLE.md) before writing code.
 - **A public API's shape gets an explicit OK,** plan or no plan: signatures, types, and how a
   failure reaches the caller, each with its alternatives. A decision-table row with one answer, or
   credited to an earlier issue, isn't confirmed.
-- **A report's "expected behaviour" is one user's case, not the spec.** Design what's best for the
-  package, and keep that case reachable through config where it's legitimate.
+- **A report's "expected behaviour", or an app's need, is one user's case, not the spec.** Work
+  from the package's side, and keep the case reachable through config where it's legitimate.
 - **Refactor first when a change wants a better shape,** as its own behaviour-preserving step.
   Public API and dependency changes get sign-off first, since both are slow to walk back.
 - **A new user-facing feature goes in the README** in the same change, its rationale in

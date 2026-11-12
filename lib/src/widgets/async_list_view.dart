@@ -64,7 +64,7 @@ class const AsyncListView<T extends Object>({
   /// Lifecycle events for logging or telemetry. Null is silent.
   final ListSmithObserver? observer,
 
-  /// Refreshes this list from code. Null leaves refresh gesture-only.
+  /// Drives this list from code. Null leaves it to gestures.
   final ListSmithController<T>? controller,
   super.key,
 }) extends StatefulWidget {
@@ -79,7 +79,10 @@ class _AsyncListViewState<T extends Object>()
     extends State<AsyncListView<T>>
     with TickerProviderStateMixin
     implements ListSmithControllerHost<T> {
-  late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
+  late final _debouncer = QueryDebouncer(
+    onCommitted: (query) => _onSearchCommitted(_CommittedSearch(query)),
+  );
+  late _CommittedSearch<T> _committedSearch;
 
   /// The pages and where the stream stands. Only the engine writes it, so a fetch starts only when the
   /// engine asks for one.
@@ -118,9 +121,12 @@ class _AsyncListViewState<T extends Object>()
   /// grouping doesn't re-run [_displayFor].
   ({PagingState<T> shownState, Grouping<T> grouping, Sections<T> sections})? _sectionsMemo;
 
+  /// Memo for [_shouldAdvancePastEmpty], keyed on the display it reads. A drag asks on every update.
+  ({_Display<T> display, bool shouldAdvance})? _advancePastEmptyMemo;
+
   final _editStoreNotifier = EditStoreNotifier<T>();
 
-  /// Whether the controller currently reflects search results (drives the empty/no-results surface).
+  /// Whether the shown pages are search results, picking no-results over the empty surface.
   late final ValueNotifier<bool> _searchModeNotifier;
 
   /// The run in flight, a reload or a 1st-page load, null when there is none.
@@ -136,15 +142,17 @@ class _AsyncListViewState<T extends Object>()
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
-    _searchModeNotifier = ValueNotifier(_isSearchQuery(_debouncer.committedQuery));
+    _committedSearch = _CommittedSearch(
+      QueryDebouncer.searchQueryOf(widget.query, minSearchLength: widget.minSearchLength),
+    );
+    _searchModeNotifier = ValueNotifier(_isSearchMode);
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
     _editStoreNotifier.addListener(_maybeAdvancePastEmptyPage);
     widget.controller?.attach(this);
     // A run too, so a reload asked meanwhile meets this load instead of cutting it.
-    _startRun(.initialLoad, (run) => run.reset());
+    _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
   }
 
   @override
@@ -155,11 +163,15 @@ class _AsyncListViewState<T extends Object>()
       oldWidget.controller?.detach();
       widget.controller?.attach(this);
     }
-    if (widget.query != oldWidget.query) {
+    if (oldWidget.source.supportsSearch && !widget.source.supportsSearch) {
+      // Lands like a cleared query, at once, so the results never page on with the feed's fetcher.
+      _debouncer.schedule('', .zero, minSearchLength: 0, committedQuery: _committedSearch.query);
+    } else if (widget.query != oldWidget.query) {
       _debouncer.schedule(
         widget.query,
         widget.searchDebounce,
         minSearchLength: widget.minSearchLength,
+        committedQuery: _committedSearch.query,
       );
     }
     // Turned off mid-animation: a leaving row would otherwise build its deleted item again.
@@ -170,7 +182,7 @@ class _AsyncListViewState<T extends Object>()
   void dispose() {
     _generation++; // a reload outliving the list must not write into it
     widget.controller?.detach();
-    _debouncer.dispose();
+    _debouncer.cancel();
     _pagingStateNotifier.dispose();
     _searchModeNotifier.dispose();
     _editStoreNotifier.dispose();
@@ -180,14 +192,17 @@ class _AsyncListViewState<T extends Object>()
     super.dispose();
   }
 
-  bool _isSearchQuery(String query) => query.isNotEmpty && widget.source.supportsSearch;
+  bool get _isSearchMode => _committedSearch.query.isNotEmpty && widget.source.supportsSearch;
+
+  /// The committed search's fetcher, null on the feed.
+  SearchPageFetcher<T>? get _searchFetcher => switch (widget.source.search) {
+    final AsyncSearch<T> asyncSearch when _isSearchMode =>
+      _committedSearch.fetchPage ?? asyncSearch.fetchPage,
+    AsyncSearch<T>() || NoSearch() => null,
+  };
 
   /// What the current mode's fetcher returns beside its items.
-  SignalKind get _signalKind => switch (widget.source.search) {
-    final AsyncSearch<T> asyncSearch when _isSearchQuery(_debouncer.committedQuery) =>
-      asyncSearch.fetchPage.signalKind,
-    AsyncSearch<T>() || NoSearch() => widget.source.fetchPage.signalKind,
-  };
+  SignalKind get _signalKind => _searchFetcher?.signalKind ?? widget.source.fetchPage.signalKind;
 
   /// Fetches the next page into the current stream, unless one is already on its way or the stream has
   /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
@@ -198,7 +213,7 @@ class _AsyncListViewState<T extends Object>()
     final generation = _generation;
     final pages = _pagingStateNotifier.value.pages ?? const [];
     final readStamp = _editStoreNotifier.value; // before the await, so a later edit is newer
-    final previousSignal = _signalKind.threadsSignal ? _lastPageSignal : null;
+    final previousSignal = !_signalKind.threadsSignal ? null : _lastPageSignal;
 
     try {
       final pageRead = await _readWithRereads(
@@ -322,7 +337,7 @@ class _AsyncListViewState<T extends Object>()
   /// Asks again for the page that failed, from an error surface.
   void _retryPage() {
     if (_pagingStateNotifier.value.pages == null) {
-      _startRun(.retry, (run) => run.reset()); // a run, like every 1st-page load
+      _startRun(.retry, (reloadRun) => reloadRun.reset()); // a run, like every 1st-page load
     } else {
       unawaited(_fetchNextPage());
     }
@@ -339,7 +354,7 @@ class _AsyncListViewState<T extends Object>()
     FetchTrigger trigger,
   ) async {
     final generation = _generation;
-    final isSearchMode = _isSearchQuery(_debouncer.committedQuery);
+    final isSearchMode = _isSearchMode;
 
     try {
       final (items, signal) = await _requestPage(pageIndex, previousSignal, trigger);
@@ -368,28 +383,26 @@ class _AsyncListViewState<T extends Object>()
     Object? previousSignal,
     FetchTrigger trigger,
   ) {
-    final source = widget.source;
-    final committedQuery = _debouncer.committedQuery;
+    final searchFetcher = _searchFetcher;
 
-    return switch (source.search) {
-      final AsyncSearch<T> asyncSearch when _isSearchQuery(committedQuery) => asyncSearch.fetchPage(
-        SearchPageRequest(
-          query: committedQuery,
-          pageIndex: pageIndex,
-          pageSize: source.pageSize,
-          trigger: trigger,
-          previousSignal: previousSignal,
-        ),
-      ),
-      AsyncSearch<T>() || NoSearch() => source.fetchPage(
-        PageRequest(
-          pageIndex: pageIndex,
-          pageSize: source.pageSize,
-          trigger: trigger,
-          previousSignal: previousSignal,
-        ),
-      ),
-    };
+    return searchFetcher == null
+        ? widget.source.fetchPage(
+            PageRequest(
+              pageIndex: pageIndex,
+              pageSize: widget.source.pageSize,
+              trigger: trigger,
+              previousSignal: previousSignal,
+            ),
+          )
+        : searchFetcher(
+            SearchPageRequest(
+              query: _committedSearch.query,
+              pageIndex: pageIndex,
+              pageSize: widget.source.pageSize,
+              trigger: trigger,
+              previousSignal: previousSignal,
+            ),
+          );
   }
 
   /// Reports a page not strictly in [comparator]'s order, rather than throwing, so it still lands.
@@ -410,12 +423,12 @@ class _AsyncListViewState<T extends Object>()
     int readStamp,
     ValueGetter<Map<Object, T>> loadedItemsByIdGetter,
   ) {
-    final comparator = _comparatorFor(isSearchMode: _isSearchQuery(_debouncer.committedQuery));
+    final comparator = _comparatorFor(isSearchMode: _isSearchMode);
     late final loadedItemsById = loadedItemsByIdGetter();
 
     return _editStoreNotifier.removalStampsSince(
       readStamp,
-      goingOutIds: _rowTransitionsNotifier.leavingIds,
+      goingOutIds: _rowTransitionsNotifier.findLeavingIds(),
       leavesPlacePredicate: (itemId, replacedItem, editedItem) {
         final listedItem = loadedItemsById[itemId] ?? replacedItem;
         if (listedItem == null) return false;
@@ -464,32 +477,30 @@ class _AsyncListViewState<T extends Object>()
         : pages.length;
   }
 
-  /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
+  /// What renders, [pagingState] with the local edits applied and overlap duplicates dropped, and the ids
   /// in it. The paging state's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
-  _Display<T> _displayFor(PagingState<T> state) {
-    final pages = state.pages;
-    if (pages == null) return (state: state, shownIds: const {});
+  _Display<T> _displayFor(PagingState<T> pagingState) {
+    final pages = pagingState.pages;
+    if (pages == null) return (pagingState: pagingState, shownIds: const {});
 
-    final editStamp = _editStoreNotifier.value;
-    final isSearchMode = _searchModeNotifier.value;
     // Only edits read it, so an inline grouping keeps de-dup cached.
     final editGrouping = _editStoreNotifier.isEmpty ? null : widget.grouping;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
-        identical(state, displayMemo.raw) &&
-        displayMemo.editStamp == editStamp &&
-        displayMemo.isSearchMode == isSearchMode &&
+        identical(pagingState, displayMemo.raw) &&
+        displayMemo.editStamp == _editStoreNotifier.value &&
+        displayMemo.isSearchMode == _searchModeNotifier.value &&
         identical(editGrouping, displayMemo.editGrouping)) {
       return displayMemo.display;
     }
 
     final display = _editStoreNotifier.isEmpty
-        ? _dedupedDisplay(state)
-        : _editedDisplay(state, pages, isSearchMode: isSearchMode);
+        ? _dedupedDisplay(pagingState)
+        : _editedDisplay(pagingState, pages, isSearchMode: _searchModeNotifier.value);
     _displayMemo = (
-      raw: state,
-      editStamp: editStamp,
-      isSearchMode: isSearchMode,
+      raw: pagingState,
+      editStamp: _editStoreNotifier.value,
+      isSearchMode: _searchModeNotifier.value,
       editGrouping: editGrouping,
       display: display,
     );
@@ -498,15 +509,17 @@ class _AsyncListViewState<T extends Object>()
   }
 
   /// No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
-  _Display<T> _dedupedDisplay(PagingState<T> state) {
-    final itemIdGetter = widget.source.itemIdGetter;
+  _Display<T> _dedupedDisplay(PagingState<T> pagingState) {
     final seenIds = <Object>{};
 
-    return (state: state.filterItems((item) => seenIds.add(itemIdGetter(item))), shownIds: seenIds);
+    return (
+      pagingState: pagingState.filterItems((item) => seenIds.add(widget.source.itemIdGetter(item))),
+      shownIds: seenIds,
+    );
   }
 
   _Display<T> _editedDisplay(
-    PagingState<T> state,
+    PagingState<T> pagingState,
     List<LoadedPage<T>> pages, {
     required bool isSearchMode,
   }) {
@@ -520,11 +533,11 @@ class _AsyncListViewState<T extends Object>()
           ? null
           : (
               comparator: comparator,
-              mayHaveRowsAfter: state.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
+              mayHaveRowsAfter: pagingState.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
             ),
     );
 
-    return (state: state.copyWith(pages: displayPages), shownIds: shownIds);
+    return (pagingState: pagingState.copyWith(pages: displayPages), shownIds: shownIds);
   }
 
   /// Parked pages count too, so a feed kept while searching comes back with its edits.
@@ -556,57 +569,75 @@ class _AsyncListViewState<T extends Object>()
   /// Whether to page past an empty screen. Emptiness comes off what the user sees, more-available off
   /// the raw pages. Gates both the auto-fetch and the loading surface, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<T> state) {
-    // No page yet isn't an empty list.
-    final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
-    final isMoreAvailable = _nextPageIndex(state.pages) != null;
-    // The user emptied it, not the server, so there's more to show.
-    if (isEmpty && state.items.isNotEmpty && isMoreAvailable) return true;
+    final display = _displayFor(state);
+    final advancePastEmptyMemo = _advancePastEmptyMemo;
+    if (advancePastEmptyMemo != null && identical(display, advancePastEmptyMemo.display)) {
+      return advancePastEmptyMemo.shouldAdvance;
+    }
 
-    return widget.source.onEmptyPage.shouldAdvance(
-      EmptyPageContext(
-        isEmpty: isEmpty,
-        isMoreAvailable: isMoreAvailable,
-        pagesLoaded: state.pages?.length ?? 0,
-      ),
-    );
+    // No page yet isn't an empty list.
+    final isEmpty = state.pages != null && display.shownIds.isEmpty;
+    final isMoreAvailable = _nextPageIndex(state.pages) != null;
+    final shouldAdvance =
+        // The user emptied it, not the server, so there's more to show.
+        (isEmpty && state.flattenItems().isNotEmpty && isMoreAvailable) ||
+        widget.source.onEmptyPage.shouldAdvance(
+          EmptyPageContext(
+            isEmpty: isEmpty,
+            isMoreAvailable: isMoreAvailable,
+            pagesLoaded: state.pages?.length ?? 0,
+          ),
+        );
+    _advancePastEmptyMemo = (display: display, shouldAdvance: shouldAdvance);
+
+    return shouldAdvance;
   }
 
-  void _onQueryCommitted(String committedQuery) {
+  /// The run the commit starts, or null when a kept feed comes back owing nothing.
+  _ReloadRun<T>? _onSearchCommitted(_CommittedSearch<T> committedSearch) {
     final wasSearching = _searchModeNotifier.value;
-    final isSearchMode = _isSearchQuery(committedQuery);
+    _committedSearch = committedSearch;
     final cacheAction = widget.source.search.cacheActionFor(
       wasSearching: wasSearching,
-      isSearching: isSearchMode,
+      isSearching: _isSearchMode,
     );
 
-    _searchModeNotifier.value = isSearchMode;
-    final keptSnapshot = _runCacheAction(cacheAction);
+    _searchModeNotifier.value = _isSearchMode;
+    final (:keptSnapshot, :reloadRun) = _runCacheAction(cacheAction);
 
-    final observer = widget.observer;
-    observer?.onQueryCommitted(committedQuery);
-    if (wasSearching != isSearchMode) observer?.onSearchModeChanged(isSearchMode: isSearchMode);
+    widget.observer?.onQueryCommitted(committedSearch.query);
+    if (wasSearching != _isSearchMode) {
+      widget.observer?.onSearchModeChanged(isSearchMode: _isSearchMode);
+    }
     if (keptSnapshot == null) {
-      observer?.onReload(.queryChanged); // reset, not restored
+      widget.observer?.onReload(.queryChanged); // reset, not restored
 
-      return;
+      return reloadRun;
     }
     // Paid after the query facts, so the observer's events stay in order.
-    final debt = keptSnapshot.debtFetchTrigger;
-    if (debt != null) _runReload(debt, reload: const ReloadToCurrentDepth());
+    final debtFetchTrigger = keptSnapshot.debtFetchTrigger;
+
+    return debtFetchTrigger == null
+        ? reloadRun
+        : _runReload(debtFetchTrigger, reload: const ReloadToCurrentDepth());
   }
 
-  /// Parks, restores or restarts the stream as [cacheAction] says. The feed it put back, or null when
-  /// it started over.
-  _NormalSnapshot<T>? _runCacheAction(CacheAction cacheAction) {
-    final keptSnapshot = cacheAction == .restoreNormal ? _normalSnapshot : null;
-    if (keptSnapshot == null) {
-      if (cacheAction == .snapshotThenRefresh) _parkFeed();
-      _startRun(.queryChanged, (run) => run.reset());
-    } else {
-      _restoreFeed(keptSnapshot);
+  /// Parks, restores or restarts the stream as [cacheAction] says. Returns the feed it put back, if
+  /// any, and the run it started.
+  ({_NormalSnapshot<T>? keptSnapshot, _ReloadRun<T>? reloadRun}) _runCacheAction(
+    CacheAction cacheAction,
+  ) {
+    final keptSnapshot = cacheAction != .restoreNormal ? null : _normalSnapshot;
+    if (keptSnapshot != null) {
+      return (keptSnapshot: keptSnapshot, reloadRun: _restoreFeed(keptSnapshot));
     }
 
-    return keptSnapshot;
+    if (cacheAction == .snapshotThenRefresh) _parkFeed();
+
+    return (
+      keptSnapshot: null,
+      reloadRun: _startRun(.queryChanged, (reloadRun) => reloadRun.reset()),
+    );
   }
 
   /// Puts the feed aside while searching. Settled, since a restore re-fetches over both flags anyway.
@@ -616,14 +647,14 @@ class _AsyncListViewState<T extends Object>()
       state: _pagingStateNotifier.value.settled(),
       signal: _lastPageSignal,
       // The restart strands a live run, so the feed inherits its ask.
-      debtFetchTrigger: runningReload != null && !runningReload.isStale
-          ? runningReload.pendingAsk
-          : null,
+      debtFetchTrigger: runningReload == null || runningReload.isStale
+          ? null
+          : runningReload.pendingAsk,
     );
   }
 
-  /// Puts the feed kept while searching back.
-  void _restoreFeed(_NormalSnapshot<T> snapshot) {
+  /// Puts the feed kept while searching back. The run that loads its owed 1st page, if any.
+  _ReloadRun<T>? _restoreFeed(_NormalSnapshot<T> snapshot) {
     _rowTransitionsNotifier.settle();
     _generation++;
     _lastFailedPageIndex = null;
@@ -632,9 +663,11 @@ class _AsyncListViewState<T extends Object>()
     _pagingStateNotifier.value = snapshot.state;
     // Parked before its 1st page landed, so that page is still owed, unless a debt's reload fetches it
     // anyway.
-    if (snapshot.state.status == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
-      _startRun(.initialLoad, (run) => run.reset());
+    if (snapshot.state.resolveStatus() == .loadingFirstPage && snapshot.debtFetchTrigger == null) {
+      return _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
     }
+
+    return null;
   }
 
   /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
@@ -648,7 +681,7 @@ class _AsyncListViewState<T extends Object>()
 
     // Once the current work is done, so a reload's events fire before its page is asked for, and resets
     // made in one go send one request.
-    return Future.microtask(() async {
+    return .microtask(() async {
       if (generation == _generation) await _fetchNextPage(trigger: trigger);
     });
   }
@@ -667,15 +700,13 @@ class _AsyncListViewState<T extends Object>()
 
   @override
   Widget build(BuildContext context) {
-    final surfaces = widget.surfaces;
-
     final pagedList = TripleValueListenableBuilder(
       firstListenable: _pagingStateNotifier,
       secondListenable: _searchModeNotifier,
       // An edit only needs the rebuild, _displayFor reads the edits.
       thirdListenable: _editStoreNotifier,
       builder: (context, state, isSearchMode, _, _) {
-        final shownState = _shownStateFor(state);
+        final shownState = _shownPagingStateFor(state);
 
         return PagedView(
           state: shownState,
@@ -698,15 +729,16 @@ class _AsyncListViewState<T extends Object>()
           pullExtentListenable: _pullExtentNotifier,
           shouldKeepPosition: widget.source.shouldKeepPosition,
           isSearchMode: isSearchMode,
-          query: _debouncer.committedQuery,
+          query: _committedSearch.query,
+          startKey: _committedSearch,
           separatorBuilder: widget.separatorBuilder,
-          firstPageLoadingBuilder: surfaces.firstPageLoadingBuilder,
-          newPageLoadingBuilder: surfaces.newPageLoadingBuilder,
-          firstPageErrorBuilder: surfaces.firstPageErrorBuilder,
-          newPageErrorBuilder: surfaces.newPageErrorBuilder,
+          firstPageLoadingBuilder: widget.surfaces.firstPageLoadingBuilder,
+          newPageLoadingBuilder: widget.surfaces.newPageLoadingBuilder,
+          firstPageErrorBuilder: widget.surfaces.firstPageErrorBuilder,
+          newPageErrorBuilder: widget.surfaces.newPageErrorBuilder,
           emptyBuilder: widget.emptyBuilder,
           noResultsBuilder: widget.noResultsBuilder,
-          noMoreItemsBuilder: surfaces.noMoreItemsBuilder,
+          noMoreItemsBuilder: widget.surfaces.noMoreItemsBuilder,
         );
       },
     );
@@ -732,28 +764,27 @@ class _AsyncListViewState<T extends Object>()
     .ongoing || .subsequentPageError || .completed => false,
   };
 
-  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).status;
+  PagingStatus _shownStatus() => _shownPagingStateFor(_pagingStateNotifier.value).resolveStatus();
 
-  /// What the list shows of [state]. While it pages past an empty page, that's the loader, and the
+  /// What the list shows of [pagingState]. While it pages past an empty page, that's the loader, and the
   /// empty surface waits for the true end (or the maxPages give-up).
-  PagingState<T> _shownStateFor(PagingState<T> state) =>
-      _shouldAdvancePastEmpty(state) ? PagingState() : _displayFor(state).state;
+  PagingState<T> _shownPagingStateFor(PagingState<T> pagingState) =>
+      _shouldAdvancePastEmpty(pagingState) ? PagingState() : _displayFor(pagingState).pagingState;
 
   /// [shownState]'s rows, in sections.
   Sections<T> _sectionsFor(PagingState<T> shownState) {
-    final grouping = widget.grouping;
     final sectionsMemo = _sectionsMemo;
     if (sectionsMemo != null &&
         identical(shownState, sectionsMemo.shownState) &&
-        identical(grouping, sectionsMemo.grouping)) {
+        identical(widget.grouping, sectionsMemo.grouping)) {
       return sectionsMemo.sections;
     }
 
-    final sections = grouping.sectionsOver(
+    final sections = widget.grouping.sectionsOver(
       // A view, not a copy. Pages never change once built.
       UnmodifiableListView((shownState.pages ?? const []).map((page) => page.items)),
     );
-    _sectionsMemo = (shownState: shownState, grouping: grouping, sections: sections);
+    _sectionsMemo = (shownState: shownState, grouping: widget.grouping, sections: sections);
 
     return sections;
   }
@@ -768,12 +799,64 @@ class _AsyncListViewState<T extends Object>()
   Future<void> reset() {
     widget.observer?.onReload(.invalidated);
     _normalSnapshot = null; // the kept feed starts over too: the restore falls through to page 0
-    final doneFuture = _startRun(.invalidated, (run) => run.reset()).doneFuture;
+    final doneFuture = _startRun(.invalidated, (reloadRun) => reloadRun.reset()).doneFuture;
     // After the run settles held exits, so none books into the fresh list.
     _editStoreNotifier.clear();
 
     return doneFuture;
   }
+
+  @override
+  Future<void> search(
+    String query, {
+    SearchPageFetcher<T>? fetchPage,
+    Duration? searchDebounce,
+    int? minSearchLength,
+  }) {
+    assert(
+      widget.source.supportsSearch,
+      'search() needs a list with search. Pass search: AsyncSearch(...) to ListSmith.async.',
+    );
+    assert(
+      fetchPage == null || !widget.source.endPolicy.requiresSignal || fetchPage.signalKind != .none,
+      'This end policy needs a signal-reporting search fetcher. Build the one passed to search() '
+      'with SearchPageFetcher.withSignal.',
+    );
+    if (!widget.source.supportsSearch) return Future.syncValue(null);
+
+    return _debouncer.scheduleFromCode(
+      query,
+      searchDebounce ?? widget.searchDebounce,
+      minSearchLength: minSearchLength ?? widget.minSearchLength,
+      committedQuery: _committedSearch.query,
+      onCommitted: (query) => _commitFromCode(_CommittedSearch(query, fetchPage: fetchPage)),
+    );
+  }
+
+  @override
+  Future<void> endSearch() {
+    final searchQuery = QueryDebouncer.searchQueryOf(
+      widget.query,
+      minSearchLength: widget.minSearchLength,
+    );
+    if (_committedSearch.query == searchQuery && _committedSearch.fetchPage == null) {
+      _debouncer.cancel(); // a call still waiting
+
+      return Future.syncValue(null);
+    }
+
+    return _debouncer.scheduleFromCode(
+      widget.query,
+      .zero,
+      minSearchLength: widget.minSearchLength,
+      committedQuery: _committedSearch.query,
+      onCommitted: (query) => _commitFromCode(_CommittedSearch(query)),
+    );
+  }
+
+  /// Completes once the run [committedSearch] starts is done.
+  Future<void> _commitFromCode(_CommittedSearch<T> committedSearch) =>
+      _onSearchCommitted(committedSearch)?.doneFuture ?? Future.syncValue(null);
 
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
   /// that loader.
@@ -849,7 +932,7 @@ class _AsyncListViewState<T extends Object>()
 
   /// Whether [book] brought in a new row.
   bool _bookGrowingIn(T item, VoidCallback book) {
-    final animation = _editAnimation;
+    final animation = _resolveEditAnimation();
     if (animation == null) {
       book();
 
@@ -869,7 +952,7 @@ class _AsyncListViewState<T extends Object>()
   void remove(T item) => _bookShrinkingOut(item, () => _edit(item, null));
 
   void _bookShrinkingOut(T item, VoidCallback book) {
-    final animation = _editAnimation;
+    final animation = _resolveEditAnimation();
     final id = widget.source.itemIdGetter(item);
     if (animation == null || !_isShown(id)) {
       book();
@@ -887,7 +970,7 @@ class _AsyncListViewState<T extends Object>()
 
   /// The edit transition, unless there is none, the platform asks for less motion, or a save answered
   /// after the list was gone.
-  AnimatedEditTransition? get _editAnimation => switch (widget.source.editTransition) {
+  AnimatedEditTransition? _resolveEditAnimation() => switch (widget.source.editTransition) {
     final AnimatedEditTransition transition
         when mounted && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
       transition,
@@ -913,7 +996,11 @@ class _AsyncListViewState<T extends Object>()
       return runningReload;
     }
 
-    return _startRun(trigger, (run) => (reload ?? _reloadFor(trigger)).run(run), announces: true);
+    return _startRun(
+      trigger,
+      (reloadRun) => (reload ?? _reloadFor(trigger)).run(reloadRun),
+      announces: true,
+    );
   }
 
   /// Called directly it cuts in, since [_runReload] is where a caller meets the live run.
@@ -922,19 +1009,19 @@ class _AsyncListViewState<T extends Object>()
     AsyncValueSetter<_ReloadRun<T>> work, {
     bool announces = false,
   }) {
-    final run = _ReloadRun(this, trigger);
-    _runningReload = run;
+    final reloadRun = _ReloadRun(this, trigger);
+    _runningReload = reloadRun;
     if (announces) widget.observer?.onReload(trigger);
     unawaited(
-      work(run).whenComplete(() {
-        if (identical(_runningReload, run)) _runningReload = null;
-        run.finish();
-        final rerunTrigger = run.rerunTrigger;
-        if (rerunTrigger != null && !run.isStale) _runReload(rerunTrigger);
+      work(reloadRun).whenComplete(() {
+        if (identical(_runningReload, reloadRun)) _runningReload = null;
+        reloadRun.finish();
+        final rerunTrigger = reloadRun.rerunTrigger;
+        if (rerunTrigger != null && !reloadRun.isStale) _runReload(rerunTrigger);
       }),
     );
 
-    return run;
+    return reloadRun;
   }
 
   /// A re-read keeps the user's place. A refresh does what the pull is configured to do, falling back
@@ -965,6 +1052,8 @@ final class _ReloadRun<T extends Object>(
   /// it stale.
   int _epoch = _engine._generation;
 
+  final PagingState<T> _startState = _engine._pagingStateNotifier.value;
+
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
   FetchTrigger? rerunTrigger;
 
@@ -984,8 +1073,6 @@ final class _ReloadRun<T extends Object>(
   @override
   bool get isStale => _engine._generation != _epoch;
 
-  PagingState<T>? _startState;
-
   /// When each re-fetch went out.
   final _readStamps = <int, int>{};
 
@@ -993,7 +1080,7 @@ final class _ReloadRun<T extends Object>(
   final _previousSignals = <int, Object?>{};
 
   @override
-  int get depth => (_startState ??= _engine._pagingStateNotifier.value).pages?.length ?? 0;
+  int get depth => _startState.pages?.length ?? 0;
 
   @override
   bool get isSignalBased => _engine._signalKind.threadsSignal;
@@ -1011,7 +1098,7 @@ final class _ReloadRun<T extends Object>(
     if (isStale) return;
     final source = _engine.widget.source;
     final rereadIndexes = resolveRereadIndexes(
-      oldPages: (_startState?.pages ?? const []).map((page) => page.items),
+      oldPages: (_startState.pages ?? const []).map((page) => page.items),
       freshPages: pages,
       readStamps: _readStamps,
       removalStamps: _engine._removalStampsSince(
@@ -1079,6 +1166,15 @@ final class _ReloadRun<T extends Object>(
   }
 }
 
+/// What the list shows, the feed when [query] is empty. A new one per commit, for the scroll start
+/// to key on.
+final class _CommittedSearch<T extends Object>(
+  final String query, {
+
+  /// Where its pages come from, null for the search's own.
+  final SearchPageFetcher<T>? fetchPage,
+});
+
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
 final class _NormalSnapshot<T extends Object>({
   required final PagingState<T> state,
@@ -1094,7 +1190,7 @@ final class _NormalSnapshot<T extends Object>({
 }
 
 /// What renders, and the ids in it.
-typedef _Display<T extends Object> = ({PagingState<T> state, Set<Object> shownIds});
+typedef _Display<T extends Object> = ({PagingState<T> pagingState, Set<Object> shownIds});
 
 /// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
 FetchTrigger _stronger(FetchTrigger? pending, FetchTrigger next) =>

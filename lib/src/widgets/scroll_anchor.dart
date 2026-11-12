@@ -100,9 +100,8 @@ class RenderScrollAnchor({
 
   @override
   void performLayout() {
-    final pullExtent = _pullExtentListenable.value;
-    final pullCorrection = pullExtent - _lastPullExtent;
-    _lastPullExtent = pullExtent;
+    final pullCorrection = _pullExtentListenable.value - _lastPullExtent;
+    _lastPullExtent = _pullExtentListenable.value;
     if (pullCorrection.abs() > precisionErrorTolerance && !_isAtStart) {
       // Scrolled away, the position takes up the pull's change, so the rows hold still.
       geometry = _correctionGeometry(pullCorrection);

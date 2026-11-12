@@ -233,10 +233,34 @@ void main() {
       check(normal.attempts).deepEquals({0: 1});
     });
 
-    scenarioWidgets('refresh() before any list attaches the controller asserts', (tester) async {
-      final controller = ListSmithController();
+    scenarioOutlineWidgets<Future<void> Function(ListSmithController<int> controller)>(
+      'refresh() or search() before any list attaches the controller asserts',
+      examples: {
+        'refresh()': (controller) => controller.refresh(),
+        'search()': (controller) => controller.search('1'),
+      },
+      outline: (tester, call) async {
+        final controller = ListSmithController<int>();
 
-      check(controller.refresh).throws<AssertionError>();
+        check(() => call(controller)).throws<AssertionError>();
+      },
+    );
+
+    scenarioWidgets('search() with no query asserts', (tester) async {
+      final controller = ListSmithController();
+      await pumpList(
+        tester,
+        fetchPage: valuedFetcher().fetchPage,
+        controller: controller,
+        search: AsyncSearch(
+          fetchPage: pagedSearchFetcher(const [
+            [1],
+          ]),
+        ),
+      );
+      await drain(tester);
+
+      check(() => controller.search('  ')).throws<AssertionError>();
     });
 
     scenarioWidgets('refresh() after the list is gone is inert', (tester) async {
@@ -314,17 +338,19 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('invalidate(), reset() and edits before any list attached are no-ops', (
-      tester,
-    ) async {
-      final controller = ListSmithController<int>();
+    scenarioWidgets(
+      'invalidate(), reset(), endSearch() and edits before any list attached are no-ops',
+      (tester) async {
+        final controller = ListSmithController<int>();
 
-      await controller.invalidate();
-      await controller.reset();
-      controller
-        ..upsert(1)
-        ..remove(1);
-    });
+        await controller.invalidate();
+        await controller.reset();
+        await controller.endSearch();
+        controller
+          ..upsert(1)
+          ..remove(1);
+      },
+    );
 
     scenarioWidgets('an async edit with no list attached still reports a failed save', (
       tester,

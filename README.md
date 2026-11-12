@@ -28,6 +28,7 @@
     * [In memory, with `ListSmith.sync`](#in-memory-with-listsmithsync)
     * [Paged, with `ListSmith.async`](#paged-with-listsmithasync)
     * [You keep the search field](#you-keep-the-search-field)
+    * [Searching from code](#searching-from-code)
 - [Grouping](#grouping)
 - [Make it look like your app](#make-it-look-like-your-app)
     * [Show your own rows while it loads](#show-your-own-rows-while-it-loads)
@@ -123,14 +124,14 @@ ListSmith.async(
 Serving a pull-to-refresh from cache defeats the pull, so `request.trigger` says why each page was
 asked for:
 
-| `FetchTrigger` | What happened                                                               |
-|----------------|-----------------------------------------------------------------------------|
-| `initialLoad`  | the 1st page of a cold list                                                 |
-| `nextPage`     | the user neared the end, so the next page was asked for                     |
-| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
-| `retry`        | this page's last attempt threw, and Retry was tapped                        |
-| `queryChanged` | a committed search query changed, entering or leaving search included       |
-| `invalidated`  | your data changed: you called `invalidate()` or `reset()`, or removed rows  |
+| `FetchTrigger` | What happened                                                                  |
+|----------------|--------------------------------------------------------------------------------|
+| `initialLoad`  | the 1st page of a cold list                                                    |
+| `nextPage`     | the user neared the end, so the next page was asked for                        |
+| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                          |
+| `retry`        | this page's last attempt threw, and Retry was tapped                           |
+| `queryChanged` | a committed query, typed or by `search()`, entering or leaving search included |
+| `invalidated`  | your data changed: you called `invalidate()` or `reset()`, or removed rows     |
 
 ```dart
 fetchPage: PageFetcher((request) => repo.load(
@@ -326,21 +327,23 @@ await controller.invalidate();  // my data changed: re-read every loaded page, k
 await controller.reset();       // start over from page 1: logout, account switch, a filter
 ```
 
-| Verb           | Runs                                                      | Pages report  | Meets a load already running                       |
-|----------------|-----------------------------------------------------------|---------------|----------------------------------------------------|
-| `refresh()`    | the pull's `Reload`, `ResetToFirstPage` under `NoRefresh` | `refresh`     | joins a refresh, otherwise runs once more after it |
-| `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does            | `invalidated` | joins it, then runs once more                      |
-| `reset()`      | `ResetToFirstPage`, always                                | `invalidated` | cuts in                                            |
+| Verb           | Runs                                                             | Pages report   | Meets a load already running                       |
+|----------------|------------------------------------------------------------------|----------------|----------------------------------------------------|
+| `refresh()`    | the pull's `Reload`, `ResetToFirstPage` under `NoRefresh`        | `refresh`      | joins a refresh, otherwise runs once more after it |
+| `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does                   | `invalidated`  | joins it, then runs once more                      |
+| `reset()`      | `ResetToFirstPage`, always                                       | `invalidated`  | cuts in                                            |
+| `search()`     | a [search](#searching-from-code) from page 0, after its debounce | `queryChanged` | cuts in                                            |
+| `endSearch()`  | what `query` holds, a kept feed without a fetch                  | `queryChanged` | cuts in                                            |
 
-While searching, `refresh()` reloads the search and `reset()` restarts it, query kept. A feed kept
-by `KeepCachePolicy` catches up when you're back.
+While searching, `refresh()` reloads the search and `reset()` restarts it, query and fetcher kept. A
+feed kept by `KeepCachePolicy` catches up when you're back.
 
 No indicator shows, since your button owns its progress, through the futures. Each completes once
 its fresh data shows or its fetch fails, or with the load it joined.
 
-Before a list attaches, `invalidate()` and `reset()` do nothing, since a store event can beat the
-view's build, while `refresh()` asserts. Nothing to dispose. To *watch* the list instead, use an
-[observer](#watching-what-it-does).
+Before a list attaches, `invalidate()`, `reset()` and `endSearch()` do nothing, since a store event
+can beat the view's build, while `refresh()` and `search()` assert. Nothing to dispose. To *watch*
+the list instead, use an [observer](#watching-what-it-does).
 
 ## Editing loaded items
 
@@ -614,6 +617,28 @@ Clearing is `_query = ''`, and the list goes back to the feed on its own.
 **`searchDebounce`** waits for typing to settle, with no wait on `.sync`, where filtering is
 instant. **`minSearchLength`** ignores anything shorter. The query is trimmed first, so a field of
 spaces counts as empty.
+
+### Searching from code
+
+A barcode scan, a deep link, a "more like this" button. `search()` on the
+[controller](#refreshing-from-code) searches a query as if it were typed, and `endSearch()` goes
+back to what the field holds:
+
+```dart
+final byBarcode = SearchPageFetcher((r) => api.productsByBarcode(r.query, r.pageIndex));
+
+await controller.search(code, fetchPage: byBarcode, searchDebounce: Duration.zero);
+await controller.endSearch();
+```
+
+- **The route comes with the call.** The fetcher you pass serves every page of that search, reloads
+  included. Without one, the search's own does.
+- **The list's `searchDebounce` and `minSearchLength` apply,** unless the call passes its own.
+- **A repeat runs again,** so scanning a code whose lookup failed retries it.
+- **Typing takes over.** A field showing the call's query changes nothing, and other text goes
+  through the search's own fetcher.
+
+`search()` needs an `AsyncSearch`, as typing does.
 
 ## Grouping
 

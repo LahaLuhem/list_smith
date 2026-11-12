@@ -23,8 +23,7 @@ final class const ReloadToCurrentDepth({
   @override
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) async {
-    final depth = context.depth;
-    if (depth == 0) {
+    if (context.depth == 0) {
       await context.reset();
 
       return;
@@ -35,7 +34,7 @@ final class const ReloadToCurrentDepth({
       final freshPages = <List<T>>[];
       Object? signal;
       try {
-        for (var index = 0; index < depth; index++) {
+        for (var index = 0; index < context.depth; index++) {
           if (context.isStale) return;
           final (items, pageSignal) = await context.fetch(index, signal);
           freshPages.add(items);
@@ -64,9 +63,9 @@ final class const ReloadToCurrentDepth({
     }
 
     // A pool as wide as the depth is "all at once", so a null concurrency needs no branch of its own.
-    final pool = Pool(concurrency ?? depth);
+    final pool = Pool(concurrency ?? context.depth);
     final freshReads = await Iterable.generate(
-      depth,
+      context.depth,
       (index) => pool.withResource(() => fetchOrNull(index)),
     ).wait;
     await pool.close();

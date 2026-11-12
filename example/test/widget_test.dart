@@ -231,6 +231,27 @@ void main() {
       check(loggedErrorFinder.evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('async search looks a code up from code, and End search brings the feed back', (
+      tester,
+    ) async {
+      await openDemo(tester, 'Async search', surfaceSize: tallSurfaceSize);
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+      check(find.text('Item 1').evaluate()).length.equals(1);
+
+      await tester.tap(find.text('Look up 13 from code'));
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      // Typed, 13 also finds 113, so its absence shows the lookup's own endpoint answered.
+      check(find.text('Item 13').evaluate()).length.equals(1);
+      check(find.text('Item 113').evaluate()).length.equals(0);
+      check(find.text('Item 1').evaluate()).length.equals(0);
+
+      await tester.tap(find.text('End search'));
+      await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+      check(find.text('Item 1').evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('sync search groups its list into labelled sections on a switch', (
       tester,
     ) async {

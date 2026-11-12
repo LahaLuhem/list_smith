@@ -444,7 +444,7 @@ void main() {
     ) async {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
-        holdFor: (_, attempt) => attempt == 2 ? holdCompleter.future : null,
+        holdFor: (_, attempt) => attempt != 2 ? null : holdCompleter.future,
       );
       final controller = ListSmithController();
 
@@ -510,7 +510,7 @@ void main() {
       // on the way back is attempt 4.
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
-        holdFor: (_, attempt) => attempt == 3 ? holdCompleter.future : null,
+        holdFor: (_, attempt) => attempt != 3 ? null : holdCompleter.future,
         cachePolicy: const KeepCachePolicy(),
       );
       final controller = ListSmithController();
@@ -673,7 +673,7 @@ void main() {
       // The refresh's fetches are attempt 2. Search then takes attempt 3, and the feed's re-read 4.
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
-        holdFor: (_, attempt) => attempt == 2 ? holdCompleter.future : null,
+        holdFor: (_, attempt) => attempt != 2 ? null : holdCompleter.future,
         cachePolicy: const KeepCachePolicy(),
       );
       final controller = ListSmithController();
@@ -708,7 +708,7 @@ void main() {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
         holdFor: (pageIndex, attempt) =>
-            (pageIndex, attempt) == (0, 4) ? holdCompleter.future : null,
+            (pageIndex, attempt) != (0, 4) ? null : holdCompleter.future,
         cachePolicy: const KeepCachePolicy(),
       );
       final controller = ListSmithController();
@@ -745,7 +745,7 @@ void main() {
     scenarioWidgets('a refresh that meets a superseded reload starts its own', (tester) async {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
-        holdFor: (_, attempt) => attempt == 2 ? holdCompleter.future : null,
+        holdFor: (_, attempt) => attempt != 2 ? null : holdCompleter.future,
       );
       final controller = ListSmithController();
 
@@ -776,7 +776,7 @@ void main() {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
         holdFor: (pageIndex, attempt) =>
-            (pageIndex, attempt) == (0, 2) ? holdCompleter.future : null,
+            (pageIndex, attempt) != (0, 2) ? null : holdCompleter.future,
       );
       final controller = ListSmithController();
 
@@ -814,7 +814,7 @@ void main() {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
         holdFor: (pageIndex, attempt) =>
-            (pageIndex, attempt) == (0, 2) ? holdCompleter.future : null,
+            (pageIndex, attempt) != (0, 2) ? null : holdCompleter.future,
         isSignalBased: true,
       );
       final controller = ListSmithController();
@@ -839,7 +839,7 @@ void main() {
     scenarioWidgets('a depth reload finishing after the list is gone stays silent', (tester) async {
       final holdCompleter = Completer<void>();
       final source = _stampedSource(
-        holdFor: (_, attempt) => attempt == 2 ? holdCompleter.future : null,
+        holdFor: (_, attempt) => attempt != 2 ? null : holdCompleter.future,
       );
       final controller = ListSmithController();
 

@@ -2,48 +2,81 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-/// Collapses a fast-changing search query into one committed value: trimmed, and empty when shorter
-/// than `minSearchLength`, so the committed query is the one that searches.
+/// Commits a search query once it settles, typed or from code: trimmed, and empty under
+/// `minSearchLength`. The list holds what's committed.
 ///
-/// [onCommitted] only ever runs from the timer, never during `build`, so a `setState` in it is safe.
+/// Commits only ever run from the timer, never during `build`, so a `setState` in one is safe.
 @internal
 class QueryDebouncer({
-  /// Called with the new committed query once a scheduled change elapses.
+  /// Called with the new committed query once a typed change elapses.
   required final ValueChanged<String> onCommitted,
 }) {
-  var _committedQuery = '';
   Timer? _timer;
+
+  /// The commit from code on its way, with its text before the gate and its waiting caller.
+  ({String trimmedQuery, Completer<void> doneCompleter})? _pendingCodeCommit;
 
   /// Creates it.
   this;
 
-  /// The current committed query.
-  String get committedQuery => _committedQuery;
-
-  /// Sets the 1st committed query without scheduling or notifying. Call once from `initState`.
-  void seed(String query, {required int minSearchLength}) =>
-      _committedQuery = _searchQueryOf(query, minSearchLength);
-
-  /// Commits [query] after [debounce], or next tick for [Duration.zero]. Does nothing when it would
-  /// commit the query already committed.
-  void schedule(String query, Duration debounce, {required int minSearchLength}) {
-    final searchQuery = _searchQueryOf(query, minSearchLength);
-    // Before the early return, so a query typed back to the committed one drops what's on its way.
-    _timer?.cancel();
-    if (searchQuery == _committedQuery) return;
-
-    _timer = Timer(debounce, () {
-      _committedQuery = searchQuery;
-      onCommitted(searchQuery);
-    });
-  }
-
-  /// Cancels any pending commit. Call from the owner's `dispose`.
-  void dispose() => _timer?.cancel();
-
-  static String _searchQueryOf(String query, int minSearchLength) {
+  /// Commits typed [query] after [debounce], or next tick for [Duration.zero]. Does nothing when it
+  /// would commit [committedQuery] again, or shows the commit from code on its way.
+  void schedule(
+    String query,
+    Duration debounce, {
+    required int minSearchLength,
+    required String committedQuery,
+  }) {
     final trimmedQuery = query.trim();
+    if (trimmedQuery == _pendingCodeCommit?.trimmedQuery) return;
 
-    return trimmedQuery.length < minSearchLength ? '' : trimmedQuery;
+    // Before the return below, so a query typed back to the committed one drops what's on its way.
+    cancel();
+    final searchQuery = _gate(trimmedQuery, minSearchLength: minSearchLength);
+    // The trimmed text too, so a field showing a short search committed from code holds.
+    if (committedQuery == trimmedQuery || committedQuery == searchQuery) return;
+
+    _timer = Timer(debounce, () => onCommitted(searchQuery));
   }
+
+  /// Commits [query] from code after [debounce], the committed one again too, since each call is its
+  /// own event. Under [minSearchLength] it's no search, as typed.
+  ///
+  /// Completes with what [onCommitted] returns, or as soon as anything replaces it.
+  Future<void> scheduleFromCode(
+    String query,
+    Duration debounce, {
+    required int minSearchLength,
+    required String committedQuery,
+    required AsyncValueSetter<String> onCommitted,
+  }) {
+    final trimmedQuery = query.trim();
+    final searchQuery = _gate(trimmedQuery, minSearchLength: minSearchLength);
+    cancel();
+    if (searchQuery.isEmpty && committedQuery.isEmpty) return Future.syncValue(null);
+
+    final doneCompleter = Completer<void>();
+    _pendingCodeCommit = (trimmedQuery: trimmedQuery, doneCompleter: doneCompleter);
+    _timer = Timer(debounce, () {
+      _pendingCodeCommit = null;
+      doneCompleter.complete(onCommitted(searchQuery));
+    });
+
+    return doneCompleter.future;
+  }
+
+  /// Cancels what's on its way, letting a caller waiting on it go. Call from the owner's `dispose`
+  /// too.
+  void cancel() {
+    _timer?.cancel();
+    _pendingCodeCommit?.doneCompleter.complete();
+    _pendingCodeCommit = null;
+  }
+
+  /// [query] as it would commit. A list seeds its 1st query with it.
+  static String searchQueryOf(String query, {required int minSearchLength}) =>
+      _gate(query.trim(), minSearchLength: minSearchLength);
+
+  static String _gate(String trimmedQuery, {required int minSearchLength}) =>
+      trimmedQuery.length < minSearchLength ? '' : trimmedQuery;
 }

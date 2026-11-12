@@ -1,16 +1,16 @@
 /// @docImport '/src/data/observer/observer.dart';
 /// @docImport '/src/data/pagination/pagination.dart';
 /// @docImport '/src/data/refresh/refresh.dart';
-/// @docImport '/src/data/search/search.dart';
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
 import 'package:flutter/foundation.dart';
 
+import '/src/data/search/search.dart';
 import 'list_smith_controller_host.dart';
 
 /// Drives a [ListSmith.async] list from code: a refresh button, a tab re-tap, a re-read after a local
-/// write, a logout.
+/// write, a logout, a scan.
 ///
 /// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
 /// Holds nothing, so there's nothing to dispose.
@@ -47,9 +47,39 @@ class ListSmithController<T extends Object>() {
   /// reports [FetchTrigger.invalidated].
   ///
   /// Cuts in on whatever load is running rather than joining it, and completes once its page 0 is over.
-  /// Keeps the query, so a search restarts, and a feed held by [KeepCachePolicy] starts over once the
-  /// query clears.
+  /// Keeps a search, its fetcher included, so it restarts, and a feed held by [KeepCachePolicy] starts
+  /// over once the search ends.
   Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
+
+  /// Searches [query] like typing it, through [fetchPage] or the search's own fetcher. The list's
+  /// debounce and min length apply unless passed. Needs an attached list with an [AsyncSearch].
+  ///
+  /// A repeat runs too, so a failed lookup can be retried. Completes once its page 0 is over, or as
+  /// soon as something replaces it while it waits.
+  Future<void> search(
+    String query, {
+    SearchPageFetcher<T>? fetchPage,
+    Duration? searchDebounce,
+    int? minSearchLength,
+  }) {
+    assert(query.trim().isNotEmpty, 'search() needs a query. To go back, call endSearch().');
+    assert(
+      _host != null || _wasEverAttached,
+      'Pass this ListSmithController to ListSmith.async before calling search().',
+    );
+
+    return _host?.search(
+          query,
+          fetchPage: fetchPage,
+          searchDebounce: searchDebounce,
+          minSearchLength: minSearchLength,
+        ) ??
+        Future<void>.syncValue(null);
+  }
+
+  /// Ends a [search], waiting or showing, and lands on what the list's query holds, as typed.
+  /// Completes once its page 0 is over, or at once when that already shows.
+  Future<void> endSearch() => _host?.endSearch() ?? Future<void>.syncValue(null);
 
   /// Shows [item] wherever a copy with its id is loaded, or at the top of the feed if none is. For
   /// a change that's already true on your server or store, and lasts until those pages are read again.

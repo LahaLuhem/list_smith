@@ -181,7 +181,9 @@ void main() {
       check(normalFetches).isGreaterThan(fetchesAfterNormal);
     });
 
-    scenarioWidgets('taking search away mid-search brings back a fresh feed', (tester) async {
+    scenarioWidgets('taking search away mid-search brings back a fresh feed at once', (
+      tester,
+    ) async {
       var feedFetches = 0;
       Widget build({required Search<int> search, required String query}) => ListSmith.async(
         fetchPage: PageFetcher((request) async {
@@ -209,7 +211,8 @@ void main() {
       check(feedFetches).equals(0);
 
       await pumpListSmith(tester, build(search: const NoSearch(), query: ''));
-      await settle(tester);
+      await tester.pump(Duration.zero); // the next tick, but no time, so the debounce can't run out
+      await drain(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
       check(find.text('item 99').evaluate()).isEmpty();

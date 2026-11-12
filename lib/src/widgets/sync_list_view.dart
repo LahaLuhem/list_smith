@@ -18,7 +18,7 @@ import 'keyed_list_view.dart';
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and shows it in the same keyed list as `.async`.
 ///
-/// No paging controller and no pull-to-refresh, since in-memory data has nothing to page or refresh.
+/// No paging or pull-to-refresh, which in-memory data has no use for.
 @internal
 class const SyncListView<T extends Object>({
   /// The items and the predicate that filters them.
@@ -61,6 +61,7 @@ class const SyncListView<T extends Object>({
 
 class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   late final _debouncer = QueryDebouncer(onCommitted: _onQueryCommitted);
+  late String _committedQuery;
   late final ValueNotifier<_Display<T>> _displayNotifier;
   late List<T> _items;
 
@@ -72,7 +73,10 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   void initState() {
     super.initState();
 
-    _debouncer.seed(widget.query, minSearchLength: widget.minSearchLength);
+    _committedQuery = QueryDebouncer.searchQueryOf(
+      widget.query,
+      minSearchLength: widget.minSearchLength,
+    );
     _takeItems();
     _displayNotifier = ValueNotifier(_resolve());
   }
@@ -99,13 +103,14 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
         widget.query,
         widget.searchDebounce,
         minSearchLength: widget.minSearchLength,
+        committedQuery: _committedQuery,
       );
     }
   }
 
   @override
   void dispose() {
-    _debouncer.dispose();
+    _debouncer.cancel();
     _displayNotifier.dispose();
 
     super.dispose();
@@ -113,13 +118,12 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
 
   /// Copies the source's items, each id once, since keyed rows can't share one.
   void _takeItems() {
-    final source = widget.source;
-    final itemIdGetter = source.itemIdGetter;
+    final itemIdGetter = widget.source.itemIdGetter;
     // In debug, the copy the in-place check keeps is the one walk of the source.
-    final passedItems = kDebugMode ? source.items.toList(growable: false) : null;
+    final passedItems = kDebugMode ? widget.source.items.toList(growable: false) : null;
     final (:items, :repeatedId) = itemIdGetter == null
-        ? (items: passedItems ?? source.items.toList(growable: false), repeatedId: null)
-        : firstOfEachId(passedItems ?? source.items, itemIdGetter);
+        ? (items: passedItems ?? widget.source.items.toList(growable: false), repeatedId: null)
+        : firstOfEachId(passedItems ?? widget.source.items, itemIdGetter);
     _items = items;
     _passedItems = passedItems;
     if (kDebugMode && repeatedId != null) {
@@ -131,22 +135,20 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
   }
 
   _Display<T> _resolve() {
-    final searchResult = resolveSyncSearch(
-      _items,
-      widget.source.searchBy,
-      _debouncer.committedQuery,
-    );
-    final grouping = widget.grouping;
-    final visibleItems = grouping.arrange(searchResult.visibleItems);
+    final searchResult = resolveSyncSearch(_items, widget.source.searchBy, _committedQuery);
+    final visibleItems = widget.grouping.arrange(searchResult.visibleItems);
 
     return (
       visibleItems: visibleItems,
-      sections: grouping.sectionsOver([visibleItems]),
+      sections: widget.grouping.sectionsOver([visibleItems]),
       isSearching: searchResult.isSearching,
     );
   }
 
-  void _onQueryCommitted(String committedQuery) => _displayNotifier.value = _resolve();
+  void _onQueryCommitted(String committedQuery) {
+    _committedQuery = committedQuery;
+    _displayNotifier.value = _resolve();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,31 +168,30 @@ class _SyncListViewState<T extends Object>() extends State<SyncListView<T>> {
           surfaceWidget = widget.emptyBuilder?.call(context) ?? const NeutralEmptyIndicator();
         } else if (display.isSearching && display.visibleItems.isEmpty) {
           surfaceWidget =
-              widget.noResultsBuilder?.call(context, _debouncer.committedQuery) ??
+              widget.noResultsBuilder?.call(context, _committedQuery) ??
               const NeutralNoResultsIndicator();
         } else {
           surfaceWidget = null;
         }
-        final scrollConfig = widget.scrollConfig;
 
         return KeyedListView(
           sections: display.sections,
           itemBuilder: widget.itemBuilder,
           pullExtentListenable: const AlwaysStoppedAnimation(0),
           shouldKeepPosition: widget.source.shouldKeepPosition,
-          startKey: _debouncer.committedQuery,
+          startKey: _committedQuery,
           itemIdGetter: widget.source.itemIdGetter,
           // Keyed by which surface, so one replacing the other starts fresh.
           surface: surfaceWidget == null
               ? null
               : KeyedSubtree(key: ValueKey(isEmpty), child: surfaceWidget),
           separatorBuilder: widget.separatorBuilder,
-          controller: scrollConfig.controller,
-          scrollDirection: scrollConfig.scrollDirection,
-          reverse: scrollConfig.reverse,
-          physics: scrollConfig.physics,
-          padding: scrollConfig.padding,
-          scrollCacheExtent: scrollConfig.scrollCacheExtent,
+          controller: widget.scrollConfig.controller,
+          scrollDirection: widget.scrollConfig.scrollDirection,
+          reverse: widget.scrollConfig.reverse,
+          physics: widget.scrollConfig.physics,
+          padding: widget.scrollConfig.padding,
+          scrollCacheExtent: widget.scrollConfig.scrollCacheExtent,
         );
       },
     );

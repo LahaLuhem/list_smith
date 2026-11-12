@@ -194,7 +194,7 @@ class const _KeyedRows<T extends Object>({
         semanticIndexCallback: (_, childIndex) {
           final (:kind, :index) = cellLayout.cellAt(childIndex);
 
-          return kind == .item || kind == .footer ? index : null;
+          return kind != .item && kind != .footer ? null : index;
         },
       ),
     );
@@ -205,7 +205,7 @@ class const _KeyedRows<T extends Object>({
       rowIdGetter: (childIndex) {
         final (:kind, :index) = cellLayout.cellAt(childIndex);
 
-        return kind == .item ? itemIdGetter(rowLookup.itemAt(index)) : null;
+        return kind != .item ? null : itemIdGetter(rowLookup.itemAt(index));
       },
       rowIndexGetter: (id, lastChildIndex) {
         final (:kind, :index) = cellLayout.cellAt(lastChildIndex);
@@ -239,8 +239,7 @@ class const _KeyedRows<T extends Object>({
       case .footer:
         return footerBuilder!(context);
       case .item:
-        final itemCount = rowLookup.itemCount;
-        if (index >= math.max(0, itemCount - 1 - _nearEndRows)) onNearEnd?.call();
+        if (index >= math.max(0, rowLookup.itemCount - 1 - _nearEndRows)) onNearEnd?.call();
         final item = rowLookup.itemAt(index);
         final itemIdGetter = this.itemIdGetter;
         final rowWidget = itemBuilder(context, item, index);

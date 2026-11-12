@@ -62,8 +62,7 @@ class const HomeView({super.key}) extends StatelessWidget {
           _DemoTile(
             icon: const PlatformIcon(PlatformIcons.search),
             title: 'Async search',
-            description:
-                'Feed to paged search results and back, with a cache switch and an event log.',
+            description: 'Paged search, typed or from code, with a cache switch and an event log.',
             pageBuilder: (_) => const AsyncSearchView(),
           ),
           _DemoTile(

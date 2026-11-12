@@ -34,7 +34,9 @@ style: explicit types, no ambient mutability, small focused classes.
   - [`part` / `part of` only when structurally needed](#idioms-parts)
   - [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#idioms-fine-grained-rebuilds)
   - [Plain `if`s over clever `switch` arms](#idioms-plain-conditionals)
+  - [A ternary yielding null puts null first](#idioms-null-first-ternary)
   - [Catch `Exception`, let `Error` through](#idioms-catch-exceptions)
+  - [A getter is a cheap read, work is a method](#idioms-getters-cheap-reads)
 - [Prose & voice](#prose)
 - [Comments & dartdoc](#dartdoc)
   - [`@docImport` for dartdoc-only references](#dartdoc-docimport)
@@ -214,8 +216,8 @@ The one engine-side `switch` is tree assembly: whether `Refresh` wraps the subtr
 - The engine implements the `@internal` `ListSmithControllerHost` and attaches itself, so the
   gesture and the handle share one entry point. A new intent is a host method plus a forwarding
   verb, nothing else.
-- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached is a no-op, and
-  only never-attached, which can only be wiring, asserts.
+- Attach in `initState`, swap in `didUpdateWidget`, detach in `dispose`. Detached is a no-op.
+  Never-attached can only be wiring, and asserts where the call's intent would be lost.
 
 ---
 
@@ -410,6 +412,15 @@ switch (snapshot) {
 }
 ```
 
+<a id="idioms-null-first-ternary"></a>
+### A ternary yielding null puts null first
+
+Like a guard's early return:
+
+```dart
+return transition == null || !transition.hasStarted ? null : transition.controller;
+```
+
 <a id="idioms-catch-exceptions"></a>
 ### Catch `Exception`, let `Error` through
 
@@ -428,6 +439,24 @@ so it reaches the app:
   if (error is! Exception) rethrow;
 }
 ```
+
+<a id="idioms-getters-cheap-reads"></a>
+### A getter is a cheap read, work is a method
+
+`obj.field` reads as free, so callers repeat it instead of hoisting it. A getter walks no
+collection and has no side effect, though a branch building a small object is fine. Anything
+heavier is a verb-named method, or a field computed once:
+
+```dart
+// Prefer:
+PagingStatus resolveStatus() { /* walks the pages */ }
+
+// Over: reads as free, so a caller asks twice.
+PagingStatus get status { /* walks the pages */ }
+```
+
+Effective Dart allows heavier getters, this repo doesn't. In-between cases get asked about, not
+bucketed. Getters the language or an interface fixes (`hashCode`, `ValueListenable.value`) stay.
 
 ---
 

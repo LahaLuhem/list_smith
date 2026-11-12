@@ -45,7 +45,7 @@ final class const ScenarioArguments._({
   }
 
   /// The Dart SDK version from [Platform.version]. A different SDK invalidates a captured baseline.
-  static String get sdkVersion => Platform.version.split(' ').first;
+  static final String sdkVersion = Platform.version.split(' ').first;
 
   static String _required(Map<String, String> flags, String name) {
     final value = flags[name];
