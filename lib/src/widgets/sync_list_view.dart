@@ -18,7 +18,7 @@ import 'keyed_list_view.dart';
 /// The sync engine behind [ListSmith.sync]: filters an in-memory [SyncSource] by the debounced query
 /// and shows it in the same keyed list as `.async`.
 ///
-/// No paging and no pull-to-refresh, since in-memory data has nothing to page or refresh.
+/// No paging or pull-to-refresh, which in-memory data has no use for.
 @internal
 class const SyncListView<T extends Object>({
   /// The items and the predicate that filters them.

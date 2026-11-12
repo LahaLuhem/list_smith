@@ -4,7 +4,7 @@ library;
 
 /// What a [PaginationEndPolicy] sees when deciding whether an async list has run out of data.
 ///
-/// Built fresh each time the list asks, so a policy stays a pure function of its input.
+/// Built fresh on every ask, so a policy can be a pure function.
 final class const EndContext({
   /// The item count of each page fetched so far, in fetch order. Read-only.
   required final List<int> pageItemCounts,

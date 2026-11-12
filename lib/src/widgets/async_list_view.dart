@@ -119,9 +119,12 @@ class _AsyncListViewState<T extends Object>()
   /// grouping doesn't re-run [_displayFor].
   ({PagingState<T> shownState, Grouping<T> grouping, Sections<T> sections})? _sectionsMemo;
 
+  /// Memo for [_shouldAdvancePastEmpty], keyed on the display it reads. A drag asks on every update.
+  ({_Display<T> display, bool shouldAdvance})? _advancePastEmptyMemo;
+
   final _editStoreNotifier = EditStoreNotifier<T>();
 
-  /// Whether the shown pages are search results, which picks the no-results surface over the empty one.
+  /// Whether the shown pages are search results, picking no-results over the empty surface.
   late final ValueNotifier<bool> _searchModeNotifier;
 
   /// The run in flight, a reload or a 1st-page load, null when there is none.
@@ -466,11 +469,11 @@ class _AsyncListViewState<T extends Object>()
         : pages.length;
   }
 
-  /// What renders, [state] with the local edits applied and overlap duplicates dropped, and the ids
+  /// What renders, [pagingState] with the local edits applied and overlap duplicates dropped, and the ids
   /// in it. The paging state's own pages stay raw, why in APPENDIX.md, `overlap-dedup`.
-  _Display<T> _displayFor(PagingState<T> state) {
-    final pages = state.pages;
-    if (pages == null) return (state: state, shownIds: const {});
+  _Display<T> _displayFor(PagingState<T> pagingState) {
+    final pages = pagingState.pages;
+    if (pages == null) return (pagingState: pagingState, shownIds: const {});
 
     final editStamp = _editStoreNotifier.value;
     final isSearchMode = _searchModeNotifier.value;
@@ -478,7 +481,7 @@ class _AsyncListViewState<T extends Object>()
     final editGrouping = _editStoreNotifier.isEmpty ? null : widget.grouping;
     final displayMemo = _displayMemo;
     if (displayMemo != null &&
-        identical(state, displayMemo.raw) &&
+        identical(pagingState, displayMemo.raw) &&
         displayMemo.editStamp == editStamp &&
         displayMemo.isSearchMode == isSearchMode &&
         identical(editGrouping, displayMemo.editGrouping)) {
@@ -486,10 +489,10 @@ class _AsyncListViewState<T extends Object>()
     }
 
     final display = _editStoreNotifier.isEmpty
-        ? _dedupedDisplay(state)
-        : _editedDisplay(state, pages, isSearchMode: isSearchMode);
+        ? _dedupedDisplay(pagingState)
+        : _editedDisplay(pagingState, pages, isSearchMode: isSearchMode);
     _displayMemo = (
-      raw: state,
+      raw: pagingState,
       editStamp: editStamp,
       isSearchMode: isSearchMode,
       editGrouping: editGrouping,
@@ -500,15 +503,18 @@ class _AsyncListViewState<T extends Object>()
   }
 
   /// No edits keeps the plain de-dup pass, the one benchmark/micro/dedup_scaling.dart measures.
-  _Display<T> _dedupedDisplay(PagingState<T> state) {
+  _Display<T> _dedupedDisplay(PagingState<T> pagingState) {
     final itemIdGetter = widget.source.itemIdGetter;
     final seenIds = <Object>{};
 
-    return (state: state.filterItems((item) => seenIds.add(itemIdGetter(item))), shownIds: seenIds);
+    return (
+      pagingState: pagingState.filterItems((item) => seenIds.add(itemIdGetter(item))),
+      shownIds: seenIds,
+    );
   }
 
   _Display<T> _editedDisplay(
-    PagingState<T> state,
+    PagingState<T> pagingState,
     List<LoadedPage<T>> pages, {
     required bool isSearchMode,
   }) {
@@ -522,11 +528,11 @@ class _AsyncListViewState<T extends Object>()
           ? null
           : (
               comparator: comparator,
-              mayHaveRowsAfter: state.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
+              mayHaveRowsAfter: pagingState.hasNextPage || !widget.source.endPolicy.stopsAtDataEnd,
             ),
     );
 
-    return (state: state.copyWith(pages: displayPages), shownIds: shownIds);
+    return (pagingState: pagingState.copyWith(pages: displayPages), shownIds: shownIds);
   }
 
   /// Parked pages count too, so a feed kept while searching comes back with its edits.
@@ -558,19 +564,28 @@ class _AsyncListViewState<T extends Object>()
   /// Whether to page past an empty screen. Emptiness comes off what the user sees, more-available off
   /// the raw pages. Gates both the auto-fetch and the loading surface, so the two can't disagree.
   bool _shouldAdvancePastEmpty(PagingState<T> state) {
-    // No page yet isn't an empty list.
-    final isEmpty = state.pages != null && _displayFor(state).shownIds.isEmpty;
-    final isMoreAvailable = _nextPageIndex(state.pages) != null;
-    // The user emptied it, not the server, so there's more to show.
-    if (isEmpty && state.flattenItems().isNotEmpty && isMoreAvailable) return true;
+    final display = _displayFor(state);
+    final advancePastEmptyMemo = _advancePastEmptyMemo;
+    if (advancePastEmptyMemo != null && identical(display, advancePastEmptyMemo.display)) {
+      return advancePastEmptyMemo.shouldAdvance;
+    }
 
-    return widget.source.onEmptyPage.shouldAdvance(
-      EmptyPageContext(
-        isEmpty: isEmpty,
-        isMoreAvailable: isMoreAvailable,
-        pagesLoaded: state.pages?.length ?? 0,
-      ),
-    );
+    // No page yet isn't an empty list.
+    final isEmpty = state.pages != null && display.shownIds.isEmpty;
+    final isMoreAvailable = _nextPageIndex(state.pages) != null;
+    final shouldAdvance =
+        // The user emptied it, not the server, so there's more to show.
+        (isEmpty && state.flattenItems().isNotEmpty && isMoreAvailable) ||
+        widget.source.onEmptyPage.shouldAdvance(
+          EmptyPageContext(
+            isEmpty: isEmpty,
+            isMoreAvailable: isMoreAvailable,
+            pagesLoaded: state.pages?.length ?? 0,
+          ),
+        );
+    _advancePastEmptyMemo = (display: display, shouldAdvance: shouldAdvance);
+
+    return shouldAdvance;
   }
 
   void _onQueryCommitted(String committedQuery) {
@@ -678,7 +693,7 @@ class _AsyncListViewState<T extends Object>()
       // An edit only needs the rebuild, _displayFor reads the edits.
       thirdListenable: _editStoreNotifier,
       builder: (context, state, isSearchMode, _, _) {
-        final shownState = _shownStateFor(state);
+        final shownState = _shownPagingStateFor(state);
 
         return PagedView(
           state: shownState,
@@ -736,12 +751,12 @@ class _AsyncListViewState<T extends Object>()
     .ongoing || .subsequentPageError || .completed => false,
   };
 
-  PagingStatus _shownStatus() => _shownStateFor(_pagingStateNotifier.value).resolveStatus();
+  PagingStatus _shownStatus() => _shownPagingStateFor(_pagingStateNotifier.value).resolveStatus();
 
-  /// What the list shows of [state]. While it pages past an empty page, that's the loader, and the
+  /// What the list shows of [pagingState]. While it pages past an empty page, that's the loader, and the
   /// empty surface waits for the true end (or the maxPages give-up).
-  PagingState<T> _shownStateFor(PagingState<T> state) =>
-      _shouldAdvancePastEmpty(state) ? PagingState() : _displayFor(state).state;
+  PagingState<T> _shownPagingStateFor(PagingState<T> pagingState) =>
+      _shouldAdvancePastEmpty(pagingState) ? PagingState() : _displayFor(pagingState).pagingState;
 
   /// [shownState]'s rows, in sections.
   Sections<T> _sectionsFor(PagingState<T> shownState) {
@@ -1083,8 +1098,8 @@ final class _ReloadRun<T extends Object>(
   }
 }
 
-/// The search the list shows, the feed when [query] is empty. One per commit, which the scroll start
-/// keys on by identity.
+/// What the list shows, the feed when [query] is empty. A new one per commit, for the scroll start
+/// to key on.
 final class _CommittedSearch(final String query);
 
 /// The normal-mode stream parked while searching, put back as it was when the query clears.
@@ -1102,7 +1117,7 @@ final class _NormalSnapshot<T extends Object>({
 }
 
 /// What renders, and the ids in it.
-typedef _Display<T extends Object> = ({PagingState<T> state, Set<Object> shownIds});
+typedef _Display<T extends Object> = ({PagingState<T> pagingState, Set<Object> shownIds});
 
 /// The stronger of a [pending] ask and the [next] one: a refresh outranks a re-read.
 FetchTrigger _stronger(FetchTrigger? pending, FetchTrigger next) =>

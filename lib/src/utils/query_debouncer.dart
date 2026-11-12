@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-/// Commits a fast-changing search query once it settles: trimmed, and empty when shorter than
-/// `minSearchLength`. The list keeps what's committed, as the only copy.
+/// Commits a search query once it settles: trimmed, and empty under `minSearchLength`. The list
+/// holds what's committed.
 ///
 /// [onCommitted] only ever runs from the timer, never during `build`, so a `setState` in it is safe.
 @internal
@@ -35,7 +35,7 @@ class QueryDebouncer({
   /// Cancels any pending commit. Call from the owner's `dispose`.
   void dispose() => _timer?.cancel();
 
-  /// [query] as it would commit, which is how a list seeds its 1st committed query.
+  /// [query] as it would commit. A list seeds its 1st query with it.
   static String searchQueryOf(String query, {required int minSearchLength}) {
     final trimmedQuery = query.trim();
 
