@@ -192,7 +192,7 @@ void main() {
         final attempt = attempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
         cursorsSeen[pageIndex] = request.previousSignal;
 
-        return ([pageIndex * 1000 + attempt], pageIndex < 2 ? 'cursor$pageIndex' : null);
+        return ([pageIndex * 1000 + attempt], pageIndex >= 2 ? null : 'cursor$pageIndex');
       });
 
       await pumpListSmith(
@@ -272,7 +272,7 @@ void main() {
         final attempt = attempts.update(pageIndex, (count) => count + 1, ifAbsent: () => 1);
         if (pageIndex == 1 && attempt == 2) throw Exception('reload boom');
 
-        return ([pageIndex * 1000 + attempt], pageIndex < 2 ? 'cursor$pageIndex' : null);
+        return ([pageIndex * 1000 + attempt], pageIndex >= 2 ? null : 'cursor$pageIndex');
       });
 
       await pumpListSmith(

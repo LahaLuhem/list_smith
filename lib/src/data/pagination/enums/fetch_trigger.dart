@@ -18,7 +18,8 @@ enum FetchTrigger() {
   /// A re-fetch of the page whose last attempt threw.
   retry,
 
-  /// A reload from a committed query change, entering or leaving search included.
+  /// A reload for a committed query, typed or from [ListSmithController.search], entering or leaving
+  /// search included.
   queryChanged,
 
   /// Your data changed locally, so a page gets read again: you called [ListSmithController.invalidate]

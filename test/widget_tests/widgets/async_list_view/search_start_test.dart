@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +44,25 @@ void main() {
       check(tester.getTopLeft(find.text('item 20', skipOffstage: false)).dy).equals(0);
     });
 
+    scenarioWidgets('calling search() again with the query showing starts from the top too', (
+      tester,
+    ) async {
+      final controller = ListSmithController<int>();
+      await _pumpSearch(tester, ValueNotifier(''), controller: controller);
+      await drain(tester);
+      unawaited(controller.search('1'));
+      await tester.pump(Duration.zero);
+      await drain(tester);
+      tester.state<ScrollableState>(listScrollableFinder).position.jumpTo(100);
+      await tester.pump();
+
+      unawaited(controller.search('1'));
+      await tester.pump(Duration.zero);
+      await drain(tester);
+
+      check(tester.getTopLeft(find.text('item 1', skipOffstage: false)).dy).equals(0);
+    });
+
     scenarioWidgets('clearing a search back to a kept feed starts from the top too', (
       tester,
     ) async {
@@ -67,6 +88,7 @@ Future<void> _pumpSearch(
   ValueNotifier<String> queryNotifier, {
   int minSearchLength = 0,
   SearchCachePolicy cachePolicy = const ReplaceCachePolicy(),
+  ListSmithController<int>? controller,
 }) {
   final items = List.generate(50, (item) => item);
   final fetchPage = PageFetcher<int>(
@@ -92,6 +114,7 @@ Future<void> _pumpSearch(
         query: query,
         minSearchLength: minSearchLength,
         searchDebounce: Duration.zero,
+        controller: controller,
         itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
       ),
     ),

@@ -123,14 +123,14 @@ ListSmith.async(
 Serving a pull-to-refresh from cache defeats the pull, so `request.trigger` says why each page was
 asked for:
 
-| `FetchTrigger` | What happened                                                               |
-|----------------|-----------------------------------------------------------------------------|
-| `initialLoad`  | the 1st page of a cold list                                                 |
-| `nextPage`     | the user neared the end, so the next page was asked for                     |
-| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                       |
-| `retry`        | this page's last attempt threw, and Retry was tapped                        |
-| `queryChanged` | a committed search query changed, entering or leaving search included       |
-| `invalidated`  | your data changed: you called `invalidate()` or `reset()`, or removed rows  |
+| `FetchTrigger` | What happened                                                                  |
+|----------------|--------------------------------------------------------------------------------|
+| `initialLoad`  | the 1st page of a cold list                                                    |
+| `nextPage`     | the user neared the end, so the next page was asked for                        |
+| `refresh`      | a pull-to-refresh, or `ListSmithController.refresh()`                          |
+| `retry`        | this page's last attempt threw, and Retry was tapped                           |
+| `queryChanged` | a committed query, typed or by `search()`, entering or leaving search included |
+| `invalidated`  | your data changed: you called `invalidate()` or `reset()`, or removed rows     |
 
 ```dart
 fetchPage: PageFetcher((request) => repo.load(

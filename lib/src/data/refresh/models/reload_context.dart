@@ -16,8 +16,8 @@ abstract interface class ReloadContext<T extends Object>._() {
   /// strategy asked for.
   bool get isSignalBased;
 
-  /// Whether the list moved on since this reload began: a reset, a query change, or the list is gone.
-  /// A stale [commit] is dropped, so stop fetching once this is true.
+  /// Whether the list moved on since this reload began: a reset, a committed query, or the list is
+  /// gone. A stale [commit] is dropped, so stop fetching once this is true.
   bool get isStale;
 
   /// Fetches page [index] given the [previousSignal] from the page before it, null for index sources

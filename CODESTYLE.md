@@ -34,6 +34,7 @@ style: explicit types, no ambient mutability, small focused classes.
   - [`part` / `part of` only when structurally needed](#idioms-parts)
   - [`ValueNotifier` + `ValueListenableBuilder` over `setState`](#idioms-fine-grained-rebuilds)
   - [Plain `if`s over clever `switch` arms](#idioms-plain-conditionals)
+  - [A ternary yielding null puts null first](#idioms-null-first-ternary)
   - [Catch `Exception`, let `Error` through](#idioms-catch-exceptions)
   - [A getter is a cheap read, work is a method](#idioms-getters-cheap-reads)
 - [Prose & voice](#prose)
@@ -409,6 +410,15 @@ switch (snapshot) {
   case _Snapshot(debt: null):
   // nothing to do
 }
+```
+
+<a id="idioms-null-first-ternary"></a>
+### A ternary yielding null puts null first
+
+Like a guard's early return:
+
+```dart
+return transition == null || !transition.hasStarted ? null : transition.controller;
 ```
 
 <a id="idioms-catch-exceptions"></a>
