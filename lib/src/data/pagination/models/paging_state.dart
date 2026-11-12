@@ -25,7 +25,7 @@ final class const PagingState<T extends Object>({
   this;
 
   /// The surface to show. Counts pages instead of flattening them, so it stays O(pages).
-  PagingStatus get status {
+  PagingStatus status() {
     final pages = this.pages;
     if (pages == null) return exception == null ? .loadingFirstPage : .firstPageError;
     if (pages.every((page) => page.items.isEmpty)) {
