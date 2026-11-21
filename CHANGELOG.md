@@ -1,4 +1,4 @@
-## [Unreleased]
+## [2.2.0] - 2026-11-21
 ### Added
 - \[#128\] `ListSmithController.search()` searches a query as if it were typed, through the fetcher you pass or the search's own, and `endSearch()` goes back to what `query` holds
 
@@ -125,7 +125,7 @@
 - Opt-in `itemId` de-duplication for items repeated across overlapping pages.
 - Lifecycle observer `ListSmithObserver` (and `LoggingListSmithObserver`) for page-load, error, refresh, and search events.
 
-[Unreleased]: https://github.com/LahaLuhem/list_smith/compare/2.1.0...HEAD
+[2.2.0]: https://github.com/LahaLuhem/list_smith/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/LahaLuhem/list_smith/compare/2.0.1...2.1.0
 [2.0.1]: https://github.com/LahaLuhem/list_smith/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/LahaLuhem/list_smith/compare/1.0.0...2.0.0
