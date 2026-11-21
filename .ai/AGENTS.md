@@ -61,7 +61,8 @@ release run commits `example/pubspec.lock`, so its `path: ../` pin follows each 
 7. **`CHANGELOG.md` is bot-owned, every section.** The release run writes the headers and
    Dependabot's lines, and [`changelog.yml`](../.github/workflows/changelog.yml) adds each merged
    PR's title under its `sem-*` label. Same for `version:` and running `cider`. The `cider:` block
-   in `pubspec.yaml` is plain config.
+   in `pubspec.yaml` is plain config. Asked to refine it, add each entry with
+   `cider log <type> <description>`, never by hand.
 8. **Workflows spell out the action defaults they rely on.** Every `github-actions` bump
    automerges, majors too, and a major often flips a default CI stays green through
    ([why](../APPENDIX.md#dependabot-automerge)).

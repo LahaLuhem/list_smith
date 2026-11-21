@@ -1,3 +1,13 @@
+## [Unreleased]
+### Added
+- \[#128\] `ListSmithController.search()` searches a query as if it were typed, through the fetcher you pass or the search's own, and `endSearch()` goes back to what `query` holds
+
+### Deprecated
+- \[#128\] `EndContext.trailingEmptyRun`: call `countTrailingEmptyPages()` instead. It goes at the next major.
+
+### Fixed
+- \[#128\] Taking `search` away mid-search lands on the feed at once, instead of on the next query change
+
 ## [2.1.0] - 2026-11-05
 ### Added
 - \[#70\] `upsertAsync` and `removeAsync` show an edit before your save answers, and roll it back if the save fails
@@ -115,6 +125,7 @@
 - Opt-in `itemId` de-duplication for items repeated across overlapping pages.
 - Lifecycle observer `ListSmithObserver` (and `LoggingListSmithObserver`) for page-load, error, refresh, and search events.
 
+[Unreleased]: https://github.com/LahaLuhem/list_smith/compare/2.1.0...HEAD
 [2.1.0]: https://github.com/LahaLuhem/list_smith/compare/2.0.1...2.1.0
 [2.0.1]: https://github.com/LahaLuhem/list_smith/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/LahaLuhem/list_smith/compare/1.0.0...2.0.0

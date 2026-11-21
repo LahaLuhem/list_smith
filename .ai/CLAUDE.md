@@ -48,7 +48,8 @@ Claude Code's extras. Read [AGENTS.md](AGENTS.md) and [`CODESTYLE.md`](../CODEST
 - **Never publish** (`flutter pub publish`, `dart pub publish`) **or push a semver tag** unasked. A
   tag publishes over OIDC with no confirmation, and pub.dev never unpublishes: a version can only be
   retracted within 7 days. Releases go through the **Release** run, which you point at, never start.
-- **Never run `cider` or touch `CHANGELOG.md` or `version:`** ([hard rule 7](AGENTS.md#hard-rules)).
+- **Never run `cider` or touch `CHANGELOG.md` or `version:` unasked.** When asked, follow
+  [hard rule 7](AGENTS.md#hard-rules).
 - **Never edit `pubspec.lock`,** which is `pub get`'s output.
 - **Ask first** before deleting under `.fvm/` or `.dart_tool/`, and before destructive git
   (`reset --hard`, `push --force`, `branch -D`, `clean -fd`).
