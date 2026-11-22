@@ -97,7 +97,7 @@ void main() {
           [0, 1, 2, 3],
         ]);
 
-        check(rowLookup.indexOf(4, 4)).isNull();
+        check(rowLookup.indexOf(4, 4)).isNull;
         check(rowLookup.indexOf(3, 3)).equals(3);
       });
 }

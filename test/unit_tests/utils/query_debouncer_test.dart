@@ -61,7 +61,7 @@ void main() {
           async.flushTimers();
         });
 
-        check(committedQueries).isEmpty();
+        check(committedQueries).isEmpty;
       });
 
   Bdd(debouncerFeature)
@@ -122,7 +122,7 @@ void main() {
         });
 
         check(calledQueries).deepEquals(['12']);
-        check(typedQueries).isEmpty();
+        check(typedQueries).isEmpty;
       });
 
   Bdd(debouncerFeature)
@@ -150,7 +150,7 @@ void main() {
           async.flushTimers();
         });
 
-        check(calledQueries).isEmpty();
+        check(calledQueries).isEmpty;
         check(typedQueries).deepEquals(['xyz']);
       });
 
@@ -208,11 +208,11 @@ void main() {
           );
           async.flushTimers();
           check(committedQueries).deepEquals(['abc']);
-          check(isCallDone).isFalse();
+          check(isCallDone).isFalse;
 
           workCompleter.complete();
           async.flushMicrotasks();
-          check(isCallDone).isTrue();
+          check(isCallDone).isTrue;
         });
       });
 
@@ -245,7 +245,7 @@ void main() {
           async.flushMicrotasks();
         });
 
-        check(isCallDone).isTrue();
+        check(isCallDone).isTrue;
       });
 }
 

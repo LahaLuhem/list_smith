@@ -331,7 +331,7 @@ void main() {
       await controller.reset();
       await tester.pump();
       // Gone at once, then paged in again from the top.
-      check(find.text('item 1').evaluate()).isEmpty();
+      check(find.text('item 1').evaluate()).isEmpty;
       await drain(tester, frames: 12);
 
       check(find.text('item 2').evaluate()).length.equals(1);
@@ -358,7 +358,11 @@ void main() {
       final controller = ListSmithController<int>();
       final reportedExceptions = <Exception>[];
 
-      await controller.upsertAsync(1, commit: Future.value(1), onFailure: reportedExceptions.add);
+      await controller.upsertAsync(
+        1,
+        commit: Future.syncValue(1),
+        onFailure: reportedExceptions.add,
+      );
       await controller.removeAsync(
         1,
         commit: Future.error(Exception('delete failed')),

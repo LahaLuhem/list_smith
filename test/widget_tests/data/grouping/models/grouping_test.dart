@@ -90,7 +90,7 @@ void main() {
       await pumpListSmith(tester, listFor(oneSection()));
 
       check(find.text('section all').evaluate()).length.equals(1);
-      check(find.text('section A').evaluate()).isEmpty();
+      check(find.text('section A').evaluate()).isEmpty;
     });
   });
 
@@ -140,7 +140,7 @@ void main() {
       await pumpListSmith(tester, listFor(oneSection()));
 
       check(find.text('section all').evaluate()).length.equals(1);
-      check(find.text('section A').evaluate()).isEmpty();
+      check(find.text('section A').evaluate()).isEmpty;
     });
 
     scenarioWidgets('a group straddling a page boundary gets one header, not one per page', (

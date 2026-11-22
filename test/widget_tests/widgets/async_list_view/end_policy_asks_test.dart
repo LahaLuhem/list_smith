@@ -26,7 +26,7 @@ void main() {
                 .isGreaterThan(0),
       );
 
-      check(callCountsPerUpdate).every((callCount) => callCount.equals(0));
+      check(callCountsPerUpdate).every(.it()..equals(0));
     });
 
     scenarioWidgets('a drag over a surface asks nothing', (tester) async {
@@ -47,7 +47,7 @@ void main() {
       final callCountsPerUpdate = await _dragCounting(tester, countingPolicy, const Offset(0, 4));
 
       check(refreshPhases).contains(.dragging);
-      check(callCountsPerUpdate).every((callCount) => callCount.equals(0));
+      check(callCountsPerUpdate).every(.it()..equals(0));
     });
 
     scenarioWidgets('an edit asks once', (tester) async {

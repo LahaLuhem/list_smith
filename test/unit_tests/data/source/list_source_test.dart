@@ -29,7 +29,7 @@ void main() {
           search: AsyncSearch(fetchPage: SearchPageFetcher((_) async => const <int>[])),
         );
 
-        check(asyncSource().supportsSearch).isFalse();
-        check(searchableSource.supportsSearch).isTrue();
+        check(asyncSource().supportsSearch).isFalse;
+        check(searchableSource.supportsSearch).isTrue;
       });
 }

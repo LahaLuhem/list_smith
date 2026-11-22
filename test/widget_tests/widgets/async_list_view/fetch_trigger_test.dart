@@ -323,7 +323,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // Page 1 of the restored list is its own next page, not a retry of the search's failure.
-      check(normal).isNotEmpty();
+      check(normal).isNotEmpty;
       check(normal.toSet()).deepEquals(const {FetchTrigger.nextPage});
     });
 
@@ -361,7 +361,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // A trigger left over from the restore would have mislabelled one of these as queryChanged.
-      check(normalTriggers).isNotEmpty();
+      check(normalTriggers).isNotEmpty;
       check(normalTriggers.toSet()).deepEquals(const {FetchTrigger.nextPage});
     });
 

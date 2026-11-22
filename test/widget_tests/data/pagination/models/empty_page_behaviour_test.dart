@@ -55,9 +55,9 @@ void main() {
     scenarioWidgets('a custom first-page loading surface covers the advance', (tester) async {
       final holdCompleter = Completer<List<int>>();
       final fetchPage = PageFetcher<int>((request) {
-        if (request.pageIndex == 0) return Future.value(const <int>[]);
+        if (request.pageIndex == 0) return Future.syncValue(const <int>[]);
 
-        return request.pageIndex == 1 ? holdCompleter.future : Future.value(const <int>[]);
+        return request.pageIndex == 1 ? holdCompleter.future : Future.syncValue(const <int>[]);
       });
 
       await pumpListSmith(
@@ -96,7 +96,7 @@ void main() {
           ListSmith.async(
             fetchPage: PageFetcher(
               (request) =>
-                  request.pageIndex == 0 ? Future.value(const <int>[]) : holdCompleter.future,
+                  request.pageIndex == 0 ? Future.syncValue(const <int>[]) : holdCompleter.future,
             ),
             itemIdGetter: (item) => item,
             endPolicy: const StopOnEmptyPagesPolicy(emptyRunBeforeEnd: 5),
@@ -110,7 +110,7 @@ void main() {
         // Premise: page 0 came back empty and the list is still paging on.
         check(find.text('my loader').evaluate()).length.equals(1);
 
-        check(scrollController.hasClients).isTrue();
+        check(scrollController.hasClients).isTrue;
         holdCompleter.complete(const [1, 2]);
         await drain(tester);
       },

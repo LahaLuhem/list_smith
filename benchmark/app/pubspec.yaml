@@ -20,8 +20,7 @@ dev_dependencies:
     git:
       url: https://github.com/LahaLuhem/dartender.git
       path: lints
-      # Before Dart 3.14's lints, which 3.13 rejects. Back to main with the SDK bump.
-      ref: cc451a5
+      ref: main
   integration_test:
     sdk: flutter
   flutter_driver:

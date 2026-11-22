@@ -76,7 +76,7 @@ void main() {
           await settle(tester);
         }
 
-        check(searchedQueries).isEmpty();
+        check(searchedQueries).isEmpty;
         check(find.text('item 1').evaluate()).length.equals(1);
       },
     );
@@ -215,7 +215,7 @@ void main() {
       await drain(tester);
 
       check(find.text('item 1').evaluate()).length.equals(1);
-      check(find.text('item 99').evaluate()).isEmpty();
+      check(find.text('item 99').evaluate()).isEmpty;
       check(feedFetches).equals(1);
     });
 

@@ -106,7 +106,7 @@ void main() {
       outline: (tester, example) async {
         await openDemo(tester, 'Custom surfaces', surfaceSize: tallSurfaceSize);
         await example.failPage(tester);
-        check(find.text(example.loadedTitle, skipOffstage: false).evaluate()).isEmpty();
+        check(find.text(example.loadedTitle, skipOffstage: false).evaluate()).isEmpty;
 
         await tester.tap(knobSwitchFinder('Inject fetch failures'));
         await tester.pump();
@@ -163,7 +163,7 @@ void main() {
         await example.turnKnob(tester);
         await drain(tester, frames: 12, step: const Duration(milliseconds: 300));
 
-        check(find.text('Item 21').evaluate()).isEmpty();
+        check(find.text('Item 21').evaluate()).isEmpty;
         check(example.shownFinder.evaluate()).length.equals(1);
       },
     );
@@ -258,7 +258,7 @@ void main() {
       await openDemo(tester, 'Sync search');
       await tester.pump(const Duration(milliseconds: 400));
 
-      check(find.text('Alpha').evaluate()).isEmpty();
+      check(find.text('Alpha').evaluate()).isEmpty;
 
       await tester.tap(find.byType(PlatformSwitch));
       await tester.pump();
@@ -323,8 +323,8 @@ void main() {
       await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
       final pulledStamps = shownStamps();
 
-      check(pulledStamps).isNotEmpty();
-      check(pulledStamps.intersection(coldStamps)).isEmpty();
+      check(pulledStamps).isNotEmpty;
+      check(pulledStamps.intersection(coldStamps)).isEmpty;
     });
 
     scenarioOutlineWidgets<String>(
@@ -338,12 +338,12 @@ void main() {
 
         await openDemo(tester, demoTitle, surfaceSize: tallSurfaceSize);
         await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
-        check(loggedEventsFinder.evaluate()).isNotEmpty();
+        check(loggedEventsFinder.evaluate()).isNotEmpty;
 
         await tester.tap(find.text('Clear'));
         await tester.pump();
 
-        check(loggedEventsFinder.evaluate()).isEmpty();
+        check(loggedEventsFinder.evaluate()).isEmpty;
       },
     );
 
@@ -370,7 +370,7 @@ void main() {
       await tester.fling(find.text('Item 1'), const Offset(0, 300), 1000);
       await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
-      check(find.textContaining('Simulated reload failure').evaluate()).isNotEmpty();
+      check(find.textContaining('Simulated reload failure').evaluate()).isNotEmpty;
     });
 
     scenarioWidgets('the edits demo adds on top, renames in place and swipes a row away', (
@@ -400,7 +400,7 @@ void main() {
       await tester.tap(find.text('Save'));
       await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
 
-      check(find.text('Item 2').evaluate()).isEmpty();
+      check(find.text('Item 2').evaluate()).isEmpty;
       check(tester.getTopLeft(find.text('Renamed row')).dy).equals(renamedRowTop);
 
       // Timed, since a plain drag ends before the full-swipe pane has built, so the row only opens.
@@ -412,7 +412,7 @@ void main() {
       // The dismissal then the resize take 300ms each.
       await drain(tester, frames: 6, step: const Duration(milliseconds: 200));
 
-      check(find.text('Item 1').evaluate()).isEmpty();
+      check(find.text('Item 1').evaluate()).isEmpty;
       check(find.text('New item 1').evaluate()).length.equals(1);
 
       await tester.pump(const Duration(seconds: 1)); // the delete answering
@@ -420,7 +420,7 @@ void main() {
       await drain(tester, frames: 10, step: const Duration(milliseconds: 300));
 
       // Read again, so these are the server's copies.
-      check(find.text('Item 1').evaluate()).isEmpty();
+      check(find.text('Item 1').evaluate()).isEmpty;
       check(tester.getTopLeft(find.text('New item 1')).dy)
           .isLessThan(tester.getTopLeft(find.text('Renamed row')).dy);
     });
@@ -453,8 +453,8 @@ void main() {
         ..isGreaterThan(0)
         ..isLessThan(fullHeight);
       await drain(tester, frames: 4, step: const Duration(milliseconds: 100));
-      check(tester.takeException()).isNull();
-      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty();
+      check(tester.takeException()).isNull;
+      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty;
       await tester.pump(const Duration(seconds: 1)); // the page load the removal set off
     });
 
@@ -470,7 +470,7 @@ void main() {
       await tester.tap(find.text('Save'));
       await drain(tester, frames: 3, step: const Duration(milliseconds: 200));
 
-      check(find.text('Item 2').evaluate()).isEmpty();
+      check(find.text('Item 2').evaluate()).isEmpty;
       check(find.text('Renamed row').evaluate()).length.equals(1);
       await tester.pump(const Duration(seconds: 1)); // the save answering
     });
@@ -486,7 +486,7 @@ void main() {
       await tester.tap(find.text('Delete').last); // the confirm's
       await drain(tester, frames: 6, step: const Duration(milliseconds: 200));
 
-      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty();
+      check(find.text('Item 2', skipOffstage: false).evaluate()).isEmpty;
       check(find.text('Item 3').evaluate()).length.equals(1);
       await tester.pump(const Duration(seconds: 1)); // the delete answering
     });
@@ -502,7 +502,7 @@ void main() {
       await tester.pumpWidget(const SizedBox()); // gone at once, before the save answers
       await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
     });
 
     scenarioWidgets('with saves failing, each edit rolls back and says so', (tester) async {
@@ -524,7 +524,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300)); // the new row grows in
       check(rowText('New item 1').evaluate()).length.equals(1);
       await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
-      check(rowText('New item 1').evaluate()).isEmpty();
+      check(rowText('New item 1').evaluate()).isEmpty;
       check(find.text("Couldn't save New item 1").evaluate()).length.equals(1);
       await waitOutTheToast();
 
@@ -543,7 +543,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       check(rowText('Renamed row').evaluate()).length.equals(1);
       await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
-      check(rowText('Renamed row').evaluate()).isEmpty();
+      check(rowText('Renamed row').evaluate()).isEmpty;
       check(rowText('Item 2').evaluate()).length.equals(1);
       check(find.text("Couldn't save Renamed row").evaluate()).length.equals(1);
       await waitOutTheToast();
@@ -557,7 +557,7 @@ void main() {
       for (var frame = 0; frame < 8 && find.text('Item 1').evaluate().isNotEmpty; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
-      check(find.text('Item 1').evaluate()).isEmpty();
+      check(find.text('Item 1').evaluate()).isEmpty;
       await drain(tester, frames: 10, step: const Duration(milliseconds: 100));
 
       check(find.text('Item 1').evaluate()).length.equals(1);

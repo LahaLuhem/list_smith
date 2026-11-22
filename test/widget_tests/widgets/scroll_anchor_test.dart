@@ -83,9 +83,9 @@ void main() {
           framePixels.add(scrollController.position.pixels);
         }
 
-        check(frameTops).every((it) => it.equals(topBefore));
+        check(frameTops).every(.it()..equals(topBefore));
         // The edit did land: the view moved with it.
-        check(framePixels).any((it) => it.not((it) => it.equals(pixelsBefore)));
+        check(framePixels).any(.it()..not(.it()..equals(pixelsBefore)));
       },
     );
 
@@ -152,7 +152,7 @@ void main() {
         );
       }
 
-      check(jumps).isEmpty();
+      check(jumps).isEmpty;
     });
 
     scenarioWidgets('at the very start, a new row shows on top', (tester) async {
@@ -204,13 +204,13 @@ void main() {
         scrollController.jumpTo(1000);
         await tester.pump();
         final topWhileOut = _topOf(tester, 20);
-        check(find.byKey(_indicatorKey).evaluate()).isNotEmpty(); // premise: still out
+        check(find.byKey(_indicatorKey).evaluate()).isNotEmpty; // premise: still out
 
         server.store.insertAll(0, example.newRows);
         final frameTops = await _releaseAndRecord(tester, holdCompleter, () => _topOf(tester, 20));
 
-        check(frameTops).every((it) => it.equals(topWhileOut));
-        check(find.byKey(_indicatorKey).evaluate()).isEmpty(); // the pull did end
+        check(frameTops).every(.it()..equals(topWhileOut));
+        check(find.byKey(_indicatorKey).evaluate()).isEmpty; // the pull did end
       },
     );
 
@@ -254,7 +254,7 @@ void main() {
         () => scrollController.position.pixels,
       );
 
-      check(framePixels).every((it) => it.isGreaterOrEqual(0)); // never past the start
+      check(framePixels).every(.it()..isGreaterOrEqual(0)); // never past the start
       check(_topOf(tester, 0)).equals(topAtRest);
     });
 
@@ -297,7 +297,7 @@ void main() {
           () => scrollController.position.pixels,
         );
 
-        check(framePixels).every((it) => it.equals(pixelsWhileOut));
+        check(framePixels).every(.it()..equals(pixelsWhileOut));
         check(_topOf(tester, 20)).isLessThan(topWhileOut); // the room did let go
       },
     );

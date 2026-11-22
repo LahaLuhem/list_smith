@@ -51,7 +51,7 @@ void main() {
       await drain(tester, frames: 12);
 
       // Refresh discarded the cursor, so the reload started again from a null cursor.
-      check(received.first).isNull();
+      check(received.first).isNull;
       check(find.text('item 1').evaluate()).length.equals(1);
     });
 
@@ -105,7 +105,7 @@ void main() {
       await _pumpPaged(tester, server.hasMoreFetcher);
 
       check(server.requests).length.equals(3);
-      check(server.requests.map((request) => request.previousSignal)).every((it) => it.isNull());
+      check(server.requests.map((request) => request.previousSignal)).every(.it()..isNull);
     });
 
     scenarioWidgets('the end policy can still end it first', (tester) async {
