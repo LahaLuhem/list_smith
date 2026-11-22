@@ -13,6 +13,6 @@ void main() {
       .run((_) {
         const context = EmptyPageContext(isEmpty: false, isMoreAvailable: true, pagesLoaded: 1);
 
-        check(const AdvanceToFirstNonEmpty().shouldAdvance(context)).isFalse();
+        check(const AdvanceToFirstNonEmpty().shouldAdvance(context)).isFalse;
       });
 }

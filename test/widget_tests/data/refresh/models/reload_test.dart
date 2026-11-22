@@ -220,7 +220,7 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
       check(find.text('item 2001').evaluate()).length.equals(0);
       // Each page was handed the previous page's fresh cursor, so the chain was rebuilt in order.
-      check(cursorsSeen[0]).isNull();
+      check(cursorsSeen[0]).isNull;
       check(cursorsSeen[1]).equals('cursor0');
       check(cursorsSeen[2]).equals('cursor1');
     });
@@ -316,14 +316,14 @@ void main() {
     ) async {
       final server = FakeServer(List.generate(9, (index) => index));
       final controller = await _pumpHasMoreList(tester, server);
-      check(server.asked(3)).isFalse(); // premise: page 2's flag ended the list
+      check(server.asked(3)).isFalse; // premise: page 2's flag ended the list
 
       unawaited(controller.refresh());
       await tester.idle();
       await drain(tester, frames: 12);
 
       check(server.attempts[2]).equals(2);
-      check(server.asked(3)).isFalse();
+      check(server.asked(3)).isFalse;
     });
   });
 }

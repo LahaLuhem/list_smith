@@ -27,7 +27,7 @@ void main() {
       check(heights[1])
         ..isGreaterThan(0)
         ..isLessThan(heights[2]);
-      check(heights.skip(3)).every((height) => height.equals(50));
+      check(heights.skip(3)).every(.it()..equals(50));
     });
 
     scenarioWidgets('rows a page brings in show at full size at once', (tester) async {
@@ -117,8 +117,8 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        check(tester.takeException()).isNull();
-        check(find.text('off 2').evaluate()).isEmpty();
+        check(tester.takeException()).isNull;
+        check(find.text('off 2').evaluate()).isEmpty;
       },
     );
 
@@ -253,7 +253,7 @@ void main() {
         ..remove(2);
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 150));
-      check(find.text('nothing here').evaluate()).isEmpty();
+      check(find.text('nothing here').evaluate()).isEmpty;
       await tester.pump(const Duration(milliseconds: 300));
       await drain(tester);
 
@@ -352,8 +352,7 @@ void main() {
       final growingFinder = find.ancestor(of: _rowOf(12), matching: find.byType(SizeTransition));
 
       check(growingFinder.evaluate()).length.equals(1);
-      check(find.descendant(of: growingFinder, matching: find.text('group 1')).evaluate())
-          .isEmpty();
+      check(find.descendant(of: growingFinder, matching: find.text('group 1')).evaluate()).isEmpty;
       check(find.text('group 1').evaluate()).length.equals(1);
       check(tester.getTopLeft(find.text('group 1')).dy).isLessThan(_topOf(tester, 12));
     });

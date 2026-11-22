@@ -65,7 +65,7 @@ void main() {
         edit(controller);
         await tester.pump();
         final afterEdit = _shownRows();
-        check(afterEdit).not((it) => it.deepEquals(beforeEdit));
+        check(afterEdit).not(.it()..deepEquals(beforeEdit));
         await release(tester, [holdCompleter]);
 
         check(server.attempts[0]).equals(2); // the reload did commit
@@ -127,7 +127,7 @@ void main() {
           scrollController: scrollController,
         );
         await drain(tester, frames: 12);
-        check(server.asked(2)).isFalse();
+        check(server.asked(2)).isFalse;
 
         for (final id in example.removed) {
           server.store.remove(id);
@@ -139,8 +139,8 @@ void main() {
         }
         await drain(tester, frames: 12);
 
-        check(server.asked(2)).isTrue();
-        check(find.text('item 14').evaluate()).isNotEmpty();
+        check(server.asked(2)).isTrue;
+        check(find.text('item 14').evaluate()).isNotEmpty;
       },
     );
 
@@ -158,7 +158,7 @@ void main() {
         scrollController: scrollController,
       );
       await drain(tester, frames: 12);
-      check(server.asked(2)).isFalse();
+      check(server.asked(2)).isFalse;
 
       server.store.remove(7); // so page 2 is short, and page 1 read again ends on page 2's 1st row
       controller.remove(7);
@@ -168,8 +168,8 @@ void main() {
       }
       await drain(tester, frames: 12);
 
-      check(find.text('item 13').evaluate()).isNotEmpty();
-      check(server.asked(3)).isFalse();
+      check(find.text('item 13').evaluate()).isNotEmpty;
+      check(server.asked(3)).isFalse;
     });
 
     scenarioOutlineWidgets<EmptyPageBehaviour>(
@@ -189,7 +189,7 @@ void main() {
           onEmptyPage: behaviour,
         );
         await drain(tester, frames: 12);
-        check(server.asked(1)).isFalse();
+        check(server.asked(1)).isFalse;
 
         for (final id in _range(0, 19)) {
           server.store.remove(id);
@@ -227,7 +227,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
       check(_shownRows()).deepEquals(_rows([1, 2, 4, 5]));
     });
 
@@ -254,7 +254,7 @@ void main() {
         ..upsert(20);
       await drain(tester);
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
       check(_shownRows()).deepEquals(_rows([20, 0, 1, 12, 10, 11]));
       for (final key in [0, 1, 2]) {
         check(find.text('group $key').evaluate()).length.equals(1);
@@ -366,7 +366,7 @@ void main() {
 
         controller.upsert((id: 1, label: 'mine'));
         await tester.pump();
-        check(_shownRows()).not((it) => it.deepEquals(before));
+        check(_shownRows()).not(.it()..deepEquals(before));
 
         await controller.refresh(); // the save failed, so the server still has the old copy
         await drain(tester, frames: 12);
@@ -513,7 +513,7 @@ void main() {
         scrollController: scrollController,
       );
       await drain(tester, frames: 12);
-      check(server.asked(1)).isFalse();
+      check(server.asked(1)).isFalse;
 
       unawaited(controller.removeAsync(10, commit: Completer<void>().future)); // page 0's last row
       server.store.insert(0, 0); // pushes 10 onto page 1
@@ -521,9 +521,9 @@ void main() {
       scrollController.jumpTo(scrollController.position.maxScrollExtent);
       await drain(tester, frames: 12);
 
-      check(server.asked(1)).isTrue();
-      check(find.text('item 9', skipOffstage: false).evaluate()).isNotEmpty(); // 10's spot is built
-      check(find.text('item 10', skipOffstage: false).evaluate()).isEmpty();
+      check(server.asked(1)).isTrue;
+      check(find.text('item 9', skipOffstage: false).evaluate()).isNotEmpty; // 10's spot is built
+      check(find.text('item 10', skipOffstage: false).evaluate()).isEmpty;
     });
 
     scenarioWidgets('once the save answers, what it gave back shows', (tester) async {
@@ -606,7 +606,7 @@ void main() {
         rowHeight: 300, // tall enough that page 1 waits for a scroll
       );
       await drain(tester, frames: 12);
-      check(server.asked(1)).isFalse();
+      check(server.asked(1)).isFalse;
       final saveCompleter = Completer<int>();
       final savedFuture = controller.upsertAsync(15, commit: saveCompleter.future);
       await tester.pump();
@@ -624,7 +624,7 @@ void main() {
       final savedFuture = controller.upsertAsync((
         id: 9,
         label: 'new',
-      ), commit: Future.value((id: 10, label: 'new')));
+      ), commit: Future.syncValue((id: 10, label: 'new')));
 
       await check(savedFuture).throws<AssertionError>();
       await tester.pump();

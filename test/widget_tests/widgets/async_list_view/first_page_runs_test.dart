@@ -121,10 +121,10 @@ void main() {
         unawaited(example.callVerb(controller).then((_) => isDone = true));
         await drain(tester);
         check(server.attempts[0]).equals(2); // the fresh page is out, and held
-        check(isDone).isFalse();
+        check(isDone).isFalse;
         await release(tester, [holdCompleter]);
 
-        check(isDone).isTrue();
+        check(isDone).isTrue;
       },
     );
 
@@ -144,10 +144,10 @@ void main() {
 
       await pullToRefresh(tester, find.text('item 1'));
       // Premise: the list is on its loader, its fresh page still held.
-      check(find.textContaining('item ').evaluate()).isEmpty();
+      check(find.textContaining('item ').evaluate()).isEmpty;
       check(server.attempts[0]).equals(2);
 
-      check(find.byKey(_indicatorKey).evaluate()).isEmpty();
+      check(find.byKey(_indicatorKey).evaluate()).isEmpty;
       await release(tester, [holdCompleter]);
     });
   });

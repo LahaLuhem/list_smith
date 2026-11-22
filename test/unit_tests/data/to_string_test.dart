@@ -100,7 +100,7 @@ void main() {
               .entries
               .where((entry) => entry.value.isNotEmpty),
         );
-        check(hiddenFieldNamesByClassName).isEmpty();
+        check(hiddenFieldNamesByClassName).isEmpty;
       });
 }
 

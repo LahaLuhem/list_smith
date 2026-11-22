@@ -33,7 +33,7 @@ void main() {
           ),
         );
         await tester.pump(example.waits - const Duration(milliseconds: 1));
-        check(routes.lookupRequests).isEmpty();
+        check(routes.lookupRequests).isEmpty;
 
         await tester.pump(const Duration(milliseconds: 1));
         await drain(tester);
@@ -159,7 +159,7 @@ void main() {
         await drain(tester);
 
         check(find.text('lookup 123 #2').evaluate()).length.equals(1);
-        check(routes.searchRequests).isEmpty();
+        check(routes.searchRequests).isEmpty;
       },
     );
 
@@ -185,11 +185,11 @@ void main() {
         await drain(tester);
         // Premise: its page 0 was asked for, and waits.
         check(routes.lookupRequests).length.equals(1);
-        check(isSearchDone).isFalse();
+        check(isSearchDone).isFalse;
 
         await release(tester, [lookupHoldCompleter]);
 
-        check(isSearchDone).isTrue();
+        check(isSearchDone).isTrue;
       },
     );
 
@@ -205,7 +205,7 @@ void main() {
       );
       await pumpListSmith(tester, const SizedBox.shrink());
 
-      check(isSearchDone).isTrue();
+      check(isSearchDone).isTrue;
     });
 
     scenarioWidgets('a call on a list without search asserts', (tester) async {
@@ -308,7 +308,7 @@ void main() {
       await _land(tester, controller.endSearch());
 
       await settle(tester); // past the call's debounce
-      check(routes.lookupRequests).isEmpty();
+      check(routes.lookupRequests).isEmpty;
     });
 
     scenarioWidgets('it does nothing when a typed search shows', (tester) async {
@@ -342,11 +342,11 @@ void main() {
       await drain(tester);
       // Premise: it went back to abc, whose answer waits.
       check(routes.searchRequests).length.equals(2);
-      check(isEndDone).isFalse();
+      check(isEndDone).isFalse;
 
       await release(tester, [searchHoldCompleter]);
 
-      check(isEndDone).isTrue();
+      check(isEndDone).isTrue;
     });
   });
 }
@@ -454,5 +454,5 @@ Future<void> _land(WidgetTester tester, Future<void> callFuture) async {
   await tester.pump(Duration.zero); // its timer, there even at zero
   await drain(tester);
   // Checked, not awaited: a call still waiting fails here instead of hanging the test.
-  check(isDone).isTrue();
+  check(isDone).isTrue;
 }

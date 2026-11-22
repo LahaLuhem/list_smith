@@ -202,7 +202,7 @@ void main() {
       await tester.pump();
 
       check(find.byType(NeutralNoResultsIndicator).evaluate()).length.equals(1);
-      check(scrollController.hasClients).isTrue();
+      check(scrollController.hasClients).isTrue;
     });
 
     scenarioWidgets('without ids, asking to keep the position is an error', (tester) async {
@@ -247,7 +247,7 @@ void main() {
 
         check(tester.takeException())
             .isA<FlutterError>()
-            .has((error) => error.message, 'message')
+            .has('message', (error) => error.message)
             .contains('42');
         check(find.text('item 42').evaluate()).length.equals(1);
         check(_topOf(tester, 42)).isLessThan(_topOf(tester, 7)); // the 1st, not the last
@@ -261,7 +261,7 @@ void main() {
 
       await _pumpRows(tester, itemsNotifier);
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
     });
   });
 

@@ -60,7 +60,7 @@ void main() {
         example.edit(server, controller);
         await tester.pump();
 
-        check(find.text('row n99').evaluate()).isEmpty();
+        check(find.text('row n99').evaluate()).isEmpty;
         check(await _allShownNames(tester, scrollController)).deepEquals(_namesOf(server));
       },
     );
@@ -109,7 +109,7 @@ void main() {
       _create(server, controller, (id: 100, team: 'A', name: 'n03'));
       await tester.pump();
       await scrollToEnd(tester, scrollController);
-      check(server.asked(4)).isTrue(); // premise: page 3 was read after it, page 4 waits
+      check(server.asked(4)).isTrue; // premise: page 3 was read after it, page 4 waits
 
       _rename(server, controller, 100, 'n99');
       await tester.pump();
@@ -176,7 +176,7 @@ void main() {
       final server = FakeServer(_rows());
       final scrollController = _scrollController();
       final controller = await _pumpSorted(tester, server, scrollController);
-      check(server.asked(3)).isFalse(); // page 3 waits for a scroll
+      check(server.asked(3)).isFalse; // page 3 waits for a scroll
 
       final row = server.store[1];
       final retaggedRow = (id: row.id, team: 'Z', name: row.name);
@@ -185,7 +185,7 @@ void main() {
       await tester.pump();
       await scrollToEnd(tester, scrollController);
 
-      check(server.attempts.values).every((it) => it.equals(1));
+      check(server.attempts.values).every(.it()..equals(1));
     });
 
     scenarioWidgets('a row placement moves keeps its state', (tester) async {
@@ -244,7 +244,7 @@ void main() {
       controller.upsert((id: 13, team: 'C', name: 'n01'));
       await tester.pump();
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
       // In place is 2nd here. The feed's order would put it 1st.
       check(tester.getTopLeft(find.text('row n01')).dy)
           .isGreaterThan(tester.getTopLeft(find.text('row n30')).dy);

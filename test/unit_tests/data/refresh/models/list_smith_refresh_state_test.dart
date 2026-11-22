@@ -33,8 +33,8 @@ void main() {
           pullDirection: .up,
         );
 
-        check(base == otherPhase).isFalse();
-        check(base == otherValue).isFalse();
-        check(base == otherDirection).isFalse();
+        check(base == otherPhase).isFalse;
+        check(base == otherValue).isFalse;
+        check(base == otherDirection).isFalse;
       });
 }

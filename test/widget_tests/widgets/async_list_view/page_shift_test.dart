@@ -21,7 +21,7 @@ void main() {
           fetchPage: server.offsetLateFetcher,
           scrollController: scrollController,
         );
-        check(server.asked(3)).isFalse(); // page 3 waits for a scroll
+        check(server.asked(3)).isFalse; // page 3 waits for a scroll
 
         server.store.remove(1);
         remove(controller);
@@ -49,7 +49,7 @@ void main() {
       final isAskedMidExit = server.asked(3);
       await tester.pump(const Duration(milliseconds: 400));
 
-      check(isAskedMidExit).isTrue();
+      check(isAskedMidExit).isTrue;
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
     });
 
@@ -67,7 +67,7 @@ void main() {
           scrollController: scrollController,
           rowHeight: _shortRowHeight,
         );
-        check(server.asked(2)).isTrue();
+        check(server.asked(2)).isTrue;
 
         server.store.remove(1);
         remove(controller);
@@ -101,7 +101,7 @@ void main() {
       await release(tester, [pageHoldCompleter]);
       await tester.pump(const Duration(milliseconds: 400));
 
-      check(isLandingMidExit).isTrue();
+      check(isLandingMidExit).isTrue;
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
     });
 
@@ -121,7 +121,7 @@ void main() {
       unawaited(controller.removeAsync(1, commit: saveCompleter.future));
       await tester.pump();
       await scrollToEnd(tester, scrollController);
-      check(server.asked(3)).isTrue();
+      check(server.asked(3)).isTrue;
 
       server.store.remove(1);
       await release(tester, [pageHoldCompleter]);
@@ -146,7 +146,7 @@ void main() {
       unawaited(controller.removeAsync(1, commit: saveCompleter.future));
       await tester.pump();
       await scrollToEnd(tester, scrollController);
-      check(server.asked(3)).isTrue();
+      check(server.asked(3)).isTrue;
 
       saveCompleter.completeError(Exception('save failed'));
       await tester.pump();
@@ -169,7 +169,7 @@ void main() {
       controller.upsert(100);
       await tester.pump();
       await scrollToEnd(tester, scrollController);
-      check(server.asked(4)).isTrue(); // premise: page 3 was read after it, page 4 waits
+      check(server.asked(4)).isTrue; // premise: page 3 was read after it, page 4 waits
 
       server.store.remove(100);
       controller.remove(100);
@@ -213,7 +213,7 @@ void main() {
         search: AsyncSearch(fetchPage: _evenRowsFetcher(server, searchPageIndexes)),
         query: 'even',
       );
-      check(searchPageIndexes).not((it) => it.contains(3));
+      check(searchPageIndexes).not(.it()..contains(3));
 
       server.store.remove(4);
       controller.remove(4);
@@ -264,7 +264,7 @@ void main() {
           fetchPage: fetcherOf(server),
           scrollController: scrollController,
         );
-        check(server.asked(3)).isFalse();
+        check(server.asked(3)).isFalse;
 
         server.store.remove(1);
         controller.remove(1);
@@ -314,8 +314,8 @@ void main() {
       await scrollToEnd(tester, scrollController);
 
       final firstEmptyPageIndex = (server.store.length / _pageSize).ceil();
-      check(server.asked(firstEmptyPageIndex)).isTrue();
-      check(server.asked(firstEmptyPageIndex + 1)).isFalse();
+      check(server.asked(firstEmptyPageIndex)).isTrue;
+      check(server.asked(firstEmptyPageIndex + 1)).isFalse;
     });
 
     scenarioWidgets('while a save is out, each page reads the page before again only once', (
@@ -335,7 +335,7 @@ void main() {
       await tester.pump();
 
       check(await _allShownItems(tester, scrollController)).deepEquals(server.store);
-      check(server.attempts.values).every((it) => it.isLessOrEqual(2));
+      check(server.attempts.values).every(.it()..isLessOrEqual(2));
     });
 
     scenarioWidgets('a new item alone reads no page again', (tester) async {
@@ -347,14 +347,14 @@ void main() {
         fetchPage: server.offsetLateFetcher,
         scrollController: scrollController,
       );
-      check(server.asked(3)).isFalse(); // page 3 waits for a scroll
+      check(server.asked(3)).isFalse; // page 3 waits for a scroll
 
       server.store.insert(1, 100);
       controller.upsert(100);
       await tester.pump();
       await scrollToEnd(tester, scrollController);
 
-      check(server.attempts.values).every((it) => it.equals(1));
+      check(server.attempts.values).every(.it()..equals(1));
     });
   });
 

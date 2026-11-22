@@ -32,7 +32,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 1));
 
-      check(tester.binding.hasScheduledFrame).isFalse();
+      check(tester.binding.hasScheduledFrame).isFalse;
     });
 
     scenarioWidgets('a custom indicator is built only while a pull is in progress', (tester) async {
@@ -42,10 +42,10 @@ void main() {
         tester,
         ListSmith.async(
           fetchPage: PageFetcher((request) {
-            if (request.pageIndex > 0) return Future.value(const <int>[]);
+            if (request.pageIndex > 0) return Future.syncValue(const <int>[]);
             firstPageFetches++;
 
-            return firstPageFetches == 1 ? Future.value(const [1, 2, 3]) : holdCompleter.future;
+            return firstPageFetches == 1 ? Future.syncValue(const [1, 2, 3]) : holdCompleter.future;
           }),
           itemIdGetter: (item) => item,
           refresh: PullToRefresh(
@@ -58,7 +58,7 @@ void main() {
       );
       await drain(tester);
       check(find.text('item 1').evaluate()).length.equals(1);
-      check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
+      check(find.byType(_SpinningIndicator).evaluate()).isEmpty;
 
       await pullToRefresh(tester, find.text('item 1'));
       check(firstPageFetches).equals(2);
@@ -70,8 +70,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      check(find.byType(_SpinningIndicator).evaluate()).isEmpty();
-      check(tester.binding.hasScheduledFrame).isFalse();
+      check(find.byType(_SpinningIndicator).evaluate()).isEmpty;
+      check(tester.binding.hasScheduledFrame).isFalse;
     });
 
     scenarioOutlineWidgets<_Orientation>(
@@ -179,10 +179,10 @@ void main() {
           tester,
           ListSmith.async(
             fetchPage: PageFetcher((request) {
-              if (request.pageIndex > 0) return Future.value(const <int>[]);
+              if (request.pageIndex > 0) return Future.syncValue(const <int>[]);
               firstPageFetches++;
 
-              return firstPageFetches == 1 ? Future.value(_items) : holdCompleter.future;
+              return firstPageFetches == 1 ? Future.syncValue(_items) : holdCompleter.future;
             }),
             itemIdGetter: (item) => item,
             scroll: config,
@@ -200,7 +200,7 @@ void main() {
         check(firstPageFetches).equals(2);
 
         final indicator = tester.getRect(find.byKey(_indicatorKey));
-        check(indicator.overlaps(tester.getRect(find.text('item 0')))).isFalse();
+        check(indicator.overlaps(tester.getRect(find.text('item 0')))).isFalse;
 
         holdCompleter.complete(_items);
       },
@@ -271,7 +271,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
 
-      check(find.byKey(_indicatorKey).evaluate()).isEmpty();
+      check(find.byKey(_indicatorKey).evaluate()).isEmpty;
       await release(tester, [holdCompleter]);
     });
   });

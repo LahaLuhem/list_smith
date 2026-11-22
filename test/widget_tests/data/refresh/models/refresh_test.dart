@@ -40,12 +40,12 @@ void main() {
       );
       await drain(tester);
       // Premise: the loader is up.
-      check(find.textContaining('item ').evaluate()).isEmpty();
+      check(find.textContaining('item ').evaluate()).isEmpty;
 
       await pullToRefresh(tester, find.byType(Scrollable));
       await release(tester, [firstLoadHoldCompleter]);
 
-      check(isIndicatorShown).isFalse();
+      check(isIndicatorShown).isFalse;
       check(server.attempts[0]).equals(1);
       // The same pull on the rows refreshes, so the one above did reach the list.
       await pullToRefresh(tester, find.byType(Scrollable));

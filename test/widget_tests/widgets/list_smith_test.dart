@@ -69,7 +69,7 @@ void main() {
       await drain(tester);
       // Premise: page 1 failed under page 0's rows.
       check(find.text('item 3').evaluate()).length.equals(1);
-      check(find.text('item 4').evaluate()).isEmpty();
+      check(find.text('item 4').evaluate()).isEmpty;
 
       await tester.tap(find.byType(NeutralRetryButton));
       await drain(tester);
@@ -98,8 +98,8 @@ void main() {
         }, (error, _) => uncaught.add(error));
 
         check(uncaught).single.isA<StateError>();
-        check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty();
-        check(observer.events.contains('error')).isFalse();
+        check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty;
+        check(observer.events.contains('error')).isFalse;
       },
     );
   });

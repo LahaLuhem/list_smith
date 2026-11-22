@@ -81,9 +81,9 @@ void main() {
         EndContext contextWith(Object? signal) =>
             EndContext(pageItemCounts: const [5], pageSize: 20, lastPageSignal: signal);
 
-        check(policy.hasReachedEnd(contextWith(false))).isTrue();
-        check(policy.hasReachedEnd(contextWith(true))).isFalse();
-        check(policy.hasReachedEnd(contextWith(null))).isFalse();
+        check(policy.hasReachedEnd(contextWith(false))).isTrue;
+        check(policy.hasReachedEnd(contextWith(true))).isFalse;
+        check(policy.hasReachedEnd(contextWith(null))).isFalse;
       });
 
   Bdd(endDetectionFeature)
@@ -99,9 +99,9 @@ void main() {
           lastPageSignal: signal,
         );
 
-        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: null))).isTrue();
-        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: 'cursor-2'))).isFalse();
-        check(policy.hasReachedEnd(contextWith(pageCount: 0, signal: null))).isFalse();
+        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: null))).isTrue;
+        check(policy.hasReachedEnd(contextWith(pageCount: 1, signal: 'cursor-2'))).isFalse;
+        check(policy.hasReachedEnd(contextWith(pageCount: 0, signal: null))).isFalse;
       });
 }
 

@@ -43,7 +43,7 @@ void main() {
         received.where(
           (fetch) => fetch.cursor != null && !'${fetch.cursor}'.startsWith('${fetch.query}:'),
         ),
-      ).isEmpty();
+      ).isEmpty;
     });
 
     scenarioWidgets('a superseded page does not fire onPageLoaded', (tester) async {
@@ -135,7 +135,8 @@ void main() {
     ) async {
       final holdCompleter = Completer<List<int>>();
       final searchFetchPage = SearchPageFetcher<int>(
-        (request) => request.pageIndex == 0 ? holdCompleter.future : Future.value(const <int>[]),
+        (request) =>
+            request.pageIndex == 0 ? holdCompleter.future : Future.syncValue(const <int>[]),
       );
 
       Widget build(String query) => ListSmith.async(
@@ -221,9 +222,9 @@ void main() {
     ) async {
       final holdCompleter = Completer<List<int>>();
       final fetchPage = PageFetcher<int>((request) {
-        if (request.pageIndex == 0) return Future.value(const [1, 2, 3]);
+        if (request.pageIndex == 0) return Future.syncValue(const [1, 2, 3]);
 
-        return request.pageIndex == 1 ? holdCompleter.future : Future.value(const <int>[]);
+        return request.pageIndex == 1 ? holdCompleter.future : Future.syncValue(const <int>[]);
       });
 
       Widget build(String query) => ListSmith.async(
@@ -436,7 +437,7 @@ void main() {
       await drain(tester);
 
       // The restore bumped the generation, so the abandoned search page announces nothing.
-      check(observer.events.where((event) => event.contains('search: true'))).isEmpty();
+      check(observer.events.where((event) => event.contains('search: true'))).isEmpty;
     });
 
     scenarioWidgets('a depth reload does not commit over a list that moved on under it', (
@@ -489,7 +490,7 @@ void main() {
       await _pumpStamped(tester, source, controller: controller, query: 'x');
       await settle(tester);
       // Premise: the list is cleared and the new stream's page 0 is out there, held.
-      check(_shown(tester)).isEmpty();
+      check(_shown(tester)).isEmpty;
 
       // The reload lands first, and its commit mustn't cancel that page 0, or stale rows stay for good.
       reloadHoldCompleter.complete();
@@ -739,7 +740,7 @@ void main() {
 
       // The 2nd restore pays the refresh the 1st one never finished.
       check(source.log.skip(before).where((entry) => entry.endsWith(':refresh')).length).equals(3);
-      check(_shown(tester)).not((it) => it.deepEquals([1, 1001, 2001]));
+      check(_shown(tester)).not(.it()..deepEquals([1, 1001, 2001]));
     });
 
     scenarioWidgets('a refresh that meets a superseded reload starts its own', (tester) async {
@@ -854,7 +855,7 @@ void main() {
       await drain(tester);
       await refreshFuture;
 
-      check(tester.takeException()).isNull();
+      check(tester.takeException()).isNull;
     });
   });
 }
