@@ -51,6 +51,7 @@ void main() {
       controller.remove(1);
       await tester.pump();
       await release(tester, [secondPageHoldCompleter]);
+      await pumpPastMotion(tester);
 
       check(server.attempts[0]).equals(3); // premise: that read went out
       check(errorFinder.evaluate()).length.equals(1);
@@ -115,6 +116,7 @@ void main() {
 
         await (example.isReset ? controller.reset() : controller.refresh());
         await drain(tester);
+        await pumpPastMotion(tester);
 
         check(errorFinder.evaluate()).isEmpty;
         check(find.text('item 1').evaluate()).length.equals(1);
@@ -138,11 +140,13 @@ void main() {
 
       unawaited(controller.search('tea', searchDebounce: .zero));
       await settle(tester);
+      await pumpPastMotion(tester);
       check(find.text('item 99').evaluate()).length.equals(1);
       check(errorFinder.evaluate()).isEmpty;
 
       unawaited(controller.endSearch());
       await settle(tester);
+      await pumpPastMotion(tester);
       check(find.text('item 1').evaluate()).length.equals(1);
       check(errorFinder.evaluate()).length.equals(1);
     });
@@ -225,8 +229,7 @@ void main() {
     scenarioWidgets('a Retry during a code refresh waits on it behind the loader', (tester) async {
       final server = FakeServer([1, 2, 3])..failing.add((0, 2));
       final controller = await _pumpList(tester, server);
-      await controller.invalidate();
-      await drain(tester);
+      await _reload(tester, controller, isPull: false);
       final refreshHoldCompleter = server.hold(0, attempt: 3);
       unawaited(controller.refresh());
       await tester.pump();
@@ -287,4 +290,5 @@ Future<void> _reload(
 
   await controller.invalidate();
   await drain(tester);
+  await pumpPastMotion(tester);
 }

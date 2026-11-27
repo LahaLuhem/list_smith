@@ -181,12 +181,14 @@ void main() {
       server.failing.add((0, 2));
       await controller.invalidate();
       await drain(tester);
+      await pumpPastMotion(tester);
       final offsetWithError = scrollController.offset;
       check(offsetWithError).isGreaterThan(shownOffset); // premise: the error landed above
       check(_topOf(tester, 25)).equals(shownTop);
 
       await controller.invalidate();
       await drain(tester);
+      await pumpPastMotion(tester);
       check(scrollController.offset).isLessThan(offsetWithError); // premise: the error went
       check(_topOf(tester, 25)).equals(shownTop);
     });

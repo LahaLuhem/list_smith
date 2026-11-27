@@ -28,6 +28,9 @@ class const PagedView<T extends Object>({
   /// Asks a failed reload again, from its error's retry.
   required final VoidCallback onReloadRetry,
 
+  /// How far the reload error has grown.
+  required final Animation<double> reloadErrorSizeFactor,
+
   /// Builds each item.
   required final ItemBuilder<T> itemBuilder,
 
@@ -60,6 +63,9 @@ class const PagedView<T extends Object>({
 
   /// Starts the list from the top when it changes.
   required final Object startKey,
+
+  /// The failed reload to show above the rows, or the last one while it shrinks out. Null for none.
+  final ReloadFailure? reloadFailure,
 
   /// Builds separators between items. Null for none.
   final IndexedWidgetBuilder? separatorBuilder,
@@ -109,7 +115,7 @@ class const PagedView<T extends Object>({
       .noItemsFound => emptyBuilder?.call(context) ?? const NeutralEmptyIndicator(),
       .ongoing || .subsequentPageError || .completed => null,
     };
-    final reloadFailure = state.reloadFailure;
+    final reloadFailure = this.reloadFailure;
 
     return KeyedListView(
       sections: sections,
@@ -117,11 +123,15 @@ class const PagedView<T extends Object>({
       itemIdGetter: itemIdGetter,
       leaderBuilder: reloadFailure == null
           ? null
-          : (_) => _ReloadError(
-              reloadFailure: reloadFailure,
-              onRetry: onReloadRetry,
-              errorBuilder: reloadErrorBuilder,
-              loadingBuilder: newPageLoadingBuilder,
+          : (_) => SizeTransition(
+              sizeFactor: reloadErrorSizeFactor,
+              axis: scrollConfig.scrollDirection,
+              child: _ReloadError(
+                reloadFailure: reloadFailure,
+                onRetry: onReloadRetry,
+                errorBuilder: reloadErrorBuilder,
+                loadingBuilder: newPageLoadingBuilder,
+              ),
             ),
       // One shape whatever the footer shows: the end, a new page loading, or its error.
       footerBuilder: switch (status) {

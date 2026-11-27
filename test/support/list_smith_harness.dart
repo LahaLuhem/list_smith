@@ -23,6 +23,10 @@ Future<void> drain(WidgetTester tester, {int frames = 5}) async {
   }
 }
 
+/// Pumps past a reload error growing in or shrinking out, which [drain]'s frames, all at one moment,
+/// never do.
+Future<void> pumpPastMotion(WidgetTester tester) => tester.pump(const Duration(seconds: 1));
+
 /// Advances past a search [debounce] so a committed query takes effect, then [drain]s the fetch it triggers.
 Future<void> settle(
   WidgetTester tester, {
