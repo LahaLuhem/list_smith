@@ -106,6 +106,9 @@ class _AsyncListViewState<T extends Object>()
   /// Whether a row near the end already booked the next page this frame.
   var _isNextPageBooked = false;
 
+  /// Whether the 1st [didChangeDependencies] is still to come.
+  var _isFirstAttachPending = true;
+
   /// Memo for [_displayFor], keyed on the paging state, the edit counter, the mode and, while edits are
   /// pending, the grouping. One cell, so the parts can't drift.
   ({
@@ -150,9 +153,18 @@ class _AsyncListViewState<T extends Object>()
       ..addListener(_dropDeadEdits)
       ..addListener(_maybeAdvancePastEmptyPage);
     _editStoreNotifier.addListener(_maybeAdvancePastEmptyPage);
-    widget.controller?.attach(this);
     // A run too, so a reload asked meanwhile meets this load instead of cutting it.
     _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isFirstAttachPending) return;
+    _isFirstAttachPending = false;
+    // Not in initState: a save the controller held books its draft here, which reads MediaQuery.
+    widget.controller?.attach(this);
   }
 
   @override
