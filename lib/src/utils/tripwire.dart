@@ -1,6 +1,6 @@
 import 'package:meta/meta.dart';
 
-/// A one-way flag: starts untripped, can be tripped once, never reset.
+/// A one-way flag: once tripped, it stays tripped.
 @internal
 final class Tripwire() {
   var _hasTripped = false;
@@ -11,7 +11,7 @@ final class Tripwire() {
   /// Whether [trip] ran.
   bool get hasTripped => _hasTripped;
 
-  /// Returns true only for the call that flipped it, like [Set.add].
+  /// True only for the call that tripped it, like [Set.add].
   bool trip() {
     if (_hasTripped) return false;
 

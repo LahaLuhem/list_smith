@@ -6,7 +6,7 @@ import 'package:meta/meta.dart';
 
 import '/src/data/pagination/pagination.dart';
 import '/src/data/presentation/presentation.dart';
-import '../utils/tripwire.dart';
+import '/src/utils/tripwire.dart';
 
 /// The rows edits are animating in and out, one controller per item id.
 ///

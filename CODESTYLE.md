@@ -217,9 +217,10 @@ The one engine-side `switch` is tree assembly: whether `Refresh` wraps the subtr
 - The engine implements the `@internal` `ListSmithControllerHost` and attaches itself, so the
   gesture and the handle share one entry point. A new intent is a host method plus a forwarding
   verb, nothing else.
-- Attach in the 1st `didChangeDependencies`, where a held save's draft can read `MediaQuery`, swap
-  in `didUpdateWidget`, detach in `dispose`. Detached is a no-op. Never-attached can only be wiring,
-  and asserts where the call's intent would be lost.
+- Attach in the 1st `didChangeDependencies`, since a held save's draft reads `MediaQuery`, swap in
+  `didUpdateWidget`, detach in `dispose`.
+- With no list attached, a verb does nothing, a save waits for the next list, and only a verb that
+  list would lose, `search()`, asserts if none ever attached ([why](APPENDIX.md#controller-handle)).
 
 ---
 
@@ -463,9 +464,9 @@ bucketed. Getters the language or an interface fixes (`hashCode`, `ValueListenab
 <a id="idioms-tripwire"></a>
 ### A one-way flag is a `Tripwire`
 
-A flag that only ever goes from unset to set is a [`Tripwire`](lib/src/utils/tripwire.dart), so
-nothing can clear it by mistake, and `if (!tripwire.trip()) return;` runs a block once. A signal
-something awaits is a `Completer<void>` instead.
+A flag that only ever flips one way is a [`Tripwire`](lib/src/utils/tripwire.dart), which nothing
+can reset. `if (!tripwire.trip()) return;` runs a block once. Something awaited is a
+`Completer<void>` instead.
 
 ---
 

@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '/src/data/grouping/grouping.dart';
 import '/src/data/pagination/pagination.dart';
-import '../../../utils/tripwire.dart';
+import '/src/utils/tripwire.dart';
 import '../utils/edit_resolver.dart';
 import 'item_edit.dart';
 import 'removal_stamps.dart';
