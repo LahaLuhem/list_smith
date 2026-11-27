@@ -725,7 +725,7 @@ class _AsyncListViewState<T extends Object>()
           sections: _sectionsFor(shownState),
           onNearEnd: _onNearEnd,
           onRetry: _retryPage,
-          onReloadRetry: _runReload,
+          onReloadRetry: _retryReload,
           itemBuilder: switch (widget.source.editTransition) {
             NoEditTransition() => widget.itemBuilder,
             AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
@@ -770,8 +770,11 @@ class _AsyncListViewState<T extends Object>()
     };
   }
 
-  /// Reads the state as a drag starts, which can be a frame ahead of the screen.
-  bool _takesPull() => widget.source.refresh.takesPull(_shownStatus());
+  /// Reads the state as a drag starts, which can be a frame ahead of the screen. None while the reload
+  /// error's loader shows a reload, as on the 1st-page loader.
+  bool _takesPull() =>
+      !(_pagingStateNotifier.value.reloadFailure?.isRetrying ?? false) &&
+      widget.source.refresh.takesPull(_shownStatus());
 
   bool _showsSurface() => switch (_shownStatus()) {
     .loadingFirstPage || .firstPageError || .noItemsFound => true,
@@ -874,7 +877,27 @@ class _AsyncListViewState<T extends Object>()
 
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
   /// that loader.
-  Future<void> _refreshFromPull() => _runReload(.refresh).handOverFuture;
+  Future<void> _refreshFromPull() {
+    final reloadRun = _runReload(.refresh);
+    reloadRun.pullTripwire.trip();
+
+    return reloadRun.handOverFuture;
+  }
+
+  /// From a failed reload's error: asks again with its trigger, or waits on the reload already running,
+  /// the error showing a loader meanwhile.
+  void _retryReload() {
+    final pagingState = _pagingStateNotifier.value;
+    final reloadFailure = pagingState.reloadFailure;
+    if (reloadFailure == null) return; // the list moved on since the frame the tap hit
+
+    final runningReload = _runningReload;
+    final liveReload = runningReload == null || runningReload.isStale ? null : runningReload;
+    if (liveReload?.pullTripwire.hasTripped ?? false) return; // its indicator shows it already
+
+    _pagingStateNotifier.value = pagingState.reloadRetrying();
+    if (liveReload == null) _runReload(reloadFailure.trigger);
+  }
 
   @override
   void upsert(T item) => _bookGrowingIn(item, () => _edit(item, item));
@@ -1097,6 +1120,9 @@ final class _ReloadRun<T extends Object>(
 
   /// What a fetch through this run last threw, null while none has.
   Exception? _exception;
+
+  /// Tripped once a pull's indicator shows this run, so a Retry leaves it to the indicator.
+  final pullTripwire = Tripwire();
 
   @override
   int get depth => _startState.pages?.length ?? 0;

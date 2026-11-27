@@ -4,9 +4,9 @@ import '../enums/fetch_trigger.dart';
 import '../enums/paging_status.dart';
 import 'loaded_page.dart';
 
-/// A failed reload: what it threw, and the trigger to ask again with.
+/// A failed reload: what it threw, the trigger to ask again with, and whether its Retry is asking.
 @internal
-typedef ReloadFailure = ({Exception exception, FetchTrigger trigger});
+typedef ReloadFailure = ({Exception exception, FetchTrigger trigger, bool isRetrying});
 
 /// What an async list holds: the pages loaded so far, and where its stream stands.
 ///
@@ -20,8 +20,8 @@ final class const PagingState<T extends Object>({
   /// What the last page fetch threw. Only [failed] sets it.
   final Exception? exception,
 
-  /// A reload that failed over these pages. Only [reloadFailed] sets it, and a commit or reset, being a
-  /// new state, drops it.
+  /// A reload that failed over these pages. Only [reloadFailed] and [reloadRetrying] set it, and a
+  /// commit or reset, being a new state, drops it.
   final ReloadFailure? reloadFailure,
 
   /// Whether the source may have more pages.
@@ -72,13 +72,26 @@ final class const PagingState<T extends Object>({
   PagingState<T> reloadFailed(Exception exception, FetchTrigger trigger) => PagingState(
     pages: pages,
     exception: this.exception,
-    reloadFailure: (exception: exception, trigger: trigger),
+    reloadFailure: (exception: exception, trigger: trigger, isRetrying: false),
     hasNextPage: hasNextPage,
     isLoading: isLoading,
   );
 
+  /// The failed reload's Retry is asking, until a reload is over. Needs a [reloadFailure].
+  PagingState<T> reloadRetrying() {
+    final (:exception, :trigger, isRetrying: _) = reloadFailure!;
+
+    return PagingState(
+      pages: pages,
+      exception: this.exception,
+      reloadFailure: (exception: exception, trigger: trigger, isRetrying: true),
+      hasNextPage: hasNextPage,
+      isLoading: isLoading,
+    );
+  }
+
   /// A copy with the given fields replaced. The exception only changes through [loading], [failed] and
-  /// [settled], the reload failure only through [reloadFailed].
+  /// [settled], the reload failure only through [reloadFailed] and [reloadRetrying].
   // Leaves both out on purpose, as the doc says.
   // ignore: avoid-incomplete-copy-with
   PagingState<T> copyWith({List<LoadedPage<T>>? pages, bool? hasNextPage, bool? isLoading}) =>

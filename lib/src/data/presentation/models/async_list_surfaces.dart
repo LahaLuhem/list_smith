@@ -16,7 +16,8 @@ final class const AsyncListSurfaces({
   /// Builds the first-page loading surface, sized to the list.
   final WidgetBuilder? firstPageLoadingBuilder,
 
-  /// Builds the loading footer shown while a further page loads.
+  /// Builds the loading footer shown while a further page loads, and the reload error's loader after its
+  /// Retry.
   final WidgetBuilder? newPageLoadingBuilder,
 
   /// Builds the first-page error surface, sized to the list, with the error and a retry callback.

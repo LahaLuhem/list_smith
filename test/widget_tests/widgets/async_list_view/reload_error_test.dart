@@ -147,15 +147,111 @@ void main() {
       check(errorFinder.evaluate()).length.equals(1);
     });
   });
+
+  feature('ListSmith.async retrying a failed reload', () {
+    final loaderFinder = find.byType(NeutralLoadingIndicator);
+    final retryFinder = find.byType(NeutralRetryButton).hitTestable();
+    final spinningIndicatorFinder = find.text('indicator refreshing');
+    final shownPull = PullToRefresh(
+      indicatorBuilder: (_, state) => Text('indicator ${state.phase.name}'),
+    );
+
+    scenarioWidgets('Retry shows a loader in place of the error until it fails again', (
+      tester,
+    ) async {
+      final server = FakeServer([1, 2, 3])..failing.addAll({(0, 2), (0, 3)});
+      final retryHoldCompleter = server.hold(0, attempt: 3);
+      await _pumpList(tester, server);
+      await pullToRefresh(tester, listScrollableFinder);
+
+      await tester.tap(retryFinder);
+      await tester.pump();
+      check(loaderFinder.evaluate()).length.equals(1);
+      check(retryFinder.evaluate()).isEmpty;
+      await release(tester, [retryHoldCompleter]);
+
+      check(loaderFinder.evaluate()).isEmpty;
+      check(retryFinder.evaluate()).length.equals(1);
+    });
+
+    scenarioWidgets("while the error's loader shows, a pull isn't taken", (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final retryHoldCompleter = server.hold(0, attempt: 3);
+      await _pumpList(tester, server, refresh: shownPull);
+      await pullToRefresh(tester, listScrollableFinder);
+      await tester.tap(retryFinder);
+      await tester.pump();
+
+      await pullToRefresh(tester, listScrollableFinder);
+
+      check(spinningIndicatorFinder.evaluate()).isEmpty;
+      await release(tester, [retryHoldCompleter]);
+    });
+
+    scenarioWidgets('a Retry under a spinning pull indicator changes nothing', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final pullHoldCompleter = server.hold(0, attempt: 3);
+      await _pumpList(tester, server, refresh: shownPull);
+      await pullToRefresh(tester, listScrollableFinder);
+      await pullToRefresh(tester, listScrollableFinder);
+      check(spinningIndicatorFinder.evaluate()).length.equals(1); // premise: the 2nd pull is out
+
+      await tester.tap(retryFinder);
+      await tester.pump();
+
+      check(loaderFinder.evaluate()).isEmpty;
+      await release(tester, [pullHoldCompleter]);
+    });
+
+    scenarioWidgets('a Retry tapped as a reload lands, before the next frame, asks nothing', (
+      tester,
+    ) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final controller = await _pumpList(tester, server);
+      await pullToRefresh(tester, listScrollableFinder);
+      final refreshHoldCompleter = server.hold(0, attempt: 3);
+      unawaited(controller.refresh());
+      await tester.pump();
+      refreshHoldCompleter.complete();
+      await tester.idle(); // it lands, and no frame has drawn that yet
+      final askedCount = server.requests.length;
+
+      await tester.tap(retryFinder);
+      await drain(tester);
+
+      check(server.requests.skip(askedCount).where((request) => request.pageIndex == 0)).isEmpty;
+    });
+
+    scenarioWidgets('a Retry during a code refresh waits on it behind the loader', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final controller = await _pumpList(tester, server);
+      await controller.invalidate();
+      await drain(tester);
+      final refreshHoldCompleter = server.hold(0, attempt: 3);
+      unawaited(controller.refresh());
+      await tester.pump();
+      final askedCount = server.requests.length;
+
+      await tester.tap(retryFinder);
+      await tester.pump();
+      check(loaderFinder.evaluate()).length.equals(1);
+      await release(tester, [refreshHoldCompleter]);
+
+      // Nothing asked again under the failed trigger once the refresh landed.
+      check(server.requests.skip(askedCount).where((request) => request.trigger == .invalidated))
+          .isEmpty;
+    });
+  });
 }
 
-/// [server]'s rows under the default pull, its empty screen reading "nothing here".
+/// [server]'s rows under [refresh], its empty screen reading "nothing here".
 Future<ListSmithController<int>> _pumpList(
   WidgetTester tester,
   FakeServer<int> server, {
   int pageSize = 20,
   AsyncListSurfaces surfaces = const AsyncListSurfaces(),
   Search<int> search = const NoSearch(),
+  Refresh refresh = const PullToRefresh(),
 }) async {
   final controller = ListSmithController<int>();
   await pumpListSmith(
@@ -166,6 +262,7 @@ Future<ListSmithController<int>> _pumpList(
       pageSize: pageSize,
       surfaces: surfaces,
       search: search,
+      refresh: refresh,
       controller: controller,
       emptyBuilder: (_) => const Text('nothing here'),
       itemBuilder: (_, item, _) => Text('item $item'),
