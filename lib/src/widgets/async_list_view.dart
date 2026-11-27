@@ -20,7 +20,7 @@ import '/src/data/search/search.dart';
 import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
 import '/src/utils/report_bad_data.dart';
-import '../utils/tripwire.dart';
+import '/src/utils/tripwire.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -163,7 +163,7 @@ class _AsyncListViewState<T extends Object>()
     super.didChangeDependencies();
 
     if (!_attachTripwire.trip()) return;
-    // Not in initState: a save the controller held books its draft here, which reads MediaQuery.
+    // Not initState, since a held save books its draft here, which reads MediaQuery.
     widget.controller?.attach(this);
   }
 

@@ -341,9 +341,14 @@ feed kept by `KeepCachePolicy` catches up when you're back.
 No indicator shows, since your button owns its progress, through the futures. Each completes once
 its fresh data shows or its fetch fails, or with the load it joined.
 
-Before a list attaches, `invalidate()`, `reset()` and `endSearch()` do nothing, since a store event
-can beat the view's build, while `refresh()` and `search()` assert. Nothing to dispose. To *watch*
-the list instead, use an [observer](#watching-what-it-does).
+With no list attached:
+
+- `search()` asserts if no list ever attached.
+- [`upsertAsync` and `removeAsync`](#before-your-server-answers) wait for the next list.
+- Every other verb does nothing, since the next list reads fresh, as long as your cache is current.
+
+Calls doing nothing? Check the list got `controller:`. Nothing to dispose. To *watch* the list
+instead, use an [observer](#watching-what-it-does).
 
 ## Editing loaded items
 
@@ -448,7 +453,8 @@ controller.upsertAsync(
 - If `commit` fails, the draft goes, what it covered comes back, and `onFailure` gets the exception.
   Nothing throws, so a call you don't await is safe. An `Error`, a bug in your save, is undone too,
   then goes on to your app.
-- `reset()` drops every draft, and a save answering after it changes nothing.
+- `reset()` drops every draft, even one waiting for its list, and a save answering after it changes
+  nothing.
 
 `removeAsync` fits `Dismissible.onDismissed` as it is:
 

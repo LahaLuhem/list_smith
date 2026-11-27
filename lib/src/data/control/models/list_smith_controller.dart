@@ -9,14 +9,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '/src/data/search/search.dart';
-import '../../../utils/tripwire.dart';
+import '/src/utils/tripwire.dart';
 import 'list_smith_controller_host.dart';
 
 /// Drives a [ListSmith.async] list from code: a refresh button, a tab re-tap, a re-read after a local
 /// write, a logout, a scan.
 ///
 /// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
-/// Holds only saves still out, so there's nothing to dispose.
+///
+/// With no list attached, a verb does nothing, a save waits for the next list, and [search] asserts
+/// if none ever attached. Nothing to dispose.
 class ListSmithController<T extends Object>() {
   ListSmithControllerHost<T>? _host;
   final _attachTripwire = Tripwire();
@@ -40,7 +42,7 @@ class ListSmithController<T extends Object>() {
   Future<void> invalidate() => _host?.invalidate() ?? Future<void>.syncValue(null);
 
   /// Starts the list over from page 0: a logout, an account switch, a filter outside search. That page
-  /// reports [FetchTrigger.invalidated].
+  /// reports [FetchTrigger.invalidated]. Drops every draft, even one waiting for its list.
   ///
   /// Cuts in on whatever load is running rather than joining it, and completes once its page 0 is over.
   /// Keeps a search, its fetcher included, so it restarts, and a feed held by [KeepCachePolicy] starts
@@ -90,6 +92,7 @@ class ListSmithController<T extends Object>() {
 
   /// [upsert] before your server has it: [draft] shows until [commit] answers, then the answer does. On
   /// failure the draft goes and [onFailure] gets the exception, so nothing throws. The id can't change.
+  /// With no list attached, it waits for the next one.
   Future<void> upsertAsync(
     T draft, {
     required Future<T> commit,
@@ -103,7 +106,7 @@ class ListSmithController<T extends Object>() {
       );
 
   /// [remove] before your server has it. On failure the item comes back and [onFailure] gets the
-  /// exception.
+  /// exception. With no list attached, it waits for the next one.
   Future<void> removeAsync(
     T item, {
     required Future<void> commit,
