@@ -23,12 +23,6 @@ final class const ReloadToCurrentDepth({
   @override
   @internal
   Future<void> run<T extends Object>(ReloadContext<T> context) async {
-    if (context.depth == 0) {
-      await context.reset();
-
-      return;
-    }
-
     // Page k needs page k-1's signal, so one page at a time.
     if (context.isSignalBased) {
       final freshPages = <List<T>>[];

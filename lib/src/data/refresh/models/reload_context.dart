@@ -9,7 +9,7 @@ import 'package:meta/meta.dart';
 /// controller.
 @internal
 abstract interface class ReloadContext<T extends Object>._() {
-  /// How many pages were loaded when the reload began, the depth to reload to.
+  /// How many pages were loaded when the reload began. Never 0, since the engine resets an empty list.
   int get depth;
 
   /// Whether the source threads a per-page signal, which forces a sequential reload whatever the
