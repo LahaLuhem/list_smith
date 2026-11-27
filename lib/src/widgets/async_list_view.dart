@@ -1160,7 +1160,8 @@ final class _ReloadRun<T extends Object>(
     _epoch = _engine._generation;
   }
 
-  @override
+  /// The engine's own restart, out of a [Reload]'s reach. Completes once page 1 lands or fails, or
+  /// the list moves on.
   Future<void> reset() {
     final firstPageFuture = _engine._resetPaging(trigger);
     _epoch = _engine._generation;

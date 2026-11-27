@@ -127,30 +127,5 @@ void main() {
         check(isDone).isTrue;
       },
     );
-
-    scenarioWidgets('a pull hands over to the 1st-page loader instead of spinning beside it', (
-      tester,
-    ) async {
-      final server = FakeServer<int>([1, 2, 3]);
-      await pumpList(
-        tester,
-        server,
-        refresh: PullToRefresh(
-          indicatorBuilder: (_, _) => const SizedBox.expand(key: _indicatorKey),
-        ),
-      );
-      await drain(tester);
-      final holdCompleter = server.hold(0, attempt: 2);
-
-      await pullToRefresh(tester, find.text('item 1'));
-      // Premise: the list is on its loader, its fresh page still held.
-      check(find.textContaining('item ').evaluate()).isEmpty;
-      check(server.attempts[0]).equals(2);
-
-      check(find.byKey(_indicatorKey).evaluate()).isEmpty;
-      await release(tester, [holdCompleter]);
-    });
   });
 }
-
-const _indicatorKey = ValueKey('indicator');

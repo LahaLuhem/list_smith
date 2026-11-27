@@ -5,8 +5,8 @@ import 'package:meta/meta.dart';
 
 /// The handle a [Reload] works through, a `BuildContext` for a reload.
 ///
-/// One per reload, so it can read depth, fetch, and commit or reset without ever touching the paging
-/// controller.
+/// One per reload, so it can read depth, fetch and commit without touching the paging controller.
+/// Nothing here empties the list, so rows stay until their replacement lands.
 @internal
 abstract interface class ReloadContext<T extends Object>._() {
   /// How many pages were loaded when the reload began. Never 0, since the engine resets an empty list.
@@ -27,8 +27,4 @@ abstract interface class ReloadContext<T extends Object>._() {
   /// Replaces the loaded pages with [pages] in one go, recording [lastSignal] as the new end signal. It
   /// may read pages again first, so await it.
   Future<void> commit(List<List<T>> pages, {Object? lastSignal});
-
-  /// Throws away the loaded pages and re-fetches only the 1st, the [ResetToFirstPage] behaviour.
-  /// Completes once that page lands or fails, or the list moves on first.
-  Future<void> reset();
 }

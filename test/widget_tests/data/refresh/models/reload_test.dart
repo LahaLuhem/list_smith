@@ -9,7 +9,7 @@ import 'package:list_smith/src/widgets/defaults/defaults.dart';
 import '../../../../support/support.dart';
 
 void main() {
-  feature('ListSmith.async ReloadToCurrentDepth', () {
+  feature('ListSmith.async reloads', () {
     // Each page yields one item stamped `page * 1000 + attempt`, so a test can tell a refetched page
     // from its 1st load. `attempts` records how many times each index was fetched.
     ({PageFetcher<int> fetchPage, Map<int, int> attempts}) valuedFetcher({int? failPageOnReload}) {
@@ -48,50 +48,111 @@ void main() {
       check(find.text('item 1').evaluate()).length.equals(0);
     });
 
-    scenarioWidgets('with nothing loaded yet, a pull asks for the 1st page again', (tester) async {
-      final server = FakeServer([1, 2, 3])..failing.add((0, 1));
-
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: server.offsetLateFetcher,
-          itemIdGetter: (item) => item,
-          refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
-          itemBuilder: (_, item, _) => Text('item $item'),
+    scenarioOutlineWidgets<({Reload reload, List<int> serverItems, String shownText})>(
+      'a pull keeps what shows under the spinning indicator until its page lands',
+      examples: const {
+        'rows, the default reload': (
+          reload: ResetToFirstPage(),
+          serverItems: [1, 2, 3],
+          shownText: 'item 1',
         ),
-      );
-      await drain(tester);
-      final errorIndicatorFinder = find.byType(NeutralErrorIndicator);
-      check(errorIndicatorFinder.evaluate()).length.equals(1); // premise: the 1st page failed
-
-      await pullToRefresh(tester, errorIndicatorFinder);
-
-      check(find.text('item 1').evaluate()).length.equals(1);
-    });
-
-    scenarioWidgets('one failed page keeps every page old', (tester) async {
-      final fetcher = valuedFetcher(failPageOnReload: 1);
-
-      await pumpListSmith(
-        tester,
-        ListSmith.async(
-          fetchPage: fetcher.fetchPage,
-          itemIdGetter: (item) => item,
-          endPolicy: const FixedPageCountPolicy(pageCount: 3),
-          refresh: const PullToRefresh(reload: ReloadToCurrentDepth(concurrency: null)),
-          itemBuilder: (_, item, _) => Text('item $item'),
+        'rows, a depth reload': (
+          reload: ReloadToCurrentDepth(),
+          serverItems: [1, 2, 3],
+          shownText: 'item 1',
         ),
-      );
-      await drain(tester, frames: 12);
+        'the empty screen, the default reload': (
+          reload: ResetToFirstPage(),
+          serverItems: [],
+          shownText: 'nothing here',
+        ),
+      },
+      outline: (tester, example) async {
+        final server = FakeServer(example.serverItems);
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: server.offsetLateFetcher,
+            itemIdGetter: (item) => item,
+            refresh: PullToRefresh(
+              reload: example.reload,
+              indicatorBuilder: (_, state) => Text('indicator ${state.phase.name}'),
+            ),
+            emptyBuilder: (_) => const Text('nothing here'),
+            itemBuilder: (_, item, _) => Text('item $item'),
+          ),
+        );
+        await drain(tester);
+        final holdCompleter = server.hold(0, attempt: 2);
+        server.store.insert(0, 0);
 
-      await pullToRefresh(tester, find.text('item 1'));
+        await pullToRefresh(tester, listScrollableFinder);
+        check(find.text(example.shownText).evaluate()).length.equals(1);
+        check(find.text('indicator refreshing').evaluate()).length.equals(1);
+        await release(tester, [holdCompleter]);
 
-      // One page failed, so nothing is committed: the pre-refresh values all remain.
-      check(find.text('item 1').evaluate()).length.equals(1); // page 0 still old
-      check(find.text('item 1001').evaluate()).length.equals(1); // page 1 still old
-      check(find.text('item 2001').evaluate()).length.equals(1); // page 2 still old
-      check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
-    });
+        check(find.text('item 0').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioWidgets(
+      'with nothing loaded yet, a pull shows the 1st-page loader while it asks again',
+      (tester) async {
+        final server = FakeServer([1, 2, 3])..failing.add((0, 1));
+        final holdCompleter = server.hold(0, attempt: 2);
+
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: server.offsetLateFetcher,
+            itemIdGetter: (item) => item,
+            itemBuilder: (_, item, _) => Text('item $item'),
+          ),
+        );
+        await drain(tester);
+        final errorIndicatorFinder = find.byType(NeutralErrorIndicator);
+        check(errorIndicatorFinder.evaluate()).length.equals(1); // premise: the 1st page failed
+
+        await pullToRefresh(tester, errorIndicatorFinder);
+        // Nothing to keep, so the error gives way instead of sitting under the indicator.
+        check(errorIndicatorFinder.evaluate()).isEmpty;
+        check(find.byType(NeutralLoadingIndicator).evaluate()).length.equals(1);
+        await release(tester, [holdCompleter]);
+
+        check(find.text('item 1').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioOutlineWidgets<({Reload reload, int failingPage})>(
+      'a failed pull keeps every page old',
+      examples: const {
+        'the default reload': (reload: ResetToFirstPage(), failingPage: 0),
+        'a depth reload': (reload: ReloadToCurrentDepth(concurrency: null), failingPage: 1),
+      },
+      outline: (tester, example) async {
+        final fetcher = valuedFetcher(failPageOnReload: example.failingPage);
+
+        await pumpListSmith(
+          tester,
+          ListSmith.async(
+            fetchPage: fetcher.fetchPage,
+            itemIdGetter: (item) => item,
+            endPolicy: const FixedPageCountPolicy(pageCount: 3),
+            refresh: PullToRefresh(reload: example.reload),
+            itemBuilder: (_, item, _) => Text('item $item'),
+          ),
+        );
+        await drain(tester, frames: 12);
+
+        await pullToRefresh(tester, find.text('item 1'));
+
+        // One page failed, so nothing is committed: the pre-refresh values all remain.
+        check(find.text('item 1').evaluate()).length.equals(1); // page 0 still old
+        check(find.text('item 1001').evaluate()).length.equals(1); // page 1 still old
+        check(find.text('item 2001').evaluate()).length.equals(1); // page 2 still old
+        check(find.text('item 2').evaluate()).length.equals(0); // no fresh value committed
+      },
+    );
 
     scenarioWidgets('a failed page stops the reload asking for the pages after it', (tester) async {
       final fetcher = valuedFetcher(failPageOnReload: 1);
