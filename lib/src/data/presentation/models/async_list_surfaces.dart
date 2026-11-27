@@ -5,7 +5,8 @@ import 'package:flutter/widgets.dart';
 
 import '../typedefs/error_builder.dart';
 
-/// The overridable surfaces only an async list has: page loading, page errors, the end-of-list footer.
+/// The overridable surfaces only an async list has: page loading, page and reload errors, the
+/// end-of-list footer.
 ///
 /// Anything you leave unset keeps list_smith's neutral surface. Build one and reuse it across lists
 /// for a house style. The pull indicator lives on [PullToRefresh] instead, and the empty state sits
@@ -23,6 +24,9 @@ final class const AsyncListSurfaces({
 
   /// Builds the new-page error footer, with the error and a retry callback.
   final ErrorBuilder? newPageErrorBuilder,
+
+  /// Builds the error a failed reload shows above what it kept, with a retry callback.
+  final ErrorBuilder? reloadErrorBuilder,
 
   /// Builds the footer shown once every page has loaded.
   final WidgetBuilder? noMoreItemsBuilder,

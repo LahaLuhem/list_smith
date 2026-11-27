@@ -1,7 +1,12 @@
 import 'package:meta/meta.dart';
 
+import '../enums/fetch_trigger.dart';
 import '../enums/paging_status.dart';
 import 'loaded_page.dart';
+
+/// A failed reload: what it threw, and the trigger to ask again with.
+@internal
+typedef ReloadFailure = ({Exception exception, FetchTrigger trigger});
 
 /// What an async list holds: the pages loaded so far, and where its stream stands.
 ///
@@ -14,6 +19,10 @@ final class const PagingState<T extends Object>({
 
   /// What the last page fetch threw. Only [failed] sets it.
   final Exception? exception,
+
+  /// A reload that failed over these pages. Only [reloadFailed] sets it, and a commit or reset, being a
+  /// new state, drops it.
+  final ReloadFailure? reloadFailure,
 
   /// Whether the source may have more pages.
   final bool hasNextPage = true,
@@ -40,23 +49,43 @@ final class const PagingState<T extends Object>({
   Iterable<T> flattenItems() => pages?.expand((page) => page.items) ?? const .empty();
 
   /// A fetch is on its way, so the last one's exception goes.
-  PagingState<T> loading() => PagingState(pages: pages, hasNextPage: hasNextPage, isLoading: true);
+  PagingState<T> loading() => PagingState(
+    pages: pages,
+    reloadFailure: reloadFailure,
+    hasNextPage: hasNextPage,
+    isLoading: true,
+  );
 
   /// The fetch on its way threw [exception].
-  PagingState<T> failed(Exception exception) =>
-      PagingState(pages: pages, exception: exception, hasNextPage: hasNextPage);
+  PagingState<T> failed(Exception exception) => PagingState(
+    pages: pages,
+    exception: exception,
+    reloadFailure: reloadFailure,
+    hasNextPage: hasNextPage,
+  );
 
-  /// Nothing on its way and no error, as a stream parked while searching should come back.
-  PagingState<T> settled() => PagingState(pages: pages, hasNextPage: hasNextPage);
+  /// Nothing on its way and no page error, as a stream parked while searching should come back.
+  PagingState<T> settled() =>
+      PagingState(pages: pages, reloadFailure: reloadFailure, hasNextPage: hasNextPage);
+
+  /// A reload over these pages threw [exception], so they stay up with it.
+  PagingState<T> reloadFailed(Exception exception, FetchTrigger trigger) => PagingState(
+    pages: pages,
+    exception: this.exception,
+    reloadFailure: (exception: exception, trigger: trigger),
+    hasNextPage: hasNextPage,
+    isLoading: isLoading,
+  );
 
   /// A copy with the given fields replaced. The exception only changes through [loading], [failed] and
-  /// [settled].
-  // Leaves exception out on purpose, as the doc says.
+  /// [settled], the reload failure only through [reloadFailed].
+  // Leaves both out on purpose, as the doc says.
   // ignore: avoid-incomplete-copy-with
   PagingState<T> copyWith({List<LoadedPage<T>>? pages, bool? hasNextPage, bool? isLoading}) =>
       PagingState(
         pages: pages ?? this.pages,
         exception: exception,
+        reloadFailure: reloadFailure,
         hasNextPage: hasNextPage ?? this.hasNextPage,
         isLoading: isLoading ?? this.isLoading,
       );
@@ -79,6 +108,7 @@ final class const PagingState<T extends Object>({
       'PagingState('
       'pages: ${pages?.length}, '
       'exception: $exception, '
+      'reloadFailure: $reloadFailure, '
       'hasNextPage: $hasNextPage, '
       'isLoading: $isLoading'
       ')';

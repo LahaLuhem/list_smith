@@ -9,7 +9,7 @@ import '../typedefs/group_header.dart';
 @internal
 typedef Cell = ({CellKind kind, int index});
 
-/// What each child of the rows sliver shows: a row, a header, a separator or the footer.
+/// What each child of the rows sliver shows: the leader, a row, a header, a separator or the footer.
 ///
 /// Headers are few, so the rest is index math around them.
 @internal
@@ -28,6 +28,9 @@ final class const CellLayout({
 
   /// Whether a header sits after its group's last item, as on a reversed list.
   required final bool isHeaderAfterItem,
+
+  /// Whether a cell comes before the rows and headers.
+  required final bool hasLeader,
 }) {
   /// Creates it.
   this;
@@ -37,10 +40,13 @@ final class const CellLayout({
       (hasFooter
           ? itemCount * _childrenPerItem + 1
           : math.max(0, itemCount * _childrenPerItem - (_childrenPerItem - 1))) +
-      headers.length;
+      headers.length +
+      _leaderCount;
 
   /// What the child at [childIndex] shows.
   Cell cellAt(int childIndex) {
+    if (hasLeader && childIndex == 0) return (kind: .leader, index: 0);
+
     final headersUpTo = _countHeaders(
       (headerIndex) => childIndexOfHeader(headerIndex) <= childIndex,
     );
@@ -48,7 +54,7 @@ final class const CellLayout({
       return (kind: .header, index: headersUpTo - 1);
     }
 
-    final indexWithoutHeaders = childIndex - headersUpTo;
+    final indexWithoutHeaders = childIndex - _leaderCount - headersUpTo;
     if (hasFooter && indexWithoutHeaders == itemCount * _childrenPerItem) {
       return (kind: .footer, index: itemCount);
     }
@@ -61,6 +67,7 @@ final class const CellLayout({
 
   /// The child showing the item at [itemIndex].
   int childIndexOfItem(int itemIndex) =>
+      _leaderCount +
       itemIndex * _childrenPerItem +
       _countHeaders((headerIndex) {
         final headerItemIndex = itemIndexOfHeader(headerIndex);
@@ -70,7 +77,10 @@ final class const CellLayout({
 
   /// The child showing the header at [headerIndex].
   int childIndexOfHeader(int headerIndex) =>
-      itemIndexOfHeader(headerIndex) * _childrenPerItem + (isHeaderAfterItem ? 1 : 0) + headerIndex;
+      _leaderCount +
+      itemIndexOfHeader(headerIndex) * _childrenPerItem +
+      (isHeaderAfterItem ? 1 : 0) +
+      headerIndex;
 
   /// The item the header at [headerIndex] sits by.
   int itemIndexOfHeader(int headerIndex) {
@@ -85,6 +95,8 @@ final class const CellLayout({
   }
 
   int get _childrenPerItem => hasSeparators ? 2 : 1;
+
+  int get _leaderCount => hasLeader ? 1 : 0;
 
   /// How many headers [isBefore] holds for, from the 1st. Typed, not `lowerBound`
   /// (APPENDIX.md#scan-loops).
@@ -110,6 +122,7 @@ final class const CellLayout({
       'hasSeparators: $hasSeparators, '
       'hasFooter: $hasFooter, '
       'headers: $headers, '
-      'isHeaderAfterItem: $isHeaderAfterItem'
+      'isHeaderAfterItem: $isHeaderAfterItem, '
+      'hasLeader: $hasLeader'
       ')';
 }

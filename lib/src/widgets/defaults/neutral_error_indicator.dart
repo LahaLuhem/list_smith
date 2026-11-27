@@ -7,7 +7,7 @@ import 'neutral_retry_button.dart';
 /// The neutral surface for a page that failed to load.
 ///
 /// A heading, the error's own description, and a [NeutralRetryButton]. Full-viewport for the 1st page,
-/// or pass [isCompact] for the tighter footer used when a later page fails below the items already loaded.
+/// or [isCompact] beside the rows: a later page's footer, a failed reload's error.
 @internal
 class const NeutralErrorIndicator({
   /// What the load failed with.
@@ -16,8 +16,11 @@ class const NeutralErrorIndicator({
   /// Re-attempts the failed load.
   required final VoidCallback onRetry,
 
-  /// Render the tighter footer form rather than the full-viewport one.
+  /// The tighter form, beside the rows.
   final bool isCompact = false,
+
+  /// What failed. Null shows a generic one at full size, none when compact.
+  final String? heading,
   super.key,
 }) extends StatelessWidget {
   static const double _spacing = 12;
@@ -32,6 +35,7 @@ class const NeutralErrorIndicator({
   @override
   Widget build(BuildContext context) {
     final foregroundColour = neutralForegroundOf(context);
+    final headingText = heading ?? (isCompact ? null : 'Something went wrong');
     final indicatorPadding = Padding(
       padding: .all(isCompact ? _compactPadding : _padding),
       child: Center(
@@ -39,7 +43,7 @@ class const NeutralErrorIndicator({
           mainAxisSize: .min,
           spacing: isCompact ? _compactSpacing : _spacing,
           children: [
-            if (!isCompact) const Text('Something went wrong'),
+            if (headingText != null) Text(headingText),
             Text(
               exception.toString(),
               textAlign: .center,

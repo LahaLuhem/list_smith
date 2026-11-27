@@ -157,6 +157,7 @@ final _samplesByClassName = <String, _Sample>{
       hasFooter: false,
       headers: [(itemIndex: 0, key: 'a'), (itemIndex: 3, key: 'b')],
       isHeaderAfterItem: true,
+      hasLeader: true,
     ),
     (layout) => {
       'itemCount': layout.itemCount,
@@ -164,6 +165,7 @@ final _samplesByClassName = <String, _Sample>{
       'hasFooter': layout.hasFooter,
       'headers': layout.headers,
       'isHeaderAfterItem': layout.isHeaderAfterItem,
+      'hasLeader': layout.hasLeader,
     },
   ),
   'EmptyPageContext': _sample(
@@ -249,12 +251,14 @@ final _samplesByClassName = <String, _Sample>{
         LoadedPage(items: [2], readStamp: 0),
       ],
       exception: Exception('network'),
+      reloadFailure: (exception: Exception('timeout'), trigger: .refresh),
       hasNextPage: false,
       isLoading: true,
     ),
     (state) => {
       'pages': state.pages?.length,
       'exception': state.exception,
+      'reloadFailure': state.reloadFailure,
       'hasNextPage': state.hasNextPage,
       'isLoading': state.isLoading,
     },

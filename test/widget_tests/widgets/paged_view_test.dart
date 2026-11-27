@@ -32,6 +32,27 @@ void main() {
       check(find.text('later failed').evaluate()).length.equals(1);
     });
 
+    scenarioWidgets('a failed reload builds its error with reloadErrorBuilder', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          surfaces: AsyncListSurfaces(
+            reloadErrorBuilder: (_, _, _) => const Text('refresh failed'),
+          ),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+
+      await pullToRefresh(tester, listScrollableFinder);
+
+      check(find.text('refresh failed').evaluate()).length.equals(1);
+      check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty;
+    });
+
     scenarioWidgets('a surface replacing another starts fresh', (tester) async {
       final holdCompleter = Completer<List<int>>();
       await pumpListSmith(

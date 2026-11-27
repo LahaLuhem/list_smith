@@ -25,6 +25,9 @@ class const PagedView<T extends Object>({
   /// Asks again for the page that failed, from an error surface's retry.
   required final VoidCallback onRetry,
 
+  /// Runs a failed reload again with its trigger, from its error's retry.
+  required final ValueSetter<FetchTrigger> onReloadRetry,
+
   /// Builds each item.
   required final ItemBuilder<T> itemBuilder,
 
@@ -73,6 +76,9 @@ class const PagedView<T extends Object>({
   /// See [firstPageLoadingBuilder].
   final ErrorBuilder? newPageErrorBuilder,
 
+  /// See [firstPageLoadingBuilder]. Shown above what a failed reload kept.
+  final ErrorBuilder? reloadErrorBuilder,
+
   /// See [firstPageLoadingBuilder]. Shown when the source has no items in normal mode.
   final WidgetBuilder? emptyBuilder,
 
@@ -103,11 +109,21 @@ class const PagedView<T extends Object>({
       .noItemsFound => emptyBuilder?.call(context) ?? const NeutralEmptyIndicator(),
       .ongoing || .subsequentPageError || .completed => null,
     };
+    final reloadFailure = state.reloadFailure;
 
     return KeyedListView(
       sections: sections,
       itemBuilder: itemBuilder,
       itemIdGetter: itemIdGetter,
+      leaderBuilder: reloadFailure == null
+          ? null
+          : (_) => _ResolvedError(
+              exception: reloadFailure.exception,
+              onRetry: () => onReloadRetry(reloadFailure.trigger),
+              builder: reloadErrorBuilder,
+              heading: "Couldn't refresh",
+              isCompact: true,
+            ),
       // One shape whatever the footer shows: the end, a new page loading, or its error.
       footerBuilder: switch (status) {
         .subsequentPageError => (_) => _ResolvedError(
@@ -148,6 +164,7 @@ class const _ResolvedError({
   required final Exception exception,
   required final VoidCallback onRetry,
   final ErrorBuilder? builder,
+  final String? heading,
   final bool isCompact = false,
 }) extends StatelessWidget {
   @override
@@ -156,7 +173,12 @@ class const _ResolvedError({
 
     return errorBuilder != null
         ? errorBuilder(context, exception, onRetry)
-        : NeutralErrorIndicator(exception: exception, onRetry: onRetry, isCompact: isCompact);
+        : NeutralErrorIndicator(
+            exception: exception,
+            onRetry: onRetry,
+            heading: heading,
+            isCompact: isCompact,
+          );
   }
 }
 

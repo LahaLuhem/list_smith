@@ -725,6 +725,7 @@ class _AsyncListViewState<T extends Object>()
           sections: _sectionsFor(shownState),
           onNearEnd: _onNearEnd,
           onRetry: _retryPage,
+          onReloadRetry: _runReload,
           itemBuilder: switch (widget.source.editTransition) {
             NoEditTransition() => widget.itemBuilder,
             AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
@@ -748,6 +749,7 @@ class _AsyncListViewState<T extends Object>()
           newPageLoadingBuilder: widget.surfaces.newPageLoadingBuilder,
           firstPageErrorBuilder: widget.surfaces.firstPageErrorBuilder,
           newPageErrorBuilder: widget.surfaces.newPageErrorBuilder,
+          reloadErrorBuilder: widget.surfaces.reloadErrorBuilder,
           emptyBuilder: widget.emptyBuilder,
           noResultsBuilder: widget.noResultsBuilder,
           noMoreItemsBuilder: widget.surfaces.noMoreItemsBuilder,
@@ -995,7 +997,7 @@ class _AsyncListViewState<T extends Object>()
   void _edit(T item, T? editedItem) =>
       _editStoreNotifier.book(widget.source.itemIdGetter(item), editedItem);
 
-  /// The one reload entry point, gesture or controller. Join and book rules: APPENDIX reload-run. [reload]
+  /// The one reload entry point, gesture or code. Join and book rules: APPENDIX reload-run. [reload]
   /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
   _ReloadRun<T> _runReload(FetchTrigger trigger, {Reload? reload}) {
     _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
@@ -1093,6 +1095,9 @@ final class _ReloadRun<T extends Object>(
   /// The signal each re-fetch went out with.
   final _previousSignals = <int, Object?>{};
 
+  /// What a fetch through this run last threw, null while none has.
+  Exception? _exception;
+
   @override
   int get depth => _startState.pages?.length ?? 0;
 
@@ -1100,11 +1105,17 @@ final class _ReloadRun<T extends Object>(
   bool get isSignalBased => _engine._signalKind.threadsSignal;
 
   @override
-  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) {
+  Future<(List<T>, Object?)> fetch(int index, Object? previousSignal) async {
     _readStamps[index] = _engine._editStoreNotifier.value;
     _previousSignals[index] = previousSignal;
 
-    return _engine._fetchPageRaw(index, previousSignal, trigger);
+    try {
+      return await _engine._fetchPageRaw(index, previousSignal, trigger);
+    } on Exception catch (exception) {
+      _exception = exception;
+
+      rethrow;
+    }
   }
 
   @override
@@ -1135,8 +1146,10 @@ final class _ReloadRun<T extends Object>(
           eagerError: true,
         );
         rereadItemsByIndex = Map.fromIterables(rereadIndexes, rereads.map((read) => read.$1));
-      } on Exception {
-        return; // the old list stays, the observer already saw the error
+      } on Exception catch (exception) {
+        _exception = exception;
+
+        return; // the old list stays
       }
       if (isStale) return;
     }
@@ -1170,8 +1183,14 @@ final class _ReloadRun<T extends Object>(
     return firstPageFuture;
   }
 
-  /// Marks the run finished. The engine calls it once it has let go of the run.
+  /// Marks the run finished, putting a failed reload's error on the pages it kept unless the list moved
+  /// on. The engine calls it once it has let go of the run.
   void finish() {
+    final exception = _exception;
+    if (exception != null && !isStale) {
+      final pagingStateNotifier = _engine._pagingStateNotifier;
+      pagingStateNotifier.value = pagingStateNotifier.value.reloadFailed(exception, trigger);
+    }
     _handOver();
     _doneCompleter.complete();
   }

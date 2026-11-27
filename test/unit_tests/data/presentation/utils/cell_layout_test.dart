@@ -16,15 +16,17 @@ void main() {
   // a: item 0, b: items 1 and 2, so b's reversed header isn't at its start.
   const longLastGroupHeaders = [(itemIndex: 0, key: 'a'), (itemIndex: 1, key: 'b')];
 
-  CellLayout layoutOf(BddContext context) => CellLayout(
+  CellLayout layoutOf(BddContext context, {bool hasLeader = false}) => CellLayout(
     itemCount: 3,
     hasSeparators: context.example.val(hasSeparatorsKey) as bool,
     hasFooter: context.example.val(hasFooterKey) as bool,
     headers: context.example.val(headersKey) as List<GroupHeader>,
     isHeaderAfterItem: context.example.val(isHeaderAfterItemKey) as bool,
+    hasLeader: hasLeader,
   );
 
   String labelOf(Cell cell) => switch (cell.kind) {
+    .leader => 'l',
     .header => 'h${cell.index}',
     .item => 'i${cell.index}',
     .separator => 's${cell.index}',
@@ -128,6 +130,73 @@ void main() {
       )
       .run((context) {
         final cellLayout = layoutOf(context);
+
+        for (var itemIndex = 0; itemIndex < 3; itemIndex++) {
+          check(cellLayout.cellAt(cellLayout.childIndexOfItem(itemIndex)))
+              .equals((kind: CellKind.item, index: itemIndex));
+        }
+        for (var headerIndex = 0; headerIndex < 2; headerIndex++) {
+          check(cellLayout.cellAt(cellLayout.childIndexOfHeader(headerIndex)))
+              .equals((kind: CellKind.header, index: headerIndex));
+        }
+      });
+
+  Bdd(layoutFeature)
+      .scenario('puts the leader before every row and header')
+      .given('separators <$hasSeparatorsKey>, a footer <$hasFooterKey> and headers <$headersKey>')
+      .when('a leader sits before the rows, each header after its item: <$isHeaderAfterItemKey>')
+      .then('the children show <$cellsKey>')
+      .example(
+        val(hasFooterKey, true),
+        val(hasSeparatorsKey, false),
+        val(headersKey, const <GroupHeader>[]),
+        val(isHeaderAfterItemKey, false),
+        val(cellsKey, const ['l', 'i0', 'i1', 'i2', 'f']),
+      )
+      .example(
+        val(hasFooterKey, true),
+        val(hasSeparatorsKey, true),
+        val(headersKey, longFirstGroupHeaders),
+        val(isHeaderAfterItemKey, false),
+        val(cellsKey, const ['l', 'h0', 'i0', 's0', 'i1', 's1', 'h1', 'i2', 's2', 'f']),
+      )
+      .example(
+        val(hasFooterKey, false),
+        val(hasSeparatorsKey, true),
+        val(headersKey, longFirstGroupHeaders),
+        val(isHeaderAfterItemKey, true),
+        val(cellsKey, const ['l', 'i0', 's0', 'i1', 'h0', 's1', 'i2', 'h1']),
+      )
+      .run((context) {
+        final cellLayout = layoutOf(context, hasLeader: true);
+
+        check(
+          List.generate(
+            cellLayout.childCount,
+            (childIndex) => labelOf(cellLayout.cellAt(childIndex)),
+          ),
+        ).deepEquals(context.example.val(cellsKey) as List<String>);
+      });
+
+  Bdd(layoutFeature)
+      .scenario('finds each row and header past the leader')
+      .given('separators <$hasSeparatorsKey>, a footer <$hasFooterKey> and headers <$headersKey>')
+      .when('a leader sits before the rows, each header after its item: <$isHeaderAfterItemKey>')
+      .then('each lookup lands on the child showing that row or header')
+      .example(
+        val(hasFooterKey, true),
+        val(hasSeparatorsKey, true),
+        val(headersKey, longFirstGroupHeaders),
+        val(isHeaderAfterItemKey, false),
+      )
+      .example(
+        val(hasFooterKey, true),
+        val(hasSeparatorsKey, false),
+        val(headersKey, longFirstGroupHeaders),
+        val(isHeaderAfterItemKey, true),
+      )
+      .run((context) {
+        final cellLayout = layoutOf(context, hasLeader: true);
 
         for (var itemIndex = 0; itemIndex < 3; itemIndex++) {
           check(cellLayout.cellAt(cellLayout.childIndexOfItem(itemIndex)))
