@@ -454,7 +454,7 @@ void main() {
       },
     );
 
-    scenarioWidgets('a pull that starts over mid-exit keeps a pending delete hidden', (
+    scenarioWidgets('a default refresh mid-exit lets a pending delete finish leaving', (
       tester,
     ) async {
       final server = FakeServer(const [1, 2, 3]); // still has 2 while the delete is out
@@ -467,11 +467,13 @@ void main() {
       unawaited(controller.removeAsync(2, commit: Completer<void>().future));
       await _startExit(tester);
       await tester.pump(const Duration(milliseconds: 100));
-      check(_heightOf(2)).isLessThan(50);
       await controller.refresh();
       await drain(tester, frames: 12);
-
       check(server.attempts[0]).equals(2); // premise: page 0 was read again
+      check(_heightOf(2)).isLessThan(50);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
       check(shownToggleRows()).deepEquals(['off 1', 'off 3']);
     });
 
