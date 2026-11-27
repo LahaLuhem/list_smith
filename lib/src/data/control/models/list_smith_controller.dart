@@ -4,6 +4,8 @@
 /// @docImport '/src/widgets/list_smith.dart';
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '/src/data/search/search.dart';
@@ -13,10 +15,11 @@ import 'list_smith_controller_host.dart';
 /// write, a logout, a scan.
 ///
 /// Intents only, never the pager or its state. Want to hear about events instead? That's [ListSmithObserver].
-/// Holds nothing, so there's nothing to dispose.
+/// Holds only saves still out, so there's nothing to dispose.
 class ListSmithController<T extends Object>() {
   ListSmithControllerHost<T>? _host;
   var _wasEverAttached = false;
+  final _heldSaves = <_HeldSave<T>>[];
 
   /// Creates it.
   this;
@@ -41,7 +44,11 @@ class ListSmithController<T extends Object>() {
   /// Cuts in on whatever load is running rather than joining it, and completes once its page 0 is over.
   /// Keeps a search, its fetcher included, so it restarts, and a feed held by [KeepCachePolicy] starts
   /// over once the search ends.
-  Future<void> reset() => _host?.reset() ?? Future<void>.syncValue(null);
+  Future<void> reset() {
+    _heldSaves.clear(); // like the list's own drafts, so a logout never shows the last account's
+
+    return _host?.reset() ?? Future<void>.syncValue(null);
+  }
 
   /// Searches [query] like typing it, through [fetchPage] or the search's own fetcher. The list's
   /// debounce and min length apply unless passed. Needs an attached list with an [AsyncSearch].
@@ -88,7 +95,11 @@ class ListSmithController<T extends Object>() {
     ValueSetter<Exception>? onFailure,
   }) =>
       _host?.upsertAsync(draft, commit: commit, onFailure: onFailure) ??
-      _reportFailure(commit, onFailure);
+      _holdUntilAnswered(
+        commit,
+        onFailure,
+        (host) => host.upsertAsync(draft, commit: commit, onFailure: onFailure),
+      );
 
   /// [remove] before your server has it. On failure the item comes back and [onFailure] gets the
   /// exception.
@@ -98,9 +109,14 @@ class ListSmithController<T extends Object>() {
     ValueSetter<Exception>? onFailure,
   }) =>
       _host?.removeAsync(item, commit: commit, onFailure: onFailure) ??
-      _reportFailure(commit, onFailure);
+      _holdUntilAnswered(
+        commit,
+        onFailure,
+        (host) => host.removeAsync(item, commit: commit, onFailure: onFailure),
+      );
 
-  /// Binds this controller to the list it drives. One controller, one list.
+  /// Binds this controller to the list it drives, which takes over the saves held meanwhile. One
+  /// controller, one list.
   @internal
   @nonVirtual
   void attach(ListSmithControllerHost<T> host) {
@@ -110,6 +126,10 @@ class ListSmithController<T extends Object>() {
     );
     _host = host;
     _wasEverAttached = true;
+    for (final heldSave in _heldSaves) {
+      heldSave.handOverTo(host);
+    }
+    _heldSaves.clear();
   }
 
   /// Unbinds the list, leaving this controller inert. Called when that list is disposed.
@@ -117,15 +137,46 @@ class ListSmithController<T extends Object>() {
   @nonVirtual
   void detach() => _host = null;
 
-  /// With no list attached there's nothing to roll back, only a failure to pass on.
-  static Future<void> _reportFailure(
+  /// A list attaching while the save is out takes it over.
+  Future<void> _holdUntilAnswered(
     Future<Object?> commit,
     ValueSetter<Exception>? onFailure,
-  ) async {
+    AsyncValueSetter<ListSmithControllerHost<T>> handOver,
+  ) {
+    final heldSave = _HeldSave(handOver);
+    _heldSaves.add(heldSave);
+    unawaited(heldSave.answer(commit, onFailure).whenComplete(() => _heldSaves.remove(heldSave)));
+
+    return heldSave.doneFuture;
+  }
+}
+
+/// A save made with no list attached, until it answers or a list takes it over.
+final class _HeldSave<T extends Object>(
+  /// Makes the same call on the list taking it over, which answers it from then on.
+  final AsyncValueSetter<ListSmithControllerHost<T>> _handOver,
+) {
+  final _doneCompleter = Completer<void>();
+
+  /// Completes once it's answered, here or by the list that took it over.
+  Future<void> get doneFuture => _doneCompleter.future;
+
+  bool get _isHandedOver => _doneCompleter.isCompleted;
+
+  void handOverTo(ListSmithControllerHost<T> host) => _doneCompleter.complete(_handOver(host));
+
+  /// With no list taking it over, there's nothing to roll back, only a failure to pass on.
+  Future<void> answer(Future<Object?> commit, ValueSetter<Exception>? onFailure) async {
     try {
       await commit;
+      if (!_isHandedOver) _doneCompleter.complete();
     } on Exception catch (exception) {
+      if (_isHandedOver) return;
       onFailure?.call(exception);
+      _doneCompleter.complete();
+    } on Object catch (error, stackTrace) {
+      // A bug in the save, so it goes on to the caller, or comes from the list that took it over.
+      if (!_isHandedOver) _doneCompleter.completeError(error, stackTrace);
     }
   }
 }

@@ -50,6 +50,24 @@ void main() {
       ),
     );
 
+    // Labelled rows, so a draft and its saved answer look different.
+    Future<void> pumpRows(
+      WidgetTester tester, {
+      required ListSmithController<_Row> controller,
+      List<_Row> serverRows = const [],
+      EditTransition editTransition = const NoEditTransition(),
+    }) => pumpListSmith(
+      tester,
+      ListSmith<_Row>.async(
+        fetchPage: PageFetcher((_) async => serverRows),
+        itemIdGetter: (row) => row.id,
+        endPolicy: const FixedPageCountPolicy(pageCount: 1),
+        editTransition: editTransition,
+        controller: controller,
+        itemBuilder: (_, row, _) => Text('row ${row.id} ${row.label}'),
+      ),
+    );
+
     scenarioWidgets('refresh() reloads the list without a pull', (tester) async {
       final fetcher = valuedFetcher();
       final controller = ListSmithController();
@@ -366,6 +384,118 @@ void main() {
       check(reportedExceptions).length.equals(1);
     });
 
+    scenarioOutlineWidgets<({bool wasListBuilt, EditTransition editTransition})>(
+      'a save made with no list attached shows in the next one, its draft then its answer',
+      examples: const {
+        'before any list was built': (wasListBuilt: false, editTransition: NoEditTransition()),
+        'after the list went': (wasListBuilt: true, editTransition: NoEditTransition()),
+        'under an edit transition': (
+          wasListBuilt: false,
+          editTransition: EditTransition(
+            duration: Duration(milliseconds: 300),
+            transitionBuilder: AnimatedSwitcher.defaultTransitionBuilder,
+          ),
+        ),
+      },
+      outline: (tester, example) async {
+        final controller = ListSmithController<_Row>();
+        if (example.wasListBuilt) {
+          await pumpRows(tester, controller: controller);
+          await drain(tester);
+          await pumpListSmith(tester, const SizedBox.shrink());
+        }
+        final saveCompleter = Completer<_Row>();
+
+        final savedFuture = controller.upsertAsync((
+          id: 9,
+          label: 'mine',
+        ), commit: saveCompleter.future);
+        await pumpRows(tester, controller: controller, editTransition: example.editTransition);
+        await drain(tester);
+        // Page 0 came without it, so this is the draft.
+        check(find.text('row 9 mine').evaluate()).length.equals(1);
+
+        saveCompleter.complete((id: 9, label: 'saved'));
+        await savedFuture;
+        await drain(tester);
+
+        check(find.text('row 9 saved').evaluate()).length.equals(1);
+      },
+    );
+
+    scenarioOutlineWidgets<({bool isTakenOver, Object failure})>(
+      'a held save that fails reaches the app once, its draft gone',
+      examples: {
+        'an Error, with no list to take it': (
+          isTakenOver: false,
+          failure: StateError('a bug in the save'),
+        ),
+        'an Exception, a list taking it': (isTakenOver: true, failure: Exception('save failed')),
+        'an Error, a list taking it': (isTakenOver: true, failure: StateError('a bug in the save')),
+      },
+      outline: (tester, example) async {
+        final controller = ListSmithController<_Row>();
+        final saveCompleter = Completer<_Row>();
+        final reportedExceptions = <Exception>[];
+        final savedFuture = controller.upsertAsync(
+          (id: 9, label: 'mine'),
+          commit: saveCompleter.future,
+          onFailure: reportedExceptions.add,
+        );
+        if (example.isTakenOver) {
+          await pumpRows(tester, controller: controller);
+          await drain(tester);
+          check(find.text('row 9 mine').evaluate()).length.equals(1);
+        }
+
+        saveCompleter.completeError(example.failure);
+        final callerFailure = await savedFuture.then<Object?>(
+          (_) => null,
+          onError: (Object error) => error,
+        );
+        await drain(tester);
+
+        check([...reportedExceptions, ?callerFailure]).deepEquals([example.failure]);
+        check(find.text('row 9 mine').evaluate()).isEmpty;
+      },
+    );
+
+    scenarioWidgets('a delete made with no list attached hides its row in the next one', (
+      tester,
+    ) async {
+      final controller = ListSmithController<_Row>();
+
+      unawaited(controller.removeAsync((id: 1, label: 'a'), commit: Completer<void>().future));
+      // The server still has it, since the delete is out.
+      await pumpRows(tester, controller: controller, serverRows: [(id: 1, label: 'a')]);
+      await drain(tester);
+
+      check(find.text('row 1 a').evaluate()).isEmpty;
+    });
+
+    scenarioWidgets('reset() with no list attached drops a held save, which still finishes', (
+      tester,
+    ) async {
+      final controller = ListSmithController<_Row>();
+      final saveCompleter = Completer<_Row>();
+      final reportedExceptions = <Exception>[];
+      final savedFuture = controller.upsertAsync(
+        (id: 9, label: 'mine'),
+        commit: saveCompleter.future,
+        onFailure: reportedExceptions.add,
+      );
+
+      await controller.reset();
+      await pumpRows(tester, controller: controller);
+      await drain(tester);
+      // Like a logout, so the next account's list never shows it.
+      check(find.text('row 9 mine').evaluate()).isEmpty;
+
+      saveCompleter.completeError(Exception('save failed'));
+      await savedFuture;
+      check(reportedExceptions).length.equals(1);
+    });
+
     scenarioWidgets('an invalidate() meeting a live one runs again, so a write mid-read lands', (
       tester,
     ) async {
@@ -549,6 +679,8 @@ void main() {
     });
   });
 }
+
+typedef _Row = ({int id, String label});
 
 /// A stamped fetcher whose [holdAttempt]-th fetch of every page waits on [holdCompleter].
 ({PageFetcher<int> fetchPage, Map<int, int> attempts}) _heldFetcher(
