@@ -20,6 +20,7 @@ import '/src/data/search/search.dart';
 import '/src/data/source/source.dart';
 import '/src/utils/query_debouncer.dart';
 import '/src/utils/report_bad_data.dart';
+import '../utils/tripwire.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
 import 'row_transitions_notifier.dart';
@@ -106,8 +107,8 @@ class _AsyncListViewState<T extends Object>()
   /// Whether a row near the end already booked the next page this frame.
   var _isNextPageBooked = false;
 
-  /// Whether the 1st [didChangeDependencies] is still to come.
-  var _isFirstAttachPending = true;
+  /// Tripped by the 1st [didChangeDependencies], which attaches the controller.
+  final _attachTripwire = Tripwire();
 
   /// Memo for [_displayFor], keyed on the paging state, the edit counter, the mode and, while edits are
   /// pending, the grouping. One cell, so the parts can't drift.
@@ -161,8 +162,7 @@ class _AsyncListViewState<T extends Object>()
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    if (!_isFirstAttachPending) return;
-    _isFirstAttachPending = false;
+    if (!_attachTripwire.trip()) return;
     // Not in initState: a save the controller held books its draft here, which reads MediaQuery.
     widget.controller?.attach(this);
   }

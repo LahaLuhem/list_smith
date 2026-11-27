@@ -37,6 +37,7 @@ style: explicit types, no ambient mutability, small focused classes.
   - [A ternary yielding null puts null first](#idioms-null-first-ternary)
   - [Catch `Exception`, let `Error` through](#idioms-catch-exceptions)
   - [A getter is a cheap read, work is a method](#idioms-getters-cheap-reads)
+  - [A one-way flag is a `Tripwire`](#idioms-tripwire)
 - [Prose & voice](#prose)
 - [Comments & dartdoc](#dartdoc)
   - [`@docImport` for dartdoc-only references](#dartdoc-docimport)
@@ -419,7 +420,7 @@ switch (snapshot) {
 Like a guard's early return:
 
 ```dart
-return transition == null || !transition.hasStarted ? null : transition.controller;
+return transition == null || !transition.startTripwire.hasTripped ? null : transition.controller;
 ```
 
 <a id="idioms-catch-exceptions"></a>
@@ -458,6 +459,13 @@ PagingStatus get status { /* walks the pages */ }
 
 Effective Dart allows heavier getters, this repo doesn't. In-between cases get asked about, not
 bucketed. Getters the language or an interface fixes (`hashCode`, `ValueListenable.value`) stay.
+
+<a id="idioms-tripwire"></a>
+### A one-way flag is a `Tripwire`
+
+A flag that only ever goes from unset to set is a [`Tripwire`](lib/src/utils/tripwire.dart), so
+nothing can clear it by mistake, and `if (!tripwire.trip()) return;` runs a block once. A signal
+something awaits is a `Completer<void>` instead.
 
 ---
 

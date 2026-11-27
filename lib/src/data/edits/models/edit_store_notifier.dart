@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '/src/data/grouping/grouping.dart';
 import '/src/data/pagination/pagination.dart';
+import '../../../utils/tripwire.dart';
 import '../utils/edit_resolver.dart';
 import 'item_edit.dart';
 import 'removal_stamps.dart';
@@ -206,7 +207,7 @@ final class PendingEdit<T extends Object>._(
 ) {
   _BookedEdit<T>? _pendingBookedEdit;
   ({T? item})? _earlyAnswer;
-  var _isDropped = false;
+  final _dropTripwire = Tripwire();
 
   /// Whether it's booked, still out, and its item's newest edit.
   bool get isNewest {
@@ -218,7 +219,7 @@ final class PendingEdit<T extends Object>._(
 
   /// Shows it over every page, read before it or after.
   void book() {
-    if (_pendingBookedEdit != null || _isDropped) return;
+    if (_pendingBookedEdit != null || _dropTripwire.hasTripped) return;
 
     _pendingBookedEdit = _editStoreNotifier._bookPending(_itemId, _editedItem);
     final earlyAnswer = _earlyAnswer;
@@ -241,7 +242,7 @@ final class PendingEdit<T extends Object>._(
   void drop() {
     final pendingBookedEdit = _pendingBookedEdit;
     if (pendingBookedEdit == null) {
-      _isDropped = true;
+      _dropTripwire.trip();
 
       return;
     }
