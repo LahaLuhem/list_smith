@@ -25,16 +25,8 @@ class ListSmithController<T extends Object>() {
   /// has no pull). While searching, it reloads the search.
   ///
   /// Completes once its fresh data shows or its fetch fails. Joins a refresh already running. During
-  /// another reload or a 1st-page load, it completes with that one and runs once more after. Asserts
-  /// if no list ever attached.
-  Future<void> refresh() {
-    assert(
-      _host != null || _wasEverAttached,
-      'Pass this ListSmithController to ListSmith.async before calling refresh().',
-    );
-
-    return _host?.refresh() ?? Future<void>.syncValue(null);
-  }
+  /// another reload or a 1st-page load, it completes with that one and runs once more after.
+  Future<void> refresh() => _host?.refresh() ?? Future<void>.syncValue(null);
 
   /// Re-reads every loaded page in place, keeping the user's scroll position, because your data changed
   /// locally. Pages report [FetchTrigger.invalidated].
