@@ -25,8 +25,8 @@ class const PagedView<T extends Object>({
   /// Asks again for the page that failed, from an error surface's retry.
   required final VoidCallback onRetry,
 
-  /// Runs a failed reload again with its trigger, from its error's retry.
-  required final ValueSetter<FetchTrigger> onReloadRetry,
+  /// Asks a failed reload again, from its error's retry.
+  required final VoidCallback onReloadRetry,
 
   /// Builds each item.
   required final ItemBuilder<T> itemBuilder,
@@ -117,12 +117,11 @@ class const PagedView<T extends Object>({
       itemIdGetter: itemIdGetter,
       leaderBuilder: reloadFailure == null
           ? null
-          : (_) => _ResolvedError(
-              exception: reloadFailure.exception,
-              onRetry: () => onReloadRetry(reloadFailure.trigger),
-              builder: reloadErrorBuilder,
-              heading: "Couldn't refresh",
-              isCompact: true,
+          : (_) => _ReloadError(
+              reloadFailure: reloadFailure,
+              onRetry: onReloadRetry,
+              errorBuilder: reloadErrorBuilder,
+              loadingBuilder: newPageLoadingBuilder,
             ),
       // One shape whatever the footer shows: the end, a new page loading, or its error.
       footerBuilder: switch (status) {
@@ -179,6 +178,44 @@ class const _ResolvedError({
             heading: heading,
             isCompact: isCompact,
           );
+  }
+}
+
+/// A failed reload's error or, while its Retry asks, the compact loader over it.
+class const _ReloadError({
+  required final ReloadFailure reloadFailure,
+  required final VoidCallback onRetry,
+  required final ErrorBuilder? errorBuilder,
+  required final WidgetBuilder? loadingBuilder,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final errorWidget = _ResolvedError(
+      exception: reloadFailure.exception,
+      onRetry: onRetry,
+      builder: errorBuilder,
+      heading: "Couldn't refresh",
+      isCompact: true,
+    );
+    if (!reloadFailure.isRetrying) return errorWidget;
+
+    return Stack(
+      children: [
+        // Laid out but hidden and untappable, so the cell keeps its size.
+        Visibility(
+          visible: false,
+          maintainState: true,
+          maintainAnimation: true,
+          maintainSize: true,
+          child: errorWidget,
+        ),
+        Positioned.fill(
+          child: Center(
+            child: loadingBuilder?.call(context) ?? const NeutralLoadingIndicator(isCompact: true),
+          ),
+        ),
+      ],
+    );
   }
 }
 

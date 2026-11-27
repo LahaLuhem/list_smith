@@ -53,6 +53,51 @@ void main() {
       check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty;
     });
 
+    scenarioWidgets("after Retry, the reload error's loader keeps its size", (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final retryHoldCompleter = server.hold(0, attempt: 3);
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      await pullToRefresh(tester, listScrollableFinder);
+      final rowTop = tester.getTopLeft(find.text('item 1')).dy;
+
+      await tester.tap(find.byType(NeutralRetryButton));
+      await tester.pump();
+
+      check(find.byType(NeutralLoadingIndicator).evaluate()).length.equals(1); // premise
+      check(tester.getTopLeft(find.text('item 1')).dy).equals(rowTop);
+      await release(tester, [retryHoldCompleter]);
+    });
+
+    scenarioWidgets("the reload error's loader comes from newPageLoadingBuilder", (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final retryHoldCompleter = server.hold(0, attempt: 3);
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          surfaces: AsyncListSurfaces(newPageLoadingBuilder: (_) => const Text('house loader')),
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+      await pullToRefresh(tester, listScrollableFinder);
+
+      await tester.tap(find.byType(NeutralRetryButton));
+      await tester.pump();
+
+      check(find.text('house loader').evaluate()).length.equals(1);
+      await release(tester, [retryHoldCompleter]);
+    });
+
     scenarioWidgets('a surface replacing another starts fresh', (tester) async {
       final holdCompleter = Completer<List<int>>();
       await pumpListSmith(

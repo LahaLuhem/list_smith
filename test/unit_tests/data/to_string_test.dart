@@ -251,7 +251,7 @@ final _samplesByClassName = <String, _Sample>{
         LoadedPage(items: [2], readStamp: 0),
       ],
       exception: Exception('network'),
-      reloadFailure: (exception: Exception('timeout'), trigger: .refresh),
+      reloadFailure: (exception: Exception('timeout'), trigger: .refresh, isRetrying: true),
       hasNextPage: false,
       isLoading: true,
     ),
