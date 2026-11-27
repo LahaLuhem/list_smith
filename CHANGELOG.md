@@ -1,6 +1,10 @@
 ## [Unreleased]
 ### Changed
 - Require Flutter 3.50 and Dart 3.14
+- \[#140\] `ListSmithController.refresh()` before a list attaches does nothing, instead of asserting
+
+### Fixed
+- \[#140\] A save made with no list attached waits for the next one
 
 ## [2.2.0] - 2026-11-21
 ### Added
