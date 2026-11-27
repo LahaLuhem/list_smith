@@ -1010,7 +1010,9 @@ class _AsyncListViewState<T extends Object>()
 
     return _startRun(
       trigger,
-      (reloadRun) => (reload ?? _reloadFor(trigger)).run(reloadRun),
+      // Nothing loaded is nothing to keep, whatever the reload.
+      (reloadRun) =>
+          reloadRun.depth == 0 ? reloadRun.reset() : (reload ?? _reloadFor(trigger)).run(reloadRun),
       announces: true,
     );
   }
