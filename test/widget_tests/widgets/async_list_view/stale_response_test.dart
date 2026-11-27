@@ -4,6 +4,7 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
+import 'package:list_smith/src/widgets/defaults/defaults.dart';
 
 import '../../../support/support.dart';
 
@@ -438,6 +439,32 @@ void main() {
 
       // The restore bumped the generation, so the abandoned search page announces nothing.
       check(observer.events.where((event) => event.contains('search: true'))).isEmpty;
+    });
+
+    scenarioWidgets('a reload a reset cuts off fails without leaving its error', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.add((0, 2));
+      final failingHoldCompleter = server.hold(0, attempt: 2);
+      final controller = ListSmithController<int>();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          controller: controller,
+          itemBuilder: (_, item, _) => Text('item $item'),
+        ),
+      );
+      await drain(tester);
+
+      final refreshFuture = controller.refresh();
+      await drain(tester);
+      await controller.reset(); // cuts in, and its page 0 lands
+      await drain(tester);
+      await release(tester, [failingHoldCompleter]);
+      await refreshFuture;
+
+      check(find.text('item 1').evaluate()).length.equals(1);
+      check(find.byType(NeutralErrorIndicator).evaluate()).isEmpty;
     });
 
     scenarioWidgets('a depth reload does not commit over a list that moved on under it', (

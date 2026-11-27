@@ -154,6 +154,44 @@ void main() {
     });
   });
 
+  feature('ListSmith.async reload error', () {
+    scenarioWidgets('the row being read holds still as a reload error comes and goes', (
+      tester,
+    ) async {
+      final server = FakeServer(List.generate(100, (index) => index));
+      final controller = ListSmithController<int>();
+      final scrollController = ScrollController();
+      await pumpListSmith(
+        tester,
+        ListSmith.async(
+          fetchPage: server.offsetLateFetcher,
+          itemIdGetter: (item) => item,
+          refresh: const NoRefresh(),
+          controller: controller,
+          scroll: ListScrollConfig(controller: scrollController),
+          itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
+        ),
+      );
+      await drain(tester);
+      scrollController.jumpTo(1000);
+      await drain(tester);
+      final shownTop = _topOf(tester, 25);
+      final shownOffset = scrollController.offset;
+
+      server.failing.add((0, 2));
+      await controller.invalidate();
+      await drain(tester);
+      final offsetWithError = scrollController.offset;
+      check(offsetWithError).isGreaterThan(shownOffset); // premise: the error landed above
+      check(_topOf(tester, 25)).equals(shownTop);
+
+      await controller.invalidate();
+      await drain(tester);
+      check(scrollController.offset).isLessThan(offsetWithError); // premise: the error went
+      check(_topOf(tester, 25)).equals(shownTop);
+    });
+  });
+
   feature('ListSmith surfaces and separators', () {
     scenarioOutlineWidgets<_SurfaceHost>(
       "a surface gets exactly the list's height, however tall it asks to be",

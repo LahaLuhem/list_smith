@@ -32,6 +32,9 @@ class const KeyedListView<T extends Object>({
   /// `.sync` takes lists without ids.
   final ItemIdGetter<T>? itemIdGetter,
 
+  /// Builds the cell before the rows, which stays above a [surface] too. Null for none.
+  final WidgetBuilder? leaderBuilder,
+
   /// Builds the cell after the rows. Null for none.
   final WidgetBuilder? footerBuilder,
 
@@ -57,6 +60,7 @@ class const KeyedListView<T extends Object>({
   @override
   Widget buildChildLayout(BuildContext context) {
     final surface = this.surface;
+    final leaderBuilder = this.leaderBuilder;
     final Widget contentSliver;
     if (surface == null) {
       contentSliver = _KeyedRows(
@@ -65,6 +69,7 @@ class const KeyedListView<T extends Object>({
         isReversed: reverse,
         itemIdGetter: itemIdGetter,
         itemBuilder: itemBuilder,
+        leaderBuilder: leaderBuilder,
         footerBuilder: footerBuilder,
         separatorBuilder: separatorBuilder,
         onNearEnd: onNearEnd,
@@ -76,7 +81,7 @@ class const KeyedListView<T extends Object>({
       final resolvedInsets = (padding ?? MediaQuery.maybePaddingOf(context) ?? .zero).resolve(
         Directionality.maybeOf(context),
       );
-      contentSliver = _SurfaceSlot(
+      final surfaceSlot = _SurfaceSlot(
         // So a short surface has nothing to scroll.
         trailingPaddingExtent: switch (getDirection(context)) {
           .down => resolvedInsets.bottom,
@@ -86,6 +91,15 @@ class const KeyedListView<T extends Object>({
         },
         child: surface,
       );
+      contentSliver = leaderBuilder == null
+          ? surfaceSlot
+          // The slot fills what the leader leaves, through precedingScrollExtent.
+          : SliverMainAxisGroup(
+              slivers: [
+                SliverToBoxAdapter(child: Builder(builder: leaderBuilder)),
+                surfaceSlot,
+              ],
+            );
     }
 
     return _ScrollStart(startKey: startKey, sliver: contentSliver);
@@ -162,14 +176,15 @@ class _RenderScrollStart(Object startKey) extends RenderProxySliver {
   }
 }
 
-/// The sliver: keyed rows and headers, then the footer as one more cell, so separators fall before it
-/// too.
+/// The sliver: the leader, keyed rows and headers, then the footer as one more cell, so separators fall
+/// before it too. The leader is a cell, so the anchor holds the rows still as it comes and goes.
 class const _KeyedRows<T extends Object>({
   required final RowLookup<T> rowLookup,
   required final GroupHeaders? groupHeaders,
   required final bool isReversed,
   required final ItemIdGetter<T>? itemIdGetter,
   required final ItemBuilder<T> itemBuilder,
+  required final WidgetBuilder? leaderBuilder,
   required final WidgetBuilder? footerBuilder,
   required final IndexedWidgetBuilder? separatorBuilder,
   required final VoidCallback? onNearEnd,
@@ -184,13 +199,14 @@ class const _KeyedRows<T extends Object>({
       hasFooter: footerBuilder != null,
       headers: groupHeaders?.headers ?? const [],
       isHeaderAfterItem: isReversed,
+      hasLeader: leaderBuilder != null,
     );
     final rowsSliverList = SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, childIndex) => _buildCell(context, cellLayout.cellAt(childIndex)),
         childCount: cellLayout.childCount,
         findChildIndexCallback: (key) => _indexOf(key, cellLayout),
-        // Screen readers count rows and the footer as list entries, not headers or separators.
+        // Screen readers count only rows and the footer as list entries.
         semanticIndexCallback: (_, childIndex) {
           final (:kind, :index) = cellLayout.cellAt(childIndex);
 
@@ -224,8 +240,10 @@ class const _KeyedRows<T extends Object>({
 
   Widget _buildCell(BuildContext context, Cell cell) {
     final (:kind, :index) = cell;
-    // A header, separator or footer cell only exists when its builder does.
+    // A leader, header, separator or footer cell only exists when its builder does.
     switch (kind) {
+      case .leader:
+        return leaderBuilder!(context);
       case .header:
         final groupHeaders = this.groupHeaders!;
         final groupKey = groupHeaders.headers[index].key;

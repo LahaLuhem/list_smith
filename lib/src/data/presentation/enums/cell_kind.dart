@@ -3,6 +3,9 @@ import 'package:meta/meta.dart';
 /// What a child of the rows sliver shows.
 @internal
 enum CellKind() {
+  /// The cell before the rows.
+  leader,
+
   /// A group's header.
   header,
 
