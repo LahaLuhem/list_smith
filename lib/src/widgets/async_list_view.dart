@@ -23,6 +23,7 @@ import '/src/utils/report_bad_data.dart';
 import '/src/utils/tripwire.dart';
 import 'paged_view.dart';
 import 'refresh_binding.dart';
+import 'reload_error_motion.dart';
 import 'row_transitions_notifier.dart';
 
 /// The async engine behind [ListSmith.async]: owns the paging state and every fetch into it, wires
@@ -139,6 +140,9 @@ class _AsyncListViewState<T extends Object>()
   /// The rows edits are animating. Idle unless the source has an [EditTransition].
   late final _rowTransitionsNotifier = RowTransitionsNotifier<T>(vsync: this);
 
+  /// The reload error coming and going.
+  late final _reloadErrorMotion = ReloadErrorMotion(vsync: this);
+
   /// How far a pull pushes the list now. The refresh binding writes it, the rows hold still against it.
   final _pullExtentNotifier = ValueNotifier<double>(0);
 
@@ -152,7 +156,8 @@ class _AsyncListViewState<T extends Object>()
     _searchModeNotifier = ValueNotifier(_isSearchMode);
     _pagingStateNotifier
       ..addListener(_dropDeadEdits)
-      ..addListener(_maybeAdvancePastEmptyPage);
+      ..addListener(_maybeAdvancePastEmptyPage)
+      ..addListener(_followReloadError);
     _editStoreNotifier.addListener(_maybeAdvancePastEmptyPage);
     // A run too, so a reload asked meanwhile meets this load instead of cutting it.
     _startRun(.initialLoad, (reloadRun) => reloadRun.reset());
@@ -199,6 +204,7 @@ class _AsyncListViewState<T extends Object>()
     _searchModeNotifier.dispose();
     _editStoreNotifier.dispose();
     _rowTransitionsNotifier.dispose();
+    _reloadErrorMotion.dispose();
     _pullExtentNotifier.dispose();
 
     super.dispose();
@@ -720,39 +726,44 @@ class _AsyncListViewState<T extends Object>()
       builder: (context, state, isSearchMode, _, _) {
         final shownState = _shownPagingStateFor(state);
 
-        return PagedView(
-          state: shownState,
-          sections: _sectionsFor(shownState),
-          onNearEnd: _onNearEnd,
-          onRetry: _retryPage,
-          onReloadRetry: _retryReload,
-          itemBuilder: switch (widget.source.editTransition) {
-            NoEditTransition() => widget.itemBuilder,
-            AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
-              widget.itemBuilder,
-              itemIdGetter: widget.source.itemIdGetter,
-              transitionBuilder: transitionBuilder,
-            ),
-          },
-          itemIdGetter: widget.source.itemIdGetter,
-          scrollConfig: widget.scrollConfig,
-          refresh: widget.source.refresh,
-          showsSurfaceGetter: _showsSurface,
-          takesPullGetter: _takesPull,
-          pullExtentListenable: _pullExtentNotifier,
-          shouldKeepPosition: widget.source.shouldKeepPosition,
-          isSearchMode: isSearchMode,
-          query: _committedSearch.query,
-          startKey: _committedSearch,
-          separatorBuilder: widget.separatorBuilder,
-          firstPageLoadingBuilder: widget.surfaces.firstPageLoadingBuilder,
-          newPageLoadingBuilder: widget.surfaces.newPageLoadingBuilder,
-          firstPageErrorBuilder: widget.surfaces.firstPageErrorBuilder,
-          newPageErrorBuilder: widget.surfaces.newPageErrorBuilder,
-          reloadErrorBuilder: widget.surfaces.reloadErrorBuilder,
-          emptyBuilder: widget.emptyBuilder,
-          noResultsBuilder: widget.noResultsBuilder,
-          noMoreItemsBuilder: widget.surfaces.noMoreItemsBuilder,
+        return ValueListenableBuilder(
+          valueListenable: _reloadErrorMotion.shownFailureListenable,
+          builder: (context, reloadFailure, _) => PagedView(
+            state: shownState,
+            sections: _sectionsFor(shownState),
+            onNearEnd: _onNearEnd,
+            onRetry: _retryPage,
+            onReloadRetry: _retryReload,
+            reloadErrorSizeFactor: _reloadErrorMotion.sizeFactor,
+            itemBuilder: switch (widget.source.editTransition) {
+              NoEditTransition() => widget.itemBuilder,
+              AnimatedEditTransition(:final transitionBuilder) => _rowTransitionsNotifier.decorate(
+                widget.itemBuilder,
+                itemIdGetter: widget.source.itemIdGetter,
+                transitionBuilder: transitionBuilder,
+              ),
+            },
+            itemIdGetter: widget.source.itemIdGetter,
+            scrollConfig: widget.scrollConfig,
+            refresh: widget.source.refresh,
+            showsSurfaceGetter: _showsSurface,
+            takesPullGetter: _takesPull,
+            pullExtentListenable: _pullExtentNotifier,
+            shouldKeepPosition: widget.source.shouldKeepPosition,
+            isSearchMode: isSearchMode,
+            query: _committedSearch.query,
+            startKey: _committedSearch,
+            reloadFailure: reloadFailure,
+            separatorBuilder: widget.separatorBuilder,
+            firstPageLoadingBuilder: widget.surfaces.firstPageLoadingBuilder,
+            newPageLoadingBuilder: widget.surfaces.newPageLoadingBuilder,
+            firstPageErrorBuilder: widget.surfaces.firstPageErrorBuilder,
+            newPageErrorBuilder: widget.surfaces.newPageErrorBuilder,
+            reloadErrorBuilder: widget.surfaces.reloadErrorBuilder,
+            emptyBuilder: widget.emptyBuilder,
+            noResultsBuilder: widget.noResultsBuilder,
+            noMoreItemsBuilder: widget.surfaces.noMoreItemsBuilder,
+          ),
         );
       },
     );
@@ -1005,14 +1016,19 @@ class _AsyncListViewState<T extends Object>()
     );
   }
 
-  /// The edit transition, unless there is none, the platform asks for less motion, or a save answered
-  /// after the list was gone.
+  /// The edit transition, unless there is none or no motion is allowed.
   AnimatedEditTransition? _resolveEditAnimation() => switch (widget.source.editTransition) {
-    final AnimatedEditTransition transition
-        when mounted && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false) =>
-      transition,
+    final AnimatedEditTransition transition when _isMotionAllowed() => transition,
     AnimatedEditTransition() || NoEditTransition() => null,
   };
+
+  /// False when the platform asks for less motion, or once the list is gone, as when a save answers late.
+  bool _isMotionAllowed() => mounted && !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+
+  void _followReloadError() => _reloadErrorMotion.follow(
+    _pagingStateNotifier.value.reloadFailure,
+    isMotionAllowedGetter: _isMotionAllowed,
+  );
 
   /// Whether the item with [id] has a row in what renders now.
   bool _isShown(Object id) => _displayFor(_pagingStateNotifier.value).shownIds.contains(id);
