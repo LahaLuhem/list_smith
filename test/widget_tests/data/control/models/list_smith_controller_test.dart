@@ -233,18 +233,11 @@ void main() {
       check(normal.attempts).deepEquals({0: 1});
     });
 
-    scenarioOutlineWidgets<Future<void> Function(ListSmithController<int> controller)>(
-      'refresh() or search() before any list attaches the controller asserts',
-      examples: {
-        'refresh()': (controller) => controller.refresh(),
-        'search()': (controller) => controller.search('1'),
-      },
-      outline: (tester, call) async {
-        final controller = ListSmithController<int>();
+    scenarioWidgets('search() before any list attaches the controller asserts', (tester) async {
+      final controller = ListSmithController<int>();
 
-        check(() => call(controller)).throws<AssertionError>();
-      },
-    );
+      check(() => controller.search('1')).throws<AssertionError>();
+    });
 
     scenarioWidgets('search() with no query asserts', (tester) async {
       final controller = ListSmithController();
@@ -339,10 +332,11 @@ void main() {
     });
 
     scenarioWidgets(
-      'invalidate(), reset(), endSearch() and edits before any list attached are no-ops',
+      'refresh(), invalidate(), reset(), endSearch() and edits before any list attached are no-ops',
       (tester) async {
         final controller = ListSmithController<int>();
 
+        await controller.refresh();
         await controller.invalidate();
         await controller.reset();
         await controller.endSearch();
