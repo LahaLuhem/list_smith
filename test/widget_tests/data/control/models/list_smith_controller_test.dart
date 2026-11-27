@@ -56,15 +56,19 @@ void main() {
       required ListSmithController<_Row> controller,
       List<_Row> serverRows = const [],
       EditTransition editTransition = const NoEditTransition(),
+      bool isMotionReduced = false,
     }) => pumpListSmith(
       tester,
-      ListSmith<_Row>.async(
-        fetchPage: PageFetcher((_) async => serverRows),
-        itemIdGetter: (row) => row.id,
-        endPolicy: const FixedPageCountPolicy(pageCount: 1),
-        editTransition: editTransition,
-        controller: controller,
-        itemBuilder: (_, row, _) => Text('row ${row.id} ${row.label}'),
+      MediaQuery(
+        data: MediaQueryData(disableAnimations: isMotionReduced),
+        child: ListSmith<_Row>.async(
+          fetchPage: PageFetcher((_) async => serverRows),
+          itemIdGetter: (row) => row.id,
+          endPolicy: const FixedPageCountPolicy(pageCount: 1),
+          editTransition: editTransition,
+          controller: controller,
+          itemBuilder: (_, row, _) => Text('row ${row.id} ${row.label}'),
+        ),
       ),
     );
 
@@ -274,7 +278,7 @@ void main() {
       check(() => controller.search('  ')).throws<AssertionError>();
     });
 
-    scenarioWidgets('refresh() after the list is gone is inert', (tester) async {
+    scenarioWidgets('refresh() and search() after the list is gone are inert', (tester) async {
       final fetcher = valuedFetcher();
       final controller = ListSmithController();
 
@@ -283,6 +287,7 @@ void main() {
       await pumpListSmith(tester, const SizedBox.shrink());
 
       await controller.refresh();
+      await controller.search('1');
       await drain(tester);
 
       check(fetcher.attempts).deepEquals({0: 1});
@@ -676,6 +681,32 @@ void main() {
       await secondController.refresh();
       await drain(tester);
       check(fetcher.attempts).deepEquals({0: 2});
+    });
+
+    scenarioWidgets('turning on reduce motion keeps the controller driving its list', (
+      tester,
+    ) async {
+      const editTransition = EditTransition(
+        duration: Duration(milliseconds: 300),
+        transitionBuilder: AnimatedSwitcher.defaultTransitionBuilder,
+      );
+      final controller = ListSmithController<_Row>();
+      await pumpRows(tester, controller: controller, editTransition: editTransition);
+      await drain(tester);
+      // Its animation reads MediaQuery, so the list now depends on it.
+      controller.upsert((id: 1, label: 'a'));
+      await drain(tester);
+
+      await pumpRows(
+        tester,
+        controller: controller,
+        editTransition: editTransition,
+        isMotionReduced: true,
+      );
+      controller.upsert((id: 2, label: 'b'));
+      await drain(tester);
+
+      check(find.text('row 2 b').evaluate()).length.equals(1);
     });
   });
 }

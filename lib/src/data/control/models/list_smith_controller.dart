@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '/src/data/search/search.dart';
+import '../../../utils/tripwire.dart';
 import 'list_smith_controller_host.dart';
 
 /// Drives a [ListSmith.async] list from code: a refresh button, a tab re-tap, a re-read after a local
@@ -18,7 +19,7 @@ import 'list_smith_controller_host.dart';
 /// Holds only saves still out, so there's nothing to dispose.
 class ListSmithController<T extends Object>() {
   ListSmithControllerHost<T>? _host;
-  var _wasEverAttached = false;
+  final _attachTripwire = Tripwire();
   final _heldSaves = <_HeldSave<T>>[];
 
   /// Creates it.
@@ -63,7 +64,7 @@ class ListSmithController<T extends Object>() {
   }) {
     assert(query.trim().isNotEmpty, 'search() needs a query. To go back, call endSearch().');
     assert(
-      _host != null || _wasEverAttached,
+      _host != null || _attachTripwire.hasTripped,
       'Pass this ListSmithController to ListSmith.async before calling search().',
     );
 
@@ -125,7 +126,7 @@ class ListSmithController<T extends Object>() {
       'A ListSmithController drives one list, and this one is already attached.',
     );
     _host = host;
-    _wasEverAttached = true;
+    _attachTripwire.trip();
     for (final heldSave in _heldSaves) {
       heldSave.handOverTo(host);
     }

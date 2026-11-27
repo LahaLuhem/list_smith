@@ -49,14 +49,14 @@ final class const ReloadToCurrentDepth({
       return;
     }
 
-    var didFail = false;
+    final failTripwire = Tripwire();
     Future<(List<T>, Object?)?> fetchOrNull(int index) async {
-      if (didFail || context.isStale) return null; // its read would go to waste
+      if (failTripwire.hasTripped || context.isStale) return null; // its read would go to waste
 
       try {
         return await context.fetch(index, null);
       } on Exception {
-        didFail = true; // the observer already saw the error
+        failTripwire.trip(); // the observer already saw the error
 
         return null;
       }
@@ -69,7 +69,7 @@ final class const ReloadToCurrentDepth({
       (index) => pool.withResource(() => fetchOrNull(index)),
     ).wait;
     await pool.close();
-    if (didFail || context.isStale) return; // nothing whole to commit
+    if (failTripwire.hasTripped || context.isStale) return; // nothing whole to commit
 
     final pageReads = freshReads.nonNulls.toList(growable: false);
     await context.commit(

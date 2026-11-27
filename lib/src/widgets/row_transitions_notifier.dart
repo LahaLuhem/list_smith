@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 
 import '/src/data/pagination/pagination.dart';
 import '/src/data/presentation/presentation.dart';
+import '../utils/tripwire.dart';
 
 /// The rows edits are animating in and out, one controller per item id.
 ///
@@ -131,7 +132,7 @@ final class RowTransitionsNotifier<T extends Object>({
   }
 
   void _animate(_Transition transition, {required bool isEntering}) {
-    transition.hasStarted = true;
+    transition.startTripwire.trip();
     unawaited(isEntering ? transition.controller.forward() : transition.controller.reverse());
 
     notifyListeners();
@@ -156,7 +157,9 @@ final class RowTransitionsNotifier<T extends Object>({
   Animation<double>? _animationOf(Object id) {
     final transition = _transitions[id];
 
-    return transition == null || !transition.hasStarted ? null : transition.controller;
+    return transition == null || !transition.startTripwire.hasTripped
+        ? null
+        : transition.controller;
   }
 
   bool _isLeaving(Object id) => _transitions[id]?.bookRemoval != null;
@@ -173,8 +176,8 @@ final class RowTransitionsNotifier<T extends Object>({
 
 /// One row's animation. [bookRemoval] is set while the row goes out.
 final class _Transition(final AnimationController controller) {
-  /// False for an exit waiting its frame, so the row isn't wrapped before it moves.
-  var hasStarted = false;
+  /// Untripped for an exit waiting its frame, so the row isn't wrapped before it moves.
+  final startTripwire = Tripwire();
 
   VoidCallback? bookRemoval;
   Widget? leavingChild;
