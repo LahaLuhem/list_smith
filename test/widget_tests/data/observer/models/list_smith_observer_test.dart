@@ -34,34 +34,53 @@ void main() {
       check(observer.lastException).isNotNull().identicalTo(exception);
     });
 
-    scenarioOutlineWidgets(
+    scenarioOutlineWidgets<FetchTrigger>(
       'onReload fires before any page of that reload is asked for',
       examples: const {
-        'reset to first page': ResetToFirstPage(),
-        'reload to current depth': ReloadToCurrentDepth(concurrency: null),
+        // Its 1st page goes out with no wait, so only the run's own order puts the event 1st.
+        'a refresh, on a cursor list': .refresh,
+        // The commit's events fire after it starts the reload, so its page has to wait for them.
+        'a query change': .queryChanged,
       },
-      outline: (tester, reload) async {
+      outline: (tester, trigger) async {
         final observer = RecordingListSmithObserver();
         final controller = ListSmithController();
-        // The fetcher writes into the observer's log, so one list holds the order of both.
-        await _pumpObserved(
+        // The fetchers write into the observer's log, so one list holds the order of both.
+        void logFetch(int pageIndex, FetchTrigger trigger) =>
+            observer.events.add('fetch($pageIndex:${trigger.name})');
+        Future<void> pump(String query) => _pumpObserved(
           tester,
           observer,
-          fetchPage: PageFetcher((request) async {
-            observer.events.add('fetch(${request.pageIndex}:${request.trigger.name})');
+          fetchPage: PageFetcher.withSignal((request) async {
+            logFetch(request.pageIndex, request.trigger);
 
-            return request.pageIndex == 0 ? const [1, 2, 3] : const <int>[];
+            return request.pageIndex == 0 ? (const [1, 2, 3], 'next') : (const <int>[], null);
           }),
+          search: AsyncSearch(
+            fetchPage: SearchPageFetcher((request) async {
+              logFetch(request.pageIndex, request.trigger);
+
+              return request.pageIndex == 0 ? const [99] : const <int>[];
+            }),
+          ),
+          query: query,
           controller: controller,
-          refresh: PullToRefresh(reload: reload),
         );
+
+        await pump('');
+        await drain(tester);
+        if (trigger == .refresh) {
+          await controller.refresh();
+        } else {
+          await pump('ab');
+          await settle(tester);
+        }
         await drain(tester);
 
-        await controller.refresh();
-        await drain(tester);
-
-        final reloadAt = observer.events.indexOf('reload(refresh)');
-        final firstFetchAt = observer.events.indexWhere((event) => event.endsWith(':refresh)'));
+        final reloadAt = observer.events.indexOf('reload(${trigger.name})');
+        final firstFetchAt = observer.events.indexWhere(
+          (event) => event.endsWith(':${trigger.name})'),
+        );
         check(reloadAt).isGreaterOrEqual(0);
         check(firstFetchAt).isGreaterThan(reloadAt);
       },
@@ -198,6 +217,32 @@ void main() {
           .deepEquals(['queryCommitted()', 'searchModeChanged(false)', 'reload(refresh)']);
     });
 
+    scenarioWidgets('taking search away reports leaving search mode', (tester) async {
+      final observer = RecordingListSmithObserver();
+      final fetchPage = PageFetcher<int>(
+        (request) async => request.pageIndex == 0 ? const [1, 2, 3] : const <int>[],
+      );
+      await _pumpObserved(
+        tester,
+        observer,
+        fetchPage: fetchPage,
+        search: AsyncSearch(
+          fetchPage: SearchPageFetcher(
+            (request) async => request.pageIndex == 0 ? const [99] : const <int>[],
+          ),
+        ),
+        query: 'ab',
+      );
+      await drain(tester);
+      observer.events.clear();
+
+      await _pumpObserved(tester, observer, fetchPage: fetchPage);
+      await settle(tester);
+
+      check(observer.events.where((event) => event.startsWith('searchModeChanged')))
+          .deepEquals(['searchModeChanged(false)']);
+    });
+
     scenarioWidgets('onReload reports invalidated for invalidate() and reset(), once each', (
       tester,
     ) async {
@@ -254,7 +299,6 @@ Future<void> _pumpObserved(
   Search<int> search = const NoSearch(),
   String query = '',
   ListSmithController? controller,
-  Refresh refresh = const PullToRefresh(),
 }) => pumpListSmith(
   tester,
   ListSmith.async(
@@ -264,7 +308,6 @@ Future<void> _pumpObserved(
     query: query,
     observer: observer,
     controller: controller,
-    refresh: refresh,
     searchDebounce: const Duration(milliseconds: 20),
     itemBuilder: (_, item, _) => Text('item $item'),
   ),
