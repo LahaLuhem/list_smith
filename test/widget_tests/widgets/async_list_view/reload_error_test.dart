@@ -39,6 +39,18 @@ void main() {
       },
     );
 
+    scenarioWidgets('its error stays off the 1st-page error screen', (tester) async {
+      final server = FakeServer([1, 2, 3])..failing.addAll({(0, 1), (0, 2)});
+      final controller = await _pumpList(tester, server);
+
+      await controller.refresh();
+      await drain(tester);
+      await pumpPastMotion(tester);
+
+      check(server.attempts[0]).equals(2); // premise: the refresh asked again
+      check(errorFinder.evaluate()).length.equals(1);
+    });
+
     scenarioWidgets('its error shows when a page read again at commit fails', (tester) async {
       final server = FakeServer(List.generate(8, (index) => index))..failing.add((0, 3));
       final controller = await _pumpList(tester, server, pageSize: 4);
