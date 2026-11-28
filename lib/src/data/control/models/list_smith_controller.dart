@@ -31,16 +31,14 @@ class ListSmithController<T extends Object>() {
   /// has no pull). While searching, it reloads the search.
   ///
   /// Completes with the exception its fetch threw, or null once its fresh data shows. Joins a refresh
-  /// already running. During another reload or a 1st-page load, it completes with that one and runs
-  /// once more after.
+  /// already running. During another reload or a 1st-page load, it runs once more after.
   Future<Exception?> refresh() => _host?.refresh() ?? Future<Exception?>.syncValue(null);
 
   /// Re-reads every loaded page in place, keeping the user's scroll position, because your data changed
   /// locally. Pages report [FetchTrigger.invalidated].
   ///
   /// Completes with the exception the re-read threw, or null once it lands. During a reload or a 1st-page
-  /// load, it completes with that one and re-reads once more after, so a write landing mid-read isn't
-  /// missed.
+  /// load, it re-reads once more after, so a write landing mid-read isn't missed.
   Future<Exception?> invalidate() => _host?.invalidate() ?? Future<Exception?>.syncValue(null);
 
   /// Starts the list over from page 0: a logout, an account switch, a filter outside search. That page

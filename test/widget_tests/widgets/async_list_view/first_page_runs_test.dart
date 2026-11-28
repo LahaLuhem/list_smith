@@ -99,14 +99,9 @@ void main() {
       'a verb from code completes once its fresh page has landed or failed',
       examples: {
         'refresh(), landing': (callVerb: (controller) => controller.refresh(), isFailing: false),
-        'refresh(), failing': (callVerb: (controller) => controller.refresh(), isFailing: true),
         'invalidate(), landing': (
           callVerb: (controller) => controller.invalidate(),
           isFailing: false,
-        ),
-        'invalidate(), failing': (
-          callVerb: (controller) => controller.invalidate(),
-          isFailing: true,
         ),
         'reset(), landing': (callVerb: (controller) => controller.reset(), isFailing: false),
         'reset(), failing': (callVerb: (controller) => controller.reset(), isFailing: true),
@@ -132,67 +127,86 @@ void main() {
 
     scenarioOutlineWidgets<
       ({
+        AsyncValueSetter<ListSmithController<int>>? liveVerb,
         Future<Exception?> Function(ListSmithController<int>) callVerb,
-        bool isFirstLoadFailing,
-        bool isFailing,
+        Set<int> failingAttempts,
+        int askAttempt,
       })
     >(
-      'refresh() and invalidate() complete with what their fetch threw, or null once it lands',
+      'refresh() and invalidate() complete with what the run doing their ask threw, or null',
       examples: {
-        'refresh(), landing': (
+        'refresh() on the error screen, landing': (
+          liveVerb: null,
           callVerb: (controller) => controller.refresh(),
-          isFirstLoadFailing: false,
-          isFailing: false,
-        ),
-        'refresh(), failing': (
-          callVerb: (controller) => controller.refresh(),
-          isFirstLoadFailing: false,
-          isFailing: true,
-        ),
-        'invalidate(), failing': (
-          callVerb: (controller) => controller.invalidate(),
-          isFirstLoadFailing: false,
-          isFailing: true,
+          failingAttempts: {1},
+          askAttempt: 2,
         ),
         'refresh() on the error screen, failing': (
+          liveVerb: null,
           callVerb: (controller) => controller.refresh(),
-          isFirstLoadFailing: true,
-          isFailing: true,
+          failingAttempts: {1, 2},
+          askAttempt: 2,
+        ),
+        'refresh() joining a live refresh()': (
+          liveVerb: (controller) => controller.refresh(),
+          callVerb: (controller) => controller.refresh(),
+          failingAttempts: {2},
+          askAttempt: 2,
+        ),
+        'refresh() booked behind a live invalidate()': (
+          liveVerb: (controller) => controller.invalidate(),
+          callVerb: (controller) => controller.refresh(),
+          failingAttempts: {3},
+          askAttempt: 3,
+        ),
+        'invalidate() booked behind a live refresh()': (
+          liveVerb: (controller) => controller.refresh(),
+          callVerb: (controller) => controller.invalidate(),
+          failingAttempts: {3},
+          askAttempt: 3,
         ),
       },
       outline: (tester, example) async {
-        final server = FakeServer<int>([1, 2, 3]);
-        if (example.isFirstLoadFailing) server.failing.add((0, 1));
-        if (example.isFailing) server.failing.add((0, 2));
+        final server = FakeServer<int>([1, 2, 3])
+          ..failing.addAll(example.failingAttempts.map((attempt) => (0, attempt)));
+        final holdCompleter = server.hold(0, attempt: 2);
         final observer = RecordingListSmithObserver();
         final controller = ListSmithController<int>();
         await pumpList(tester, server, controller: controller, observer: observer);
+        await drain(tester);
+        unawaited(example.liveVerb?.call(controller));
         await drain(tester);
 
         final exceptionFuture = example.callVerb(controller);
-        await drain(tester);
+        await release(tester, [holdCompleter]);
 
-        check(server.attempts[0]).equals(2); // premise: the verb's fetch went out
-        check(await exceptionFuture).identicalTo(example.isFailing ? observer.lastException : null);
+        final isAskFailing = example.failingAttempts.contains(example.askAttempt);
+        check(server.attempts[0]).equals(example.askAttempt); // premise: its run fetched last
+        check(await exceptionFuture).identicalTo(!isAskFailing ? null : observer.lastException);
       },
     );
 
-    scenarioWidgets(
-      'a refresh() that reset() cut off completes with null, though its fetch failed',
-      (tester) async {
-        final server = FakeServer<int>([1, 2, 3])..failing.add((0, 2));
-        final observer = RecordingListSmithObserver();
-        final controller = ListSmithController<int>();
-        await pumpList(tester, server, controller: controller, observer: observer);
-        await drain(tester);
+    scenarioOutlineWidgets<AsyncValueSetter<ListSmithController<int>>?>(
+      'a refresh() whose ask reset() cut off completes with null',
+      examples: {
+        'its own run': null,
+        'booked behind a live invalidate()': (controller) => controller.invalidate(),
+      },
+      outline: (tester, liveVerb) async {
+        // The held fetch fails, and so would a rerun after the cut.
+        final server = FakeServer<int>([1, 2, 3])..failing.addAll({(0, 2), (0, 4)});
         final holdCompleter = server.hold(0, attempt: 2);
+        final controller = ListSmithController<int>();
+        await pumpList(tester, server, controller: controller);
+        await drain(tester);
+        unawaited(liveVerb?.call(controller));
+        await drain(tester);
         final exceptionFuture = controller.refresh();
         await drain(tester);
 
         await controller.reset();
         await release(tester, [holdCompleter]);
 
-        check(observer.lastException).isNotNull(); // premise: the refresh's fetch failed
         check(await exceptionFuture).isNull;
       },
     );

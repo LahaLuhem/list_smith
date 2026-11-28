@@ -642,7 +642,7 @@ class _AsyncListViewState<T extends Object>()
 
     return debtFetchTrigger == null
         ? reloadRun
-        : _runReload(debtFetchTrigger, reload: const ReloadToCurrentDepth());
+        : _runReload(debtFetchTrigger, reload: const ReloadToCurrentDepth()).reloadRun;
   }
 
   /// Parks, restores or restarts the stream as [cacheAction] says. Returns the feed it put back, if
@@ -822,10 +822,10 @@ class _AsyncListViewState<T extends Object>()
   }
 
   @override
-  Future<Exception?> refresh() => _runReload(.refresh).doneFuture;
+  Future<Exception?> refresh() => _runReload(.refresh).outcomeFuture;
 
   @override
-  Future<Exception?> invalidate() => _runReload(.invalidated).doneFuture;
+  Future<Exception?> invalidate() => _runReload(.invalidated).outcomeFuture;
 
   @override
   Future<void> reset() {
@@ -893,7 +893,7 @@ class _AsyncListViewState<T extends Object>()
   /// Completes once the list shows fresh rows or its own loader, so the indicator never spins beside
   /// that loader.
   Future<void> _refreshFromPull() {
-    final reloadRun = _runReload(.refresh);
+    final reloadRun = _runReload(.refresh).reloadRun;
     reloadRun.pullTripwire.trip();
 
     return reloadRun.handOverFuture;
@@ -1041,25 +1041,32 @@ class _AsyncListViewState<T extends Object>()
       _editStoreNotifier.book(widget.source.itemIdGetter(item), editedItem);
 
   /// The one reload entry point, gesture or code. Join and book rules: APPENDIX reload-run. [reload]
-  /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth.
-  _ReloadRun<T> _runReload(FetchTrigger trigger, {Reload? reload}) {
+  /// overrides what [_reloadFor] would pick, for a restore paying its debt to depth. The outcome comes
+  /// from the run doing the ask: the one started or joined, or the rerun booked.
+  ({_ReloadRun<T> reloadRun, Future<Exception?> outcomeFuture}) _runReload(
+    FetchTrigger trigger, {
+    Reload? reload,
+  }) {
     _normalSnapshot?.owe(trigger); // asked while searching, so the parked feed owes it too
     final runningReload = _runningReload;
     if (runningReload != null && !runningReload.isStale) {
-      if (runningReload.trigger != .refresh || trigger != .refresh) {
-        runningReload.rerunTrigger = _stronger(runningReload.rerunTrigger, trigger);
-      }
-
-      return runningReload;
+      return (
+        reloadRun: runningReload,
+        outcomeFuture: runningReload.trigger == .refresh && trigger == .refresh
+            ? runningReload.doneFuture
+            : runningReload.book(trigger),
+      );
     }
 
-    return _startRun(
+    final startedReloadRun = _startRun(
       trigger,
       // Nothing loaded is nothing to keep, whatever the reload.
       (reloadRun) =>
           reloadRun.depth == 0 ? reloadRun.reset() : (reload ?? _reloadFor(trigger)).run(reloadRun),
       announces: true,
     );
+
+    return (reloadRun: startedReloadRun, outcomeFuture: startedReloadRun.doneFuture);
   }
 
   /// Called directly it cuts in, since [_runReload] is where a caller meets the live run.
@@ -1075,8 +1082,12 @@ class _AsyncListViewState<T extends Object>()
       work(reloadRun).whenComplete(() {
         if (identical(_runningReload, reloadRun)) _runningReload = null;
         reloadRun.finish();
-        final rerunTrigger = reloadRun.rerunTrigger;
-        if (rerunTrigger != null && !reloadRun.isStale) _runReload(rerunTrigger);
+        final rerun = reloadRun.rerun;
+        if (rerun == null) return;
+
+        rerun.outcomeCompleter.complete(
+          reloadRun.isStale ? null : _runReload(rerun.trigger).outcomeFuture,
+        );
       }),
     );
 
@@ -1113,8 +1124,8 @@ final class _ReloadRun<T extends Object>(
 
   final PagingState<T> _startState = _engine._pagingStateNotifier.value;
 
-  /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
-  FetchTrigger? rerunTrigger;
+  /// Booked by callers that met this run live and must not be lost. Runs once this one is done.
+  _Rerun? rerun;
 
   /// Completes with the run's failure once the engine has let go of it, null if it landed or the list
   /// moved on.
@@ -1126,8 +1137,8 @@ final class _ReloadRun<T extends Object>(
   /// What a caller asked of this run that cutting it off would lose: a booked rerun, or the run itself
   /// when a caller asked for it. A 1st-page load the engine started is nobody's ask.
   FetchTrigger? get pendingAsk => switch (trigger) {
-    .refresh || .invalidated => _stronger(rerunTrigger, trigger),
-    .initialLoad || .nextPage || .retry || .queryChanged => rerunTrigger,
+    .refresh || .invalidated => _stronger(rerun?.trigger, trigger),
+    .initialLoad || .nextPage || .retry || .queryChanged => rerun?.trigger,
   };
 
   @override
@@ -1232,6 +1243,14 @@ final class _ReloadRun<T extends Object>(
     _firstPageException = await firstPageFuture;
   }
 
+  /// Books [trigger] to run once this one is done, completing with how that rerun goes.
+  Future<Exception?> book(FetchTrigger trigger) {
+    final rerun = this.rerun ??= _Rerun(trigger);
+    rerun.trigger = _stronger(rerun.trigger, trigger);
+
+    return rerun.outcomeCompleter.future;
+  }
+
   /// Marks the run finished, putting a failed reload's error on the pages it kept unless the list moved
   /// on. The engine calls it once it has let go of the run.
   void finish() {
@@ -1247,6 +1266,12 @@ final class _ReloadRun<T extends Object>(
   void _handOver() {
     if (!_handOverCompleter.isCompleted) _handOverCompleter.complete();
   }
+}
+
+/// The run booked behind a live one: one however many callers book it, the strongest trigger winning.
+final class _Rerun(var FetchTrigger trigger) {
+  /// Every booking caller's outcome: how the rerun went, or null if it never ran.
+  final outcomeCompleter = Completer<Exception?>();
 }
 
 /// What the list shows, the feed when [query] is empty. A new one per commit, for the scroll start

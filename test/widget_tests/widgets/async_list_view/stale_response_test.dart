@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:checks/checks.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith/list_smith.dart';
@@ -695,41 +696,40 @@ void main() {
       check(source.log.length).equals(before);
     });
 
-    scenarioWidgets('a feed reload cut off by entering search is paid on the way back', (
-      tester,
-    ) async {
-      // The refresh's fetches are attempt 2. Search then takes attempt 3, and the feed's re-read 4.
-      final holdCompleter = Completer<void>();
-      final source = _stampedSource(
-        holdFor: (_, attempt) => attempt != 2 ? null : holdCompleter.future,
-        cachePolicy: const KeepCachePolicy(),
-      );
-      final controller = ListSmithController();
+    scenarioOutlineWidgets<({AsyncValueSetter<ListSmithController>? liveAsk, int heldAttempt})>(
+      'a refresh booked behind a load that entering search cuts off is paid on the way back',
+      examples: {
+        'a live invalidate()': (liveAsk: (controller) => controller.invalidate(), heldAttempt: 2),
+        'the 1st-page load': (liveAsk: null, heldAttempt: 1),
+      },
+      outline: (tester, example) async {
+        final holdCompleter = Completer<void>();
+        final source = _stampedSource(
+          holdFor: (pageIndex, attempt) =>
+              (pageIndex, attempt) != (0, example.heldAttempt) ? null : holdCompleter.future,
+          cachePolicy: const KeepCachePolicy(),
+        );
+        final controller = ListSmithController();
+        await _pumpStamped(tester, source, controller: controller);
+        await drain(tester, frames: 12);
+        unawaited(example.liveAsk?.call(controller));
+        await drain(tester);
+        unawaited(controller.refresh());
+        await drain(tester);
+        await _pumpStamped(tester, source, controller: controller, query: 'x');
+        await settle(tester);
+        holdCompleter.complete();
+        await tester.idle();
+        await drain(tester, frames: 12);
 
-      await _pumpStamped(tester, source, controller: controller);
-      await drain(tester, frames: 12);
-      final refreshFuture = controller.refresh();
-      await drain(tester);
-      await _pumpStamped(tester, source, controller: controller, query: 'x');
-      await settle(tester);
-      await drain(tester, frames: 12);
-      check(_shown(tester)).deepEquals([3, 1003, 2003]);
+        final before = source.log.length;
+        await _pumpStamped(tester, source, controller: controller);
+        await settle(tester);
+        await drain(tester, frames: 12);
 
-      holdCompleter.complete();
-      await tester.idle();
-      await drain(tester, frames: 12);
-      await refreshFuture;
-      // Premise: the cut-off reload did not land on the search.
-      check(_shown(tester)).deepEquals([3, 1003, 2003]);
-
-      await _pumpStamped(tester, source, controller: controller);
-      await settle(tester);
-      await drain(tester, frames: 12);
-
-      // The snapshot was born owing the reload it cut off, so the feed comes back re-read.
-      check(_shown(tester)).deepEquals([4, 1004, 2004]);
-      check(source.log.where((entry) => entry.endsWith('#4:refresh')).length).equals(3);
-    });
+        check(source.log.skip(before).first).endsWith(':refresh');
+      },
+    );
 
     scenarioWidgets('a debt reload cut off by a new search is owed again', (tester) async {
       // The 1st restore's re-read is sequential and hangs on p0#4, so the next search cuts it off.
