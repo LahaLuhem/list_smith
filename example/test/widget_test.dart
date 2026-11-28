@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_slidable/flutter_slidable.dart' show Slidable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:list_smith_example/features/core/widgets/event_log_panel.dart';
-import 'package:material_ui/material_ui.dart' show Theme;
+import 'package:material_ui/material_ui.dart' show SnackBar, Theme;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show PlatformSwitch;
 
 import 'support/support.dart';
@@ -372,6 +372,27 @@ void main() {
 
       check(find.textContaining('Simulated reload failure').evaluate()).isNotEmpty;
     });
+
+    scenarioOutlineWidgets<bool>(
+      "the reload demo's code refresh says so only when it fails",
+      examples: const {'failing': true, 'landing': false},
+      outline: (tester, isFailing) async {
+        // The cell above the rows has the same heading.
+        final toastFinder = find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.text("Couldn't refresh"),
+        );
+        await openDemo(tester, 'Reload', surfaceSize: tallSurfaceSize);
+        await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+        if (isFailing) await tester.tap(knobSwitchFinder('Inject a failure on reload'));
+        await tester.pump();
+
+        await tester.tap(find.text('Refresh from code'));
+        await drain(tester, frames: 8, step: const Duration(milliseconds: 300));
+
+        check(toastFinder.evaluate()).length.equals(isFailing ? 1 : 0);
+      },
+    );
 
     scenarioWidgets('the edits demo adds on top, renames in place and swipes a row away', (
       tester,

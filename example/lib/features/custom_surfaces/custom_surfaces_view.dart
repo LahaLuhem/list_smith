@@ -45,10 +45,18 @@ class const CustomSurfacesView({super.key}) extends StatelessWidget {
           newPageLoadingBuilder: (_) => const CustomLoading(isCompact: true),
           firstPageErrorBuilder: (_, exception, onRetry) =>
               CustomError(exception: exception, onRetry: onRetry),
-          newPageErrorBuilder: (_, exception, onRetry) =>
-              CustomError(exception: exception, onRetry: onRetry, isCompact: true),
+          newPageErrorBuilder: (_, exception, onRetry) => CustomError(
+            exception: exception,
+            onRetry: onRetry,
+            compactMessage: 'Could not load more.',
+          ),
           // Wiring only.
           // coverage:ignore-start
+          reloadErrorBuilder: (_, exception, onRetry) => CustomError(
+            exception: exception,
+            onRetry: onRetry,
+            compactMessage: 'Could not refresh.',
+          ),
           noMoreItemsBuilder: (_) => const CustomEnd(),
           // coverage:ignore-end
         ),

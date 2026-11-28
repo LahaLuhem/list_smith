@@ -39,8 +39,8 @@ abstract base class const ListSmithObserver() {
 
   // An empty default.
   // coverage:ignore-start
-  /// A page fetch threw [exception]. Fires even when the list shows nothing, as when a reload that keeps
-  /// depth leaves the old rows up. An [Error] never comes here: it's a bug, so it goes on to the app.
+  /// A page fetch threw [exception], even one the list moved on from and so never shows. An [Error]
+  /// never comes here: it's a bug, so it goes on to the app.
   void onError(Exception exception, StackTrace stackTrace) {}
   // coverage:ignore-end
 

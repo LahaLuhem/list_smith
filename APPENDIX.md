@@ -9,7 +9,7 @@ Why list_smith is built the way it is, where the code and the rules don't say. H
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#ai-files-symlinked)
 - [Consumer-facing surfaces impose no design system](#design-system-agnostic)
 - [`lib/src/` directory layout](#src-directory-layout)
-- [A pull resets the list by default](#pull-to-refresh-resets-v1)
+- [A pull keeps the rows until its page lands](#pull-to-refresh-resets-v1)
 - [Async override surfaces group, universal ones stay flat](#async-surfaces-holder)
 - [Sync search: flat input, a pure resolver](#sync-search-shape)
 - [Async search: one paging state, 2 views](#async-two-view-search)
@@ -21,7 +21,7 @@ Why list_smith is built the way it is, where the code and the rules don't say. H
 - [Explicit end signals: an open policy plus a fetcher building block](#explicit-end-signals)
 - [Cursor-driven pagination: the signal, fed back](#cursor-driven-pagination)
 - [Sync predicate builders (`SyncSearchPredicates`)](#sync-searchable-fields)
-- [A narrow controller: intents out, nothing back](#controller-handle)
+- [A narrow controller: intents out, no state back](#controller-handle)
 - [Each reload is a run that knows its stream](#reload-run)
 - [Fetchers take a request object, not an argument list](#page-request-object)
 - [Fetchers are told why they were called](#fetch-trigger)
@@ -83,13 +83,19 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 ---
 
 <a id="pull-to-refresh-resets-v1"></a>
-## A pull resets the list by default
+## A pull keeps the rows until its page lands
 
-- **Decision:** a pull resets the paging state, so the 1st-page loader shows while the fresh page
-  loads. Holding the indicator instead would spin it beside the loader.
-- **`refresh()` from code waits for the fresh page,** since a button has no loader to hand over to.
-- **`ReloadToCurrentDepth`** keeps the old items and holds the indicator until it's done
-  ([#reload-run](#reload-run)).
+- **Decision:** the rows stay under the spinning indicator until the fresh page lands, then
+  `ResetToFirstPage` shows page 1 in their place. Clearing them first left a failed pull on the
+  error screen. Only a list with nothing loaded restarts on the 1st-page loader.
+- **A failed reload's error sits where its page would have landed,** in a cell above the 1st row,
+  and goes with the pages it's about: once a reload lands or a reset clears them.
+- **Retry asks again with the trigger that failed,** since `retry` on a depth reload would flag
+  pages that never failed.
+- **The cell grows in and shrinks out** from one controller the engine owns, so the rows slide
+  rather than jump, and a cell scrolled back to doesn't grow again.
+- **`refresh()` and `invalidate()` complete with the failure,** since a code refresh failing deep
+  leaves the cell out of sight.
 
 ---
 
@@ -289,7 +295,7 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 ---
 
 <a id="controller-handle"></a>
-## A narrow controller: intents out, nothing back
+## A narrow controller: intents out, no state back
 
 - **Decision:** an optional `ListSmithController` on `.async` carrying intents: `refresh()`,
   `invalidate()`, `reset()`, the [search verbs](#search-from-code) and the [edits](#edit-layer). No
@@ -302,8 +308,8 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
   handle run the same `refresh()`.
 - **`NoRefresh` means no gesture, not no refresh,** so `refresh()` there runs `ResetToFirstPage`. A
   per-call `refresh({Reload? using})` is the build-upward path.
-- **Silent.** Animating the indicator would flash it before the 1st-page loader
-  ([#pull-to-refresh-resets-v1](#pull-to-refresh-resets-v1)). The button owns its progress.
+- **Silent on every list,** since a `NoRefresh` one has no indicator to spin. The caller's control
+  shows progress, and the future returns the failure.
 - **Coalesced.** A 2nd `refresh()` while one runs joins it, so a double tap sends 1 request.
 - **With no list, a verb does nothing, but a save waits and `search()` asserts.** The next list's
   1st read is fresh anyway, and an assert would fire by whether the user had opened that screen, not
@@ -318,9 +324,10 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
   born into, and `isStale` compares the two.
 - **Why:** the depth reload's late `commit()` overwrote any reset, query change, restore or dispose
   during its awaits. A stale run drops its commit, skips its remaining fetches and is never joined.
-- **Its own writes don't stale it,** so a refresh during a `ResetToFirstPage` run's page 0 joins.
+- **Its own writes don't stale it,** so a refresh meeting one that restarted the list still joins.
 - **Any other pair runs once more,** `.refresh` winning, or a write on a page the run already read
-  would never be re-read. A joiner completes with the run it joined, and `reset()` takes the slot.
+  would never be re-read. A joiner completes with the run it joined, a booked call with its rerun,
+  or null if the list moves on first. `reset()` takes the slot.
 - **Page-0 loads are runs,** so the join rule sees them. The engine's own are nobody's ask, so a
   feed parked during one owes nothing.
 - **`invalidate()` always reloads to depth.** A pull jumping to the start is a convention, a local
@@ -352,7 +359,7 @@ checkout without symlinks gets a file holding the path, where the fallback is ha
 - **A fact, not an instruction.** Bypass, revalidate or stale-while-revalidate is the app's call,
   which a `shouldBypassCache` bool can't hold. A 2nd fetcher for bypassing would need a mirror on
   `AsyncSearch`.
-- **A plain enum.** Both reset paths go through `_resetPaging()`, so a "restarts the cursor" field
+- **A plain enum.** Every restart goes through `_resetPaging()`, so a "restarts the cursor" field
   would restate it. The 1st trigger needing that elsewhere earns one.
 - **`retry` costs a field.** A fetch clears the error as it starts, so a retry isn't derivable.
   `_lastFailedPageIndex` clears when that page succeeds and on restart. Without it a retry reports
@@ -504,8 +511,8 @@ Every Dependabot PR, majors included, auto-merges through dartender's `ci.yml`. 
   `remove()` goes at once, so Dismissible and Slidable, which throw if kept, need no flag.
 - **Wrapped only while it animates,** the child under a `GlobalKey` so its state survives. Never
   around the header, whose height would hide a group-first row's shrink.
-- **Restarts settle** (`reset()`, a query change, a resetting pull, a `KeepCachePolicy` restore), so
-  nothing animates onto a fresh list. A depth reload's commit doesn't, so its animations finish.
+- **Restarts settle** (`reset()`, a query change, a `KeepCachePolicy` restore), so nothing animates
+  onto a fresh list. A reload's commit doesn't, so its animations finish.
 
 ---
 

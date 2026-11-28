@@ -260,6 +260,9 @@ scroll frame ([cost](#performance)).
 On by default for `ListSmith.async`: a pull from the list's start reloads it from the 1st page.
 `refresh: NoRefresh()` switches it off.
 
+The rows stay under the indicator until the fresh page lands. A failed reload keeps them and shows
+its error above, with a retry.
+
 A pull works on the rows, and on the error and empty screens unless you leave them out of
 `pullableSurfaces`, but never on the 1st-page loader, whose page is already on its way. A short list
 takes one too, unless its physics are `NeverScrollableScrollPhysics`.
@@ -330,16 +333,22 @@ await controller.reset();       // start over from page 1: logout, account switc
 | Verb           | Runs                                                             | Pages report   | Meets a load already running                       |
 |----------------|------------------------------------------------------------------|----------------|----------------------------------------------------|
 | `refresh()`    | the pull's `Reload`, `ResetToFirstPage` under `NoRefresh`        | `refresh`      | joins a refresh, otherwise runs once more after it |
-| `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does                   | `invalidated`  | joins it, then runs once more                      |
-| `reset()`      | `ResetToFirstPage`, always                                       | `invalidated`  | cuts in                                            |
+| `invalidate()` | `ReloadToCurrentDepth`, whatever the pull does                   | `invalidated`  | runs once more after it                            |
+| `reset()`      | a restart from page 0, the list cleared                          | `invalidated`  | cuts in                                            |
 | `search()`     | a [search](#searching-from-code) from page 0, after its debounce | `queryChanged` | cuts in                                            |
 | `endSearch()`  | what `query` holds, a kept feed without a fetch                  | `queryChanged` | cuts in                                            |
 
 While searching, `refresh()` reloads the search and `reset()` restarts it, query and fetcher kept. A
 feed kept by `KeepCachePolicy` catches up when you're back.
 
-No indicator shows, since your button owns its progress, through the futures. Each completes once
-its fresh data shows or its fetch fails, or with the load it joined.
+No indicator shows, since your button owns its progress through the futures. Each completes once its
+load is over. `refresh()` and `invalidate()` complete with the exception, or null, so your button
+can say so when the list's error is out of sight:
+
+```dart
+final exception = await controller.refresh();
+if (exception != null) showSnackBar("Couldn't refresh");
+```
 
 With no list attached:
 
@@ -710,11 +719,11 @@ ListSmith.async(
   <img src="https://raw.githubusercontent.com/LahaLuhem/list_smith/main/doc/clips/states.webp" width="400" alt="A custom loader, then a custom error for a failed page, then its retry">
 </p>
 
-Its slots: loading and error for the 1st page and for later ones, and `noMoreItemsBuilder` once
-every page has loaded. The error builders get `(context, error, onRetry)`, so your error view can
-offer a retry. Only an `Exception` from your fetcher gets there: an `Error` is a bug, so it goes on
-to your app's error handler. A slot you leave out keeps its neutral default, and the pull indicator
-lives on `PullToRefresh`.
+Its slots: loading and error for the 1st page and for later ones, `reloadErrorBuilder` for a failed
+reload above what it kept, and `noMoreItemsBuilder` once every page has loaded. The error builders
+get `(context, error, onRetry)`, so your error view can offer a retry. Only an `Exception` from your
+fetcher gets there: an `Error` is a bug, so it goes on to your app's error handler. A slot you leave
+out keeps its neutral default, and the pull indicator lives on `PullToRefresh`.
 
 Surfaces get exactly the list's visible space, so make yours fit, or wrap it in a
 `SingleChildScrollView`.

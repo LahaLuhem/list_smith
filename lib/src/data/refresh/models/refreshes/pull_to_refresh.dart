@@ -10,8 +10,8 @@ final class const PullToRefresh({
   /// Defaults to `64`.
   final double indicatorExtent = 64,
 
-  /// What the pull does to the pages already loaded. [ResetToFirstPage] (the default) jumps back to the
-  /// start and reloads page one, [ReloadToCurrentDepth] re-fetches every loaded page to keep depth.
+  /// What the pull does to the pages already loaded. [ResetToFirstPage] (the default) reads page 1
+  /// again and shows just that, [ReloadToCurrentDepth] re-reads every loaded page to keep depth.
   final Reload reload = const ResetToFirstPage(),
 
   /// The surfaces shown instead of the rows that a pull still refreshes. The rows always take one and the
