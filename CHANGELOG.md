@@ -1,7 +1,11 @@
 ## [Unreleased]
+### Added
+- \[#141\] `reloadErrorBuilder` on `AsyncListSurfaces` builds the error a failed reload shows above the rows it kept
+
 ### Changed
 - Require Flutter 3.50 and Dart 3.14
 - \[#140\] `ListSmithController.refresh()` before a list attaches does nothing, instead of asserting
+- \[#141\] `ListSmithController.refresh()` and `invalidate()` complete with the exception their reload failed with, or null
 
 ### Fixed
 - \[#140\] A save made with no list attached waits for the next one
