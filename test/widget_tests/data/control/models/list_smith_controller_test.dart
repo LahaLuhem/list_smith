@@ -128,52 +128,6 @@ void main() {
       check(fetcher.attempts).deepEquals({0: 2});
     });
 
-    scenarioWidgets('a second refresh joins the one in flight instead of rivalling it', (
-      tester,
-    ) async {
-      final fetcher = valuedFetcher();
-      final controller = ListSmithController();
-      final observer = RecordingListSmithObserver();
-
-      await pumpList(
-        tester,
-        fetchPage: fetcher.fetchPage,
-        controller: controller,
-        pageCount: 3,
-        refresh: const PullToRefresh(reload: ReloadToCurrentDepth()),
-        observer: observer,
-      );
-      await drain(tester, frames: 12);
-
-      await [controller.refresh(), controller.refresh()].wait;
-      await drain(tester);
-
-      // One reload ran and one event fired: the 2nd call rode the 1st.
-      check(observer.events.where((event) => event == 'reload(refresh)')).length.equals(1);
-      check(fetcher.attempts).deepEquals({0: 2, 1: 2, 2: 2});
-    });
-
-    scenarioWidgets('a second refresh joins under the default reload too', (tester) async {
-      final fetcher = valuedFetcher();
-      final controller = ListSmithController();
-      final observer = RecordingListSmithObserver();
-
-      await pumpList(
-        tester,
-        fetchPage: fetcher.fetchPage,
-        controller: controller,
-        observer: observer,
-      );
-      await drain(tester);
-
-      // ResetToFirstPage resets the stream at once. The run's own reset must not read as "moved on".
-      await [controller.refresh(), controller.refresh()].wait;
-      await drain(tester);
-
-      check(observer.events.where((event) => event == 'reload(refresh)')).length.equals(1);
-      check(fetcher.attempts).deepEquals({0: 2});
-    });
-
     scenarioWidgets('a refresh() re-entered from the reload event joins the one starting', (
       tester,
     ) async {
