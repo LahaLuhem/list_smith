@@ -35,6 +35,12 @@ abstract final class ConstTheme._() {
         DemoErrorIndicator(exception: exception, onRetry: onRetry),
     newPageErrorBuilder: (_, exception, onRetry) =>
         DemoErrorIndicator(exception: exception, onRetry: onRetry, isCompact: true),
+    reloadErrorBuilder: (_, exception, onRetry) => DemoErrorIndicator(
+      exception: exception,
+      onRetry: onRetry,
+      heading: "Couldn't refresh",
+      isCompact: true,
+    ),
   );
 
   static Widget platformRefreshIndicator(BuildContext _, ListSmithRefreshState state) {

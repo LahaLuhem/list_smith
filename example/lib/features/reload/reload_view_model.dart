@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:list_smith/list_smith.dart';
+import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart' show showPlatformToast;
 import 'package:pmvvm/pmvvm.dart';
 
 import '/features/core/data/models/demo_item.dart';
@@ -16,9 +19,6 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
 
   final _attempts = <int, int>{};
   final _isRefreshingNotifier = ValueNotifier(false);
-  final _lastExceptionNotifier = ValueNotifier<Exception?>(null);
-
-  late final observer = _LastExceptionObserver(_lastExceptionNotifier);
 
   /// Runs the same [reload] as a pull, from the "Refresh from code" button.
   final controller = ListSmithController<DemoItem>();
@@ -29,9 +29,6 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
   bool get keepDepth => _keepDepth;
 
   int get concurrency => _concurrency;
-
-  /// The latest reload's error, since a reload that keeps depth leaves the rows as they were.
-  ValueListenable<Exception?> get lastExceptionListenable => _lastExceptionNotifier;
 
   /// Whether the code-driven refresh is still running, so only the button rebuilds while it is.
   ValueListenable<bool> get isRefreshingListenable => _isRefreshingNotifier;
@@ -78,7 +75,11 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
     _isRefreshingNotifier.value = true;
 
     try {
-      await controller.refresh();
+      final exception = await controller.refresh();
+      // The list's own error may be scrolled away.
+      if (exception != null && context.mounted) {
+        unawaited(showPlatformToast(context: context, message: "Couldn't refresh"));
+      }
     } finally {
       if (!disposed) _isRefreshingNotifier.value = false;
     }
@@ -87,18 +88,7 @@ final class ReloadViewModel() extends ViewModel with FailureInjectionMixin {
   @override
   void dispose() {
     _isRefreshingNotifier.dispose();
-    _lastExceptionNotifier.dispose();
 
     super.dispose();
   }
-}
-
-final class _LastExceptionObserver(final ValueNotifier<Exception?> _lastExceptionNotifier)
-    extends ListSmithObserver {
-  @override
-  void onReload(FetchTrigger trigger) => _lastExceptionNotifier.value = null;
-
-  @override
-  void onError(Exception exception, StackTrace stackTrace) =>
-      _lastExceptionNotifier.value = exception;
 }

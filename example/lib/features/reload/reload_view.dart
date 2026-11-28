@@ -58,11 +58,6 @@ class const ReloadView({super.key}) extends StatelessWidget {
             child: Text(isRefreshing ? 'Refreshing…' : 'Refresh from code'),
           ),
         ),
-        ValueListenableBuilder(
-          valueListenable: viewModel.lastExceptionListenable,
-          builder: (_, lastException, _) =>
-              lastException == null ? const SizedBox.shrink() : Text('$lastException'),
-        ),
       ],
       list: ListSmith.async(
         fetchPage: PageFetcher(viewModel.fetchPage),
@@ -74,7 +69,6 @@ class const ReloadView({super.key}) extends StatelessWidget {
         ),
         surfaces: ConstTheme.platformSurfaces,
         controller: viewModel.controller,
-        observer: viewModel.observer,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (_, item, _) => DemoItemTile(item: item),
       ),
