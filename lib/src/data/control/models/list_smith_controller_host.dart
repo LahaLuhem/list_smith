@@ -11,10 +11,10 @@ import '/src/data/search/search.dart';
 @internal
 abstract interface class ListSmithControllerHost<T extends Object>._() {
   /// See [ListSmithController.refresh].
-  Future<void> refresh();
+  Future<Exception?> refresh();
 
   /// See [ListSmithController.invalidate].
-  Future<void> invalidate();
+  Future<Exception?> invalidate();
 
   /// See [ListSmithController.reset].
   Future<void> reset();

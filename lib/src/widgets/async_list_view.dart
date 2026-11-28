@@ -224,9 +224,10 @@ class _AsyncListViewState<T extends Object>()
 
   /// Fetches the next page into the current stream, unless one is already on its way or the stream has
   /// ended. [trigger] is what a restart's 1st page reports, otherwise each page derives its own.
-  Future<void> _fetchNextPage({FetchTrigger? trigger}) async {
+  /// Completes with the failure it put on the list, if any.
+  Future<Exception?> _fetchNextPage({FetchTrigger? trigger}) async {
     final pageIndex = _reserveNextPage();
-    if (pageIndex == null) return;
+    if (pageIndex == null) return null;
 
     final generation = _generation;
     final pages = _pagingStateNotifier.value.pages ?? const [];
@@ -241,7 +242,7 @@ class _AsyncListViewState<T extends Object>()
         previousSignal: previousSignal,
         trigger: trigger,
       );
-      if (pageRead == null) return;
+      if (pageRead == null) return null;
 
       final (:items, :signal) = pageRead;
       _lastPageSignal = signal;
@@ -253,11 +254,15 @@ class _AsyncListViewState<T extends Object>()
         ],
         isLoading: false,
       );
+
+      return null;
     } on Exception catch (exception) {
       // Only Exceptions: an Error is a bug in the fetcher, so it goes on to the app and the list waits.
-      if (generation == _generation) {
-        _pagingStateNotifier.value = _pagingStateNotifier.value.failed(exception);
-      }
+      if (generation != _generation) return null;
+
+      _pagingStateNotifier.value = _pagingStateNotifier.value.failed(exception);
+
+      return exception;
     }
   }
 
@@ -689,8 +694,9 @@ class _AsyncListViewState<T extends Object>()
   }
 
   /// Restarts the stream: invalidates in-flight writes, clears the end signal so a signal policy can't
-  /// read the old stream's last one, and fetches the new 1st page, which reports [trigger].
-  Future<void> _resetPaging(FetchTrigger trigger) {
+  /// read the old stream's last one, and fetches the new 1st page, which reports [trigger]. Completes
+  /// with that page's failure, if any.
+  Future<Exception?> _resetPaging(FetchTrigger trigger) {
     _rowTransitionsNotifier.settle();
     final generation = ++_generation;
     _lastFailedPageIndex = null;
@@ -699,9 +705,7 @@ class _AsyncListViewState<T extends Object>()
 
     // Once the current work is done, so a reload's events fire before its page is asked for, and resets
     // made in one go send one request.
-    return .microtask(() async {
-      if (generation == _generation) await _fetchNextPage(trigger: trigger);
-    });
+    return .microtask(() => generation != _generation ? null : _fetchNextPage(trigger: trigger));
   }
 
   // The engine side of a reload, reached through a [_ReloadRun].
@@ -818,10 +822,10 @@ class _AsyncListViewState<T extends Object>()
   }
 
   @override
-  Future<void> refresh() => _runReload(.refresh).doneFuture;
+  Future<Exception?> refresh() => _runReload(.refresh).doneFuture;
 
   @override
-  Future<void> invalidate() => _runReload(.invalidated).doneFuture;
+  Future<Exception?> invalidate() => _runReload(.invalidated).doneFuture;
 
   @override
   Future<void> reset() {
@@ -1100,7 +1104,7 @@ final class _ReloadRun<T extends Object>(
   /// What every page fetched through this run reports.
   final FetchTrigger trigger,
 ) implements ReloadContext<T> {
-  final _doneCompleter = Completer<void>();
+  final _doneCompleter = Completer<Exception?>();
   final _handOverCompleter = Completer<void>();
 
   /// The generation this run belongs to. Its own writes move it along, so only another writer can make
@@ -1112,8 +1116,9 @@ final class _ReloadRun<T extends Object>(
   /// Booked by a caller that met this run live and must not be lost. Runs once this one is done.
   FetchTrigger? rerunTrigger;
 
-  /// Completes once the run finishes, committed or not, after the engine has let go of it.
-  Future<void> get doneFuture => _doneCompleter.future;
+  /// Completes with the run's failure once the engine has let go of it, null if it landed or the list
+  /// moved on.
+  Future<Exception?> get doneFuture => _doneCompleter.future;
 
   /// Completes once the list shows this run's result or its own loader, whichever comes 1st.
   Future<void> get handOverFuture => _handOverCompleter.future;
@@ -1136,6 +1141,9 @@ final class _ReloadRun<T extends Object>(
 
   /// What a fetch through this run last threw, null while none has.
   Exception? _exception;
+
+  /// What page 1 threw after a [reset]. The error screen shows it, so it stays out of [_exception].
+  Exception? _firstPageException;
 
   /// Tripped once a pull's indicator shows this run, so a Retry leaves it to the indicator.
   final pullTripwire = Tripwire();
@@ -1217,12 +1225,11 @@ final class _ReloadRun<T extends Object>(
 
   /// The engine's own restart, out of a [Reload]'s reach. Completes once page 1 lands or fails, or
   /// the list moves on.
-  Future<void> reset() {
+  Future<void> reset() async {
     final firstPageFuture = _engine._resetPaging(trigger);
     _epoch = _engine._generation;
     _handOver(); // the loader shows from here
-
-    return firstPageFuture;
+    _firstPageException = await firstPageFuture;
   }
 
   /// Marks the run finished, putting a failed reload's error on the pages it kept unless the list moved
@@ -1234,7 +1241,7 @@ final class _ReloadRun<T extends Object>(
       pagingStateNotifier.value = pagingStateNotifier.value.reloadFailed(exception, trigger);
     }
     _handOver();
-    _doneCompleter.complete();
+    _doneCompleter.complete(isStale ? null : exception ?? _firstPageException);
   }
 
   void _handOver() {

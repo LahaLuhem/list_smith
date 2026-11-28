@@ -14,6 +14,7 @@ void main() {
       WidgetTester tester,
       FakeServer<int> server, {
       ListSmithController<int>? controller,
+      ListSmithObserver? observer,
       Refresh refresh = const PullToRefresh(),
     }) => pumpListSmith(
       tester,
@@ -24,6 +25,7 @@ void main() {
         endPolicy: const FixedPageCountPolicy(pageCount: 1),
         refresh: refresh,
         controller: controller,
+        observer: observer,
         itemBuilder: (_, item, _) => SizedBox(height: 50, child: Text('item $item')),
       ),
     );
@@ -125,6 +127,73 @@ void main() {
         await release(tester, [holdCompleter]);
 
         check(isDone).isTrue;
+      },
+    );
+
+    scenarioOutlineWidgets<
+      ({
+        Future<Exception?> Function(ListSmithController<int>) callVerb,
+        bool isFirstLoadFailing,
+        bool isFailing,
+      })
+    >(
+      'refresh() and invalidate() complete with what their fetch threw, or null once it lands',
+      examples: {
+        'refresh(), landing': (
+          callVerb: (controller) => controller.refresh(),
+          isFirstLoadFailing: false,
+          isFailing: false,
+        ),
+        'refresh(), failing': (
+          callVerb: (controller) => controller.refresh(),
+          isFirstLoadFailing: false,
+          isFailing: true,
+        ),
+        'invalidate(), failing': (
+          callVerb: (controller) => controller.invalidate(),
+          isFirstLoadFailing: false,
+          isFailing: true,
+        ),
+        'refresh() on the error screen, failing': (
+          callVerb: (controller) => controller.refresh(),
+          isFirstLoadFailing: true,
+          isFailing: true,
+        ),
+      },
+      outline: (tester, example) async {
+        final server = FakeServer<int>([1, 2, 3]);
+        if (example.isFirstLoadFailing) server.failing.add((0, 1));
+        if (example.isFailing) server.failing.add((0, 2));
+        final observer = RecordingListSmithObserver();
+        final controller = ListSmithController<int>();
+        await pumpList(tester, server, controller: controller, observer: observer);
+        await drain(tester);
+
+        final exceptionFuture = example.callVerb(controller);
+        await drain(tester);
+
+        check(server.attempts[0]).equals(2); // premise: the verb's fetch went out
+        check(await exceptionFuture).identicalTo(example.isFailing ? observer.lastException : null);
+      },
+    );
+
+    scenarioWidgets(
+      'a refresh() that reset() cut off completes with null, though its fetch failed',
+      (tester) async {
+        final server = FakeServer<int>([1, 2, 3])..failing.add((0, 2));
+        final observer = RecordingListSmithObserver();
+        final controller = ListSmithController<int>();
+        await pumpList(tester, server, controller: controller, observer: observer);
+        await drain(tester);
+        final holdCompleter = server.hold(0, attempt: 2);
+        final exceptionFuture = controller.refresh();
+        await drain(tester);
+
+        await controller.reset();
+        await release(tester, [holdCompleter]);
+
+        check(observer.lastException).isNotNull(); // premise: the refresh's fetch failed
+        check(await exceptionFuture).isNull;
       },
     );
   });
